@@ -17,7 +17,15 @@ class SaaSMaintenanceMiddleware(MiddlewareMixin):
         if path.startswith('/saas-admin/') or path.startswith('/static/') or path.startswith('/media/') or path.startswith('/admin/'):
             return None
         
-        # Vérifier si on est en mode maintenance
+        # 1. Vérifier si le tenant actuel est actif
+        if hasattr(request, 'tenant') and request.tenant.schema_name != 'public':
+            if not getattr(request.tenant, 'is_active', True):
+                return render(request, 'public_folder/maintenance.html', {
+                    'title': "Compte Désactivé",
+                    'message': "Désolé, votre accès est suspendu. Veuillez contacter l'administration pour plus d'informations.",
+                }, status=403)
+
+        # 2. Vérifier si on est en mode maintenance
         try:
             config = SaaSMaintenanceConfiguration.get_solo()
             if config.is_maintenance_mode:

@@ -26,6 +26,12 @@ from .views import (
     postes_budgetaire_create,
     postes_budgetaire_edit,
     postes_budgetaire_delete,
+    
+    user_list,
+    user_create,
+    user_edit,
+    user_delete,
+    user_toggle_status,
 
     budget_campaign_list,
     budget_campaign_instituts,
@@ -47,9 +53,9 @@ from .views import (
     reset_tenant_table,
     tenant_workspace,
     preview_tenant_table_reset,
-    delete_tenant,
-    list_orphaned_schemas,
-    delete_orphaned_schema
+    delete_orphaned_schema,
+    get_tenant_sync_list,
+    sync_single_tenant_view
 )
 
 
@@ -57,23 +63,7 @@ app_name = 'associe_app'
 
 urlpatterns = [
     path('', index, name='configuration_index'),
-    path('budget/', configuration_budget, name='configuration_budget'),
-    path('structure/', configuration_structure, name='configuration_structure'),
 
-    # Tenant Visualization
-    path('tenants/', tenant_data_list, name='tenant_data_list'),
-    path('tenants/delete/<int:tenant_id>/', delete_tenant, name='delete_tenant'),
-    path('tenants/schemas/', list_orphaned_schemas, name='schema_management'),
-    path('tenants/schemas/delete/', delete_orphaned_schema, name='delete_orphaned_schema'),
-    path('tenants/<int:tenant_id>/workspace/', tenant_workspace, name='tenant_workspace'),
-    path('tenants/categories/<int:tenant_id>/', get_tenant_categories, name='get_tenant_categories'),
-    path('tenants/purge/<int:tenant_id>/', purge_tenant_categories, name='purge_tenant_categories'),
-    path('tenants/delete-payment-type/<int:tenant_id>/<int:payment_type_id>/', delete_tenant_payment_type, name='delete_tenant_payment_type'),
-    path('tenants/reset-table/', reset_tenant_table, name='reset_tenant_table'),
-    path('tenants/preview-reset/', preview_tenant_table_reset, name='preview_tenant_table_reset'),
-    path('crm-statistics/', crm_statistics, name='crm_statistics'),
-    path('crm-statistics/api/<int:tenant_id>/', get_crm_stats_api, name='get_crm_stats_api'),
-    path('tenants/update-type/', update_tenant_type, name='update_tenant_type'),
 
 
     # Payment Types
@@ -120,4 +110,17 @@ urlpatterns = [
     path('extension-requests/<int:request_id>/', review_extension, name='review_extension'),
 
     path('sync-categories/', sync_categories_view, name='sync_categories_view'),
+    path('sync-tenant-list/', get_tenant_sync_list, name='get_tenant_sync_list'),
+    path('sync-single-tenant/', sync_single_tenant_view, name='sync_single_tenant_view'),
+    
+    # CRM Statistics
+    path('crm-statistics/', crm_statistics, name='crm_statistics'),
+    path('crm-statistics/api/<int:tenant_id>/', get_crm_stats_api, name='get_crm_stats_api'),
+
+    # User Management
+    path('users/', user_list, name='user_list'),
+    path('users/create/', user_create, name='user_create'),
+    path('users/edit/<int:pk>/', user_edit, name='user_edit'),
+    path('users/delete/<int:pk>/', user_delete, name='user_delete'),
+    path('users/toggle-status/<int:pk>/', user_toggle_status, name='user_toggle_status'),
 ]

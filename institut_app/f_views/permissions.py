@@ -1188,6 +1188,87 @@ def ApiGetRolePermissionsByRoleId(request):
             'message': str(e)
         })
 
+@login_required(login_url="institut_app:login")
+def ApiGetAttributionPermissions(request):
+    """
+    Récupère toutes les permissions possibles pour le module d'une attribution,
+    en indiquant si elles sont accordées par le rôle ET si elles sont explicitement désactivées.
+    """
+    attribution_id = request.GET.get('attribution_id')
+    if not attribution_id:
+        return JsonResponse({'status': 'error', 'message': 'ID de l\'attribution requis'})
+    
+    try:
+        attribution = UserModuleRole.objects.select_related('role', 'module').get(id=attribution_id)
+        module = attribution.module
+        role = attribution.role
+        
+        # Toutes les permissions possibles pour ce module
+        all_module_permissions = ModulePermission.objects.filter(module=module)
+        
+        # Permissions accordées par le rôle
+        role_granted_ids = RolePermission.objects.filter(
+            role=role,
+            module_permission__module=module
+        ).values_list('module_permission_id', flat=True)
+        
+        # Permissions explicitement désactivées pour cet utilisateur
+        denied_ids = attribution.denied_permissions.values_list('id', flat=True)
+        
+        permissions_data = []
+        for mp in all_module_permissions:
+            permissions_data.append({
+                'id': mp.id,
+                'permission_type': mp.get_permission_type_display(),
+                'description': mp.description,
+                'is_granted_by_role': mp.id in role_granted_ids,
+                'is_denied': mp.id in denied_ids
+            })
+            
+        return JsonResponse({
+            'status': 'success',
+            'permissions': permissions_data
+        })
+    except UserModuleRole.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Attribution non trouvée'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiTogglePermissionDenial(request):
+    """
+    Bascule l'état de désactivation d'une permission pour une attribution.
+    """
+    if request.method == "POST":
+        attribution_id = request.POST.get('attribution_id')
+        permission_id = request.POST.get('permission_id')
+        
+        if not attribution_id or not permission_id:
+            return JsonResponse({'status': 'error', 'message': 'IDs requis'})
+            
+        try:
+            attribution = UserModuleRole.objects.get(id=attribution_id)
+            permission = ModulePermission.objects.get(id=permission_id)
+            
+            if attribution.denied_permissions.filter(id=permission.id).exists():
+                attribution.denied_permissions.remove(permission)
+                message = "Permission réactivée"
+                is_denied = False
+            else:
+                attribution.denied_permissions.add(permission)
+                message = "Permission désactivée"
+                is_denied = True
+                
+            return JsonResponse({
+                'status': 'success', 
+                'message': message,
+                'is_denied': is_denied
+            })
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
 
 import json
 

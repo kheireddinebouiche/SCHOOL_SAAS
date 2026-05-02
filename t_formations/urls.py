@@ -66,10 +66,10 @@ urlpatterns = [
     path('ApiActivatePromo', ApiActivatePromo, name="ApiActivatePromo"),
     path('ApiDeletePromo',ApiDeletePromo,name="ApiDeletePromo"),
     path('ApiCheckPromoCode', ApiCheckPromoCode, name="ApiCheckPromoCode"),
+    path('promos/details-promotion/<int:pk>/', detailPromo, name="detailPromo"),
 
     path('modules/liste-des-modules/', PageListeModules, name="PageListeModules"),
     path('ApiGetModules', ApiGetModules, name="ApiGetModules"),
-    path('ApiGetModuleDetails', ApiGetModuleDetails, name="ApiGetModuleDetails"),
     path('get_module_details_with_teachers/', get_module_details_with_teachers, name="get_module_details_with_teachers"),
 
     path('liste-institut/',ListeDesInstituts, name="ListeDesInstituts"),

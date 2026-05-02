@@ -130,3 +130,50 @@ class SaaSGlobalConfiguration(models.Model):
     def get_solo(cls):
         obj, created = cls.objects.get_or_create(id=1)
         return obj
+
+class KnowledgeCategory(models.Model):
+    """Catégories pour le centre de connaissance (SaaS)."""
+    name = models.CharField(max_length=255, verbose_name=_("Nom de la catégorie"))
+    description = models.TextField(blank=True, null=True, verbose_name=_("Description"))
+    order = models.PositiveIntegerField(default=0, verbose_name=_("Ordre d'affichage"))
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Catégorie de Connaissance"
+        verbose_name_plural = "Catégories de Connaissance"
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return self.name
+
+class KnowledgeResource(models.Model):
+    """Ressource (Tutoriel, Vidéo, Article) du centre de connaissance (SaaS)."""
+    TYPE_CHOICES = [
+        ('VIDEO', 'Vidéo (YouTube/Vimeo)'),
+        ('PDF', 'Document PDF'),
+        ('ARTICLE', 'Article/Texte'),
+        ('FILE', 'Fichier à télécharger'),
+    ]
+
+    title = models.CharField(max_length=255, verbose_name=_("Titre"))
+    category = models.ForeignKey(KnowledgeCategory, on_delete=models.CASCADE, related_name='resources', verbose_name=_("Catégorie"))
+    resource_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='VIDEO', verbose_name=_("Type de ressource"))
+    description = models.TextField(blank=True, null=True, verbose_name=_("Description/Contenu"))
+    
+    video_url = models.URLField(blank=True, null=True, verbose_name=_("URL Vidéo (Youtube/Vimeo)"), help_text=_("Lien direct vers la vidéo"))
+    file_attachment = models.FileField(upload_to='knowledge_resources/', blank=True, null=True, verbose_name=_("Fichier joint"))
+    
+    is_published = models.BooleanField(default=True, verbose_name=_("Publié"))
+    order = models.PositiveIntegerField(default=0, verbose_name=_("Ordre d'affichage"))
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Ressource de Connaissance"
+        verbose_name_plural = "Ressources de Connaissance"
+        ordering = ['category', 'order', '-created_at']
+
+    def __str__(self):
+        return self.title

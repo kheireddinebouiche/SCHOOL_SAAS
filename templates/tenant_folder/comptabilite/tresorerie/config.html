@@ -199,18 +199,18 @@
                             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                                 <ul class="nav nav-pills" id="pills-tab" role="tablist">
                                     <li class="nav-item" role="presentation">
-                                        <button class="nav-link active d-flex align-items-center" data-bs-toggle="pill" data-bs-target="#formations-tab" type="button" role="tab">
-                                            <i class="ri-book-open-line me-2"></i> Formations
-                                        </button>
-                                    </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link d-flex align-items-center" data-bs-toggle="pill" data-bs-target="#specialites-tab" type="button" role="tab">
+                                        <button class="nav-link active d-flex align-items-center" data-bs-toggle="pill" data-bs-target="#specialites-tab" type="button" role="tab">
                                             <i class="ri-award-line me-2"></i> Spécialités
                                         </button>
                                     </li>
                                     <li class="nav-item" role="presentation">
                                         <button class="nav-link d-flex align-items-center" data-bs-toggle="pill" data-bs-target="#double-tab" type="button" role="tab">
                                             <i class="ri-links-line me-2"></i> Double Diplomation
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link d-flex align-items-center" data-bs-toggle="pill" data-bs-target="#soldes-tab" type="button" role="tab">
+                                            <i class="ri-money-dollar-circle-line me-2"></i> Soldes Initiaux
                                         </button>
                                     </li>
                                 </ul>
@@ -227,36 +227,37 @@
                             </div>
 
                             <div class="tab-content" id="pills-tabContent">
-                                <!-- Formations Tab -->
-                                <div class="tab-pane fade show active" id="formations-tab" role="tabpanel">
-                                    <div class="table-responsive">
-                                        <table class="table align-middle table-nowrap mb-0">
-                                            <thead>
-                                                <tr>
-                                                    <th class="ps-4" style="width: 120px;">Code</th>
-                                                    <th>Libellé Formation</th>
-                                                    <th class="text-center">Frais d'inscription</th>
-                                                    <th class="text-center">Prix de Training</th>
-                                                    <th class="text-end pe-4">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="listFormations"></tbody>
-                                        </table>
-                                    </div>
-                                </div>
-
                                 <!-- Specialites Tab -->
-                                <div class="tab-pane fade" id="specialites-tab" role="tabpanel">
+                                <div class="tab-pane fade show active" id="specialites-tab" role="tabpanel">
+                                    <div class="row mb-3 g-3 align-items-center">
+                                        <div class="col-md-4">
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light border-light-subtle"><i class="ri-filter-line text-muted"></i></span>
+                                                <select class="form-select border-light-subtle fw-medium" id="filter-formation-specialite">
+                                                    <option value="">Toutes les formations</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-8 text-end">
+                                            <button id="btnBulkUpdatePrices" class="btn btn-soft-primary waves-effect waves-light d-none" data-bs-toggle="modal" data-bs-target="#bulkPriceModal">
+                                                <i class="ri-edit-2-line align-bottom me-1"></i> Modifier les prix sélectionnés
+                                            </button>
+                                        </div>
+                                    </div>
                                     <div class="table-responsive">
                                         <table class="table align-middle table-nowrap mb-0">
                                             <thead>
                                                 <tr>
-                                                    <th class="ps-4" style="width: 120px;">Code</th>
+                                                    <th style="width: 40px;">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="checkAllSpecialites">
+                                                        </div>
+                                                    </th>
                                                     <th>Spécialité</th>
                                                     <th>Formation</th>
-                                                    <th class="text-center">Prix Standard</th>
-                                                    <th class="text-center">Prix Double Diplôme</th>
-                                                    <th class="text-end pe-4">Action</th>
+                                                    <th>Prix (Standard)</th>
+                                                    <th>Prix (Double Diplôme)</th>
+                                                    <th class="text-end">Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="listSpecialites"></tbody>
@@ -283,6 +284,29 @@
                                         </table>
                                     </div>
                                 </div>
+
+                                <!-- Soldes Initiaux Tab -->
+                                <div class="tab-pane fade" id="soldes-tab" role="tabpanel">
+                                    <div class="d-flex justify-content-end mb-3">
+                                        <button class="btn btn-primary rounded-pill shadow-sm px-4" id="btnAddSoldeInitial">
+                                            <i class="ri-add-line me-1"></i> Nouveau Solde Initial
+                                        </button>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table align-middle table-nowrap mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th class="ps-4">Année</th>
+                                                    <th>Type</th>
+                                                    <th>Entité</th>
+                                                    <th class="text-center">Montant Initial</th>
+                                                    <th class="text-end pe-4">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="listSoldes"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -293,48 +317,6 @@
 </div>
 
 
-<!-- Modal Formation Price -->
-<div id="formationPriceModal" class="modal fade zoomIn" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content glass-card shadow-lg border-0">
-            <div class="modal-header bg-soft-primary px-4 py-3">
-                <h5 class="modal-title fw-bold text-primary">
-                    <i class="ri-edit-2-line me-2"></i>Mise à jour Tarification
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <input type="hidden" id="formation_id_edit">
-                <div class="mb-4">
-                    <label class="form-label text-muted fs-12 text-uppercase fw-bold mb-2">Formation</label>
-                    <input type="text" id="formation_nom_display" class="form-control form-control-lg fw-bold border-0 bg-light rounded-3" readonly>
-                </div>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label fs-13 fw-semibold text-dark">Frais d'inscription</label>
-                        <div class="input-group">
-                            <input type="number" id="frais_inscription_edit" class="form-control form-control-lg border-light-subtle rounded-3 text-center fs-15">
-                            <span class="input-group-text bg-light text-muted border-light-subtle rounded-end-3">DA</span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fs-13 fw-semibold text-dark">Prix Formation</label>
-                        <div class="input-group">
-                            <input type="number" id="prix_formation_edit" class="form-control form-control-lg border-light-subtle rounded-3 text-center fs-15">
-                            <span class="input-group-text bg-light text-muted border-light-subtle rounded-end-3">DA</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer bg-light bg-opacity-50 p-3 border-0">
-                <button type="button" class="btn btn-ghost-secondary px-4 rounded-3" data-bs-dismiss="modal">Annuler</button>
-                <button class="btn btn-primary px-4 py-3 btn-rounded shadow-sm" id="btnUpdateFormationPrice">
-                    <span class="fw-bold">Appliquer les tarifs</span> <i class="ri-check-line ms-1"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Modal Specialty Price -->
 <div id="specialitePriceModal" class="modal fade flip" tabindex="-1" aria-hidden="true">
@@ -353,17 +335,10 @@
                     <input type="text" id="specialite_label_display" class="form-control form-control-lg fw-bold border-0 bg-light rounded-3" readonly>
                 </div>
                 <div class="row g-3">
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <label class="form-label fs-13 fw-semibold text-dark">Prix Standard</label>
                         <div class="input-group">
                             <input type="number" id="prix_specialite_edit" class="form-control form-control-lg border-light-subtle rounded-3 text-center">
-                            <span class="input-group-text bg-light text-muted border-light-subtle rounded-end-3 small">DA</span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fs-13 fw-semibold text-dark">Prix Double Cursus</label>
-                        <div class="input-group">
-                            <input type="number" id="prix_double_edit" class="form-control form-control-lg border-light-subtle rounded-3 text-center">
                             <span class="input-group-text bg-light text-muted border-light-subtle rounded-end-3 small">DA</span>
                         </div>
                     </div>
@@ -467,20 +442,108 @@
 </div>
 
 
+<!-- Bulk Price Modal -->
+<div class="modal fade" id="bulkPriceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary bg-opacity-10 p-3">
+                <h5 class="modal-title text-primary fw-bold">Modifier les prix en masse</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="bulkSelectionCount" class="alert alert-info border-0 mb-3">
+                    <i class="ri-information-line me-2"></i> <span>0</span> spécialités sélectionnées
+                </div>
+                <div id="selectedSpecsList" class="mb-4 d-flex flex-wrap gap-2">
+                    <!-- Spans will be added here dynamically -->
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nouveau Prix (Standard)</label>
+                    <div class="input-group">
+                        <input type="number" id="bulk_prix" class="form-control border-light-subtle" placeholder="0.00">
+                        <span class="input-group-text bg-light text-muted border-light-subtle">DA</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light bg-opacity-50 p-3 border-0">
+                <button type="button" class="btn btn-ghost-secondary px-4 rounded-3" data-bs-dismiss="modal">Annuler</button>
+                <button class="btn btn-primary px-4 py-3 btn-rounded shadow-sm" id="btnSaveBulkPrices">
+                    <span class="fw-bold">Mettre à jour tous les prix</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour Solde Initial -->
+<div id="soldeInitialModal" class="modal fade zoomIn" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card shadow-lg border-0">
+            <div class="modal-header bg-soft-primary px-4 py-3">
+                <h5 class="modal-title fw-bold text-primary">
+                    <i class="ri-money-dollar-circle-line me-2"></i>Configuration du Solde Initial
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formSoldeInitial">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small text-uppercase">Année Scolaire</label>
+                        <select class="form-select border-light-subtle rounded-3" id="solde_annee" required>
+                            <option value="2023">2023/2024</option>
+                            <option value="2024">2024/2025</option>
+                            <option value="2025">2025/2026</option>
+                            <option value="2026">2026/2027</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small text-uppercase">Type de Journal</label>
+                        <select class="form-select border-light-subtle rounded-3" id="solde_type" required>
+                            <option value="caisse">Caisse (Espèces)</option>
+                            <option value="banque">Banque</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small text-uppercase">Entité Légale</label>
+                        <select class="form-select border-light-subtle rounded-3" id="solde_entite">
+                            <option value="0">Toutes les entités (Global)</option>
+                        </select>
+                        <small class="text-muted">Laissez global si vous n'avez qu'une seule entité ou pour un solde consolidé.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small text-uppercase">Montant Initial (DA)</label>
+                        <div class="input-group">
+                            <input type="number" step="0.01" id="solde_montant" class="form-control form-control-lg border-light-subtle rounded-3 text-center" placeholder="0.00" required>
+                            <span class="input-group-text bg-light text-muted border-light-subtle rounded-end-3 small">DA</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light bg-opacity-50 p-3 border-0">
+                <button type="button" class="btn btn-ghost-secondary px-4 rounded-3" data-bs-dismiss="modal">Annuler</button>
+                <button class="btn btn-primary px-4 py-3 btn-rounded shadow-sm" id="btnSaveSoldeInitial">
+                    <span class="fw-bold">Enregistrer le solde</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     $(document).ready(function(){
         
-        let currentTab = 'formations';
+        let currentTab = 'specialites';
 
         // Initialize display
         loadData();
+        loadFormationsFilter();
 
         // Switch Tab Logic
         $('button[data-bs-toggle="pill"]').on('shown.bs.tab', function (e) {
             let target = $(e.target).data('bs-target');
-            if (target === '#formations-tab') currentTab = 'formations';
-            else if (target === '#specialites-tab') currentTab = 'specialites';
-            else currentTab = 'double';
+            if (target === '#specialites-tab') currentTab = 'specialites';
+            else if (target === '#double-tab') currentTab = 'double';
+            else currentTab = 'soldes';
             loadData();
         });
 
@@ -488,8 +551,7 @@
         $('#global-search').on('keyup', function() {
             let value = $(this).val().toLowerCase();
             let tableBody = "";
-            if (currentTab === 'formations') tableBody = '#listFormations tr';
-            else if (currentTab === 'specialites') tableBody = '#listSpecialites tr';
+            if (currentTab === 'specialites') tableBody = '#listSpecialites tr';
             else tableBody = '#listDouble tr';
             
             $(tableBody).filter(function() {
@@ -498,9 +560,9 @@
         });
 
         function loadData() {
-            if (currentTab === 'formations') loadFormations();
-            else if (currentTab === 'specialites') loadSpecialites();
-            else loadDouble();
+            if (currentTab === 'specialites') loadSpecialites();
+            else if (currentTab === 'double') loadDouble();
+            else loadSoldes();
         }
 
         // --- UI Helpers ---
@@ -509,40 +571,12 @@
             return `<span class="price-tag">${formatted}</span><span class="currency-symbol">DA</span>`;
         }
 
-        // --- FORMATIONS MANAGEMENT ---
-        function loadFormations(){
-            $.ajax({
-                url : "{% url 't_tresorerie:ApiListeFormationsPrices' %}",
-                dataType: 'JSON',
-                type : 'GET',
-                success : function(data){
-                    var row = "";
-                    if (data.length > 0){
-                        $.each(data, function(index, f){
-                            row += `<tr>
-                                <td class="ps-4"><span class="badge badge-soft-primary rounded-pill px-3">${f.code}</span></td>
-                                <td class="fw-bold text-dark">${f.nom}</td>
-                                <td class="text-center">${formatPrice(f.frais_inscription)}</td>
-                                <td class="text-center">${formatPrice(f.prix_formation)}</td>
-                                <td class="text-end pe-4">
-                                    <button class="btn btn-ghost-primary btn-edit-premium edit-formation-price" data-id="${f.id}" data-nom="${f.nom}" data-frais="${f.frais_inscription}" data-prix="${f.prix_formation}">
-                                        <i class="ri-pencil-fill"></i>
-                                    </button>
-                                </td>
-                            </tr>`;
-                        });
-                    } else {
-                        row = "<tr><td colspan=5 class='text-muted text-center py-4'>Aucune formation trouvée</td></tr>";
-                    }
-                    $('#listFormations').html(row);
-                }
-            });
-        }
-
         // --- SPECIALITES MANAGEMENT ---
         function loadSpecialites(){
+            var formationId = $('#filter-formation-specialite').val();
             $.ajax({
                 url : "{% url 't_tresorerie:ApiListeSpecialitesPrices' %}",
+                data : { 'formation_id': formationId },
                 dataType: 'JSON',
                 type : 'GET',
                 success : function(data){
@@ -550,11 +584,20 @@
                     if (data.length > 0){
                         $.each(data, function(index, s){
                             row += `<tr>
-                                <td class="ps-4"><span class="badge badge-soft-info rounded-pill px-3">${s.code}</span></td>
-                                <td class="fw-bold text-dark">${s.label}</td>
+                                <td>
+                                    <div class="form-check ms-1">
+                                        <input class="form-check-input spec-checkbox" type="checkbox" value="${s.id}" data-label="${s.label}">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <span class="fw-bold text-dark">${s.label}</span>
+                                        <span class="text-muted fs-11">${s.code}</span>
+                                    </div>
+                                </td>
                                 <td class="text-muted"><small>${s.formation__nom}</small></td>
-                                <td class="text-center">${formatPrice(s.prix)}</td>
-                                <td class="text-center">${formatPrice(s.prix_double_diplomation || 0)}</td>
+                                <td class="">${formatPrice(s.prix)}</td>
+                                <td class="">${formatPrice(s.prix_double_diplomation || 0)}</td>
                                 <td class="text-end pe-4">
                                     <button class="btn btn-ghost-info btn-edit-premium edit-specialite-price" data-id="${s.id}" data-label="${s.label}" data-prix="${s.prix}" data-double="${s.prix_double_diplomation}">
                                         <i class="ri-pencil-fill"></i>
@@ -566,6 +609,9 @@
                         row = "<tr><td colspan=6 class='text-muted text-center py-4'>Aucune spécialité trouvée</td></tr>";
                     }
                     $('#listSpecialites').html(row);
+                    // Reset Bulk UI
+                    $('#checkAllSpecialites').prop('checked', false);
+                    updateBulkButtonVisibility();
                 }
             });
         }
@@ -612,38 +658,8 @@
         }
 
         // Initialize
-        loadFormations();
         loadSpecialites();
         loadDouble();
-
-        // --- FORMATION PRICE ACTIONS ---
-        $(document).on('click', '.edit-formation-price', function(){
-            $('#formation_id_edit').val($(this).data('id'));
-            $('#formation_nom_display').val($(this).data('nom'));
-            $('#frais_inscription_edit').val($(this).data('frais'));
-            $('#prix_formation_edit').val($(this).data('prix'));
-            $('#formationPriceModal').modal('show');
-        });
-
-        $('#btnUpdateFormationPrice').click(function(){
-            $.ajax({
-                url: "{% url 't_tresorerie:ApiUpdateFormationPrice' %}",
-                type: 'POST',
-                data: {
-                    'id': $('#formation_id_edit').val(),
-                    'frais_inscription': $('#frais_inscription_edit').val(),
-                    'prix_formation': $('#prix_formation_edit').val(),
-                    'csrfmiddlewaretoken': '{{ csrf_token }}'
-                },
-                success: function(res){
-                    if(res.status == 'success'){
-                        alertify.success(res.message);
-                        $('#formationPriceModal').modal('hide');
-                        loadFormations();
-                    } else alertify.error(res.message);
-                }
-            });
-        });
 
         // --- SPECIALITE PRICE ACTIONS ---
         $(document).on('click', '.edit-specialite-price', function(){
@@ -716,7 +732,6 @@
             });
         });
 
-    });
 
     // ============== PARAMÈTRE : Blocage date paiement ==============
     function loadParametreFinancier() {
@@ -750,6 +765,202 @@
             }
         });
     });
+
+    // --- SOLDES INITIAUX MANAGEMENT ---
+    function loadSoldes() {
+        $.ajax({
+            url: "{% url 't_tresorerie:api_list_soldes_initiaux' %}",
+            dataType: 'JSON',
+            type: 'GET',
+            success: function(data) {
+                var row = "";
+                if (data.length > 0) {
+                    $.each(data, function(index, s) {
+                        var badgeClass = s.type === 'caisse' ? 'badge-soft-primary' : 'badge-soft-info';
+                        row += `<tr>
+                            <td class="ps-4"><span class="fw-bold">${s.annee_label}</span></td>
+                            <td><span class="badge ${badgeClass} rounded-pill px-3">${s.type_label}</span></td>
+                            <td><span class="text-muted">${s.entite_name}</span></td>
+                            <td class="text-center">${formatPrice(s.montant)}</td>
+                            <td class="text-end pe-4">
+                                <button class="btn btn-ghost-primary btn-edit-premium edit-solde-initial" 
+                                    data-id="${s.id}" 
+                                    data-annee="${s.annee_scolaire}" 
+                                    data-type="${s.type}" 
+                                    data-entite="${s.entite_id}" 
+                                    data-montant="${s.montant}">
+                                    <i class="ri-pencil-fill"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                    });
+                } else {
+                    row = `<tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="d-flex flex-column align-items-center">
+                                <div class="bg-soft-light text-muted display-3 mb-3">
+                                    <i class="ri-money-dollar-circle-line"></i>
+                                </div>
+                                <h5 class="fw-bold text-dark">Aucun solde initial configuré</h5>
+                                <p class="text-muted mx-auto" style="max-width: 300px;">
+                                    Les soldes d'ouverture permettent d'avoir une comptabilité précise dès le début de l'année.
+                                </p>
+                                <button class="btn btn-sm btn-soft-primary rounded-pill mt-2" onclick="$('#btnAddSoldeInitial').click()">
+                                    <i class="ri-add-line me-1"></i> Configurer maintenant
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }
+                $('#listSoldes').html(row);
+            }
+        });
+    }
+
+    // Load entities for the modal
+    function loadEntitesForSolde() {
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiLoadEntites' %}",
+            type: 'GET',
+            success: function(res) {
+                var select = $('#solde_entite');
+                select.find('option:not(:first)').remove();
+                $.each(res, function(i, e) {
+                    select.append(`<option value="${e.id}">${e.designation}</option>`);
+                });
+            }
+        });
+    }
+
+    $('#btnAddSoldeInitial').click(function() {
+        $('#formSoldeInitial')[0].reset();
+        loadEntitesForSolde();
+        $('#soldeInitialModal').modal('show');
+    });
+
+    $(document).on('click', '.edit-solde-initial', function() {
+        var d = $(this).data();
+        $('#solde_annee').val(d.annee);
+        $('#solde_type').val(d.type);
+        $('#solde_montant').val(d.montant);
+        
+        // Load entities and then set value
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiLoadEntites' %}",
+            type: 'GET',
+            success: function(res) {
+                var select = $('#solde_entite');
+                select.find('option:not(:first)').remove();
+                $.each(res, function(i, e) {
+                    select.append(`<option value="${e.id}">${e.designation}</option>`);
+                });
+                $('#solde_entite').val(d.entite);
+                $('#soldeInitialModal').modal('show');
+            }
+        });
+    });
+
+    $('#btnSaveSoldeInitial').click(function() {
+        var data = {
+            annee: $('#solde_annee').val(),
+            type: $('#solde_type').val(),
+            entite_id: $('#solde_entite').val(),
+            montant: $('#solde_montant').val()
+        };
+
+        $.ajax({
+            url: "{% url 't_tresorerie:api_set_solde_initial' %}",
+            type: 'POST',
+            data: JSON.stringify(data),
+            contentType: "application/json",
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            success: function(res) {
+                if (res.status === 'success') {
+                    alertify.success(res.message);
+                    $('#soldeInitialModal').modal('hide');
+                    loadSoldes();
+                } else alertify.error(res.message);
+            }
+        });
+    });
+
+    function loadFormationsFilter() {
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiLoadFormations' %}",
+            type: 'GET',
+            success: function(data) {
+                var select = $('#filter-formation-specialite');
+                $.each(data, function(i, f) {
+                    select.append(`<option value="${f.code}">${f.nom}</option>`);
+                });
+            }
+        });
+    }
+
+    $('#filter-formation-specialite').on('change', function() {
+        loadSpecialites();
+    });
+
+    // --- BULK UPDATE LOGIC ---
+    function updateBulkButtonVisibility() {
+        let checked = $('.spec-checkbox:checked');
+        let count = checked.length;
+        if (count > 0) {
+            $('#btnBulkUpdatePrices').removeClass('d-none');
+            $('#bulkSelectionCount span').text(count);
+            
+            // Populate list of selected specs
+            let list = $('#selectedSpecsList');
+            list.empty();
+            checked.each(function() {
+                list.append(`<span class="badge bg-soft-primary text-primary border border-primary-subtle rounded-pill px-2 py-1">${$(this).data('label')}</span>`);
+            });
+        } else {
+            $('#btnBulkUpdatePrices').addClass('d-none');
+        }
+    }
+
+    $('#checkAllSpecialites').on('change', function() {
+        $('.spec-checkbox').prop('checked', $(this).is(':checked'));
+        updateBulkButtonVisibility();
+    });
+
+    $(document).on('change', '.spec-checkbox', function() {
+        updateBulkButtonVisibility();
+    });
+
+    $('#btnSaveBulkPrices').click(function() {
+        let ids = [];
+        $('.spec-checkbox:checked').each(function() {
+            ids.push($(this).val());
+        });
+        let prix = $('#bulk_prix').val();
+
+        if (!prix) {
+            alertify.error('Veuillez saisir un prix valide');
+            return;
+        }
+
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiBulkUpdateSpecialitePrice' %}",
+            type: 'POST',
+            data: {
+                'ids[]': ids,
+                'prix': prix,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(res) {
+                if (res.status === 'success') {
+                    alertify.success(res.message);
+                    $('#bulkPriceModal').modal('hide');
+                    $('#bulk_prix').val('');
+                    loadSpecialites();
+                } else alertify.error(res.message);
+            }
+        });
+    });
+
+});
     // ===============================================================
 
 </script>

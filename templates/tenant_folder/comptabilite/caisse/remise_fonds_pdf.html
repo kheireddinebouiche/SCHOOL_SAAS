@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Bordereau de Remise de Fonds - {{ depot.num }}</title>
+    <style>
+        body { font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; margin: 0; padding: 40px; }
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+        .logo { font-size: 24px; font-weight: bold; color: #0d6efd; }
+        .title { text-align: center; margin-bottom: 40px; }
+        .title h1 { margin: 0; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; color: #222; }
+        .title p { margin: 5px 0 0; color: #666; font-size: 14px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
+        .info-box { background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+        .info-label { font-size: 11px; text-transform: uppercase; color: #999; font-weight: bold; margin-bottom: 5px; }
+        .info-value { font-size: 15px; font-weight: 500; }
+        .amount-section { text-align: center; background: #f0f7ff; border: 2px dashed #0d6efd; padding: 20px; border-radius: 12px; margin-bottom: 40px; }
+        .amount-value { font-size: 32px; font-weight: bold; color: #0d6efd; }
+        .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-top: 60px; }
+        .signature-box { text-align: center; height: 150px; border: 1px solid #eee; border-radius: 8px; padding: 10px; position: relative; }
+        .signature-label { font-size: 12px; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 80px; }
+        .footer { position: fixed; bottom: 40px; left: 40px; right: 40px; border-top: 1px solid #eee; padding-top: 10px; font-size: 10px; color: #999; text-align: center; }
+        @media print {
+            body { padding: 20px; }
+            .no-print { display: none; }
+            .signatures { margin-top: 40px; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="header">
+        <div class="logo">{{ depot.entite.designation }}</div>
+        <div style="text-align: right;">
+            <div style="font-weight: bold;">{{ depot.num }}</div>
+            <div style="font-size: 13px; color: #666;">Généré le {{ today|date:"d/m/Y à H:i" }}</div>
+        </div>
+    </div>
+
+    <div class="title">
+        <h1>Bordereau de Remise de Fonds</h1>
+        <p>Document attestant le transfert d'espèces de la caisse vers la banque</p>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-box">
+            <div class="info-label">Détails du Dépôt</div>
+            <div class="info-value">Date : {{ depot.date_depot|date:"d F Y" }}</div>
+            <div class="info-value">Référence : {{ depot.reference_bordereau|default:"N/A" }}</div>
+        </div>
+        <div class="info-box">
+            <div class="info-label">Banque de Destination</div>
+            <div class="info-value">{{ depot.banque_destinatrice.bank_name }}</div>
+            <div class="info-value">Compte : {{ depot.banque_destinatrice.bank_code }}</div>
+        </div>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-box">
+            <div class="info-label">Agent Remettant</div>
+            <div class="info-value">{{ depot.agent_remettant }}</div>
+        </div>
+        <div class="info-box">
+            <div class="info-label">Caissier / Opérateur</div>
+            <div class="info-value">{{ depot.cree_par.get_full_name|default:depot.cree_par.username }}</div>
+        </div>
+    </div>
+
+    <div class="amount-section">
+        <div class="info-label">Montant Total à Déposer</div>
+        <div class="amount-value">{{ depot.montant|floatformat:2 }} DA</div>
+        <div style="margin-top: 10px; font-style: italic; color: #555;">
+            Arrêté le présent bordereau à la somme de : <strong>{{ depot.montant|floatformat:2 }} Dinars Algériens</strong>
+        </div>
+    </div>
+
+    {% if depot.observation %}
+    <div class="info-box" style="margin-bottom: 40px;">
+        <div class="info-label">Observations</div>
+        <div class="info-value">{{ depot.observation }}</div>
+    </div>
+    {% endif %}
+
+    <div class="signatures">
+        <div class="signature-box">
+            <div class="signature-label">Signature du Caissier</div>
+        </div>
+        <div class="signature-box">
+            <div class="signature-label">Signature de l'Agent Remettant</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Ce document est une pièce comptable interne. Toute falsification est passible de poursuites.<br>
+        {{ depot.entite.adresse|default:"" }} - {{ depot.entite.telephone|default:"" }}
+    </div>
+
+    <div class="no-print" style="position: fixed; top: 20px; left: 20px;">
+        <button onclick="window.print()" style="padding: 10px 20px; cursor: pointer; background: #0d6efd; color: white; border: none; border-radius: 5px;">Imprimer</button>
+    </div>
+</body>
+</html>

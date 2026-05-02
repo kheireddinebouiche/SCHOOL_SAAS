@@ -390,16 +390,26 @@
 $(document).ready(function() {
     let currentPage = 1;
 
-    function loadItems(page = 1, searchQuery = '') {
+    function loadItems(page = 1) {
+        let searchQuery = $('#table-filter').val();
+        let statusFilter = $('#filter-module').val();
+        let orderBy = $('#date_filter-module').val();
+
         $('#ListItems').html('<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></td></tr>');
         
         $.ajax({
             url: '{% url "t_formations:ApiGetModules" %}',
             type: 'GET',
-            data: { page: page, search: searchQuery },
+            data: { 
+                page: page, 
+                search: searchQuery,
+                status: statusFilter,
+                order_by: orderBy
+            },
             success: function(res) {
                 var data = res.data;
                 var pagination = res.pagination;
+                var stats = res.stats;
                 var html = "";
                 
                 if (data.length === 0) {
@@ -435,8 +445,12 @@ $(document).ready(function() {
                             </tr>`;
                     });
                     renderPagination(pagination);
-                    $('#totalModules').text(pagination.total_items);
-                    $('#modulesActifs').text(data.filter(x => x.est_valider).length); // Simplified mockup logic
+                    
+                    // Update stats
+                    $('#totalModules').text(stats.total);
+                    $('#modulesActifs').text(stats.valides);
+                    $('#enAttenteCount').text(stats.en_attente);
+                    $('#modulesInactifs').text(stats.inactifs);
                 }
                 $("#ListItems").html(html);
             }
@@ -444,28 +458,63 @@ $(document).ready(function() {
     }
 
     function renderPagination(p) {
-        if (!p) return;
-        $('#paginationInfo').text(`Affichage ${p.start_index}-${p.end_index} sur ${p.total_items}`);
-        let h = "";
-        h += `<li class="page-item ${!p.has_previous ? 'disabled' : ''}"><a class="page-link" href="#" data-page="${p.current_page - 1}">Précédent</a></li>`;
-        
-        for (let i = 1; i <= p.total_pages; i++) {
-            if (i == p.current_page) h += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
-            else h += `<li class="page-item"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+        if (!p || p.total_pages <= 1) {
+            $('#paginationLinks').html('');
+            $('#paginationInfo').text(p.total_items > 0 ? `Affichage de tous les ${p.total_items} modules` : '');
+            return;
         }
+
+        $('#paginationInfo').text(`Affichage ${p.start_index}-${p.end_index} sur ${p.total_items}`);
         
-        h += `<li class="page-item ${!p.has_next ? 'disabled' : ''}"><a class="page-link" href="#" data-page="${p.current_page + 1}">Suivant</a></li>`;
+        let h = "";
+        
+        // Previous Button
+        h += `<li class="page-item ${!p.has_previous ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${p.current_page - 1}" ${!p.has_previous ? 'tabindex="-1" aria-disabled="true"' : ''}>
+                    <i class="ri-arrow-left-s-line"></i>
+                </a>
+              </li>`;
+
+        // Smart Page Numbers
+        const range = 2; // Pages to show around current
+        const total = p.total_pages;
+        const current = p.current_page;
+
+        for (let i = 1; i <= total; i++) {
+            if (i === 1 || i === total || (i >= current - range && i <= current + range)) {
+                h += `<li class="page-item ${i === current ? 'active' : ''}">
+                        ${i === current ? `<span class="page-link">${i}</span>` : `<a class="page-link" href="#" data-page="${i}">${i}</a>`}
+                      </li>`;
+            } else if (i === current - range - 1 || i === current + range + 1) {
+                h += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+        }
+
+        // Next Button
+        h += `<li class="page-item ${!p.has_next ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${p.current_page + 1}" ${!p.has_next ? 'tabindex="-1" aria-disabled="true"' : ''}>
+                    <i class="ri-arrow-right-s-line"></i>
+                </a>
+              </li>`;
+
         $('#paginationLinks').html(h);
     }
 
     $(document).on('click', '.page-link', function(e) {
         e.preventDefault();
-        loadItems($(this).data('page'), $('#table-filter').val());
+        if ($(this).closest('.page-item').hasClass('disabled') || $(this).closest('.page-item').hasClass('active')) return;
+        
+        let page = $(this).data('page');
+        if (page) loadItems(page);
     });
 
     $('#table-filter').on('input', function() {
         clearTimeout(this.delay);
-        this.delay = setTimeout(() => loadItems(1, $(this).val()), 500);
+        this.delay = setTimeout(() => loadItems(1), 500);
+    });
+
+    $('#filter-module, #date_filter-module').on('change', function() {
+        loadItems(1);
     });
 
     loadItems();

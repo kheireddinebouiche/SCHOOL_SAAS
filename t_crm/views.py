@@ -425,7 +425,10 @@ def InscriptionParticulier(request):
     }
     return render(request, 'tenant_folder/crm/inscription_particulier.html', context)
 
-@login_required(login_url='institut_app:login') 
+@login_required(login_url='institut_app:login')
+@module_permission_required('crm','view')
+@module_permission_required('crm','add')
+@role_required('crm', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def InscriptionEntreprise(request):
     form = NewProspecFormEntreprise()
     if request.method == "POST":
@@ -470,6 +473,8 @@ def ApiLoadProspects(request):
     return JsonResponse(list(prospects), safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('crm', 'delete')
+@role_required('crm', ['Administrateur', 'Manager', 'Superviseur'])
 def ApiDeleteProspect(request):
     id_prospect = Prospets.objects.get(id = request.POST.get('id_prospect'))
     id_prospect.delete()
@@ -763,7 +768,88 @@ def ApiCreateVoeuxDouble(request):
             return JsonResponse({'status' : 'error','message':'Veuillez remplir tous les champs.'})
     else:
         return JsonResponse({'status' : 'error'})
+
 @login_required(login_url="institut_app:login")
+def ApiCheckDuplicateProspect(request):
+    nom = request.GET.get('nom', '').strip()
+    prenom = request.GET.get('prenom', '').strip()
+    if not nom or not prenom:
+        return JsonResponse({'exists': False})
+    
+    from django.db.models.functions import Trim
+    from .models import Prospets, FicheDeVoeux, FicheVoeuxDouble, Visiteurs, DemandeInscription
+    
+    # 1. Search in Prospets
+    duplicates_prospects = Prospets.objects.annotate(
+        t_nom=Trim('nom'), t_prenom=Trim('prenom')
+    ).filter(t_nom__iexact=nom, t_prenom__iexact=prenom)
+    
+    data = []
+    
+    for d in duplicates_prospects:
+        voeux = FicheDeVoeux.objects.filter(prospect=d).order_by('-created_at').first()
+        if voeux:
+            promo = voeux.promo.label if voeux.promo else "N/A"
+            specialite = voeux.specialite.label if voeux.specialite else "N/A"
+            formation = voeux.specialite.formation.nom if voeux.specialite and voeux.specialite.formation else "N/A"
+        else:
+            voeux_double = FicheVoeuxDouble.objects.filter(prospect=d).order_by('-created_at').first()
+            if voeux_double:
+                promo = voeux_double.promo.label if voeux_double.promo else "N/A"
+                specialite = voeux_double.specialite.label if voeux_double.specialite else "N/A"
+                # DoubleDiplomation n'a pas de formation directe, on prend celle de specialite1
+                if voeux_double.specialite and voeux_double.specialite.specialite1 and voeux_double.specialite.specialite1.formation:
+                    formation = voeux_double.specialite.specialite1.formation.nom
+                else:
+                    formation = "Double Diplomation"
+            else:
+                promo = "N/A"
+                specialite = "N/A"
+                formation = "N/A"
+        
+        data.append({
+            'type': 'Prospect',
+            'nom': d.nom,
+            'prenom': d.prenom,
+            'promo': promo,
+            'formation': formation,
+            'specialite': specialite,
+            'date_creation': d.created_at.strftime('%d/%m/%Y')
+        })
+
+    # 2. Search in Visiteurs
+    duplicates_visiteurs = Visiteurs.objects.annotate(
+        t_nom=Trim('nom'), t_prenom=Trim('prenom')
+    ).filter(t_nom__iexact=nom, t_prenom__iexact=prenom)
+
+    for v in duplicates_visiteurs:
+        # Check if already counted via Prospect (related_prospect)
+        # Usually they are converted, but let's be sure.
+        demande = DemandeInscription.objects.filter(visiteur=v).order_by('-created_at').first()
+        if demande:
+            promo = demande.promo.label if demande.promo else "N/A"
+            specialite = demande.specialite.label if demande.specialite else "N/A"
+            formation = demande.formation.nom if demande.formation else "N/A"
+        else:
+            promo = "N/A"
+            specialite = "N/A"
+            formation = "N/A"
+
+        data.append({
+            'type': 'Visiteur',
+            'nom': v.nom,
+            'prenom': v.prenom,
+            'promo': promo,
+            'formation': formation,
+            'specialite': specialite,
+            'date_creation': v.created_at.strftime('%d/%m/%Y')
+        })
+    
+    if data:
+        return JsonResponse({'exists': True, 'duplicates': data})
+    
+    return JsonResponse({'exists': False})
+
 def ApiQuickSearchExistingContact(request):
     search_type = request.GET.get('search_type', '')
     

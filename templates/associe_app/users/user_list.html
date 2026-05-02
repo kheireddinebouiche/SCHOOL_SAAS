@@ -1,0 +1,248 @@
+{% extends 'public_folder/base.html' %} 
+
+{% block content %}
+<style>
+    :root {
+        --primary-indigo: #6366f1;
+        --secondary-indigo: #4f46e5;
+        --bg-main: #f4f7fe;
+        --card-glass: rgba(255, 255, 255, 0.95);
+        --border-glass: rgba(255, 255, 255, 0.5);
+    }
+
+    .main-content {
+        background-color: var(--bg-main) !important;
+        min-height: 100vh;
+    }
+
+    .page-title-box {
+        background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%) !important;
+        border-radius: 1.5rem !important;
+        padding: 2.5rem !important;
+        color: white;
+        margin-bottom: 2rem;
+        box-shadow: 0 15px 35px rgba(13, 71, 161, 0.15);
+    }
+
+    .user-card {
+        background: var(--card-glass);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border-glass);
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+        overflow: hidden;
+    }
+
+    .table-custom {
+        margin-bottom: 0;
+    }
+
+    .table-custom thead th {
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        color: #64748b;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 1px;
+        padding: 1.25rem 1.5rem;
+    }
+
+    .table-custom tbody td {
+        padding: 1.25rem 1.5rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
+        color: #1e293b;
+        font-size: 0.9rem;
+    }
+
+    .avatar-initial {
+        width: 40px;
+        height: 40px;
+        background: var(--primary-indigo);
+        color: white;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.1rem;
+        box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+    }
+
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 0.75rem;
+    }
+
+    .badge-soft-success { background: #ecfdf5; color: #10b981; }
+    .badge-soft-danger { background: #fef2f2; color: #ef4444; }
+    .badge-soft-primary { background: #eef2ff; color: #6366f1; }
+
+    .action-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        border: 1px solid #e2e8f0;
+        background: white;
+        color: #64748b;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .action-btn.edit:hover { background: var(--primary-indigo); color: white; border-color: var(--primary-indigo); }
+    .action-btn.delete:hover { background: #ef4444; color: white; border-color: #ef4444; }
+    .action-btn.status:hover { background: #f59e0b; color: white; border-color: #f59e0b; }
+
+    .btn-add-user {
+        background: white !important;
+        color: #1a237e !important;
+        font-weight: 800 !important;
+        border-radius: 12px !important;
+        padding: 0.8rem 1.5rem !important;
+        border: none !important;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        transition: all 0.3s;
+    }
+
+    .btn-add-user:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-up {
+        animation: fadeInUp 0.5s ease-out forwards;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <!-- Header -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="page-title-box d-sm-flex align-items-center justify-content-between animate-up">
+                        <div>
+                            <h2 class="mb-1 text-white fw-bold">Gestion des Utilisateurs</h2>
+                            <p class="text-white-50 mb-0">Gérez les accès et les permissions des administrateurs de la plateforme.</p>
+                        </div>
+                        <div>
+                            <a href="{% url 'associe_app:user_create' %}" class="btn btn-add-user">
+                                <i class="ri-user-add-line me-2"></i> Nouvel Utilisateur
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User List -->
+            <div class="row">
+                <div class="col-12 animate-up" style="animation-delay: 0.1s;">
+                    <div class="user-card">
+                        <div class="table-responsive">
+                            <table class="table table-custom align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Utilisateur</th>
+                                        <th>Email</th>
+                                        <th>Rôle</th>
+                                        <th>Statut</th>
+                                        <th>Date d'inscription</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for u in users %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="avatar-initial">
+                                                    {{ u.username|first|upper }}
+                                                </div>
+                                                <div>
+                                                    <h6 class="fw-bold mb-0 text-dark">{{ u.get_full_name|default:u.username }}</h6>
+                                                    <small class="text-muted">@{{ u.username }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ u.email|default:"---" }}</td>
+                                        <td>
+                                            {% if u.is_superuser %}
+                                                <span class="status-badge badge-soft-danger">Super Admin</span>
+                                            {% elif u.is_staff %}
+                                                <span class="status-badge badge-soft-primary">Staff</span>
+                                            {% else %}
+                                                <span class="status-badge badge-soft-primary text-muted">Utilisateur</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if u.is_active %}
+                                                <span class="status-badge badge-soft-success">Actif</span>
+                                            {% else %}
+                                                <span class="status-badge badge-soft-danger">Désactivé</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ u.date_joined|date:"d M Y" }}</td>
+                                        <td class="text-end">
+                                            <div class="d-flex gap-2 justify-content-end">
+                                                <a href="{% url 'associe_app:user_toggle_status' u.pk %}" class="action-btn status" title="{% if u.is_active %}Désactiver{% else %}Activer{% endif %}">
+                                                    <i class="ri-shield-user-line"></i>
+                                                </a>
+                                                <a href="{% url 'associe_app:user_edit' u.pk %}" class="action-btn edit" title="Modifier">
+                                                    <i class="ri-edit-2-line"></i>
+                                                </a>
+                                                {% if not u.is_superuser %}
+                                                <button type="button" class="action-btn delete" onclick="confirmDelete({{ u.pk }}, '{{ u.username }}')" title="Supprimer">
+                                                    <i class="ri-delete-bin-6-line"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function confirmDelete(id, username) {
+        alertify.confirm('Supprimer l\'utilisateur', 
+            `Êtes-vous sûr de vouloir supprimer l'utilisateur <strong>${username}</strong> ? Cette action est irréversible.`, 
+            function() {
+                $.ajax({
+                    url: "{% url 'associe_app:user_delete' 0 %}".replace('0', id),
+                    type: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}' },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alertify.success(response.message);
+                            location.reload();
+                        } else {
+                            alertify.error(response.message);
+                        }
+                    }
+                });
+            }, function() {}
+        ).set('labels', {ok:'Supprimer', cancel:'Annuler'});
+    }
+</script>
+{% endblock %}

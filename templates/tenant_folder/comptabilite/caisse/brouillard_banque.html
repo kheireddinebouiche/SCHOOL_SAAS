@@ -36,22 +36,38 @@
         transition: background-color 0.2s ease;
     }
 
-    .search-input-group {
-        position: relative;
+    .premium-input {
+        background-color: #f8fafc !important;
+        border: 1.5px solid #e2e8f0 !important;
+        padding: 0.75rem 1.25rem;
+        border-radius: 1rem !important;
+        font-weight: 500;
+        transition: all 0.3s ease !important;
     }
 
-    .search-input-group i {
+    input.premium-input#table-filter {
+        padding-left: 3.25rem !important;
+    }
+
+    .premium-input:focus {
+        background-color: white !important;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1) !important;
+    }
+
+    .search-box i {
         position: absolute;
-        left: 1rem;
         top: 50%;
+        left: 1.25rem;
         transform: translateY(-50%);
-        color: #94a3b8;
+        color: #64748b;
+        z-index: 10;
+        pointer-events: none;
+        font-size: 1.2rem;
     }
 
-    .search-input-group .form-control {
-        padding-left: 2.75rem;
-        border-radius: 0.75rem;
-        border: 1px solid #e2e8f0;
+    .search-box {
+        position: relative;
     }
 
     .btn-rounded { border-radius: 0.75rem; }
@@ -124,12 +140,12 @@
           <div class="card glass-card stat-card-premium">
             <div class="card-body p-4">
               <div class="d-flex align-items-center">
-                <div class="icon-container-premium bg-soft-primary me-3">
-                  <i class="ri-bank-line text-primary fs-3"></i>
+                <div class="icon-container-premium bg-soft-info me-3">
+                  <i class="ri-play-circle-line text-info fs-3"></i>
                 </div>
                 <div>
-                  <p class="text-muted mb-1 small text-uppercase fw-bold">Solde total</p>
-                  <h4 class="mb-0 fw-bold" id="soldeTotal">0.00 DZD</h4>
+                  <p class="text-muted mb-1 small text-uppercase fw-bold">Solde initial</p>
+                  <h4 class="mb-0 fw-bold" id="soldeInitialStat">0,00 DA</h4>
                 </div>
               </div>
             </div>
@@ -172,12 +188,12 @@
           <div class="card glass-card stat-card-premium">
             <div class="card-body p-4">
               <div class="d-flex align-items-center">
-                <div class="icon-container-premium bg-soft-info me-3">
-                  <i class="ri-history-line text-info fs-3"></i>
+                <div class="icon-container-premium bg-soft-primary me-3">
+                  <i class="ri-bank-line text-primary fs-3"></i>
                 </div>
                 <div>
-                  <p class="text-muted mb-1 small text-uppercase fw-bold">Total opérations</p>
-                  <h4 class="mb-0 fw-bold" id="totalOperations">0</h4>
+                  <p class="text-muted mb-1 small text-uppercase fw-bold">Solde final</p>
+                  <h4 class="mb-0 fw-bold" id="soldeTotal">0,00 DA</h4>
                 </div>
               </div>
             </div>
@@ -190,56 +206,60 @@
         <div class="col-lg-12">
           <div class="card glass-card border-0">
             <div class="card-header bg-transparent border-0 p-4 pb-0">
-              <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-                <div class="d-flex align-items-center">
-                  <i class="ri-filter-2-line text-primary me-2 fs-4"></i>
-                  <h5 class="card-title mb-0 fw-bold">Journal Bancaire</h5>
-                </div>
-
-                <div class="d-flex flex-wrap align-items-center gap-3">
-                  <div class="search-input-group" style="min-width: 250px;">
-                    <i class="ri-search-2-line text-muted"></i>
-                    <input type="text" class="form-control" id="table-filter" placeholder="Rechercher...">
+              <div class="row g-3 mb-3">
+                <!-- Recherche -->
+                <div class="col-lg-3 col-md-6">
+                  <div class="search-box">
+                    <i class="ri-search-line"></i>
+                    <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control premium-input" />
                   </div>
-
-                  <div class="d-flex align-items-center gap-2">
-                    <select class="form-select btn-rounded" id="yearFilter" style="width: 140px;">
+                </div>
+                
+                <!-- Filtres Additionnels (Année, Entité, Type) -->
+                <div class="col-lg-5 col-md-6">
+                  <div class="d-flex gap-2">
+                    <select class="form-select premium-input" id="yearFilter">
                       {% for y in available_years %}
                         <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}/{{ y|add:1 }}</option>
                       {% endfor %}
                     </select>
-
-                    <select class="form-select btn-rounded" id="entiteFilter" style="width: 180px;">
+                    <select class="form-select premium-input" id="entiteFilter">
                       <option value="0">Toutes les entités</option>
                     </select>
-
-                    <select class="form-select btn-rounded" id="typeFilter" style="width: 150px;">
+                    <select class="form-select premium-input" id="typeFilter">
                       <option value="0">Tous types</option>
                       <option value="entree">Entrées</option>
                       <option value="sortie">Sorties</option>
                     </select>
-
-                    <div class="input-group input-group-sm">
-                      <input type="date" id="dateFrom" class="form-control btn-rounded" style="width: 130px;">
-                      <span class="input-group-text bg-transparent border-0">à</span>
-                      <input type="date" id="dateTo" class="form-control btn-rounded" style="width: 130px;">
-                    </div>
-
-                    <button id="filterByDate" class="btn btn-primary btn-rounded px-3">
-                      <i class="ri-filter-line"></i>
-                    </button>
-                    <button id="clearDateFilter" class="btn btn-soft-secondary btn-rounded px-3">
-                      <i class="ri-close-line"></i>
-                    </button>
                   </div>
+                </div>
 
-                  <div class="d-flex gap-2">
-                    <button id="exportExcel" class="btn btn-soft-success btn-rounded px-3">
-                      <i class="ri-file-excel-line me-1"></i> Excel
-                    </button>
-                    <button id="exportPDF" class="btn btn-soft-danger btn-rounded px-3">
-                      <i class="ri-file-pdf-line me-1"></i> PDF
-                    </button>
+                <!-- Période et Actions -->
+                <div class="col-lg-4 col-md-12">
+                  <div class="d-flex flex-wrap justify-content-lg-end align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                      <input type="date" id="dateFrom" class="form-control premium-input" style="width: 130px;">
+                      <span class="text-muted small fw-bold">à</span>
+                      <input type="date" id="dateTo" class="form-control premium-input" style="width: 130px;">
+                    </div>
+                    
+                    <div class="btn-group gap-1">
+                      <button id="filterByDate" class="btn btn-primary rounded-pill shadow-sm" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;" title="Filtrer par date">
+                        <i class="ri-filter-3-line fs-5"></i>
+                      </button>
+                      <button id="clearDateFilter" class="btn btn-light rounded-pill shadow-sm" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;" title="Réinitialiser">
+                        <i class="ri-refresh-line fs-5"></i>
+                      </button>
+                    </div>
+                    
+                    <div class="d-flex gap-1">
+                      <button id="exportExcel" class="btn btn-soft-success rounded-pill px-3">
+                        <i class="ri-file-excel-line"></i>
+                      </button>
+                      <button id="exportPDF" class="btn btn-soft-danger rounded-pill px-3">
+                        <i class="ri-file-pdf-line"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -262,19 +282,21 @@
   $(document).ready(function(){
     var allBrouillardData = [];
     var currentSearchTerm = '';
+    var currentSoldeInitial = 0;
     var currentTypeFilter = '0';
 
-    // Helper function to format money with thousands separator
+    // Helper function to format money with accounting format
     function formatMoney(amount) {
+      if (amount === undefined || amount === null) return '0,00 DA';
       if (typeof amount === 'string') {
         amount = parseFloat(amount);
       }
-      if (isNaN(amount)) return '0.00';
+      if (isNaN(amount)) return '0,00 DA';
       
       return amount.toLocaleString('fr-FR', {
         minimumFractionDigits: 2, 
         maximumFractionDigits: 2
-      }).replace(/\./g, ' '); 
+      }) + ' DA';
     }
 
     function loadItems(){
@@ -285,6 +307,7 @@
         success: function(response){
           // Store all data for filtering
           allBrouillardData = response.mouvements || [];
+          currentSoldeInitial = response.solde_initial || 0;
 
           // Dynamically populate entity filter
           var entities = {};
@@ -377,10 +400,10 @@
       // Check if the response has data
       if (filteredData.length === 0) {
         // Update statistics cards with zero values
-        $('#soldeTotal').text('0.00 DZD');
-        $('#totalEntrees').text('0.00 DZD');
-        $('#totalSorties').text('0.00 DZD');
-        $('#totalOperations').text('0');
+        $('#soldeInitialStat').text(formatMoney(currentSoldeInitial));
+        $('#totalEntrees').text(formatMoney(0));
+        $('#totalSorties').text(formatMoney(0));
+        $('#soldeTotal').text(formatMoney(currentSoldeInitial));
 
         container.append(`
           <div class="d-flex flex-column align-items-center justify-content-center py-5">
@@ -424,7 +447,7 @@
           });
 
           // Recalculate running balance
-          var runningBalance = 0;
+          var runningBalance = currentSoldeInitial;
           $.each(sortedFilteredData, function(i, transaction) {
             var montant = parseFloat(transaction.montant) || 0;
             if (transaction.type === 'entree') {
@@ -467,13 +490,13 @@
         });
 
         // Use the final running balance from the filtered data
-        var soldeTotal = filteredData.length > 0 ? filteredData[filteredData.length - 1].solde : 0;
+        var soldeFinal = filteredData.length > 0 ? filteredData[filteredData.length - 1].solde : currentSoldeInitial;
 
         // Update statistics cards
-        $('#soldeTotal').text(formatMoney(soldeTotal) + ' DZD');
-        $('#totalEntrees').text(formatMoney(totalEntrees) + ' DZD');
-        $('#totalSorties').text(formatMoney(totalSorties) + ' DZD');
-        $('#totalOperations').text(totalOperations);
+        $('#soldeInitialStat').text(formatMoney(currentSoldeInitial));
+        $('#soldeTotal').text(formatMoney(soldeFinal));
+        $('#totalEntrees').text(formatMoney(totalEntrees));
+        $('#totalSorties').text(formatMoney(totalSorties));
 
         // Create HTML for each date group
         $.each(sortedDates, function(index, date) {
@@ -529,23 +552,23 @@
                   <div class="d-flex gap-3">
                     <div class="text-center">
                       <div class="text-info small">Solde initial</div>
-                      <div class="fw-bold text-info">${formatMoney(initialBalance)} DZD</div>
+                      <div class="fw-bold text-info">${formatMoney(initialBalance)}</div>
                     </div>
                     <div class="text-center">
                       <div class="text-success small">Entrées</div>
-                      <div class="fw-bold">${formatMoney(entreesTotal)} DZD</div>
+                      <div class="fw-bold">${formatMoney(entreesTotal)}</div>
                     </div>
                     <div class="text-center">
                       <div class="text-danger small">Sorties</div>
-                      <div class="fw-bold">${formatMoney(sortiesTotal)} DZD</div>
+                      <div class="fw-bold">${formatMoney(sortiesTotal)}</div>
                     </div>
                     <div class="text-center">
                       <div class="text-primary small">Net</div>
-                      <div class="fw-bold ${netTotal >= 0 ? 'text-success' : 'text-danger'}">${formatMoney(netTotal)} DZD</div>
+                      <div class="fw-bold ${netTotal >= 0 ? 'text-success' : 'text-danger'}">${formatMoney(netTotal)}</div>
                     </div>
                     <div class="text-center">
                       <div class="text-warning small">Solde final</div>
-                      <div class="fw-bold ${finalBalance >= 0 ? 'text-success' : 'text-danger'}">${formatMoney(finalBalance)} DZD</div>
+                      <div class="fw-bold ${finalBalance >= 0 ? 'text-success' : 'text-danger'}">${formatMoney(finalBalance)}</div>
                     </div>
                   </div>
                 </div>
@@ -560,8 +583,8 @@
                         <th class="border-0">Client/Fournisseur</th>
                         <th class="border-0">Entité</th>
                         <th class="border-0">Type</th>
-                        <th class="border-0">Montant</th>
-                        <th class="border-0">Solde</th>
+                        <th class="border-0 text-end">Montant</th>
+                        <th class="border-0 text-end">Solde</th>
                         <th class="border-0 rounded-end text-center">Actions</th>
                       </tr>
                     </thead>
@@ -574,8 +597,8 @@
               '<span class="badge bg-primary">Encaissement</span>' :
               '<span class="badge bg-danger">Décaissement</span>';
             var montantText = transaction.type === 'entree' ?
-              '<span class="text-success fw-bold">+' + formatMoney(transaction.montant) + ' DZD</span>' :
-              '<span class="text-danger fw-bold">-' + formatMoney(transaction.montant) + ' DZD</span>';
+              '<span class="text-success fw-bold">+' + formatMoney(transaction.montant) + '</span>' :
+              '<span class="text-danger fw-bold">-' + formatMoney(transaction.montant) + '</span>';
 
             var transactionRow = `
               <tr>
@@ -599,14 +622,14 @@
                     ${typeBadge}
                   </div>
                 </td>
-                <td>
+                <td class="text-end">
                   <div class="text-body">
                     ${montantText}
                   </div>
                 </td>
-                <td>
+                <td class="text-end">
                   <div class="text-body">
-                    <span class="fw-bold ${transaction.solde >= 0 ? 'text-success' : 'text-danger'}">${formatMoney(transaction.solde)} DZD</span>
+                    <span class="fw-bold ${transaction.solde >= 0 ? 'text-success' : 'text-danger'}">${formatMoney(transaction.solde)}</span>
                   </div>
                 </td>
                 <td class="text-end">
@@ -681,6 +704,10 @@
     $('#typeFilter').on('change', function() {
       currentTypeFilter = this.value;
       applyFilters();
+    });
+
+    $('#yearFilter').on('change', function() {
+      window.location.href = "{% url 't_tresorerie:PageBrouillardBanque' %}?year=" + this.value;
     });
 
     $('#entiteFilter').on('change', function() {
@@ -818,7 +845,7 @@
           transaction.entite_name || 'N/A',
           typeLabel,
           montantText,
-          formatMoney(transaction.solde) + ' DZD'
+          formatMoney(transaction.solde)
         ]);
       });
 
@@ -961,7 +988,7 @@
             transaction.entite_name || 'N/A',
             typeLabel,
             montantText,
-            formatMoney(transaction.solde) + ' DZD'
+            formatMoney(transaction.solde)
           ]);
         });
       }

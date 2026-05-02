@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from .models import *
 from .forms import *
+from t_groupe.models import Groupe
 from django.contrib.auth.decorators import login_required
 from django.db import transaction, IntegrityError
 from django.db.models.deletion import ProtectedError
@@ -464,25 +465,25 @@ def ApiCheckFormationState(request):
         return JsonResponse({'status': False}) 
 
 def ApiSyncPartenaire(request):
-
     code_partenaire = request.POST.get('code_partenaire')
     shema_name = request.POST.get('schema_name')
-    partenaire  = Partenaires.objects.get(code = code_partenaire)
+    partenaire = Partenaires.objects.get(code=code_partenaire)
 
     institut = Institut.objects.get(schema_name=shema_name)
     with schema_context(institut.schema_name):
-        sync_partenaire = Partenaires(
-            nom = partenaire.nom,
-            code = partenaire.code,
-            adresse = partenaire.adresse,
-
-            telephone = partenaire.telephone,
-            email = partenaire.email,
-            site_web = partenaire.site_web,
-            type_partenaire = partenaire.type_partenaire,
+        sync_partenaire, created = Partenaires.objects.update_or_create(
+            code=partenaire.code,
+            defaults={
+                'nom': partenaire.nom,
+                'adresse': partenaire.adresse,
+                'telephone': partenaire.telephone,
+                'email': partenaire.email,
+                'site_web': partenaire.site_web,
+                'type_partenaire': partenaire.type_partenaire,
+            }
         )
-        sync_partenaire.save()
-        return JsonResponse({'success': True, 'message': 'Partenaire synchronisé avec succès'})
+        message = 'Partenaire synchronisé avec succès' if created else 'Informations du partenaire mises à jour avec succès'
+        return JsonResponse({'success': True, 'message': message})
         
 def deletePartenaire(request, pk):
     partenaire = Partenaires.objects.get(id=pk)
@@ -718,17 +719,56 @@ def detailSpecialite(request, pk):
     return render(request, 'tenant_folder/formations/details_specialite.html', context)
 
 def ApiGetSpecialiteModule(request):
-    id = request.GET.get('id')
-    modules = Modules.objects.filter(specialite_id = id, is_archived = False).values('id', 'label','code','coef','duree', 'est_valider').order_by('created_at')
+    try:
+        id = request.GET.get('id')
+        search_query = request.GET.get('search', '')
+        page_number = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 10))
 
-    specialite = Specialites.objects.get(id = id)
+        if not id:
+            return JsonResponse({'status': 'error', 'message': 'ID de spécialité manquant'}, status=400)
 
-    data  = {
-       'modules' : list(modules),
-       'nb_semestre' : specialite.nb_semestre,
-    }
+        # Base query
+        queryset = Modules.objects.filter(specialite_id=id, is_archived=False)
+        
+        # Apply search filter
+        if search_query:
+            queryset = queryset.filter(
+                Q(label__icontains=search_query) | 
+                Q(code__icontains=search_query) |
+                Q(code_interne__icontains=search_query)
+            )
+            
+        # Order and values
+        queryset = queryset.order_by('created_at')
+        
+        # All modules for select dropdown (unpaginated)
+        all_modules = queryset.values('id', 'label')
 
-    return JsonResponse(data, safe=False)
+        # Pagination
+        paginator = Paginator(queryset.values('id', 'label','code','code_interne','coef','duree', 'est_valider'), page_size)
+        page_obj = paginator.get_page(page_number)
+        
+        specialite = Specialites.objects.get(id=id)
+
+        data = {
+           'modules': list(page_obj.object_list),
+           'all_modules': list(all_modules), # For the repartition select
+           'nb_semestre': specialite.nb_semestre,
+           'pagination': {
+                'total_pages': paginator.num_pages,
+                'current_page': page_obj.number,
+                'total_items': paginator.count,
+                'has_next': page_obj.has_next(),
+                'has_previous': page_obj.has_previous(),
+                'start_index': page_obj.start_index() if paginator.count > 0 else 0,
+                'end_index': page_obj.end_index() if paginator.count > 0 else 0
+            }
+        }
+
+        return JsonResponse(data, safe=False)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
@@ -816,7 +856,7 @@ def ApiDuplicateSpecialite(request):
 @login_required(login_url="institut_app:login")
 def ApiGetRepartitionModule(request):
     id_specialite = request.GET.get('id_specialite')
-    object = ProgrammeFormation.objects.filter(specialite = id_specialite).values('id', 'module__label','module__code','semestre')
+    object = ProgrammeFormation.objects.filter(specialite = id_specialite).values('id', 'module__label','module__code','module__code_interne','semestre')
 
     return JsonResponse(list(object), safe=False)
 
@@ -906,7 +946,7 @@ def archiveModule(request):
 @login_required(login_url="institut_app:login")
 def ApiGetModuleDetails(request):
     id = request.GET.get('id')
-    obj = Modules.objects.filter(id = id).values('id', 'code', 'label', 'duree', 'coef', 'n_elimate', 'systeme_eval')
+    obj = Modules.objects.filter(id = id).values('id', 'code', 'label', 'duree', 'coef', 'n_elimate', 'systeme_eval', 'code_interne')
     return JsonResponse(list(obj), safe=False)
 
 @login_required(login_url="institut_app:login")
@@ -918,11 +958,18 @@ def ApiUpdateModule(request):
     duree = request.POST.get('duree')
     label = request.POST.get('label')
     code = request.POST.get('code')
+    code_interne = request.POST.get('code_interne')
     n_elimate = request.POST.get('n_elimate')
     systeme_eval = request.POST.get('systeme_eval')
 
     module = Modules.objects.get(id= id)
-    module.code_interne = code
+    if code:
+        module.code = code
+    if code_interne:
+        module.code_interne = code_interne
+    else:
+        # Fallback for old frontend behavior if needed
+        module.code_interne = code
     module.duree = duree
     module.label = label
     module.coef = coef
@@ -957,7 +1004,7 @@ def listPromos(request):
 
 @login_required(login_url="institut_app:login")
 def ApiListePromos(request):
-    liste= Promos.objects.filter().values('id','label','session','etat','code','begin_year','end_year','date_debut', 'date_fin','annee_academique')
+    liste= Promos.objects.filter().values('id','label','session','etat','code','begin_year','end_year','annee_academique')
 
     for l in liste:
         l_obj = Promos.objects.get(id = l['id'])
@@ -1011,6 +1058,18 @@ def AddPromo(request):
     return render(request, 'tenant_folder/formations/promos/new_promo.html', context)
 
 @login_required(login_url="institut_app:login")
+def detailPromo(request, pk):
+    promo = Promos.objects.get(id=pk)
+    groupes = Groupe.objects.filter(promotion=promo).select_related('specialite')
+    
+    context = {
+        'promo': promo,
+        'groupes': groupes,
+        'tenant': request.tenant
+    }
+    return render(request, 'tenant_folder/formations/promos/details_promo.html', context)
+
+@login_required(login_url="institut_app:login")
 def ApiDeletePromo(request):
     id = request.POST.get('id')
     promo = Promos.objects.get(id = id)
@@ -1023,7 +1082,7 @@ def ApiDeletePromo(request):
 @login_required(login_url="institut_app:login")
 def ApiGetPromo(request):
     id = request.GET.get('id')
-    promo = Promos.objects.filter(id = id).values('id', 'label', 'session','code','begin_year','end_year','date_debut','date_fin','annee_academique')
+    promo = Promos.objects.filter(id = id).values('id', 'label', 'session','code','begin_year','end_year','annee_academique')
     return JsonResponse(list(promo), safe=False)
 
 @login_required(login_url="institut_app:login")
@@ -1038,8 +1097,6 @@ def ApiUpdatePromo(request):
         new_end_year = request.POST.get('new_end_year')
 
         annee_academique = request.POST.get('annee_academique')
-        new_date_debut = request.POST.get('new_date_debut')
-        new_date_fin = request.POST.get('new_date_fin')
 
         if not label or not session:
             return JsonResponse({'success' : False, 'message' : 'Veuillez remplir les champs obligatoires'})
@@ -1050,8 +1107,6 @@ def ApiUpdatePromo(request):
             promo.code = new_code
             promo.begin_year = new_begin_year
             promo.end_year = new_end_year
-            promo.date_debut = new_date_debut
-            promo.date_fin = new_date_fin
             promo.annee_academique = annee_academique
             promo.save()
             return JsonResponse({'success' : True, 'message' : 'Promo mise à jour avec succès'})
@@ -1081,33 +1136,56 @@ def ApiGetModules(request):
         page_number = int(request.GET.get('page', 1))
         page_size = int(request.GET.get('page_size', 10))
         search_query = request.GET.get('search', '')
+        status_filter = request.GET.get('status', '0')
+        order_by = request.GET.get('order_by', '-created_at')
         
         # Base query
-        queryset = Modules.objects.filter(is_archived=False).values(
-            'id', 'label', 'coef', 'duree', 'code', 'est_valider', 'created_at'
-        ).order_by('-created_at')
+        queryset = Modules.objects.filter(is_archived=False)
         
-        # Apply search filter
+        # Apply filters
         if search_query:
             queryset = queryset.filter(
                 Q(label__icontains=search_query) | 
-                Q(code__icontains=search_query)
+                Q(code__icontains=search_query) |
+                Q(code_interne__icontains=search_query)
             )
+        
+        if status_filter == 'actif':
+            queryset = queryset.filter(est_valider=True)
+        elif status_filter == 'inactif':
+            queryset = queryset.filter(est_valider=False)
+            
+        # Apply ordering
+        if order_by in ['created_at', '-created_at']:
+            queryset = queryset.order_by(order_by)
+        else:
+            queryset = queryset.order_by('-created_at')
+
+        # Global stats (for KPIs)
+        total_count = Modules.objects.filter(is_archived=False).count()
+        valides_count = Modules.objects.filter(is_archived=False, est_valider=True).count()
+        en_attente_count = Modules.objects.filter(is_archived=False, est_valider=False).count()
             
         # Pagination
-        paginator = Paginator(queryset, page_size)
+        paginator = Paginator(queryset.values('id', 'label', 'coef', 'duree', 'code', 'est_valider', 'created_at'), page_size)
         page_obj = paginator.get_page(page_number)
         
         data = {
             'data': list(page_obj.object_list),
             'pagination': {
                 'total_pages': paginator.num_pages,
-                'current_page': page_number,
+                'current_page': page_obj.number,
                 'total_items': paginator.count,
                 'has_next': page_obj.has_next(),
                 'has_previous': page_obj.has_previous(),
-                'start_index': page_obj.start_index(),
-                'end_index': page_obj.end_index()
+                'start_index': page_obj.start_index() if paginator.count > 0 else 0,
+                'end_index': page_obj.end_index() if paginator.count > 0 else 0
+            },
+            'stats': {
+                'total': total_count,
+                'valides': valides_count,
+                'en_attente': en_attente_count,
+                'inactifs': 0 # Assuming 'archived' means inactive or we define it differently
             }
         }
         
@@ -1142,6 +1220,7 @@ def ApiGetModuleDetails(request):
         data = {
             'id': details.id,
             'code': details.code,
+            'code_interne': details.code_interne,
             'label': details.label,
             'duree': details.duree,
             'coef': details.coef,
@@ -1181,6 +1260,7 @@ def get_module_details_with_teachers(request):
             module_data = {
                 'id': module.id,
                 'code': module.code or '',
+                'code_interne': module.code_interne or '',
                 'label': module.label or '',
                 'duree': module.duree or '',
                 'coef': module.coef or '',

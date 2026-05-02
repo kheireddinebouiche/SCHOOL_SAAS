@@ -364,15 +364,23 @@
                                             <p class="text-muted small mb-0">Modules associés à cette spécialité</p>
                                         </div>
                                     </div>
-                                    <div class="d-flex gap-2">
-                                        {% if not is_foreign_program or request.tenant.tenant_type == 'master' %}
-                                        <button id="_addModuleBtn" class="btn btn-success shadow-sm">
-                                            <i class="ri-add-line me-2"></i>Ajouter un module
-                                        </button>
-                                        <button id="_importModulesBtn" class="btn btn-soft-secondary">
-                                            <i class="ri-download-cloud-line me-2"></i>Importer
-                                        </button>
-                                        {% endif %}
+                                    <div class="d-flex gap-3 align-items-center">
+                                        <div class="search-box">
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light border-0"><i class="ri-search-line"></i></span>
+                                                <input type="text" class="form-control border-0 bg-light" id="searchModules" placeholder="Nom, code système ou interne...">
+                                            </div>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            {% if not is_foreign_program or request.tenant.tenant_type == 'master' %}
+                                            <button id="_addModuleBtn" class="btn btn-success shadow-sm">
+                                                <i class="ri-add-line me-2"></i>Ajouter un module
+                                            </button>
+                                            <button id="_importModulesBtn" class="btn btn-soft-secondary">
+                                                <i class="ri-download-cloud-line me-2"></i>Importer
+                                            </button>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="card-body p-0">
@@ -381,6 +389,7 @@
                                             <thead class="bg-light text-muted text-uppercase fs-12">
                                                 <tr>
                                                     <th class="ps-4">Code</th>
+                                                    <th>Code Interne</th>
                                                     <th>Label</th>
                                                     <th>Coefficient</th>
                                                     <th>Volume Horaire</th>
@@ -392,6 +401,19 @@
                                                
                                             </tbody>
                                         </table>
+                                </div>
+                                <div class="card-footer border-top-0 bg-white px-4 py-3">
+                                    <div class="row align-items-center">
+                                        <div class="col-sm">
+                                            <div class="text-muted" id="paginationInfo">
+                                                <!-- Info will be injected here -->
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-auto">
+                                            <ul class="pagination pagination-separated pagination-sm justify-content-center justify-content-sm-end mb-0" id="paginationLinks">
+                                                <!-- Links will be injected here -->
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -451,12 +473,12 @@
                                 </div>
                             </div>
                             <div class="col-lg-6">
-                                <label for="_code_module" class="form-label fw-medium">Code du module <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-0"><i class="ri-barcode-line text-muted"></i></span>
-                                    <input type="text" class="form-control border-0 bg-light py-2" id="_code_module" placeholder="Entrez le code du module" required />
-                                </div>
-                            </div>
+                                 <label for="_code_module" class="form-label fw-medium">Code Interne <span class="text-danger">*</span></label>
+                                 <div class="input-group">
+                                     <span class="input-group-text bg-light border-0"><i class="ri-barcode-line text-muted"></i></span>
+                                     <input type="text" class="form-control border-0 bg-light py-2" id="_code_module" placeholder="Ex: MOD-01" required />
+                                 </div>
+                             </div>
                             <div class="col-lg-6">
                                 <label for="_coef" class="form-label fw-medium">Coefficient <span class="text-danger">*</span></label>
                                 <div class="input-group">
@@ -524,12 +546,19 @@
                                 </div>
                             </div>
                             <div class="col-lg-6">
-                                <label for="u_code_module" class="form-label fw-medium">Code du module <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-0"><i class="ri-barcode-line text-muted"></i></span>
-                                    <input type="text" class="form-control border-0 bg-light py-2" id="u_code_module" placeholder="Entrez le code du module" required />
-                                </div>
-                            </div>
+                                 <label for="u_code" class="form-label fw-medium">Code Système (Auto)</label>
+                                 <div class="input-group">
+                                     <span class="input-group-text bg-light border-0"><i class="ri-barcode-line text-muted"></i></span>
+                                     <input type="text" class="form-control border-0 bg-light py-2" id="u_code" readonly />
+                                 </div>
+                             </div>
+                             <div class="col-lg-6">
+                                 <label for="u_code_interne" class="form-label fw-medium">Code Interne <span class="text-danger">*</span></label>
+                                 <div class="input-group">
+                                     <span class="input-group-text bg-light border-0"><i class="ri-barcode-line text-muted"></i></span>
+                                     <input type="text" class="form-control border-0 bg-light py-2" id="u_code_interne" placeholder="Entrez le code interne" required />
+                                 </div>
+                             </div>
                             <div class="col-lg-6">
                                 <label for="u_coef" class="form-label fw-medium">Coefficient <span class="text-danger">*</span></label>
                                 <div class="input-group">
@@ -855,12 +884,19 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-lg-3">
-                                <label class="form-label fw-medium">Code</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-0"><i class="ri-hash text-muted"></i></span>
-                                    <input type="text" class="form-control border-0 bg-light py-2" id="detail_code" disabled>
-                                </div>
-                            </div>
+                                 <label class="form-label fw-medium">Code Système</label>
+                                 <div class="input-group">
+                                     <span class="input-group-text bg-light border-0"><i class="ri-hash text-muted"></i></span>
+                                     <input type="text" class="form-control border-0 bg-light py-2" id="detail_code" disabled>
+                                 </div>
+                             </div>
+                             <div class="col-lg-3">
+                                 <label class="form-label fw-medium">Code Interne</label>
+                                 <div class="input-group">
+                                     <span class="input-group-text bg-light border-0"><i class="ri-barcode-line text-muted"></i></span>
+                                     <input type="text" class="form-control border-0 bg-light py-2" id="detail_code_interne" disabled>
+                                 </div>
+                             </div>
                             <div class="col-lg-3">
                                 <label class="form-label fw-medium">Label</label>
                                 <div class="input-group">
@@ -956,13 +992,16 @@
        
         loadModule();
 
-        function loadModule(){
+        function loadModule(page = 1){
+            let searchQuery = $('#searchModules').val();
 
             $.ajax({
                 url : "{% url 't_formations:ApiGeSpecialitetModules' %}",
                 type : "GET",
                 data : {
                     'id' : id,
+                    'search': searchQuery,
+                    'page': page
                 },
                 dataType: 'JSON',
                 success : function(data){
@@ -972,7 +1011,8 @@
                     if(data.modules.length > 0){
                         $.each(data.modules, function(index, p){
                             row += "<tr>";
-                            row += "<td><b>#"+p.code+"</b></td>";
+                            row += "<td class='ps-4'><b>#"+p.code+"</b></td>";
+                            row += "<td><span class='badge bg-light text-secondary'>"+(p.code_interne || '-')+"</span></td>";
                             row += "<td>"+p.label+"</td>";
                             row += "<td>"+p.coef+"</td>";
                             row += "<td>"+p.duree+" H</td>";
@@ -1012,14 +1052,16 @@
                             row += "</tr>";
                         });
 
-                        $.each(data.modules, function(index, item){
-                            select += "<option value="+item.id+">"+item.label+" </option>";
+                        // Use all_modules for the selects
+                        $.each(data.all_modules, function(index, item){
+                            select += "<option value="+item.id+">"+(item.code_interne ? "["+item.code_interne+"] " : "") + item.label+" </option>";
                         });
 
                         for(var i=0; i < data.nb_semestre; i++){
                             selectSemestre += "<option value="+(i+1)+">Semestre "+(i+1)+"</option>";
                         };
                         
+                        renderPagination(data.pagination);
                     }else{
                             row = "<tr><td class='text-muted text-center' colspan='6'>" +
                                     '<div class="d-flex flex-column align-items-center justify-content-center py-5">'+
@@ -1029,8 +1071,9 @@
                                             '</div>'+
                                         '</div>'+
                                         '<h5 class="mb-2">Aucun module trouvé</h5>'+
-                                        '<p class="text-muted mb-0">Il n\'y a aucun module enregistré pour le moment</p>'+
+                                        '<p class="text-muted mb-0">Il n\'y a aucun module correspondant à votre recherche</p>'+
                                     '</div></td></tr>';
+                            renderPagination(null);
                     }
 
                     $('#_p_semestre').html(selectSemestre);
@@ -1040,6 +1083,62 @@
                 }
             });
         } 
+
+        function renderPagination(p) {
+            if (!p || p.total_pages <= 1) {
+                $('#paginationLinks').html('');
+                $('#paginationInfo').text(p && p.total_items > 0 ? `Affichage de tous les ${p.total_items} modules` : '');
+                return;
+            }
+
+            $('#paginationInfo').text(`Affichage ${p.start_index}-${p.end_index} sur ${p.total_items}`);
+            
+            let h = "";
+            
+            // Previous Button
+            h += `<li class="page-item ${!p.has_previous ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${p.current_page - 1}" ${!p.has_previous ? 'tabindex="-1" aria-disabled="true"' : ''}>
+                        <i class="ri-arrow-left-s-line"></i>
+                    </a>
+                  </li>`;
+
+            // Smart Page Numbers
+            const range = 2;
+            const total = p.total_pages;
+            const current = p.current_page;
+
+            for (let i = 1; i <= total; i++) {
+                if (i === 1 || i === total || (i >= current - range && i <= current + range)) {
+                    h += `<li class="page-item ${i === current ? 'active' : ''}">
+                            ${i === current ? `<span class="page-link">${i}</span>` : `<a class="page-link" href="#" data-page="${i}">${i}</a>`}
+                          </li>`;
+                } else if (i === current - range - 1 || i === current + range + 1) {
+                    h += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+            }
+
+            // Next Button
+            h += `<li class="page-item ${!p.has_next ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${p.current_page + 1}" ${!p.has_next ? 'tabindex="-1" aria-disabled="true"' : ''}>
+                        <i class="ri-arrow-right-s-line"></i>
+                    </a>
+                  </li>`;
+
+            $('#paginationLinks').html(h);
+        }
+
+        $(document).on('click', '.page-link', function(e) {
+            e.preventDefault();
+            if ($(this).closest('.page-item').hasClass('disabled') || $(this).closest('.page-item').hasClass('active')) return;
+            
+            let page = $(this).data('page');
+            if (page) loadModule(page);
+        });
+
+        $('#searchModules').on('input', function() {
+            clearTimeout(this.delay);
+            this.delay = setTimeout(() => loadModule(1), 500);
+        });
 
         $(document).on('click', '#_addModuleBtn', function(){
             $('#addModule').modal("show");
@@ -1114,60 +1213,57 @@
                 data : {'id' : id},
                 type : 'GET',
                 success : function(data){
+                    let moduleData = null;
                     if(data && typeof data === 'object' && !Array.isArray(data)){
-                        // Handle single object response
-                        $('#updateModule #u_label').val(data.label);
-                        $('#updateModule #u_duree').val(data.duree);
-                        $('#updateModule #u_coef').val(data.coef);
-                        $('#updateModule #u_code_module').val(data.code);
-                        $('#updateModule #u_n_elimate').val(data.n_elimate);
-                        $('#updateModule #u_systeme_eval').val(data.systeme_eval);
-                        $('#updateModule #_id_module').val(data.id);
+                        moduleData = data;
                     } else if(data && Array.isArray(data) && data.length > 0){
-                        // Handle array response (backward compatibility)
-                        $('#updateModule #u_label').val(data[0].label);
-                        $('#updateModule #u_duree').val(data[0].duree);
-                        $('#updateModule #u_coef').val(data[0].coef);
-                        $('#updateModule #u_code_module').val(data[0].code);
-                        $('#updateModule #u_n_elimate').val(data[0].n_elimate);
-                        $('#updateModule #u_systeme_eval').val(data[0].systeme_eval);
-                        $('#updateModule #_id_module').val(data[0].id);
+                        moduleData = data[0];
+                    }
+
+                    if (moduleData) {
+                        $('#u_label').val(moduleData.label);
+                        $('#u_code').val(moduleData.code);
+                        $('#u_code_interne').val(moduleData.code_interne || '');
+                        $('#u_coef').val(moduleData.coef);
+                        $('#u_duree').val(moduleData.duree);
+                        $('#u_n_elimate').val(moduleData.n_elimate);
+                        $('#u_systeme_eval').val(moduleData.systeme_eval);
+                        $('#_id_module').val(moduleData.id);
+                        
+                        $('#updateModule').modal('show');
                     } else {
-                        // Handle error case if no data is returned
-                        alert('Impossible de charger les informations du module');
+                        alertify.error('Impossible de charger les informations du module');
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Error loading module details:', error);
-                    alert('Erreur lors du chargement des informations du module');
+                    alertify.error('Erreur lors du chargement des informations du module');
                 }
             });
-            
-            $('#updateModule').modal('show');
         });
 
         $(document).on('click','#ConfirmUpdateBtn', function(){
 
             var label = document.getElementById('u_label').value;
-            var code = document.getElementById('u_code_module').value;
-            var duree = document.getElementById('u_duree').value;
+            var code_interne = document.getElementById('u_code_interne').value;
             var coef = document.getElementById('u_coef').value;
+            var duree = document.getElementById('u_duree').value;
             var n_elimate = document.getElementById('u_n_elimate').value;
+            var id_module = document.getElementById('_id_module').value;
             var systeme_eval = document.getElementById('u_systeme_eval').value;
-            var id = document.getElementById('_id_module').value;
 
             $.ajax({
                 url : "{% url 't_formations:ApiUpdateModule' %}",
+                type : "POST",
                 dataType : "JSON",
-                type : 'POST',
                 data : {
                     'label' : label,
-                    'code' : code,
+                    'code_interne' : code_interne,
                     'duree' : duree,
                     'coef' : coef,
                     'n_elimate' : n_elimate,
                     'systeme_eval' : systeme_eval,
-                    'id' : id,
+                    'id' : id_module,
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
                 success: function(response){
@@ -1194,7 +1290,7 @@
                         var row = "";
                         $.each(data, function(index, item){
                             row += "<tr>";
-                            row += "<td><b>"+item.module__code+'</b> - '+item.module__label+"</td>";
+                            row += "<td><b>"+(item.module__code_interne || item.module__code)+"</b> - "+item.module__label+"</td>";
                             row += "<td>"+item.semestre+"</td>";
                             row += '<td>';
                             row += '<button type="button" class="btn btn-danger btn-sm remove-item-repartition-btn" data-id='+item.id+'>';
@@ -1327,6 +1423,7 @@
                     if (data.status !== 'error') {
                         // Populate the module details in the modal
                         $('#detail_code').val(data.code);
+                        $('#detail_code_interne').val(data.code_interne || '-');
                         $('#detail_label').val(data.label);
                         $('#detail_duree').val(data.duree + ' H');
                         $('#detail_coef').val(data.coef);

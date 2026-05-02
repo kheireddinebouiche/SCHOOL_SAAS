@@ -11,7 +11,7 @@ from django.contrib.auth import logout, authenticate, login
 
 
 def Index(request):
-    tenants = Institut.objects.exclude(schema_name='public')
+    tenants = Institut.objects.exclude(schema_name='public').filter(is_visible=True)
     
     if request.method == 'POST':
         tenant_slug = request.POST.get('tenant_slug')

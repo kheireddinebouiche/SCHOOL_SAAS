@@ -1,9 +1,9 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, login
+from django.contrib import messages
 from django.db import transaction
-from django.core.exceptions import ObjectDoesNotExist
 from datetime import datetime
 import json
 from ..models import UserSession, UserDeviceLog
@@ -24,6 +24,9 @@ def ApiListeUtilisateurs(request):
             user_data = []
             for user in users:
                 session_info, _ = UserSession.objects.get_or_create(user=user)
+                from ..models import PasswordResetRequest
+                has_pending_reset = PasswordResetRequest.objects.filter(user=user, is_active=True).exists()
+                
                 user_data.append({
                     'id': user.id,
                     'username': user.username,
@@ -36,6 +39,7 @@ def ApiListeUtilisateurs(request):
                     'last_login': user.last_login.strftime('%Y-%m-%d %H:%M:%S') if user.last_login else '',
                     'is_superuser': user.is_superuser,
                     'is_device_lock_enabled': session_info.is_device_lock_enabled,
+                    'has_pending_reset': has_pending_reset,
                 })
             
             return JsonResponse(list(user_data), safe=False)
@@ -219,6 +223,14 @@ def ApiCreateUser(request):
                 is_active=is_active in ['1', 'true', 'True', True, 'on']
             )
 
+            # Initialize profile
+            from ..models import Profile
+            from django.utils import timezone
+            Profile.objects.create(
+                user=user,
+                last_password_change=timezone.now()
+            )
+
             return JsonResponse({
                 "status": "success",
                 "message": "Utilisateur créé avec succès",
@@ -251,6 +263,21 @@ def ApiChangeUserPassword(request):
             # Set the new password
             user.set_password(new_password)
             user.save()
+
+            # Update last_password_change in profile
+            from ..models import Profile
+            from django.utils import timezone
+            profile, created = Profile.objects.get_or_create(user=user)
+            profile.last_password_change = timezone.now()
+            profile.save()
+
+            # Mark password reset requests as handled
+            from ..models import PasswordResetRequest
+            PasswordResetRequest.objects.filter(user=user, is_active=True).update(
+                is_active=False, 
+                handled_at=timezone.now(),
+                handled_by=request.user
+            )
 
             return JsonResponse({
                 "status": "success",
@@ -341,3 +368,35 @@ def ApiToggleDeviceLock(request):
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)})
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+@login_required(login_url="institut_app:login")
+def LoginAsUser(request, user_id):
+    if not request.user.is_superuser:
+        messages.error(request, "Permission refusée.")
+        return redirect('institut_app:UsersListePage')
+    
+    target_user = get_object_or_404(User, id=user_id)
+    original_user_id = request.user.id
+    
+    # login flushes session, so set variable after login
+    login(request, target_user, backend='django.contrib.auth.backends.ModelBackend')
+    request.session['impersonator_id'] = original_user_id
+    
+    messages.success(request, f"Vous êtes maintenant connecté(e) en tant que {target_user.username}.")
+    return redirect('institut_app:index')
+
+@login_required(login_url="institut_app:login")
+def RestoreOriginalUser(request):
+    impersonator_id = request.session.get('impersonator_id')
+    if impersonator_id:
+        try:
+            impersonator = User.objects.get(id=impersonator_id)
+            login(request, impersonator, backend='django.contrib.auth.backends.ModelBackend')
+            if 'impersonator_id' in request.session:
+                del request.session['impersonator_id']
+            messages.success(request, f"De retour sur votre compte administrateur ({impersonator.username}).")
+        except User.DoesNotExist:
+            messages.error(request, "Impossible de retrouver le compte d'origine.")
+    else:
+        messages.info(request, "Aucune session d'origine trouvée.")
+    return redirect('institut_app:index')

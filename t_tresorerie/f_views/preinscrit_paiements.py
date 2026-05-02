@@ -13,6 +13,18 @@ from datetime import datetime
 from django.db.models import Max
 
 
+def clean_montant(val_str):
+    if not val_str:
+        return Decimal('0.00')
+    val_str = str(val_str).replace(' DA', '').replace('DA', '').strip()
+    val_str = val_str.replace('.', '')
+    val_str = val_str.replace(',', '.')
+    val_str = val_str.replace(' ', '')
+    try:
+        return Decimal(val_str)
+    except:
+        return Decimal('0.00')
+
 @login_required(login_url="institut_app:login")
 def ApiGetPaiementRequestDetails(request):
     id_client = request.GET.get('id_client')
@@ -31,8 +43,8 @@ def ApiGetPaiementRequestDetails(request):
         echeancier_list = json.loads(echeancier_data)
         echeancier_list = sorted(echeancier_list, key=lambda x: x['date_echeance'])
         # Calculer les totaux
-        total_initial = sum(Decimal(e['montant']) for e in echeancier_list)
-        total_final = sum(Decimal(e['montant_final']) for e in echeancier_list)
+        total_initial = sum(clean_montant(e['montant']) for e in echeancier_list)
+        total_final = sum(clean_montant(e['montant_final']) for e in echeancier_list)
         
         # Préparer les données de réponse
         data = {
@@ -48,8 +60,18 @@ def ApiGetPaiementRequestDetails(request):
         }
         ### Boucle pour enregistrer les paiements
         for i in echeancier_list:
-            ApiStorePaiements(obj_client,i['libelle'],i['date_echeance'],i['montant_final'],obj_promo.promo.id,id_echeancier, i.get('entite_id'))  
+            cleaned_montant = clean_montant(i['montant_final'])
+            ApiStorePaiements(obj_client,i['libelle'],i['date_echeance'],cleaned_montant,obj_promo.promo.id,id_echeancier, i.get('entite_id'))  
                
+        # Log de génération/consultation de la lettre d'engagement
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='VIEW',
+            target_model='Paiement',
+            target_id=str(id_client),
+            details=f"Génération/Impression de la lettre d'engagement pour l'étudiant {obj_client.nom} {obj_client.prenom}.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
              
         return JsonResponse({"status":"success"})
     
@@ -76,8 +98,8 @@ def ApiGetPaiementRequestDetailsDouble(request):
             echeancier_list = json.loads(echeancier_data)
             
             # Calculer les totaux
-            total_initial = sum(Decimal(e['montant']) for e in echeancier_list)
-            total_final = sum(Decimal(e['montant_final']) for e in echeancier_list)
+            total_initial = sum(clean_montant(e['montant']) for e in echeancier_list)
+            total_final = sum(clean_montant(e['montant_final']) for e in echeancier_list)
             
             # Préparer les données de réponse
             data = {
@@ -93,9 +115,19 @@ def ApiGetPaiementRequestDetailsDouble(request):
             }
             ### Boucle pour enregistrer les paiements
             for i in echeancier_list:
-                ApiStorePaiementsDouble(obj_client,i['libelle'],i['date_echeance'],i['montant_final'],obj_promo.promo.id,id_echeancier,i['entite'])  
+                cleaned_montant = clean_montant(i['montant_final'])
+                ApiStorePaiementsDouble(obj_client,i['libelle'],i['date_echeance'],cleaned_montant,obj_promo.promo.id,id_echeancier,i['entite'])  
                 
-                
+            # Log de génération/consultation de la lettre d'engagement (Double)
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='VIEW',
+                target_model='Paiement',
+                target_id=str(id_client),
+                details=f"Génération/Impression de la lettre d'engagement (Double Diplôme) pour l'étudiant {obj_client.nom} {obj_client.prenom}.",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({"status":"success"})
         
         else:
@@ -270,6 +302,15 @@ def ApiDeletePaiement(request):
 
         paiement_obj.delete()
 
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='Paiement',
+            target_id=str(num_bon),
+            details=f"Suppression du paiement (Bon N°: {num_bon}) d'un montant de {montant_paye} DA pour l'étudiant {paiement_obj.prospect.nom} {paiement_obj.prospect.prenom}.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
         return JsonResponse({"status" : "success"})
     else:
         return JsonResponse({"status" : "error"})
@@ -331,6 +372,15 @@ def ApiConfirmInscription(request):
         client.statut = 'convertit'
         client.save()
 
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Prospets',
+            target_id=str(id_client),
+            details=f"Confirmation de l'inscription pour l'étudiant {client.nom} {client.prenom}. Matricule généré: {matricule}.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
         return JsonResponse({"status" : "success"})
     else:   
         return JsonResponse({"status" : "error"})
@@ -350,6 +400,15 @@ def ApiConfirmInscriptionDouble(request):
         client.matricule_interne = matricule
         client.statut = 'convertit'
         client.save()
+
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Prospets',
+            target_id=str(id_client),
+            details=f"Confirmation de l'inscription (Double Diplôme) pour l'étudiant {client.nom} {client.prenom}. Matricule généré: {matricule}.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
 
         return JsonResponse({"status" : "success"})
     else:   

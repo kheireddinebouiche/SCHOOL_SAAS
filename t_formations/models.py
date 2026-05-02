@@ -300,8 +300,6 @@ class Promos(models.Model):
     ])
     annee_academique = models.CharField(max_length=255, null=True, blank=True)
 
-    date_debut = models.DateField(null=True)
-    date_fin = models.DateField(null=True)
 
     etat = models.CharField(max_length=10, null=True, blank=True, choices=[('active','Active'),('inactive','Inactive')], default='inactive')
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)

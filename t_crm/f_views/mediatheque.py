@@ -20,7 +20,7 @@ def format_size(bytes):
 
 @login_required(login_url='institut_app:login')
 @module_permission_required('crm', 'view')
-@role_required('crm', ['Administrateur', 'Superviseur'])
+@role_required('crm', ['Administrateur', 'Superviseur','Utilisateur','Manager'])
 def mediatheque_list(request):
     """
     Shows exclusively physical files (FS orphans) from 'documents_demande_inscription'.

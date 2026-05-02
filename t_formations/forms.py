@@ -173,8 +173,6 @@ class PromoForm(forms.ModelForm):
             'code' : forms.TextInput(attrs={"class" : 'form-control', 'style' : 'text-transform: uppercase;', 'id' : 'id_code'}),
             'begin_year' : forms.TextInput(attrs={"class" : 'form-control', "placeholder": "Année",'id' : "begin_year_id"}),
             'end_year': forms.TextInput(attrs={"class": "form-control", "placeholder": "Année",'id' : "end_year_id"}),
-            'date_debut' : forms.DateInput(attrs={'class' : 'form-control', 'type' : 'date', 'id' : "id_date_debut"}),
-            'date_fin' : forms.DateInput(attrs={'class' : 'form-control', 'type' : 'date', 'id' : "id_date_fin"}),
             'annee_academique' : forms.TextInput(attrs={"class" : "form-control",'id':"id_annee_academique"})
         }
 
@@ -184,8 +182,6 @@ class PromoForm(forms.ModelForm):
             'code' : "Code Unique :",
             'begin_year' : "Année de début :",
             'end_year' : "Année de fin :",
-            'date_debut' : "Date de lancement :",
-            'date_fin' : "Date de fin de formation :",
             'annee_academique' : "Année académique :",
         }
 

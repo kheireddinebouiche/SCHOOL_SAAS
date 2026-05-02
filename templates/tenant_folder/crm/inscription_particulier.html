@@ -338,7 +338,7 @@
                         </div>
 
                         <div class="card-body p-4 p-lg-5">
-                            <form method="POST" class="needs-validation" onsubmit="this.querySelector('button[type=submit]').disabled = true;">
+                            <form method="POST" id="inscriptionForm" class="needs-validation">
                                 {% csrf_token %}
                                 <input type="hidden" name="related_prospect_id" id="id_related_prospect_id">
 
@@ -834,12 +834,82 @@
             });
         });
 
-        // Close dropdown when clicking outside
         $(document).click(function(event) {
             if (!$(event.target).closest('.search-group, #search-results-container').length) {
                 // Keep results visible for easier use
                 // resultsContainer.hide(); 
             }
+        });
+
+        // Duplicate Check Logic
+        let duplicateConfirmed = false;
+
+        $('#inscriptionForm').on('submit', function(e) {
+            if (duplicateConfirmed) {
+                $(this).find('button[type=submit]').prop('disabled', true);
+                return true;
+            }
+
+            e.preventDefault();
+            const form = this;
+            const nom = $('#id_last_name').val().trim();
+            const prenom = $('#id_first_name').val().trim();
+
+            if (!nom || !prenom) {
+                form.reportValidity();
+                return;
+            }
+
+            // Show loading state
+            const submitBtn = $(this).find('button[type=submit]');
+            const originalBtnHtml = submitBtn.html();
+            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Vérification...');
+
+            // Check for duplicates
+            $.ajax({
+                url: "{% url 't_crm:ApiCheckDuplicateProspect' %}",
+                data: { 'nom': nom, 'prenom': prenom },
+                success: function(response) {
+                    console.log("Duplicate check response:", response);
+                    if (response.exists) {
+                        submitBtn.prop('disabled', false).html(originalBtnHtml);
+                        let html = '';
+                        response.duplicates.forEach(item => {
+                            html += `
+                                <div class="p-3 bg-light rounded-3 mb-2 border border-warning border-opacity-10">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <div class="fw-bold text-dark">${item.nom} ${item.prenom}</div>
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary small">${item.type}</span>
+                                    </div>
+                                    <div class="small text-muted">
+                                        <strong>Formation:</strong> ${item.formation}<br>
+                                        <strong>Spécialité:</strong> ${item.specialite}<br>
+                                        <strong>Promo:</strong> ${item.promo}<br>
+                                        <small class="text-primary">Inscrit le: ${item.date_creation}</small>
+                                    </div>
+                                </div>`;
+                        });
+                        $('#duplicate-list').html(html);
+                        $('#duplicateConfirmModal').modal('show');
+                    } else {
+                        duplicateConfirmed = true;
+                        form.submit();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Duplicate check error:", error);
+                    // In case of error, restore button or just submit
+                    submitBtn.prop('disabled', false).html(originalBtnHtml);
+                    duplicateConfirmed = true;
+                    form.submit();
+                }
+            });
+        });
+
+        $('#confirm-duplicate-btn').on('click', function() {
+            duplicateConfirmed = true;
+            $('#inscriptionForm').submit();
+            $('#duplicateConfirmModal').modal('hide');
         });
     });
 </script>
@@ -918,6 +988,41 @@
                 <!-- Results will be injected here -->
             </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmation Doublon -->
+<div class="modal fade" id="duplicateConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+      <div class="modal-header bg-warning bg-opacity-10 border-0 p-4">
+        <h5 class="modal-title fw-bold text-dark d-flex align-items-center">
+            <div class="section-icon-box bg-warning text-white m-0 me-3 shadow-sm" style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; margin-right: 1rem !important;">
+                <i class="ri-error-warning-line"></i>
+            </div>
+            Attention : Doublon potentiel
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4 bg-white">
+        <p class="text-muted mb-4">Un ou plusieurs prospects avec le même <strong>nom et prénom</strong> existent déjà dans la base de données :</p>
+        
+        <div id="duplicate-list" class="mb-4">
+            <!-- List injected here -->
+        </div>
+
+        <div class="alert alert-warning border-0 rounded-3 small d-flex align-items-center gap-2">
+            <i class="ri-information-line fs-5"></i>
+            <div>Voulez-vous quand même continuer l'ajout de ce nouveau prospect ?</div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 p-4 pt-0 bg-white">
+        <button type="button" class="btn btn-light rounded-3 px-4 fw-medium" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-warning rounded-3 px-4 text-white fw-bold shadow-sm" id="confirm-duplicate-btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none;">
+            Oui, continuer l'ajout
+        </button>
       </div>
     </div>
   </div>

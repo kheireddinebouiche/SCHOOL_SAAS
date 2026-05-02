@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core import serializers
 import json
 import re
-from t_crm.models import FicheVoeuxDouble
+from t_crm.models import FicheVoeuxDouble, UserActionLog
 
 
 @login_required(login_url="institut_app:login")
@@ -264,6 +264,15 @@ def ApiStoreEcheancierSpecial(request):
             entite_id=entite_id if entite_id else None,
             is_validate=False,
             is_approuved=False
+        )
+
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='EcheancierSpecial',
+            target_id=str(echeancier_special.id),
+            details=f"Nouvelle demande d'échéancier spécial pour l'étudiant {echeancier_special.prospect.nom} {echeancier_special.prospect.prenom} ({nombre_tranches} tranches).",
+            ip_address=request.META.get('REMOTE_ADDR')
         )
         
         # Create EcheancierPaiementSpecialLine for each line

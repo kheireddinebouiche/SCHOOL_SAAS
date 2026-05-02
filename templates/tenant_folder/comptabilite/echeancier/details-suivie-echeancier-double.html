@@ -2337,6 +2337,7 @@
                                             <input type="number" class="form-control border-0 py-2" id="montantPaiement" step="0.01" min="0" required style="background-color: #f8f9fa !important;" />
                                             <span class="input-group-text border-0" style="background-color: rgba(59, 125, 221, 0.1) !important;">DA</span>
                                         </div>
+                                        <div id="montantValidationMessage" class="text-danger small mt-1" style="display: none; font-weight: 500;"></div>
                                     </div>
                                 </div>
                                 
@@ -4173,12 +4174,23 @@
         // Mettre à jour le résumé en temps réel (date is frozen to current date)
         // The date field is readonly and will always show the current date
         
-        $(document).on('change keyup', '#montantPaiement', function(){
-            var montant = $(this).val();
+        $(document).on('change keyup input', '#montantPaiement', function(){
+            var montant = parseFloat($(this).val()) || 0;
+            var selectedOption = $('#echeancierSelection option:selected');
+            var maxMontant = parseFloat(selectedOption.data('montant')) || 0;
+            
             if (montant) {
-                $('#resumeMontant').text(parseFloat(montant).toFixed(2) + ' DA');
+                $('#resumeMontant').text(montant.toFixed(2) + ' DA');
             } else {
                 $('#resumeMontant').text('0.00 DA');
+            }
+
+            if (selectedOption.val() !== "" && montant > maxMontant) {
+                $(this).addClass('is-invalid');
+                $('#montantValidationMessage').text("Le montant ne peut pas être supérieur à l'échéance : " + maxMontant.toFixed(2) + " DA").show();
+            } else {
+                $(this).removeClass('is-invalid');
+                $('#montantValidationMessage').hide();
             }
         });
         
@@ -4225,6 +4237,22 @@
             // Validation simple
             if (!echeance || !datePaiement || !montant || !modePaiement || !typePaiement) {
                 alertify.error("Veuillez remplir tous les champs obligatoires.");
+                return;
+            }
+
+            var selectedOption = $('#echeancierSelection option:selected');
+            var maxMontant = parseFloat(selectedOption.data('montant')) || 0;
+            var montantSaisi = parseFloat(montant);
+
+            if (montantSaisi > maxMontant) {
+                alertify.error("Le montant saisi (" + montantSaisi.toFixed(2) + " DA) dépasse le solde de l'échéance (" + maxMontant.toFixed(2) + " DA).");
+                $('#montantPaiement').addClass('is-invalid');
+                return;
+            }
+
+            if (montantSaisi <= 0) {
+                alertify.error("Le montant doit être supérieur à 0.");
+                $('#montantPaiement').addClass('is-invalid');
                 return;
             }
 

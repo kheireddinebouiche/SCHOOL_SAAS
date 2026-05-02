@@ -9,7 +9,7 @@ from .views import (
     InscriptionEntreprise, ListeDesProspects, DetailsProspect,
     ApiLoadProspects, ApiDeleteProspect, ApiFilterProspect,
     ApiLoadProspectDetails, ApiUpdatePropectDetails, ApiUpdateProspectEtsDetails,
-    ApiCheckIfVoeuxExiste, ApiCheckIfVoeuxDoubleExiste, ApiCreateVoeuxDouble,
+    ApiCheckIfVoeuxExiste, ApiCheckIfVoeuxDoubleExiste, ApiCheckDuplicateProspect, ApiCreateVoeuxDouble,
     ApiFilterPrinscrit, ApiLoadSpecialite, ApiQuickSearchExistingContact,
 )
 from .f_views.prospects import (
@@ -241,6 +241,7 @@ urlpatterns = [
     path('user-logs/', user_action_log_list, name='user_action_log_list'),
     path('user-logs/clear/', clear_logs, name='clear_logs'),
 
+    path('api/check-duplicate-prospect/', ApiCheckDuplicateProspect, name='ApiCheckDuplicateProspect'),
     path('api/quick-search-contact/', ApiQuickSearchExistingContact, name='ApiQuickSearchExistingContact'),
     path('reporting/', crm_reporting, name='crm_reporting'),
     path('api/reporting-data/', ApiGetCrmReportingData, name='ApiGetCrmReportingData'),

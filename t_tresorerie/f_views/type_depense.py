@@ -20,6 +20,7 @@ def ApiLoadDepensesCategories(request):
                 'name': cat.name,
                 'parent_id': cat.parent.id if cat.parent else None,
                 'parent_name': cat.parent.name if cat.parent else None,
+                'description': cat.description or '-',
                 'created_at': cat.created_at.strftime('%Y-%m-%d') if cat.created_at else '-',
                 'updated_at': cat.updated_at.strftime('%Y-%m-%d') if cat.updated_at else '-',
             })
@@ -32,6 +33,7 @@ def ApiStoreDepenseCategory(request):
     if request.method == 'POST':
         name = request.POST.get('name')
         parent_id = request.POST.get('parent_id')
+        description = request.POST.get('description', '')
         
         parent = None
         if parent_id:
@@ -41,7 +43,7 @@ def ApiStoreDepenseCategory(request):
                 return JsonResponse({"status": "error", "message": "Parent category not found"})
 
         try:
-            category = DepensesCategory.objects.create(name=name, parent=parent)
+            category = DepensesCategory.objects.create(name=name, parent=parent, description=description)
             return JsonResponse({
                 "status": "success", 
                 "message": "Category created successfully",
@@ -62,7 +64,8 @@ def ApiUpdateDepenseCategory(request):
     if request.method == 'POST':
         cat_id = request.POST.get('id')
         name = request.POST.get('name')
-        parent_id = request.POST.get('parent_id') # Can be empty/None to remove parent
+        parent_id = request.POST.get('parent_id')
+        description = request.POST.get('description', '')
 
         try:
             category = DepensesCategory.objects.get(id=cat_id)
@@ -80,6 +83,7 @@ def ApiUpdateDepenseCategory(request):
             else:
                  category.parent = None
             
+            category.description = description
             category.save()
             return JsonResponse({"status": "success", "message": "Category updated successfully"})
         except DepensesCategory.DoesNotExist:

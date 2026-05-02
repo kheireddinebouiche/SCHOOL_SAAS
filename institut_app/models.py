@@ -28,6 +28,7 @@ class Profile(models.Model):
     adresse = models.CharField(max_length=100, null=True, blank=True)
     role = models.CharField(max_length=100, null=True, blank=True, choices=[('admin', 'Admin'), ('user', 'User'),('tresorier', 'Trésorier'),('rh', 'Ressources Humaines'),('crm', 'Chargé(e) clientèle')])
     image = models.ImageField(upload_to='profile_images', null=True, blank=True, default='profile_images/default1.png')
+    last_password_change = models.DateTimeField(null=True, blank=True, verbose_name=_("Dernier changement de mot de passe"))
     class Meta:
         verbose_name="Profile"
         verbose_name_plural="Profiles"
@@ -242,6 +243,7 @@ class Module(models.Model):
         ('tre',_('Trésorerie')),
         ('daf',_('DAF')),
         ('scol',_('Scolarité')),
+        ('int',_('Interface Pédagogique')),
         ('rh',_('Ressources Humaines')),
         ('rem',_('Remise')),
         ('com',_('Communications')),
@@ -333,6 +335,7 @@ class UserModuleRole(models.Model):
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='module_roles', verbose_name=_('Utilisateur'))
     module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="user_roles", verbose_name=_('Module'))
     role = models.ForeignKey(Role, on_delete=models.PROTECT, verbose_name=_('Role'))
+    denied_permissions = models.ManyToManyField(ModulePermission, blank=True, related_name="denied_by_users", verbose_name=_('Permissions désactivées'))
     assigned_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, related_name="assigned_roles", verbose_name=_('Assigné par'))
     assigned_at = models.DateField(auto_now_add=True)
     updated_at = models.DateField(auto_now=True)
@@ -351,6 +354,13 @@ class UserModuleRole(models.Model):
         return f"{self.user} - {self.module.get_name_display()} - {self.role.name}"
     
     def has_permission(self, permission_type):
+        # First check if the permission is explicitly denied for this user
+        if self.denied_permissions.filter(
+            permission_type=permission_type,
+            module=self.module
+        ).exists():
+            return False
+
         return self.role.permissions.filter(
             module_permission__module = self.module,
             module_permission__permission_type = permission_type
@@ -378,3 +388,18 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Notification for {self.user}: {self.message}"
+
+class PasswordResetRequest(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="password_resets")
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    handled_at = models.DateTimeField(null=True, blank=True)
+    handled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="handled_resets")
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = _('Demande de réinitialisation')
+        verbose_name_plural = _('Demandes de réinitialisation')
+
+    def __str__(self):
+        return f"Reset for {self.user.username} at {self.created_at}"

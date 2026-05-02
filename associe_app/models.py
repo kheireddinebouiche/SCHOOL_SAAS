@@ -37,6 +37,7 @@ class GlobalPaymentCategory(models.Model):
         default='standard',
         verbose_name="Type de Catégorie"
     )
+    description = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -57,6 +58,7 @@ class GlobalDepensesCategory(models.Model):
         related_name="children",
     )
     payment_category = models.ForeignKey('GlobalPaymentCategory', on_delete=models.SET_NULL, null=True, blank=True, related_name='depense_categories')
+    description = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -13,21 +13,23 @@ class GlobalPaymentTypeForm(forms.ModelForm):
 class GlobalPaymentCategoryForm(forms.ModelForm):
     class Meta:
         model = GlobalPaymentCategory
-        fields = ['name', 'parent', 'category_type']
+        fields = ['name', 'parent', 'category_type', 'description']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'parent': forms.Select(attrs={'class': 'form-control'}),
             'category_type': forms.Select(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
 class GlobalDepensesCategoryForm(forms.ModelForm):
     class Meta:
         model = GlobalDepensesCategory
-        fields = ['name', 'parent', 'payment_category']
+        fields = ['name', 'parent', 'payment_category', 'description']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'parent': forms.Select(attrs={'class': 'form-control'}),
             'payment_category': forms.Select(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
 class PostesBudgetaireForm(forms.ModelForm):

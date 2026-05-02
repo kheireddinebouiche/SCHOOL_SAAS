@@ -335,6 +335,10 @@
                             {{ form.category_type }}
                         </div>
                     </div>
+                    <div class="mb-0">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                        {{ form.description }}
+                    </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 px-4 pb-4">
                     <button type="button" class="btn btn-ghost-secondary px-4 me-2" data-bs-dismiss="modal">Annuler</button>
@@ -374,6 +378,42 @@
                     <button type="submit" class="btn btn-primary rounded-pill px-4" id="importSubmitBtn">Démarrer l'import</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Sync Progress Modal -->
+<div class="modal fade" id="syncProgressModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Synchronisation des Tenants</h5>
+            </div>
+            <div class="modal-body py-4">
+                <div class="text-center mb-4">
+                    <div class="spinner-border text-primary mb-3" role="status" id="syncSpinner">
+                        <span class="visually-hidden">Syncing...</span>
+                    </div>
+                    <h6 id="syncStatusText" class="fw-bold text-dark">Initialisation...</h6>
+                    <p id="syncDetailText" class="text-muted small mb-0">Préparation de la liste des établissements</p>
+                </div>
+                
+                <div class="progress progress-xl mb-3" style="height: 12px; border-radius: 6px;">
+                    <div id="syncProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+                         role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span id="syncCountText" class="badge bg-light text-primary fw-bold">0 / 0</span>
+                    <span id="syncPercentText" class="text-muted small fw-bold">0%</span>
+                </div>
+
+                <div id="syncLog" class="mt-3 p-2 rounded bg-light border" style="max-height: 100px; overflow-y: auto; font-family: monospace; font-size: 11px; display: none;">
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" id="syncCloseBtn" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal" style="display: none;">Fermer</button>
+            </div>
         </div>
     </div>
 </div>
@@ -479,19 +519,108 @@
 
         if (syncBtn) {
             syncBtn.onclick = function() {
-                syncBtn.classList.add('btn-spin');
+                const syncModal = new bootstrap.Modal(document.getElementById('syncProgressModal'));
+                const progressBar = document.getElementById('syncProgressBar');
+                const statusText = document.getElementById('syncStatusText');
+                const detailText = document.getElementById('syncDetailText');
+                const countText = document.getElementById('syncCountText');
+                const percentText = document.getElementById('syncPercentText');
+                const closeBtn = document.getElementById('syncCloseBtn');
+                const spinner = document.getElementById('syncSpinner');
+                const syncLog = document.getElementById('syncLog');
+
+                // Reset UI
+                progressBar.style.width = '0%';
+                progressBar.classList.remove('bg-success');
+                progressBar.classList.add('bg-primary');
+                statusText.innerText = 'Initialisation...';
+                detailText.innerText = 'Récupération de la liste des établissements...';
+                countText.innerText = '0 / 0';
+                percentText.innerText = '0%';
+                closeBtn.style.display = 'none';
+                spinner.style.display = 'inline-block';
+                syncLog.innerHTML = '';
+                syncLog.style.display = 'block';
+
+                syncModal.show();
+
                 $.ajax({
-                    url: "{% url 'associe_app:sync_categories_view' %}",
+                    url: "{% url 'associe_app:get_tenant_sync_list' %}",
                     type: 'GET',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
                     success: function(response) {
                         if (response.status === 'success') {
-                            alertify.success(response.message);
-                            setTimeout(() => location.reload(), 800);
+                            const tenants = response.tenants;
+                            const total = tenants.length;
+                            countText.innerText = `0 / ${total}`;
+                            
+                            if (total === 0) {
+                                statusText.innerText = 'Terminé';
+                                detailText.innerText = 'Aucun établissement à synchroniser.';
+                                spinner.style.display = 'none';
+                                closeBtn.style.display = 'block';
+                                return;
+                            }
+
+                            let processed = 0;
+
+                            const syncNext = (index) => {
+                                if (index >= total) {
+                                    statusText.innerText = 'Synchronisation terminée !';
+                                    detailText.innerText = 'Toutes les catégories ont été propagées.';
+                                    progressBar.classList.remove('progress-bar-animated');
+                                    progressBar.classList.add('bg-success');
+                                    spinner.style.display = 'none';
+                                    closeBtn.style.display = 'block';
+                                    alertify.success('Synchronisation globale terminée.');
+                                    return;
+                                }
+
+                                const tenant = tenants[index];
+                                statusText.innerText = 'Synchronisation en cours...';
+                                detailText.innerText = `Traitement : ${tenant.name}`;
+                                
+                                const logEntry = document.createElement('div');
+                                logEntry.innerText = `> ${tenant.name} (${tenant.schema_name})...`;
+                                syncLog.appendChild(logEntry);
+                                syncLog.scrollTop = syncLog.scrollHeight;
+
+                                $.ajax({
+                                    url: "{% url 'associe_app:sync_single_tenant_view' %}",
+                                    type: 'POST',
+                                    data: {
+                                        'schema_name': tenant.schema_name,
+                                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                                    },
+                                    success: function(res) {
+                                        processed++;
+                                        const percent = Math.round((processed / total) * 100);
+                                        progressBar.style.width = `${percent}%`;
+                                        countText.innerText = `${processed} / ${total}`;
+                                        percentText.innerText = `${percent}%`;
+                                        
+                                        logEntry.innerText += ' [OK]';
+                                        logEntry.classList.add('text-success');
+                                    },
+                                    error: function() {
+                                        processed++;
+                                        logEntry.innerText += ' [ERREUR]';
+                                        logEntry.classList.add('text-danger');
+                                    },
+                                    complete: function() {
+                                        syncNext(index + 1);
+                                    }
+                                });
+                            };
+
+                            syncNext(0);
+                        } else {
+                            alertify.error('Impossible de récupérer la liste des tenants.');
+                            syncModal.hide();
                         }
                     },
-                    complete: function() {
-                        syncBtn.classList.remove('btn-spin');
+                    error: function() {
+                        alertify.error('Erreur réseau lors de l\'initialisation.');
+                        syncModal.hide();
                     }
                 });
             }
@@ -565,6 +694,7 @@
                     </div>
                     <div class="node-label">
                         ${node.name}
+                        ${node.description ? `<br><small class="text-muted fw-normal fst-italic">${node.description}</small>` : ''}
                     </div>
                     <div class="node-meta d-flex align-items-center">
                         <span class="node-badge ${badgeClass} me-3">
@@ -685,6 +815,7 @@
                 document.getElementById('id_name').value = data.name;
                 document.getElementById('id_parent').value = data.parent;
                 document.getElementById('id_category_type').value = data.category_type;
+                document.getElementById('id_description').value = data.description;
                 if (categoryModal) categoryModal.show();
             }
         });

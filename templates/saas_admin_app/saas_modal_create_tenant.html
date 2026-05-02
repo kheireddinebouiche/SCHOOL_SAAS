@@ -1,0 +1,135 @@
+<!-- Modal Création Tenant -->
+<div class="modal fade" id="createTenantModal" tabindex="-1" aria-labelledby="createTenantModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-bottom border-white border-opacity-10">
+                <h5 class="modal-title text-primary" id="createTenantModalLabel">
+                    <i class="ri-building-4-line me-2"></i>Créer une nouvelle Institution (Tenant)
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'saas_admin_app:saas_create_tenant' %}" method="POST" id="createTenantForm">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <!-- Form Body -->
+                    <div id="tenantCreationFormBody">
+                        <div class="row g-3">
+                            <!-- Informations Institution -->
+                            <div class="col-12">
+                                <h6 class="text-muted text-uppercase fw-bold fs-11 mb-3">Informations de l'Institution</h6>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Nom de l'Institution</label>
+                                <input type="text" name="nom" class="form-control" placeholder="Ex: INSIM Constantine" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Type de Compte</label>
+                                <select name="tenant_type" class="form-select">
+                                    <option value="second">Compte Standard</option>
+                                    <option value="master">Compte Maître</option>
+                                    <option value="associe">Associé</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Identifiant Schéma (Unique)</label>
+                                <input type="text" name="schema_name" class="form-control font-monospace" placeholder="ex: insim_const" required>
+                                <small class="text-muted">Minuscules, chiffres et underscores uniquement.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Nom de Domaine / URL</label>
+                                <input type="text" name="domain_name" class="form-control" placeholder="ex: const.insim360.com" required>
+                            </div>
+    
+                            <!-- Configuration Administrateur -->
+                            <div class="col-12 mt-4">
+                                <h6 class="text-muted text-uppercase fw-bold fs-11 mb-3">Configuration du Super-utilisateur</h6>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-medium">Nom d'utilisateur Admin</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="ri-user-settings-line"></i></span>
+                                    <input type="text" name="admin_username" class="form-control" placeholder="ex: superadmin" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-medium">Email Administrateur</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="ri-mail-line"></i></span>
+                                    <input type="email" name="admin_email" class="form-control" placeholder="admin@exemple.com" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-medium">Mot de passe</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="ri-lock-password-line"></i></span>
+                                    <input type="password" name="admin_password" class="form-control" placeholder="Mot de passe sécurisé" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Loader Overlay -->
+                    <div id="tenantCreationLoader" class="d-none text-center py-5">
+                        <div class="loader-content">
+                            <div class="spinner-grow text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                                <span class="visually-hidden">Chargement...</span>
+                            </div>
+                            <h4 class="text-primary mb-2">Création de l'Institution...</h4>
+                            <p class="text-muted px-4">
+                                Nous préparons l'environnement, créons la base de données et configurons l'accès administrateur. 
+                                <br><strong>Veuillez ne pas fermer cette fenêtre.</strong>
+                            </p>
+                            <div class="mt-4 px-5">
+                                <div class="progress progress-sm animated-progess custom-progress">
+                                    <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <small class="text-muted">Status: Migration des données...</small>
+                                    <small class="text-primary fw-bold">En cours</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-white border-opacity-10" id="createTenantModalFooter">
+                    <button type="button" class="btn btn-soft-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="ri-save-line me-1"></i> Créer l'Institution
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gestion du loader de création de tenant
+        const createTenantForm = document.getElementById('createTenantForm');
+        if (createTenantForm) {
+            createTenantForm.addEventListener('submit', function(e) {
+                // Afficher le loader et cacher le formulaire
+                document.getElementById('tenantCreationFormBody').classList.add('d-none');
+                document.getElementById('tenantCreationLoader').classList.remove('d-none');
+                document.getElementById('createTenantModalFooter').classList.add('d-none');
+                
+                // Modifier le titre de la modale
+                const modalTitle = document.getElementById('createTenantModalLabel');
+                if (modalTitle) modalTitle.innerHTML = '<i class="ri-loader-4-line ri-spin me-2"></i>Opération en cours...';
+                
+                // Empêcher la fermeture de la modale par l'utilisateur
+                const modalEl = document.getElementById('createTenantModal');
+                const closeBtn = modalEl.querySelector('.btn-close');
+                if (closeBtn) closeBtn.classList.add('d-none');
+                
+                // Désactiver le clic à l'extérieur pour fermer
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) {
+                    modalEl.setAttribute('data-bs-backdrop', 'static');
+                    modalEl.setAttribute('data-bs-keyboard', 'false');
+                }
+            });
+        }
+    });
+</script>

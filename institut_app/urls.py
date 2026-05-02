@@ -16,6 +16,7 @@ urlpatterns = [
     path('',Index, name="index"),
    
     path('login/',login_view, name="login"),
+    path('forgot-password/', ForgotPasswordRequestView, name="forgot_password"),
     path('register/', register, name="register"),
     path('logout/',logout_view, name="logout"),
     path('blocked/', ShowBlockedConnexion, name="ShowBlockedConnexion"),
@@ -53,6 +54,7 @@ urlpatterns = [
 
     path('profile/',GetMyProfile, name="profile"),
     path('mise-a-jour-profile/', UpdateMyProfile, name="UpdateProfile"),
+    path('force-password-change/', ChangePasswordForce, name="ChangePasswordForce"),
 
 
     path('ApiLoadEntrepriseData', ApiLoadEntrepriseData , name="ApiLoadEntrepriseData"),
@@ -105,6 +107,8 @@ urlpatterns = [
     path('ApiListeDesUtilisateurs',ApiListeUsersPermission, name="ApiListeDesUtilisateurs"),
     path('ApiGetAttributionDetails',ApiGetAttributionDetails, name="ApiGetAttributionDetails"),
     path('ApiGetRolePermissionsByRoleId', ApiGetRolePermissionsByRoleId, name="ApiGetRolePermissionsByRoleId"),
+    path('ApiGetAttributionPermissions', ApiGetAttributionPermissions, name="ApiGetAttributionPermissions"),
+    path('ApiTogglePermissionDenial', ApiTogglePermissionDenial, name="ApiTogglePermissionDenial"),
 
     path('ApiListeUtilisateurs', ApiListeUtilisateurs, name="ApiListeUtilisateurs"),
     path('ApiShowUserDetails', ApiShowUserDetails, name="ApiShowUserDetails"),
@@ -115,6 +119,8 @@ urlpatterns = [
     path('ApiCreateUser', ApiCreateUser, name="ApiCreateUser"),
     path('ApiResetDeviceLock', ApiResetDeviceLock, name="ApiResetDeviceLock"),
     path('ApiToggleDeviceLock', ApiToggleDeviceLock, name="ApiToggleDeviceLock"),
+    path('login-as-user/<int:user_id>/', LoginAsUser, name="LoginAsUser"),
+    path('restore-original-user/', RestoreOriginalUser, name="RestoreOriginalUser"),
     path('utilisateurs/historique-appareils/', DeviceManagementPage, name="DeviceManagementPage"),
 
     #### Dashboard #####
@@ -147,6 +153,7 @@ urlpatterns = [
     path('api/update-global-settings/', api_update_global_settings, name="api_update_global_settings"),
     path('api/update-tenant-settings/', api_update_tenant_settings, name="api_update_tenant_settings"),
     path('api/verify-password/', ApiVerifyPassword, name="ApiVerifyPassword"),
+    path('centre-de-connaissance/', knowledge_center_view, name="knowledge_center"),
     ########################################## Configuration Globale ##########################################
 ]
 

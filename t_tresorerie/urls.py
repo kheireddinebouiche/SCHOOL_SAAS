@@ -32,6 +32,7 @@ urlpatterns = [
 
     path('ApiGetDetailsDemandePaiement', ApiGetDetailsDemandePaiement, name="ApiGetDetailsDemandePaiement"),
     path('ApiGetDetailsDemandePaiementDouble', ApiGetDetailsDemandePaiementDouble, name="ApiGetDetailsDemandePaiementDouble"),
+    path('ApiSaveSelectedEcheancier', ApiSaveSelectedEcheancier, name="ApiSaveSelectedEcheancier"),
 
     path('details-paiement-request/<int:pk>/',PageDetailsDemandePaiement, name="PageDetailsDemandePaiement"),
 
@@ -61,6 +62,7 @@ urlpatterns = [
     path('ApiSaveEcheancier', ApiSaveEcheancier, name="ApiSaveEcheancier"),
     path('ApiUpdateEcheancier', ApiUpdateEcheancier, name="ApiUpdateEcheancier"),
     path('ApiSetEcheancierDefault', ApiSetEcheancierDefault, name="ApiSetEcheancierDefault"),
+    path('ApiToggleEcheancierAvailability', ApiToggleEcheancierAvailability, name="ApiToggleEcheancierAvailability"),
     path('ApiSaveModeleEcheancier', ApiSaveModeleEcheancier, name="ApiSaveModeleEcheancier"),
     path('ApiLoadModeleEcheancierDetails', ApiLoadModeleEcheancierDetails, name="ApiLoadModeleEcheancierDetails"),
     path('ApiUpdateModeleEcheancier', ApiUpdateModeleEcheancier, name="ApiUpdateModeleEcheancier"),
@@ -77,6 +79,7 @@ urlpatterns = [
     path('ApiGetPaiementRequestDetailsDouble', ApiGetPaiementRequestDetailsDouble, name="ApiGetPaiementRequestDetailsDouble"),
     
     path('ApiDeleteEcheancier', ApiDeleteEcheancier, name="ApiDeleteEcheancier"),
+    path('ApiBulkDeleteEcheanciers', ApiBulkDeleteEcheanciers, name="ApiBulkDeleteEcheanciers"),
     path('ApiLoadEntiteLegal', ApiLoadEntiteLegal, name="ApiLoadEntiteLegal"),
     
     path("echeanciers-specials/",ListeEcheancierSpecial, name="ListeEcheancierSpecial"),
@@ -182,7 +185,19 @@ urlpatterns = [
 
     path('brouillard_caisse_json', brouillard_caisse_json, name="brouillard_caisse_json"),
     path('brouillard_banck_json', brouillard_banck_json, name="brouillard_banck_json"),
+    path('api_set_solde_initial', api_set_solde_initial, name="api_set_solde_initial"),
+    path('api_list_soldes_initiaux', api_list_soldes_initiaux, name="api_list_soldes_initiaux"),
     path('brouillard_banque', brouillard_banque, name="brouillard_banque"),
+
+    path('caisse/depot-banque/', PageDepotBanque, name="PageDepotBanque"),
+    path('api/list-depots-banque/', api_list_depots_banque, name="api_list_depots_banque"),
+    path('api/get-depot-banque/<int:pk>/', api_get_depot_banque, name="api_get_depot_banque"),
+    path('api/create-depot-banque/', api_create_depot_banque, name="api_create_depot_banque"),
+    path('api/update-depot-banque/<int:pk>/', api_update_depot_banque, name="api_update_depot_banque"),
+    path('api/delete-depot-banque/<int:pk>/', api_delete_depot_banque, name="api_delete_depot_banque"),
+    path('imprimer-remise-fonds/<int:pk>/', imprimer_remise_fonds, name="imprimer_remise_fonds"),
+    path('banque/situation-des-comptes/', PageSituationComptes, name="PageSituationComptes"),
+
     path('imputation-bancaire/', ImputationBancaire, name="ImputationBancaire"),
     path('ApiReturnUndonePaiament', ApiReturnUndonePaiament, name="ApiReturnUndonePaiament"),
     path('ApiImputeBankPaiment', ApiImputeBankPaiment, name="ApiImputeBankPaiment"),
@@ -263,6 +278,7 @@ urlpatterns = [
     path('api/update-formation-price/', ApiUpdateFormationPrice, name="ApiUpdateFormationPrice"),
     path('api/liste-specialites-prices/', ApiListeSpecialitesPrices, name="ApiListeSpecialitesPrices"),
     path('api/update-specialite-price/', ApiUpdateSpecialitePrice, name="ApiUpdateSpecialitePrice"),
+    path('api/bulk-update-specialite-price/', ApiBulkUpdateSpecialitePrice, name="ApiBulkUpdateSpecialitePrice"),
     path('api/liste-double-diplomation-prices/', ApiListeDoubleDiplomationPrices, name="ApiListeDoubleDiplomationPrices"),
     path('api/update-double-diplomation-price/', ApiUpdateDoubleDiplomationPrice, name="ApiUpdateDoubleDiplomationPrice"),
     path('api/list-payment-types/', ApiListePaymentTypes, name='ApiListePaymentTypes'),

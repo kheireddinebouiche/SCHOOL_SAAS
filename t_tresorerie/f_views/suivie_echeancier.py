@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 import json
-from t_crm.models import RemiseAppliquer, Prospets, FicheDeVoeux
+from t_crm.models import RemiseAppliquer, Prospets, FicheDeVoeux, UserActionLog
 from django.db.models import Q, Sum, F, Case, When, Value, CharField, Count
 from institut_app.decorators import *
 from t_crm.models import *
@@ -699,6 +699,15 @@ def ApiSaveRefundOperation(request):
 
         DuePaiements.objects.filter(client_id = change_client, type="frais_f").update(is_annulated=True)
 
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Rembourssement',
+            target_id=str(id_refund),
+            details=f"Exécution d'un remboursement de {amount} DA pour l'étudiant {prospect.nom} {prospect.prenom}.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
        
         return JsonResponse({"status" : "success","rembourssementId" : obj_refund.id})
     else:
@@ -735,9 +744,22 @@ def ApiShowRefundTraiteResult(request):
 def ApiGetEntrepriseInfos(request):
     id_client = request.GET.get('id_client')
     print(id_client)
-    voeux = FicheDeVoeux.objects.filter(prospect_id = id_client, is_confirmed = True).first()
+    
+    entreprise = None
+    
+    # Try FicheDeVoeux first
+    voeux = FicheDeVoeux.objects.filter(prospect_id=id_client, is_confirmed=True).first()
+    if voeux and voeux.specialite and voeux.specialite.formation and voeux.specialite.formation.entite_legal:
+        entreprise = voeux.specialite.formation.entite_legal
+    
+    # If not found, try FicheVoeuxDouble
+    if not entreprise:
+        voeux_double = FicheVoeuxDouble.objects.filter(prospect_id=id_client, is_confirmed=True).first()
+        if voeux_double and voeux_double.specialite and voeux_double.specialite.specialite1 and voeux_double.specialite.specialite1.formation and voeux_double.specialite.specialite1.formation.entite_legal:
+            entreprise = voeux_double.specialite.specialite1.formation.entite_legal
    
-    entreprise = Entreprise.objects.get(id = voeux.specialite.formation.entite_legal.id)
+    if not entreprise:
+        return JsonResponse({"status": "error", "message": "Informations entreprise non trouvées"}, status=404)
 
     data = {
         'designation' : entreprise.designation,
@@ -746,6 +768,8 @@ def ApiGetEntrepriseInfos(request):
         'art' : entreprise.art,
         'telephone' : entreprise.telephone,
     }
+
+    return JsonResponse(data)
 
 @login_required(login_url="institut_app:login")
 def ApiGetProspectsList(request):
@@ -838,6 +862,16 @@ def ApiToggleFinancialAlert(request):
                 student.financial_alert_user = None
                 student.financial_alert_date = None
                 student.save()
+
+                UserActionLog.objects.create(
+                    user=request.user,
+                    action_type='UPDATE',
+                    target_model='Prospets',
+                    target_id=str(id_client),
+                    details=f"Alerte financière {action == 'enable' and 'activée' or 'désactivée'} pour l'étudiant {student.nom} {student.prenom}. {action == 'enable' and 'Motif: ' + message or ''}",
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+
                 return JsonResponse({"status": "success", "message": "Alerte désactivée avec succès"})
             
             return JsonResponse({"status": "error", "message": "Action non reconnue"})

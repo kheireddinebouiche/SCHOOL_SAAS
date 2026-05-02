@@ -518,6 +518,18 @@
                           <div class="form-text">Sélectionnez la formation associée à cet échéancier</div>
                         </div>
 
+                        <div class="col-lg-12" id="specialiteField" style="display: none;">
+                          <label class="form-label fw-medium" for="specialiteEcheancier">Spécialité</label>
+                          <select class="form-select py-2" id="specialiteEcheancier" name="specialite_echeancier">
+                            <option value="">Sélectionnez une spécialité</option>
+                          </select>
+                          <div class="form-text text-danger d-none" id="specialiteWarning">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Attention : Les tarifs diffèrent selon la spécialité. Veuillez sélectionner une spécialité.
+                          </div>
+                          <div class="form-text">Optionnel : Sélectionnez une spécialité pour un échéancier spécifique.</div>
+                        </div>
+
                         <div class="col-lg-12" id="doubleFormationSection" style="display: none;">
                           <div class="row g-3 align-items-end">
                             <div class="col-md-12">
@@ -552,9 +564,24 @@
                       </div>
                     </div>
                     <div class="card-body">
-                      <div id="listeTranchesContainer">
-                        <!-- Les tranches seront ajoutées ici dynamiquement -->
-                      </div>
+                    <!-- Barre d'actions en masse -->
+                    <div id="bulkDateAction" class="bg-primary bg-opacity-10 p-3 rounded-3 mb-4 d-none">
+                        <div class="row align-items-center g-3">
+                            <div class="col-md-auto">
+                                <span class="fw-bold text-primary"><i class="ri-checkbox-multiple-line me-2"></i>Actions groupées (<span id="selectedCount">0</span> sélectionnées)</span>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="date" id="bulkDateInput" class="form-control bg-white">
+                            </div>
+                            <div class="col-md-auto">
+                                <button type="button" id="applyBulkDate" class="btn btn-primary px-4">
+                                    Affecter la date
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="listeTranchesContainer"></div>
                       
                       <div class="d-flex justify-content-end mt-4">
                         <button type="button" class="btn btn-success px-4 py-2" id="btnEnregistrerEcheancier">
@@ -728,7 +755,10 @@ $(document).ready(function () {
             success: function(data) {
                 var option = "<option value=''>Sélectionnez un modèle d'échéancier</option>";
                 $.each(data, function(index, item) {
-                    option += "<option value='"+item.id+"' data-is-double-diplomation='"+item.is_double_diplomation+"'>"+item.label+"</option>";
+                    var typeLabel = item.is_double_diplomation ? "Double" : "Standard";
+                    var promoDisplay = item.promo__label || item.promo__code || "Sans promo";
+                    var displayText = item.label + " [" + promoDisplay + "] - " + typeLabel;
+                    option += "<option value='"+item.id+"' data-is-double-diplomation='"+item.is_double_diplomation+"'>"+displayText+"</option>";
                 });
                 $('#modeleEcheancier').html(option);
             },
@@ -747,7 +777,7 @@ $(document).ready(function () {
             success: function(data) {
                 var option = "<option value=''>Sélectionnez une formation</option>";
                 $.each(data, function(index, item) {
-                    option += "<option value='"+item.id+"' data-prix='"+item.prix_formation+"'>"+item.nom+"</option>";
+                    option += "<option value='"+item.code+"' data-prix='"+item.prix_formation+"'>"+item.nom+"</option>";
                 });
                 $('#formationEcheancier').html(option);
             },
@@ -760,6 +790,55 @@ $(document).ready(function () {
     // Initialiser les données
     // Variable globale pour suivre l'état du mode double diplomation
     var isDoubleDiplomationMode = false;
+    var globalSpecialites = [];
+    var hasPriceDifferences = false;
+
+    // Charger les spécialités pour une formation donnée
+    function loadSpecialites(formationId) {
+        if (!formationId) {
+            $('#specialiteField').hide();
+            globalSpecialites = [];
+            return;
+        }
+
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiLoadSpecialites' %}",
+            data: { 'formation_id': formationId },
+            dataType: 'JSON',
+            type: "GET",
+            success: function(data) {
+                globalSpecialites = data || [];
+                if (data && data.length > 0) {
+                    var option = "<option value=''>Toutes les spécialités (Générer pour chaque tarif détecté)</option>";
+                    var prices = [];
+                    var formationPrice = parseFloat($('#formationEcheancier option:selected').data('prix')) || 0;
+                    prices.push(formationPrice);
+
+                    $.each(data, function(index, item) {
+                        var p = parseFloat(item.prix) || 0;
+                        option += "<option value='"+item.id+"' data-prix='"+p+"'>"+item.label+" (" + p.toLocaleString('fr-FR') + " DA)</option>";
+                        if (!prices.includes(p)) prices.push(p);
+                    });
+                    $('#specialiteEcheancier').html(option);
+                    $('#specialiteField').show();
+
+                    // Détecter si les prix diffèrent
+                    hasPriceDifferences = (prices.length > 1);
+                    if (hasPriceDifferences) {
+                        $('#specialiteWarning').html('<i class="fas fa-info-circle me-1"></i> Des tarifs différents ont été détectés. Un échéancier sera généré pour chaque spécialité ayant un prix spécifique.').removeClass('d-none');
+                    } else {
+                        $('#specialiteWarning').addClass('d-none');
+                    }
+                } else {
+                    $('#specialiteField').hide();
+                    hasPriceDifferences = false;
+                }
+            },
+            error: function() {
+                alertify.error("Erreur lors du chargement des spécialités");
+            }
+        });
+    }
 
     loadModelesEcheanciers();
 
@@ -811,8 +890,16 @@ $(document).ready(function () {
                 var montant = (prixFormation * pourcentage / 100).toFixed(2);
             }
         } else {
+            var selectedSpecialite = $('#specialiteEcheancier option:selected');
             var selectedFormation = $('#formationEcheancier option:selected');
-            var prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+            
+            var prixFormation = 0;
+            if (selectedSpecialite.val()) {
+                prixFormation = parseFloat(selectedSpecialite.data('prix')) || 0;
+            } else {
+                prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+            }
+            
             var montant = (prixFormation * pourcentage / 100).toFixed(2);
         }
 
@@ -821,49 +908,66 @@ $(document).ready(function () {
     });
 
     // Mettre à jour les montants lorsque la formation ou spécialités changent
-    $('#formationEcheancier, #doubleSpecialiteEchancier').on('change', function() {
+    $('#formationEcheancier').on('change', function() {
+        var formationId = $(this).val();
+        loadSpecialites(formationId);
+        updateTranchesAmounts();
+    });
 
+    $('#specialiteEcheancier, #doubleSpecialiteEchancier').on('change', function() {
+        if ($(this).val()) {
+            $(this).removeClass('is-invalid');
+            $('#specialiteWarning').addClass('d-none');
+        }
+        updateTranchesAmounts();
+    });
+
+    function updateTranchesAmounts() {
         // Si les tranches sont déjà générées, mettre à jour tous les montants
         if($('#tranchesContainer').is(':visible')) {
-            var prixFormation = 0;
-
-            if (isDoubleDiplomationMode) {
-                // For double diplomation mode, get the prices for both specializations
-                var selectedFormation = $('#doubleSpecialiteEchancier option:selected');
-                var prixSpec1 = parseFloat(selectedFormation.data('prix-spec1')) || 0;
-                var prixSpec2 = parseFloat(selectedFormation.data('prix-spec2')) || 0;
-                var labelSpec1 = selectedFormation.data('specialite1-label') || 'Spécialité 1';
-                var labelSpec2 = selectedFormation.data('specialite2-label') || 'Spécialité 2';
-
-                prixFormation = prixSpec1 + prixSpec2;
-
-                // Update amounts for each tranche based on its specialty
-                $('.tranche-pourcentage').each(function() {
-                    var pourcentage = parseFloat($(this).val()) || 0;
-                    var trancheLabel = $(this).closest('.tranche-item').find('input[name="tranche_libelle[]"]').val();
-
-                    if (trancheLabel.includes(labelSpec1)) {
-                        var montant = (prixSpec1 * pourcentage / 100).toFixed(2);
-                    } else if (trancheLabel.includes(labelSpec2)) {
-                        var montant = (prixSpec2 * pourcentage / 100).toFixed(2);
-                    } else {
-                        // For non-specific tranches, use total price
-                        var montant = (prixFormation * pourcentage / 100).toFixed(2);
-                    }
-
-                    $(this).closest('.row').find('.montant-echeance').val(montant);
-                });
-            } else {
-                var selectedFormation = $('#formationEcheancier option:selected');
-                prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
-
-                $('.tranche-pourcentage').each(function() {
-                    var pourcentage = parseFloat($(this).val()) || 0;
-                    var montant = (prixFormation * pourcentage / 100).toFixed(2);
-                    $(this).closest('.row').find('.montant-echeance').val(montant);
-                });
-            }
+            $('.tranche-pourcentage').each(function() {
+                var basePrice = parseFloat($(this).data('base-price')) || 0;
+                var pourcentage = parseFloat($(this).val()) || 0;
+                var montant = (basePrice * pourcentage / 100).toFixed(2);
+                $(this).closest('.row').find('.montant-echeance').val(montant);
+            });
         }
+    }
+
+    // Gestion de la sélection en masse
+    $(document).on('change', '.select-all-tranches', function() {
+        var blockId = $(this).data('block');
+        var isChecked = $(this).prop('checked');
+        $('#' + blockId).nextUntil('.specialite-header', '.tranche-item').find('.tranche-checkbox').prop('checked', isChecked);
+        updateBulkActionBar();
+    });
+
+    $(document).on('change', '.tranche-checkbox', function() {
+        updateBulkActionBar();
+    });
+
+    function updateBulkActionBar() {
+        var selectedCount = $('.tranche-checkbox:checked').length;
+        $('#selectedCount').text(selectedCount);
+        if (selectedCount > 0) {
+            $('#bulkDateAction').removeClass('d-none');
+        } else {
+            $('#bulkDateAction').addClass('d-none');
+        }
+    }
+
+    $(document).on('click', '#applyBulkDate', function() {
+        var bulkDate = $('#bulkDateInput').val();
+        if (!bulkDate) {
+            alertify.error("Veuillez sélectionner une date");
+            return;
+        }
+        
+        $('.tranche-checkbox:checked').each(function() {
+            $(this).closest('.tranche-item').find('.tranche-date-input').val(bulkDate);
+        });
+        
+        alertify.success("Date affectée aux tranches sélectionnées");
     });
     
     // Show/hide formation or specialite fields based on model selection
@@ -932,8 +1036,15 @@ $(document).ready(function () {
                     } else {
                         // Récupérer le prix de la formation sélectionnée
                         var selectedFormation = $('#formationEcheancier option:selected');
-                        prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
-                        selectedText = selectedFormation.text();
+                        var selectedSpecialite = $('#specialiteEcheancier option:selected');
+                        
+                        if (selectedSpecialite.val()) {
+                            prixFormation = parseFloat(selectedSpecialite.data('prix')) || 0;
+                            selectedText = selectedSpecialite.text() + " (" + selectedFormation.text() + ")";
+                        } else {
+                            prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
+                            selectedText = selectedFormation.text();
+                        }
                     }
 
                     // Mettre à jour le résumé
@@ -984,292 +1095,137 @@ $(document).ready(function () {
             prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
             prixSpec1 = parseFloat(selectedFormation.data('prix-spec1')) || 0;
             prixSpec2 = parseFloat(selectedFormation.data('prix-spec2')) || 0;
+
+            var container = $('#listeTranchesContainer');
+            container.empty();
+
+            var label1 = selectedFormation.data('specialite1-label') || 'Spécialité 1';
+            var label2 = selectedFormation.data('specialite2-label') || 'Spécialité 2';
+            var formation1 = selectedFormation.data('specialite1-formation') || 'Formation 1';
+            var formation2 = selectedFormation.data('specialite2-formation') || 'Formation 2';
+
+            if (tranches && tranches.length > 0) {
+                renderTranchesBlock(container, tranches, prixSpec1, label1, selectedFormation.data('specialite1-id'), formation1);
+                renderTranchesBlock(container, tranches, prixSpec2, label2, selectedFormation.data('specialite2-id'), formation2);
+            } else {
+                var pourcentageParTranche = (100 / nombreTranches).toFixed(2);
+                renderTranchesBlock(container, Array(nombreTranches).fill({label: "Versement", value: pourcentageParTranche}), prixSpec1, label1, selectedFormation.data('specialite1-id'), formation1);
+                renderTranchesBlock(container, Array(nombreTranches).fill({label: "Versement", value: pourcentageParTranche}), prixSpec2, label2, selectedFormation.data('specialite2-id'), formation2);
+            }
         } else {
             // Récupérer le prix de la formation sélectionnée
             var selectedFormation = $('#formationEcheancier option:selected');
-            prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
-        }
+            var selectedSpecialite = $('#specialiteEcheancier option:selected');
+            var selectedSpecialiteId = selectedSpecialite.val();
+            var prixBaseFormation = parseFloat(selectedFormation.data('prix')) || 0;
 
-        var container = $('#listeTranchesContainer');
-        container.empty();
+            var container = $('#listeTranchesContainer');
+            container.empty();
 
-        if(tranches && tranches.length > 0) {
-            if (isDoubleDiplomationMode && prixSpec1 > 0 && prixSpec2 > 0) {
-                // Récupérer les labels des spécialités
-                var selectedFormation = $('#doubleSpecialiteEchancier option:selected');
-                var labelSpec1 = selectedFormation.data('specialite1-label') || 'Spécialité 1';
-                var labelSpec2 = selectedFormation.data('specialite2-label') || 'Spécialité 2';
-
-                // Ajouter un en-tête pour le groupe de la spécialité 1
-                var headerSpec1 = `
-                  <div class="specialite-header mb-3">
-                    <h5 class="text-primary fw-bold">
-                      <i class="ri-building-line me-2"></i>Échéancier spécialité ${labelSpec1}
-                    </h5>
-                    <hr class="my-3">
-                  </div>
-                `;
-                container.append(headerSpec1);
-
-                // Générer toutes les tranches pour la spécialité 1 en premier
-                $.each(tranches, function(index, tranche) {
-                    var montantEcheanceSpec1 = (prixSpec1 * parseFloat(tranche.value) / 100).toFixed(2);
-
-                    var trancheHtmlSpec1 = `
-                      <div class="tranche-item mb-3 p-3 bg-light rounded-3">
-                        <div class="row g-3 align-items-end">
-                          <div class="col-md-5">
-                            <label class="form-label fw-medium">Libellé de la tranche ${index + 1} - ${labelSpec1}</label>
-                            <input type="text" class="form-control bg-white py-2" name="tranche_libelle[]" value="${tranche.label} - ${labelSpec1}" placeholder="Ex: Acompte, Versement ${index + 1}...">
-                            <input type="hidden" name="tranche_id[]" value="${tranche.id}">
-                            <input type="hidden" name="specialite_id[]" value="${selectedFormation.data('specialite1-id')}">
-                          </div>
-                          <div class="col-md-2">
-                            <label class="form-label fw-medium">Pourcentage (%)</label>
-                            <input type="number" class="form-control bg-white py-2 tranche-pourcentage" name="tranche_pourcentage[]" value="${tranche.value}" min="0" max="100" step="0.01" placeholder="Ex: ${tranche.value}">
-                          </div>
-                          <div class="col-md-2">
-                            <label class="form-label fw-medium">Montant (DA)</label>
-                            <input type="text" class="form-control bg-white py-2 montant-echeance" name="montant_echeance[]" value="${montantEcheanceSpec1}" readonly aria-readonly="true">
-                          </div>
-                          <div class="col-md-3">
-                            <label class="form-label fw-medium">Date d'échéance</label>
-                            <input type="date" class="form-control bg-white py-2" name="tranche_date[]" value="">
-                          </div>
-                          <div class="col-md-12 mt-2">
-                            <label class="form-label fw-medium">Description</label>
-                            <textarea class="form-control bg-white py-2" name="tranche_description[]" rows="2" placeholder="Description de la tranche ${index + 1} - ${labelSpec1}">${tranche.description || ''}</textarea>
-                          </div>
-                        </div>
-                      </div>
-                    `;
-                    container.append(trancheHtmlSpec1);
+            if (selectedSpecialiteId) {
+                // MODE : Une seule spécialité sélectionnée
+                var prixSpec = parseFloat(selectedSpecialite.data('prix')) || 0;
+                var trArray = tranches && tranches.length > 0 ? tranches : Array(parseInt(nombreTranches)).fill({label: "Versement", value: (100 / nombreTranches).toFixed(2)});
+                renderTranchesBlock(container, trArray, prixSpec, selectedSpecialite.text(), selectedSpecialiteId);
+            } else if (hasPriceDifferences && globalSpecialites.length > 0) {
+                // MODE : Multi-spécialités (prix différents détectés) - Groupement par prix
+                var trArray = tranches && tranches.length > 0 ? tranches : Array(parseInt(nombreTranches)).fill({label: "Versement", value: (100 / nombreTranches).toFixed(2)});
+                
+                // Grouper les spécialités par prix
+                var priceGroups = {};
+                $.each(globalSpecialites, function(idx, spec) {
+                    var p = (parseFloat(spec.prix) || prixBaseFormation).toFixed(2);
+                    if (!priceGroups[p]) {
+                        priceGroups[p] = {
+                            price: parseFloat(p),
+                            specs: []
+                        };
+                    }
+                    priceGroups[p].specs.push(spec);
                 });
 
-                // Ajouter un en-tête pour le groupe de la spécialité 2
-                var headerSpec2 = `
-                  <div class="specialite-header mb-3 mt-4">
-                    <h5 class="text-primary fw-bold">
-                      <i class="ri-building-line me-2"></i>Échéancier spécialité ${labelSpec2}
-                    </h5>
-                    <hr class="my-3">
-                  </div>
-                `;
-                container.append(headerSpec2);
-
-                // Ensuite, générer toutes les tranches pour la spécialité 2
-                $.each(tranches, function(index, tranche) {
-                    var montantEcheanceSpec2 = (prixSpec2 * parseFloat(tranche.value) / 100).toFixed(2);
-
-                    var trancheHtmlSpec2 = `
-                      <div class="tranche-item mb-3 p-3 bg-light rounded-3">
-                        <div class="row g-3 align-items-end">
-                          <div class="col-md-5">
-                            <label class="form-label fw-medium">Libellé de la tranche ${index + 1 + tranches.length} - ${labelSpec2}</label>
-                            <input type="text" class="form-control bg-white py-2" name="tranche_libelle[]" value="${tranche.label} - ${labelSpec2}" placeholder="Ex: Acompte, Versement ${index + 1}...">
-                            <input type="hidden" name="tranche_id[]" value="${tranche.id}">
-                            <input type="hidden" name="specialite_id[]" value="${selectedFormation.data('specialite2-id')}">
-                          </div>
-                          <div class="col-md-2">
-                            <label class="form-label fw-medium">Pourcentage (%)</label>
-                            <input type="number" class="form-control bg-white py-2 tranche-pourcentage" name="tranche_pourcentage[]" value="${tranche.value}" min="0" max="100" step="0.01" placeholder="Ex: ${tranche.value}">
-                          </div>
-                          <div class="col-md-2">
-                            <label class="form-label fw-medium">Montant (DA)</label>
-                            <input type="text" class="form-control bg-white py-2 montant-echeance" name="montant_echeance[]" value="${montantEcheanceSpec2}" readonly aria-readonly="true">
-                          </div>
-                          <div class="col-md-3">
-                            <label class="form-label fw-medium">Date d'échéance</label>
-                            <input type="date" class="form-control bg-white py-2" name="tranche_date[]" value="">
-                          </div>
-                          <div class="col-md-12 mt-2">
-                            <label class="form-label fw-medium">Description</label>
-                            <textarea class="form-control bg-white py-2" name="tranche_description[]" rows="2" placeholder="Description de la tranche ${index + 1 + tranches.length} - ${labelSpec2}">${tranche.description || ''}</textarea>
-                          </div>
-                        </div>
-                      </div>
-                    `;
-                    container.append(trancheHtmlSpec2);
+                $.each(priceGroups, function(priceStr, group) {
+                    var label = group.specs.map(s => s.label).join(", ");
+                    var specIds = group.specs.map(s => s.id).join(",");
+                    renderTranchesBlock(container, trArray, group.price, label, specIds);
                 });
             } else {
-                // Regular calculation for non-double diplomations
-                $.each(tranches, function(index, tranche) {
-                    var montantEcheance = (prixFormation * parseFloat(tranche.value) / 100).toFixed(2);
+                // MODE : Par défaut (Formation seule ou prix identiques)
+                var prixSpec = prixBaseFormation;
+                var trArray = tranches && tranches.length > 0 ? tranches : Array(parseInt(nombreTranches)).fill({label: "Versement", value: (100 / nombreTranches).toFixed(2)});
+                renderTranchesBlock(container, trArray, prixSpec, "Formation", null);
+            }
+        }
+    }
 
-                    var trancheHtml = `
-                      <div class="tranche-item mb-3 p-3 bg-light rounded-3">
-                        <div class="row g-3 align-items-end">
-                          <div class="col-md-5">
+    // Helper function to render a block of tranches
+    function renderTranchesBlock(container, tranches, basePrice, label, specId, subLabel = null) {
+        var blockId = 'block-' + (specId || 'global').toString().replace(/,/g, '-');
+        container.append(`
+            <div class="specialite-header mb-3 mt-4" id="${blockId}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="text-primary fw-bold mb-0">
+                        <i class="ri-building-line me-2"></i>Échéancier ${isDoubleDiplomationMode ? 'pour ' + label : ''} d'un montant de ${basePrice.toLocaleString('fr-FR')} DA
+                        <span class="ms-2" data-bs-toggle="tooltip" data-bs-html="true" title="<div class='text-start'><strong>Spécialités concernées :</strong><br>${label.split(', ').join('<br>')}</div>">
+                            <i class="ri-information-line text-muted fs-6" style="cursor: pointer;"></i>
+                        </span>
+                    </h5>
+                    <div class="form-check">
+                        <input class="form-check-input select-all-tranches" type="checkbox" data-block="${blockId}" id="selectAll-${blockId}">
+                        <label class="form-check-label small text-muted" for="selectAll-${blockId}">Tout sélectionner</label>
+                    </div>
+                </div>
+                ${subLabel ? `<div class="text-muted small ms-4 mt-n1 mb-2"><i class="ri-book-line me-1"></i>${subLabel}</div>` : ''}
+                <hr class="my-2">
+            </div>
+        `);
+
+        // Initialize tooltips for new elements
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+
+        $.each(tranches, function(index, tranche) {
+            var libelleDefault = tranche.label === "Versement" ? "Versement " + (index + 1) : tranche.label;
+            if (index === 0 && (tranche.label === "Versement" || tranche.label === "Acompte")) libelleDefault = "Acompte";
+            
+            if (isDoubleDiplomationMode) {
+                libelleDefault += " - " + label;
+            }
+            
+            var montantEcheance = (basePrice * parseFloat(tranche.value) / 100).toFixed(2);
+            var trancheHtml = `
+                <div class="tranche-item mb-3 p-3 bg-light rounded-3">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-auto">
+                             <div class="form-check mb-2">
+                                <input class="form-check-input tranche-checkbox" type="checkbox" data-block="${blockId}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label fw-medium">Libellé de la tranche ${index + 1}</label>
-                            <input type="text" class="form-control bg-white py-2" name="tranche_libelle[]" value="${tranche.label}" placeholder="Ex: Acompte, Versement ${index + 1}...">
-                            <input type="hidden" name="tranche_id[]" value="${tranche.id}">
-                          </div>
-                          <div class="col-md-2">
-                            <label class="form-label fw-medium">Pourcentage (%)</label>
-                            <input type="number" class="form-control bg-white py-2 tranche-pourcentage" name="tranche_pourcentage[]" value="${tranche.value}" min="0" max="100" step="0.01" placeholder="Ex: ${tranche.value}">
-                          </div>
-                          <div class="col-md-2">
-                            <label class="form-label fw-medium">Montant (DA)</label>
-                            <input type="text" class="form-control bg-white py-2 montant-echeance" name="montant_echeance[]" value="${montantEcheance}" readonly aria-readonly="true">
-                          </div>
-                          <div class="col-md-3">
-                            <label class="form-label fw-medium">Date d'échéance</label>
-                            <input type="date" class="form-control bg-white py-2" name="tranche_date[]" value="">
-                          </div>
-                          <div class="col-md-12 mt-2">
-                            <label class="form-label fw-medium">Description</label>
-                            <textarea class="form-control bg-white py-2" name="tranche_description[]" rows="2" placeholder="Description de la tranche ${index + 1} (optionnel)">${tranche.description || ''}</textarea>
-                          </div>
+                            <input type="text" class="form-control bg-white py-2" name="tranche_libelle[]" value="${libelleDefault}">
+                            <input type="hidden" name="tranche_id[]" value="${tranche.id || ''}">
+                            <input type="hidden" name="tranche_specialite_id[]" value="${specId || ''}">
                         </div>
-                      </div>
-                    `;
-                    container.append(trancheHtml);
-                });
-            }
-        } else {
-            // Générer des tranches par défaut
-            var pourcentageParTranche = (100 / nombreTranches).toFixed(2);
-
-            if (isDoubleDiplomationMode && prixSpec1 > 0 && prixSpec2 > 0) {
-                // Récupérer les labels des spécialités
-                var selectedFormation = $('#doubleSpecialiteEchancier option:selected');
-                var labelSpec1 = selectedFormation.data('specialite1-label') || 'Spécialité 1';
-                var labelSpec2 = selectedFormation.data('specialite2-label') || 'Spécialité 2';
-
-                // Ajouter un en-tête pour le groupe de la spécialité 1
-                var headerSpec1 = `
-                  <div class="specialite-header mb-3">
-                    <h5 class="text-primary fw-bold">
-                      <i class="ri-building-line me-2"></i>Échéancier spécialité ${labelSpec1}
-                    </h5>
-                    <hr class="my-3">
-                  </div>
-                `;
-                container.append(headerSpec1);
-
-                // Générer toutes les tranches pour la spécialité 1 en premier
-                for(var i = 1; i <= nombreTranches; i++) {
-                    var delaiParDefaut = i * 30; // 30 jours entre chaque tranche
-                    var libelleParDefaut = i === 1 ? "Acompte" : "Versement " + i;
-
-                    // Générer une tranche pour le prix de la spécialité 1
-                    var montantEcheanceSpec1 = (prixSpec1 * parseFloat(pourcentageParTranche) / 100).toFixed(2);
-
-                    var trancheHtmlSpec1 = `
-                      <div class="tranche-item mb-3 p-3 bg-light rounded-3">
-                        <div class="row g-3 align-items-end">
-                          <div class="col-md-5">
-                            <label class="form-label fw-medium">Libellé de la tranche ${i} - ${labelSpec1}</label>
-                            <input type="text" class="form-control bg-white py-2" name="tranche_libelle[]" value="${libelleParDefaut} - ${labelSpec1}" placeholder="Ex: Acompte, Versement ${i}...">
-                            <input type="hidden" name="specialite_id[]" value="${selectedFormation.data('specialite1-id')}">
-                          </div>
-                          <div class="col-md-2">
+                        <div class="col-md-2">
                             <label class="form-label fw-medium">Pourcentage (%)</label>
-                            <input type="number" class="form-control bg-white py-2 tranche-pourcentage" name="tranche_pourcentage[]" value="${pourcentageParTranche}" min="0" max="100" step="0.01" placeholder="Ex: ${pourcentageParTranche}">
-                          </div>
-                          <div class="col-md-2">
-                            <label class="form-label fw-medium">Montant (DA)</label>
-                            <input type="text" class="form-control bg-white py-2 montant-echeance" name="montant_echeance[]" value="${montantEcheanceSpec1}" readonly aria-readonly="true">
-                          </div>
-                          <div class="col-md-3">
-                            <label class="form-label fw-medium">Date d'échéance</label>
-                            <input type="date" class="form-control bg-white py-2" name="tranche_date[]" value="">
-                          </div>
-                          <div class="col-md-12 mt-2">
-                            <label class="form-label fw-medium">Description</label>
-                            <textarea class="form-control bg-white py-2" name="tranche_description[]" rows="2" placeholder="Description de la tranche ${i} - ${labelSpec1}"></textarea>
-                          </div>
+                            <input type="number" class="form-control bg-white py-2 tranche-pourcentage" name="tranche_pourcentage[]" value="${tranche.value}" data-base-price="${basePrice}">
                         </div>
-                      </div>
-                    `;
-                    container.append(trancheHtmlSpec1);
-                }
-
-                // Ajouter un en-tête pour le groupe de la spécialité 2
-                var headerSpec2 = `
-                  <div class="specialite-header mb-3 mt-4">
-                    <h5 class="text-primary fw-bold">
-                      <i class="ri-building-line me-2"></i>Échéancier spécialité ${labelSpec2}
-                    </h5>
-                    <hr class="my-3">
-                  </div>
-                `;
-                container.append(headerSpec2);
-
-                // Ensuite, générer toutes les tranches pour la spécialité 2
-                for(var j = 1; j <= nombreTranches; j++) {
-                    var delaiParDefaut = j * 30; // 30 jours entre chaque tranche
-                    var libelleParDefaut = j === 1 ? "Acompte" : "Versement " + j;
-
-                    // Générer une tranche pour le prix de la spécialité 2
-                    var montantEcheanceSpec2 = (prixSpec2 * parseFloat(pourcentageParTranche) / 100).toFixed(2);
-
-                    var trancheHtmlSpec2 = `
-                      <div class="tranche-item mb-3 p-3 bg-light rounded-3">
-                        <div class="row g-3 align-items-end">
-                          <div class="col-md-5">
-                            <label class="form-label fw-medium">Libellé de la tranche ${j + nombreTranches} - ${labelSpec2}</label>
-                            <input type="text" class="form-control bg-white py-2" name="tranche_libelle[]" value="${libelleParDefaut} - ${labelSpec2}" placeholder="Ex: Acompte, Versement ${j}...">
-                            <input type="hidden" name="specialite_id[]" value="${selectedFormation.data('specialite2-id')}">
-                          </div>
-                          <div class="col-md-2">
-                            <label class="form-label fw-medium">Pourcentage (%)</label>
-                            <input type="number" class="form-control bg-white py-2 tranche-pourcentage" name="tranche_pourcentage[]" value="${pourcentageParTranche}" min="0" max="100" step="0.01" placeholder="Ex: ${pourcentageParTranche}">
-                          </div>
-                          <div class="col-md-2">
+                        <div class="col-md-2">
                             <label class="form-label fw-medium">Montant (DA)</label>
-                            <input type="text" class="form-control bg-white py-2 montant-echeance" name="montant_echeance[]" value="${montantEcheanceSpec2}" readonly aria-readonly="true">
-                          </div>
-                          <div class="col-md-3">
-                            <label class="form-label fw-medium">Date d'échéance</label>
-                            <input type="date" class="form-control bg-white py-2" name="tranche_date[]" value="">
-                          </div>
-                          <div class="col-md-12 mt-2">
-                            <label class="form-label fw-medium">Description</label>
-                            <textarea class="form-control bg-white py-2" name="tranche_description[]" rows="2" placeholder="Description de la tranche ${j + nombreTranches} - ${labelSpec2}"></textarea>
-                          </div>
+                            <input type="text" class="form-control bg-white py-2 montant-echeance" name="montant_echeance[]" value="${montantEcheance}" readonly>
                         </div>
-                      </div>
-                    `;
-                    container.append(trancheHtmlSpec2);
-                }
-            } else {
-                // Regular calculation for non-double diplomations
-                for(var i = 1; i <= nombreTranches; i++) {
-                    var delaiParDefaut = i * 30; // 30 jours entre chaque tranche
-                    var libelleParDefaut = i === 1 ? "Acompte" : "Versement " + i;
-                    var montantEcheance = (prixFormation * parseFloat(pourcentageParTranche) / 100).toFixed(2);
-
-                    var trancheHtml = `
-                      <div class="tranche-item mb-3 p-3 bg-light rounded-3">
-                        <div class="row g-3 align-items-end">
-                          <div class="col-md-5">
-                            <label class="form-label fw-medium">Libellé de la tranche ${i}</label>
-                            <input type="text" class="form-control bg-white py-2" name="tranche_libelle[]" value="${libelleParDefaut}" placeholder="Ex: Acompte, Versement ${i}...">
-                          </div>
-                          <div class="col-md-2">
-                            <label class="form-label fw-medium">Pourcentage (%)</label>
-                            <input type="number" class="form-control bg-white py-2 tranche-pourcentage" name="tranche_pourcentage[]" value="${pourcentageParTranche}" min="0" max="100" step="0.01" placeholder="Ex: ${pourcentageParTranche}">
-                          </div>
-                          <div class="col-md-2">
-                            <label class="form-label fw-medium">Montant (DA)</label>
-                            <input type="text" class="form-control bg-white py-2 montant-echeance" name="montant_echeance[]" value="${montantEcheance}" readonly aria-readonly="true">
-                          </div>
-                          <div class="col-md-3">
+                        <div class="col-md-3">
                             <label class="form-label fw-medium">Date d'échéance</label>
-                            <input type="date" class="form-control bg-white py-2" name="tranche_date[]" value="">
-                          </div>
-                          <div class="col-md-12 mt-2">
-                            <label class="form-label fw-medium">Description</label>
-                            <textarea class="form-control bg-white py-2" name="tranche_description[]" rows="2" placeholder="Description de la tranche ${i} (optionnel)"></textarea>
-                          </div>
+                            <input type="date" class="form-control bg-white py-2 tranche-date-input" name="tranche_date[]" value="">
                         </div>
-                      </div>
-                    `;
-                    container.append(trancheHtml);
-                }
-            }
-        }
+                    </div>
+                </div>
+            `;
+            container.append(trancheHtml);
+        });
     }
     
     // Mettre à jour la progression
@@ -1316,8 +1272,7 @@ $(document).ready(function () {
                 pourcentage: $(this).find('input[name="tranche_pourcentage[]"]').val(),
                 date: $(this).find('input[name="tranche_date[]"]').val(),
                 description: $(this).find('textarea[name="tranche_description[]"]').val(),
-                // Inclure l'identifiant de l'entité légale de la spécialité
-                specialite_id: $(this).find('input[name="specialite_id[]"]').val()
+                specialite_id: $(this).find('input[name="tranche_specialite_id[]"]').val() || null
             };
             tranchesData.push(tranche);
         });
@@ -1346,7 +1301,8 @@ $(document).ready(function () {
             type: 'POST',
             data: {
                 'modele_id': modeleId,
-                'formation_id': isDoubleDiplomationMode ? doubleFormation : formationId,
+                'formation_id': !isDoubleDiplomationMode ? formationId : null,
+                'specialite_id': isDoubleDiplomationMode ? doubleFormation : $('#specialiteEcheancier').val(),
                 'tranches': JSON.stringify(tranchesData),
                 'is_double_diplomation': isDoubleDiplomationMode,
                 'frais_inscription' : frais_inscription,
@@ -1397,10 +1353,12 @@ $(document).ready(function () {
             var option = "<option value='0'>Sélectionnez une formation</option>";
                 $.each(data, function(index, item) {
                     // Utiliser les labels des spécialités s'ils sont disponibles, sinon utiliser des valeurs par défaut
-                    var labelSpec1 = item.specialite1__label || 'Spécialité 1';
-                    var labelSpec2 = item.specialite2__label || 'Spécialité 2';
+                    var labelSpec1 = (item.specialite1__label || 'Spécialité 1').replace(/'/g, "&apos;");
+                    var labelSpec2 = (item.specialite2__label || 'Spécialité 2').replace(/'/g, "&apos;");
+                    var formation1 = (item.specialite1__formation__nom || '').replace(/'/g, "&apos;");
+                    var formation2 = (item.specialite2__formation__nom || '').replace(/'/g, "&apos;");
 
-                    option += "<option value='"+item.id+"' data-prix='"+item.prix+"' data-prix-spec1='"+item.prix_spec1+"' data-prix-spec2='"+item.prix_spec2+"' data-specialite1-id='"+item.specialite1__formation__entite_legal__id+"' data-specialite2-id='"+item.specialite2__formation__entite_legal__id+"' data-specialite1-label='"+labelSpec1+"' data-specialite2-label='"+labelSpec2+"'>"+item.label+"</option>";
+                    option += "<option value='"+item.id+"' data-prix='"+item.prix+"' data-prix-spec1='"+item.prix_spec1+"' data-prix-spec2='"+item.prix_spec2+"' data-specialite1-id='"+item.specialite1__formation__entite_legal__id+"' data-specialite2-id='"+item.specialite2__formation__entite_legal__id+"' data-specialite1-label='"+labelSpec1+"' data-specialite2-label='"+labelSpec2+"' data-specialite1-formation='"+formation1+"' data-specialite2-formation='"+formation2+"'>"+labelSpec1+" / "+labelSpec2+"</option>";
                 });
                 $('#doubleSpecialiteEchancier').html(option);
         },

@@ -2,6 +2,7 @@ import os
 import subprocess
 from datetime import datetime
 from django.conf import settings
+from django_tenants.utils import tenant_context
 from .models import DatabaseBackup
 
 def perform_backup(tenant=None):
@@ -143,8 +144,20 @@ def perform_restore(backup_obj):
             '-f', filepath
         ]
         result = subprocess.run(restore_cmd, env=env, check=True, capture_output=True, text=True)
+
+        # 4. Exécuter les migrations pour mettre à jour le schéma si nécessaire
+        import sys
+        migrate_cmd = [
+            sys.executable, 'manage.py', 'migrate_schemas', f'--schema={schema_name}'
+        ]
+        subprocess.run(migrate_cmd, check=True, capture_output=True, text=True)
         
-        return True, "Restauration terminée avec succès."
+        # 5. Vider les sessions des utilisateurs pour ce tenant
+        from django.contrib.sessions.models import Session
+        with tenant_context(tenant):
+            Session.objects.all().delete()
+        
+        return True, "Restauration terminée avec succès (données importées, migrations appliquées et sessions réinitialisées)."
 
     except subprocess.CalledProcessError as e:
         error_msg = e.stderr if e.stderr else str(e)

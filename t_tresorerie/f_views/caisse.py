@@ -9,11 +9,13 @@ from django.contrib import messages
 from itertools import chain
 from datetime import datetime
 from django.db import models
-from django.db.models import F, Value, CharField, Q, Case, When
+from django.db.models import F, Value, CharField, Q, Case, When, Sum, Max
 from django.db.models.functions import Coalesce
-from itertools import chain
 from django.db.models.functions import Concat
 from django.contrib.humanize.templatetags.humanize import intcomma
+import json
+from django.views.decorators.http import require_POST
+from t_crm.models import UserActionLog
 
 
 @login_required(login_url="institut_app:login")
@@ -135,9 +137,22 @@ def brouillard_caisse_json(request):
         mapped_entite_id=F('entite__id')
     )
 
+    # ---- 2b. Dépôts en Banque (Sorties de caisse) ----
+    depots_banque = DepotBanque.objects.filter(date_depot__gte=start_date, date_depot__lte=end_date).values(
+        nom=Value('Dépôt en Banque', output_field=CharField()),
+        date=F('date_depot'),
+        mouvement_montant=Coalesce(F('montant'), Value(0, output_field=models.DecimalField())),
+        type=Value('sortie', output_field=CharField()),
+        descri=F('observation'),
+        ref=F('num'),
+        order_to=F('agent_remettant'),
+        entite_name=F('entite__designation'),
+        mapped_entite_id=F('entite__id')
+    )
+
     # ---- 3. Fusion et tri chronologique ----
     mouvements = sorted(
-        chain(paiements, autres_produits, consulting_paiements, depenses),
+        chain(paiements, autres_produits, consulting_paiements, depenses, depots_banque),
         key=lambda x: (
             x['date'] if isinstance(x['date'], datetime) 
             else datetime.combine(x['date'], datetime.min.time())
@@ -145,7 +160,15 @@ def brouillard_caisse_json(request):
     )
 
     # ---- 4. Calcul du solde cumulatif ----
-    solde = 0
+    entite_filter = request.GET.get('entite', '0')
+    solde_initial_obj = None
+    if entite_filter != '0':
+        solde_initial_obj = SoldeInitial.objects.filter(type='caisse', annee_scolaire=year, entite_id=entite_filter).first()
+    else:
+        solde_initial_obj = SoldeInitial.objects.filter(type='caisse', annee_scolaire=year, entite__isnull=True).first()
+    
+    initial_amount = float(solde_initial_obj.montant) if solde_initial_obj else 0.0
+    solde = initial_amount
     results = []
     for mv in mouvements:
         montant = float(mv['mouvement_montant'] or 0)
@@ -167,6 +190,7 @@ def brouillard_caisse_json(request):
 
     return JsonResponse({
         "status": "success",
+        "solde_initial": initial_amount,
         "solde_final": solde,
         "mouvements": results
     }, safe=False)
@@ -190,6 +214,16 @@ def brouillard_banck_json(request):
         
     start_date = datetime(year, 8, 1).date()
     end_date = datetime(year + 1, 7, 31).date()
+
+    # Fetch Solde Initial for the selected year/entity
+    entite_filter = request.GET.get('entite', '0')
+    solde_initial_obj = None
+    if entite_filter != '0':
+        solde_initial_obj = SoldeInitial.objects.filter(type='banque', annee_scolaire=year, entite_id=entite_filter).first()
+    else:
+        solde_initial_obj = SoldeInitial.objects.filter(type='banque', annee_scolaire=year, entite__isnull=True).first()
+    
+    initial_amount = float(solde_initial_obj.montant) if solde_initial_obj else 0.0
 
     # ---- 1. Paiements (Entrées en banque) ----
     paiements = Paiements.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
@@ -263,14 +297,28 @@ def brouillard_banck_json(request):
         mode=F('mode_paiement')
     )
 
+    # ---- 2b. Dépôts en Banque (Entrées) ----
+    depots_banque = DepotBanque.objects.filter(date_depot__gte=start_date, date_depot__lte=end_date).values(
+        nom=Value('Dépôt en Banque', output_field=CharField()),
+        date=F('date_depot'),
+        mouvement_montant=Coalesce(F('montant'), Value(0, output_field=models.DecimalField())),
+        type=Value('entree', output_field=CharField()),
+        descr=F('observation'),
+        ref=F('num'),
+        order_to=F('agent_remettant'),
+        entite_name=F('entite__designation'),
+        mapped_entite_id=F('entite__id'),
+        mode=Value('esp', output_field=CharField())
+    )
+
     # ---- 3. Fusion et tri chronologique ----
     mouvements = sorted(
-        chain(paiements, autres_produits, consulting_paiements, depenses),
+        chain(paiements, autres_produits, consulting_paiements, depenses, depots_banque),
         key=lambda x: x['date'] or datetime.min
     )
 
     # ---- 4. Calcul du solde cumulatif ----
-    solde = 0
+    solde = initial_amount
     results = []
     for mv in mouvements:
         montant = float(mv['mouvement_montant'] or 0)
@@ -292,6 +340,7 @@ def brouillard_banck_json(request):
 
     return JsonResponse({
         "status": "success",
+        "solde_initial": initial_amount,
         "solde_final": solde,
         "mouvements": results
     }, safe=False)
@@ -444,6 +493,15 @@ def ApiImputeBankPaiment(request):
                 
                 operation.save()
                 
+                UserActionLog.objects.create(
+                    user=request.user,
+                    action_type='UPDATE',
+                    target_model='OperationsBancaire',
+                    target_id=str(operationId),
+                    details=f"Imputation bancaire de l'opération {operation.ref or operationId} sur le compte {compte.bank_name}. Montant: {operation.montant} DA.",
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+
                 return JsonResponse({
                     "status": "success", 
                     "message": "Opération rapprochée avec succès"
@@ -680,3 +738,313 @@ def ApiRecouvrementStats(request):
         }
         return JsonResponse(data)
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+@require_POST
+@login_required(login_url="institut_app:login")
+def api_set_solde_initial(request):
+    try:
+        data = json.loads(request.body)
+        montant = data.get('montant')
+        annee = data.get('annee')
+        entite_id = data.get('entite_id')
+        solde_type = data.get('type', 'caisse')
+
+        if not annee:
+            return JsonResponse({"status": "error", "message": "Année manquante"}, status=400)
+
+        # Si entite_id est '0' ou vide, on considère le solde global (entite=None)
+        entite = None
+        if entite_id and entite_id != '0':
+            entite = Entreprise.objects.get(id=entite_id)
+
+        solde_obj, created = SoldeInitial.objects.update_or_create(
+            type=solde_type,
+            annee_scolaire=annee,
+            entite=entite,
+            defaults={'montant': montant}
+        )
+
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='SoldeInitial',
+            target_id=str(solde_obj.id),
+            details=f"Définition du solde initial ({solde_type}) pour l'année {annee} sur l'entité {entite.designation if entite else 'Global'}. Montant: {montant} DA.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
+        return JsonResponse({
+            "status": "success", 
+            "message": "Solde initial enregistré avec succès",
+            "montant": float(solde_obj.montant)
+        })
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
+@login_required(login_url="institut_app:login")
+def api_list_soldes_initiaux(request):
+    soldes = SoldeInitial.objects.all().order_by('-annee_scolaire', 'type')
+    data = []
+    for s in soldes:
+        data.append({
+            'id': s.id,
+            'type': s.type,
+            'type_label': s.get_type_display(),
+            'montant': float(s.montant),
+            'annee_scolaire': s.annee_scolaire,
+            'annee_label': f"{s.annee_scolaire}/{s.annee_scolaire+1}",
+            'entite_id': s.entite.id if s.entite else 0,
+            'entite_name': s.entite.designation if s.entite else "Toutes les entités"
+        })
+    return JsonResponse(data, safe=False)
+
+@login_required(login_url="institut_app:login")
+def PageDepotBanque(request):
+    return render(request, 'tenant_folder/comptabilite/caisse/depot_banque.html')
+
+@login_required(login_url="institut_app:login")
+def api_list_depots_banque(request):
+    depots = DepotBanque.objects.all().order_by('-date_depot', '-created_at')
+    
+    # Filtering logic
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    entite_id = request.GET.get('entite_id')
+    search = request.GET.get('search')
+
+    if start_date:
+        depots = depots.filter(date_depot__gte=start_date)
+    if end_date:
+        depots = depots.filter(date_depot__lte=end_date)
+    if entite_id:
+        depots = depots.filter(entite_id=entite_id)
+    if search:
+        depots = depots.filter(
+            Q(num__icontains=search) | 
+            Q(agent_remettant__icontains=search) | 
+            Q(reference_bordereau__icontains=search)
+        )
+
+    data = []
+    for d in depots:
+        data.append({
+            'id': d.id,
+            'num': d.num,
+            'date': d.date_depot.strftime('%Y-%m-%d'),
+            'montant': float(d.montant),
+            'entite': d.entite.designation,
+            'agent': d.agent_remettant,
+            'banque': d.banque_destinatrice.bank_name if d.banque_destinatrice else "Non spécifiée",
+            'reference': d.reference_bordereau or "-",
+            'observation': d.observation or ""
+        })
+    return JsonResponse(data, safe=False)
+
+@require_POST
+@login_required(login_url="institut_app:login")
+def api_create_depot_banque(request):
+    try:
+        data = json.loads(request.body)
+        
+        # Validation de la date
+        date_str = data.get('date')
+        if date_str:
+            try:
+                date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                date_obj = datetime.now().date()
+        else:
+            date_obj = datetime.now().date()
+
+        depot = DepotBanque.objects.create(
+            date_depot=date_obj,
+            montant=Decimal(str(data.get('montant') or 0)),
+            entite_id=data.get('entite_id'),
+            agent_remettant=data.get('agent'),
+            banque_destinatrice_id=data.get('banque_id') if data.get('banque_id') and data.get('banque_id') != '0' else None,
+            reference_bordereau=data.get('reference'),
+            observation=data.get('observation'),
+            cree_par=request.user
+        )
+
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='DepotBanque',
+            target_id=str(depot.id),
+            details=f"Création d'un dépôt en banque (N°: {depot.num}) d'un montant de {depot.montant} DA par {depot.agent_remettant}.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
+        return JsonResponse({
+            "status": "success", 
+            "message": "Dépôt enregistré avec succès",
+            "id": depot.id
+        })
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
+@login_required(login_url="institut_app:login")
+def imprimer_remise_fonds(request, pk):
+    depot = DepotBanque.objects.get(pk=pk)
+    context = {
+        'depot': depot,
+        'today': datetime.now(),
+    }
+    return render(request, 'tenant_folder/comptabilite/caisse/remise_fonds_pdf.html', context)
+
+@login_required(login_url="institut_app:login")
+def ApiLoadEntrepises(request):
+    entreprises = Entreprise.objects.all().values('id', 'designation')
+    return JsonResponse(list(entreprises), safe=False)
+
+@login_required(login_url="institut_app:login")
+def ApiListBankAccount(request):
+    entreprise_id = request.GET.get('entreprise_id')
+    banks = BankAccount.objects.all()
+    if entreprise_id:
+        banks = banks.filter(entreprise_id=entreprise_id)
+    
+    data = list(banks.values('id', 'bank_name', 'bank_code', 'bank_iban', 'entreprise__designation'))
+    return JsonResponse(data, safe=False)
+@login_required(login_url="institut_app:login")
+def PageSituationComptes(request):
+    bank_accounts = BankAccount.objects.filter(is_archived=False)
+    situations = []
+    
+    total_general = Decimal('0.00')
+    
+    # Année scolaire actuelle
+    today = datetime.now()
+    current_year = today.year if today.month >= 8 else today.year - 1
+    
+    for account in bank_accounts:
+        # 1. Solde Initial
+        solde_init_obj = SoldeInitial.objects.filter(
+            type='banque', 
+            entite=account.entreprise,
+            annee_scolaire=current_year
+        ).first()
+        
+        solde_initial = solde_init_obj.montant if solde_init_obj else Decimal('0.00')
+        
+        # 2. Total Entrées (OperationsBancaire)
+        entrees_op = OperationsBancaire.objects.filter(
+            compte_bancaire=account,
+            operation_type='entree'
+        ).aggregate(total=Sum('montant'))['total'] or Decimal('0.00')
+        
+        # 3. Total Sorties (OperationsBancaire)
+        sorties_op = OperationsBancaire.objects.filter(
+            compte_bancaire=account,
+            operation_type='sortie'
+        ).aggregate(total=Sum('montant'))['total'] or Decimal('0.00')
+        
+        # 4. Total Dépôts (Depuis la caisse)
+        depots = DepotBanque.objects.filter(
+            banque_destinatrice=account
+        ).aggregate(total=Sum('montant'))['total'] or Decimal('0.00')
+        
+        # Calcul Final
+        total_entrees = entrees_op + depots
+        total_sorties = sorties_op
+        solde_actuel = solde_initial + total_entrees - total_sorties
+        
+        situations.append({
+            'account': account,
+            'solde_initial': solde_initial,
+            'total_entrees': total_entrees,
+            'total_sorties': total_sorties,
+            'solde_actuel': solde_actuel,
+        })
+        
+        total_general += solde_actuel
+
+    context = {
+        'situations': situations,
+        'total_general': total_general,
+        'current_year': f"{current_year}/{current_year+1}",
+    }
+    return render(request, 'tenant_folder/comptabilite/caisse/situation_comptes.html', context)
+
+@login_required(login_url="institut_app:login")
+def api_get_depot_banque(request, pk):
+    try:
+        depot = DepotBanque.objects.get(pk=pk)
+        return JsonResponse({
+            "status": "success",
+            "data": {
+                "id": depot.id,
+                "entite_id": depot.entite.id,
+                "banque_id": depot.banque_destinatrice.id if depot.banque_destinatrice else None,
+                "date": depot.date_depot.strftime('%Y-%m-%d'),
+                "montant": float(depot.montant),
+                "agent": depot.agent_remettant,
+                "reference": depot.reference_bordereau,
+                "observation": depot.observation
+            }
+        })
+    except DepotBanque.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Dépôt non trouvé"}, status=404)
+
+@login_required(login_url="institut_app:login")
+@require_POST
+def api_update_depot_banque(request, pk):
+    try:
+        depot = DepotBanque.objects.get(pk=pk)
+        data = json.loads(request.body)
+        
+        # Validation de la date
+        date_str = data.get('date')
+        if date_str:
+            try:
+                date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+                depot.date_depot = date_obj
+            except ValueError:
+                pass
+
+        depot.montant = Decimal(str(data.get('montant') or 0))
+        depot.entite_id = data.get('entite_id')
+        depot.agent_remettant = data.get('agent')
+        depot.banque_destinatrice_id = data.get('banque_id') if data.get('banque_id') and data.get('banque_id') != '0' else None
+        depot.reference_bordereau = data.get('reference')
+        depot.observation = data.get('observation')
+        
+        depot.save()
+        
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='DepotBanque',
+            target_id=str(pk),
+            details=f"Mise à jour du dépôt en banque (N°: {depot.num}). Nouveau montant: {depot.montant} DA.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
+        return JsonResponse({"status": "success", "message": "Dépôt mis à jour avec succès"})
+    except DepotBanque.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Dépôt non trouvé"}, status=404)
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
+@login_required(login_url="institut_app:login")
+@require_POST
+def api_delete_depot_banque(request, pk):
+    try:
+        depot = DepotBanque.objects.get(pk=pk)
+        depot_num = depot.num
+        depot_montant = depot.montant
+        depot.delete()
+
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='DepotBanque',
+            target_id=str(pk),
+            details=f"Suppression du dépôt en banque (N°: {depot_num}) d'un montant de {depot_montant} DA.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
+        return JsonResponse({"status": "success", "message": "Dépôt supprimé avec succès"})
+    except DepotBanque.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Dépôt non trouvé"}, status=404)

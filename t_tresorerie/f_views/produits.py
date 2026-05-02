@@ -32,6 +32,7 @@ def ApiListeCategoriesProduits(request):
             'parent_id': cat.parent.id if cat.parent else None,
             'parent_name': cat.parent.name if cat.parent else None,
             'children_count': cat.children.count(),
+            'description': cat.description or '-',
             'is_active': True,
             'is_parent': cat.parent is None,
             'category_type': cat.category_type, # Include category_type
@@ -64,6 +65,7 @@ def ApiCreerCategorieProduit(request):
             name = data.get('name')
             parent_id = data.get('parent_id')
             category_type = data.get('category_type', 'standard')
+            description = data.get('description', '')
 
             if not name:
                 return JsonResponse({'error': 'Le nom de la catégorie est requis'}, status=400)
@@ -75,7 +77,8 @@ def ApiCreerCategorieProduit(request):
             category = PaymentCategory.objects.create(
                 name=name,
                 parent=parent,
-                category_type=category_type
+                category_type=category_type,
+                description=description
             )
 
             return JsonResponse({
@@ -99,6 +102,7 @@ def ApiModifierCategorieProduit(request):
             name = data.get('name')
             parent_id = data.get('parent_id')
             category_type = data.get('category_type', 'standard')
+            description = data.get('description', '')
 
             if not category_id or not name:
                 return JsonResponse({'error': 'ID et nom de la catégorie sont requis'}, status=400)
@@ -112,6 +116,7 @@ def ApiModifierCategorieProduit(request):
             category.name = name
             category.parent = parent
             category.category_type = category_type
+            category.description = description
             category.save()
 
             return JsonResponse({

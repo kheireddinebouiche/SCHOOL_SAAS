@@ -19,6 +19,7 @@ class ClientPaiementsRequest(models.Model):
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE, null=True, blank=True)
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
     specialite_double = models.ForeignKey(DoubleDiplomation, on_delete=models.CASCADE, null=True, blank=True)
+    ref_echeancier = models.ForeignKey('EcheancierPaiement', on_delete=models.SET_NULL, null=True, blank=True)
 
     amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     paid = models.BooleanField(default=False)
@@ -125,31 +126,22 @@ class Paiements(models.Model):
 
         if not self.num:
 
-            # 1. Vérifier chemin : Paiement → DuePaiement → Echeancier → Entreprise
-            # if not self.due_paiements or not self.due_paiements.entite or not self.due_paiements.ref_echeancier:
-            #     raise ValueError("Impossible de générer le numéro : ref_echeancier introuvable.")
-
             if not entite_obj:
-                 # Fallback for num generation if entite_obj is still None
                  super().save(*args, **kwargs)
                  return
 
-            # 2. Lecture des champs Entreprise
             entite_str = entite_obj.designation or "ENTITE"
             wilaya = str(entite_obj.code_wilaya).zfill(2) if entite_obj.code_wilaya else "00"
             annexe = str(entite_obj.numero).zfill(2) if entite_obj.numero else "00"
 
-            # 3. Date du paiement
             date_p = self.date_paiement or datetime.date.today()
 
-            # Conversion si la valeur est une chaîne
             if isinstance(date_p, str):
                 date_p = datetime.datetime.strptime(date_p, "%Y-%m-%d").date()
 
             mois = date_p.strftime("%m")
             annee = date_p.strftime("%y")
 
-            # 4. Génération séquence unique
             pattern = f"/ST/{entite_str}/{wilaya}/{annexe}/{mois}/{annee}"
             last = Paiements.objects.filter(num__endswith=pattern)\
                                     .aggregate(max_num=Max("num"))["max_num"]
@@ -160,7 +152,6 @@ class Paiements(models.Model):
             else:
                 seq = "000001"
 
-            # 5. Construction du numéro final
             self.num = f"N°{seq}/ST/{entite_str}/{wilaya}/{annexe}/{mois}/{annee}"
 
         super().save(*args, **kwargs)
@@ -187,7 +178,6 @@ class Rembourssements(models.Model):
     def __str__(self):
         return self.client
     
-## ne pas utiliser cette classe
 class PaiementRemboursement(models.Model):
     client = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     remboursement = models.ForeignKey(Rembourssements, on_delete=models.CASCADE, related_name="paiements_rembourses")
@@ -230,8 +220,8 @@ class ModelEcheancier(models.Model):
 class EcheancierPaiement(models.Model):
     model = models.ForeignKey(ModelEcheancier, on_delete=models.CASCADE, null=True, blank=True)
     formation = models.ForeignKey(Formation, null=True, blank=True, on_delete=models.CASCADE)
+    specialite = models.ForeignKey(Specialites, null=True, blank=True, on_delete=models.CASCADE)
     
-    ##Attribution des frais d'inscription
     frais_inscription = models.DecimalField(decimal_places=2, max_digits=200, null=True, blank=True)
 
     formation_double = models.ForeignKey(DoubleDiplomation, on_delete=models.CASCADE, null=True, blank=True)
@@ -265,7 +255,6 @@ class EcheancierPaiementLine(models.Model):
     created_at = models.DateField(auto_now_add=True)
     updated_at = models.DateField(auto_now=True)
 
-
     def __str__(self):
         return self.value
 
@@ -273,7 +262,6 @@ class EcheancierSpecial(models.Model):
     nombre_tranche = models.IntegerField(null=True, blank=True)
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     
-    ##Attribution des frais d'inscription
     frais_inscription = models.DecimalField(decimal_places=2, max_digits=200, null=True, blank=True)
     entite = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)
 
@@ -295,10 +283,8 @@ class EcheancierPaiementSpecialLine(models.Model):
 
     entite = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True)
 
-
     created_at = models.DateField(auto_now_add=True)
     updated_at = models.DateField(auto_now=True)
-
 
     def __str__(self):
         return self.echeancier.prospect.nom
@@ -340,8 +326,6 @@ class PromoRembourssement(models.Model):
     def __str__(self):
         return self.montant
 
-####################### GESTION DES CATEGORIES DE DEPENSES #############################################
- 
 class TypeDepense(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     description = models.CharField(max_length=100, null=True, blank=True)
@@ -363,11 +347,6 @@ class SousTypeDepense(models.Model):
     def __str__(self):
         return self.label
 
-####################### FIN GESTION DES CATEGORIES DE PRODUIT ##########################################
-
-
-####################### GESTION DES CATEGORIES DE PRODUIT ET DE DEPENSES ##############################################
-
 class DepensesCategory(models.Model):
     name = models.CharField(max_length=100)
     parent = models.ForeignKey(
@@ -378,6 +357,7 @@ class DepensesCategory(models.Model):
         related_name="children",
     )
     payment_category = models.ForeignKey('PaymentCategory', on_delete=models.SET_NULL, null=True, blank=True, related_name='depense_categories')
+    description = models.TextField(null=True, blank=True)
     global_id = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -388,7 +368,7 @@ class DepensesCategory(models.Model):
 
     def __str__(self):
         return self.name
-   
+    
 class PaymentCategory(models.Model):
     name = models.CharField(max_length=100)
     parent = models.ForeignKey(
@@ -404,6 +384,7 @@ class PaymentCategory(models.Model):
         default='standard',
         verbose_name="Type de Catégorie"
     )
+    description = models.TextField(null=True, blank=True)
     global_id = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -414,7 +395,7 @@ class PaymentCategory(models.Model):
 
     def __str__(self):
         return self.name
-   
+    
 class AutreProduit(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     num = models.CharField(max_length=100, null=True, blank=True, unique=True, help_text="Numéro séquentiel de paiement")
@@ -434,12 +415,6 @@ class AutreProduit(models.Model):
     def save(self, *args, **kwargs):
         if not self.num:
             if not self.entite:
-                # Fallback or error if entite is required for numbering.
-                # Assuming default behavior or skipping numbering if no entite, 
-                # BUT the pattern uses entite. Let's use "ENTITE" if None to avoid crash,
-                # or better, raise validation error if strict.
-                # Given user request to be "like Paiements", we try to mimic.
-                # Paiements uses self.due_paiements.entite.
                 entite_nom = "ENTITE"
                 wilaya = "00"
                 annexe = "00"
@@ -448,17 +423,14 @@ class AutreProduit(models.Model):
                 wilaya = str(self.entite.code_wilaya).zfill(2) if self.entite.code_wilaya else "00"
                 annexe = str(self.entite.numero).zfill(2) if self.entite.numero else "00"
 
-            # 3. Date du paiement
             date_p = self.date_paiement or datetime.date.today()
 
-            # Conversion si la valeur est une chaîne
             if isinstance(date_p, str):
                 date_p = datetime.datetime.strptime(date_p, "%Y-%m-%d").date()
 
             mois = date_p.strftime("%m")
             annee = date_p.strftime("%y")
 
-            # 4. Génération séquence unique
             pattern = f"/AP/{entite_nom}/{wilaya}/{annexe}/{mois}/{annee}"
             last = AutreProduit.objects.filter(num__endswith=pattern)\
                                     .aggregate(max_num=Max("num"))["max_num"]
@@ -469,18 +441,14 @@ class AutreProduit(models.Model):
             else:
                 seq = "000001"
 
-            # 5. Construction du numéro final
-            # Using AP to distinguish from standard Paiements (ST)
             self.num = f"N°{seq}/AP/{entite_nom}/{wilaya}/{annexe}/{mois}/{annee}"
 
         super().save(*args, **kwargs)
 
-####################### GESTION DES CATEGORIES DE PRODUIT ET DE DEPENSES ##############################################
-
 class PlanComptable(models.Model):
-    numero = models.CharField(max_length=20, unique=True)   # ex: "531", "7061"
-    intitule = models.CharField(max_length=255)             # ex: "Caisse", "Prestations de service"
-    classe = models.CharField(max_length=1)                 # ex: "5"
+    numero = models.CharField(max_length=20, unique=True)
+    intitule = models.CharField(max_length=255)
+    classe = models.CharField(max_length=1)
     type_compte = models.CharField(
         max_length=20,
         choices=[
@@ -569,11 +537,76 @@ class ParametreFinancier(models.Model):
         verbose_name = "Paramètre Financier"
         verbose_name_plural = "Paramètres Financiers"
 
-    def __str__(self):
-        return "Paramètres Financiers"
-
     @classmethod
     def get_instance(cls):
         """Always returns the single settings record, creating it if needed."""
         obj, _ = cls.objects.get_or_create(id=1)
         return obj
+
+class SoldeInitial(models.Model):
+    TYPES = [('caisse', 'Caisse'), ('banque', 'Banque')]
+    type = models.CharField(max_length=10, choices=TYPES)
+    montant = models.DecimalField(max_digits=20, decimal_places=2, default=0)
+    annee_scolaire = models.IntegerField(help_text="L'année de début de l'année scolaire (ex: 2023 pour 2023/2024)")
+    date_solde = models.DateField(default=datetime.date.today)
+    entite = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('type', 'annee_scolaire', 'entite')
+        verbose_name = "Solde Initial"
+        verbose_name_plural = "Soldes Initiaux"
+
+    def __str__(self):
+        entite_str = f" - {self.entite.designation}" if self.entite else ""
+        return f"Solde {self.type} {self.annee_scolaire}/{self.annee_scolaire+1}{entite_str}: {self.montant}"
+
+class DepotBanque(models.Model):
+    num = models.CharField(max_length=100, null=True, blank=True, unique=True, help_text="Numéro séquentiel de remise de fonds")
+    date_depot = models.DateField(default=datetime.date.today)
+    montant = models.DecimalField(max_digits=20, decimal_places=2)
+    entite = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
+    agent_remettant = models.CharField(max_length=255, help_text="Nom de la personne qui dépose l'argent")
+    banque_destinatrice = models.ForeignKey(BankAccount, on_delete=models.SET_NULL, null=True, blank=True)
+    reference_bordereau = models.CharField(max_length=100, null=True, blank=True)
+    observation = models.TextField(null=True, blank=True)
+    
+    cree_par = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Dépôt en Banque"
+        verbose_name_plural = "Dépôts en Banque"
+
+    def __str__(self):
+        return f"Dépôt {self.num} - {self.montant} DA"
+
+    def save(self, *args, **kwargs):
+        if not self.num:
+            entite_obj = self.entite
+            entite_str = entite_obj.designation or "ENTITE"
+            wilaya = str(entite_obj.code_wilaya).zfill(2) if entite_obj.code_wilaya else "00"
+            annexe = str(entite_obj.numero).zfill(2) if entite_obj.numero else "00"
+
+            date_p = self.date_depot or datetime.date.today()
+            mois = date_p.strftime("%m")
+            annee = date_p.strftime("%y")
+
+            pattern = f"/DEPOT/{entite_str}/{wilaya}/{annexe}/{mois}/{annee}"
+            last = DepotBanque.objects.filter(num__endswith=pattern)\
+                                     .aggregate(max_num=Max("num"))["max_num"]
+
+            if last:
+                try:
+                    last_seq = int(last.split("/")[0].replace("N°", ""))
+                    seq = str(last_seq + 1).zfill(6)
+                except:
+                    seq = "000001"
+            else:
+                seq = "000001"
+
+            self.num = f"N°{seq}/DEPOT/{entite_str}/{wilaya}/{annexe}/{mois}/{annee}"
+
+        super().save(*args, **kwargs)

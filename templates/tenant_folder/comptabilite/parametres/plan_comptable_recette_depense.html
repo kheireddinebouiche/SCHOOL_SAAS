@@ -192,7 +192,8 @@
                                         <table class="table align-middle table-nowrap mb-0" id="recettesTable">
                                             <thead>
                                                 <tr>
-                                                    <th style="width: 40%;">Libellé de la catégorie</th>
+                                                    <th style="width: 30%;">Libellé de la catégorie</th>
+                                                    <th>Description</th>
                                                     <th>Type</th>
                                                     <th>Sous-catégories</th>
                                                     <th>Date de création</th>
@@ -212,7 +213,8 @@
                                         <table class="table align-middle table-nowrap mb-0" id="depensesTable">
                                             <thead>
                                                 <tr>
-                                                    <th style="width: 40%;">Type de dépense</th>
+                                                    <th style="width: 30%;">Type de dépense</th>
+                                                    <th>Description</th>
                                                     <th>Catégorie Parente</th>
                                                     <th>Date de création</th>
                                                     <th class="text-center">Actions</th>
@@ -261,6 +263,10 @@
                             <option value="rachat_credit">Rachat de Crédit</option>
                         </select>
                     </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea class="form-control btn-rounded" id="recetteDescription" rows="3" placeholder="Description de la catégorie..."></textarea>
+                    </div>
                     <div class="d-grid mt-4">
                         <button type="button" class="btn btn-primary btn-lg btn-rounded py-3" id="saveRecette">
                             <span class="fw-bold">Enregistrer</span>
@@ -292,6 +298,10 @@
                         <select class="form-select form-control-lg btn-rounded" id="depenseParent">
                             <option value="">Aucune (Principal)</option>
                         </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea class="form-control btn-rounded" id="depenseDescription" rows="3" placeholder="Description du type..."></textarea>
                     </div>
                     <div class="d-grid mt-4">
                         <button type="button" class="btn btn-danger btn-lg btn-rounded py-3" id="saveDepense">
@@ -420,6 +430,7 @@
                                 </span>
                                 <span class="fw-bold">${item.name}</span>
                             </td>
+                            <td class="text-muted small">${item.description || '-'}</td>
                             <td>
                                 <span class="badge badge-soft-${item.category_type === 'rachat_credit' ? 'warning' : 'primary'} text-uppercase">
                                     ${item.category_type === 'rachat_credit' ? 'Rachat' : 'Standard'}
@@ -433,7 +444,7 @@
                                         <i class="ri-more-2-fill"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-                                        <li><a class="dropdown-item edit-recette" href="#" data-id="${item.id}" data-name="${item.name}" data-parent="${item.parent_id || ''}" data-type="${item.category_type}"><i class="ri-pencil-line me-2"></i>Modifier</a></li>
+                                        <li><a class="dropdown-item edit-recette" href="#" data-id="${item.id}" data-name="${item.name}" data-parent="${item.parent_id || ''}" data-type="${item.category_type}" data-description="${item.description || ''}"><i class="ri-pencil-line me-2"></i>Modifier</a></li>
                                         <li><hr class="dropdown-divider"></li>
                                         <li><a class="dropdown-item text-danger delete-btn" href="#" data-id="${item.id}" data-type="recette"><i class="ri-delete-bin-line me-2"></i>Supprimer</a></li>
                                     </ul>
@@ -504,6 +515,7 @@
                                 </span>
                                 <span class="fw-bold">${item.name}</span>
                             </td>
+                            <td class="text-muted small">${item.description || '-'}</td>
                             <td><span class="badge bg-light text-dark fw-normal">${item.parent_name || 'Principal'}</span></td>
                             <td class="text-muted small">${date}</td>
                             <td class="text-center">
@@ -512,7 +524,7 @@
                                         <i class="ri-more-2-fill"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-                                        <li><a class="dropdown-item edit-depense" href="#" data-id="${item.id}" data-name="${item.name}" data-parent="${item.parent_id || ''}"><i class="ri-pencil-line me-2"></i>Modifier</a></li>
+                                        <li><a class="dropdown-item edit-depense" href="#" data-id="${item.id}" data-name="${item.name}" data-parent="${item.parent_id || ''}" data-description="${item.description || ''}"><i class="ri-pencil-line me-2"></i>Modifier</a></li>
                                         <li><hr class="dropdown-divider"></li>
                                         <li><a class="dropdown-item text-danger delete-btn" href="#" data-id="${item.id}" data-type="depense"><i class="ri-delete-bin-line me-2"></i>Supprimer</a></li>
                                     </ul>
@@ -599,6 +611,7 @@
             let name = $('#recetteName').val();
             let parentId = $('#recetteParent').val();
             let type = $('#recetteType').val();
+            let description = $('#recetteDescription').val();
 
             if (!name) return alertify.error("Le nom est requis");
 
@@ -609,7 +622,7 @@
                 type: 'POST',
                 headers: {'X-CSRFToken': '{{ csrf_token }}'},
                 contentType: 'application/json',
-                data: JSON.stringify({id: id, name: name, parent_id: parentId, category_type: type}),
+                data: JSON.stringify({id: id, name: name, parent_id: parentId, category_type: type, description: description}),
                 success: function(resp) {
                     if (resp.success) {
                         alertify.success(resp.message);
@@ -624,6 +637,7 @@
             let id = $('#depenseId').val();
             let name = $('#depenseName').val();
             let parentId = $('#depenseParent').val();
+            let description = $('#depenseDescription').val();
 
             if (!name) return alertify.error("Le nom est requis");
 
@@ -632,7 +646,7 @@
             $.ajax({
                 url: url,
                 type: 'POST',
-                data: {id: id, name: name, parent_id: parentId, csrfmiddlewaretoken: '{{ csrf_token }}'},
+                data: {id: id, name: name, parent_id: parentId, description: description, csrfmiddlewaretoken: '{{ csrf_token }}'},
                 success: function(resp) {
                     if (resp.status === 'success') {
                         alertify.success(resp.message);
@@ -649,6 +663,7 @@
             $('#recetteName').val($(this).data('name'));
             $('#recetteParent').val($(this).data('parent'));
             $('#recetteType').val($(this).data('type'));
+            $('#recetteDescription').val($(this).data('description'));
             $('#recetteModalLabel').text("Modifier la Catégorie");
             $('#recetteModal').modal('show');
         });
@@ -658,6 +673,7 @@
             $('#depenseId').val($(this).data('id'));
             $('#depenseName').val($(this).data('name'));
             $('#depenseParent').val($(this).data('parent'));
+            $('#depenseDescription').val($(this).data('description'));
             $('#depenseModalLabel').text("Modifier le Type");
             $('#depenseModal').modal('show');
         });
@@ -693,12 +709,14 @@
         function resetRecetteForm() {
             $('#recetteForm')[0].reset();
             $('#recetteId').val('');
+            $('#recetteDescription').val('');
             $('#recetteModalLabel').text("Nouvelle Catégorie de Recette");
         }
 
         function resetDepenseForm() {
             $('#depenseForm')[0].reset();
             $('#depenseId').val('');
+            $('#depenseDescription').val('');
             $('#depenseModalLabel').text("Nouveau Type de Dépense");
         }
     });

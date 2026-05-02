@@ -10,7 +10,13 @@ class Institut(TenantMixin):
     date_creation = models.DateTimeField(auto_now_add=True)
 
     tenant_type = models.CharField(max_length=255, null=True, blank=True, choices=[('associe','Associe'),('master','Compte maitre'),('second','Compte standard')])
+    is_visible = models.BooleanField(default=True, verbose_name=_("Visible dans la sélection"))
+    is_active = models.BooleanField(default=True, verbose_name=_("Compte actif"))
+    crm_notifications_enabled = models.BooleanField(default=True, verbose_name=_("Notifications CRM actives"))
     max_upload_size = models.PositiveIntegerField(null=True, blank=True, verbose_name=_("Taille max upload (KB)"), help_text=_("Laissez vide pour utiliser la limite globale du SaaS"))
+    
+    force_password_change = models.BooleanField(default=False, verbose_name=_("Forcer le changement de mot de passe"))
+    password_reset_date = models.DateTimeField(null=True, blank=True, verbose_name=_("Date de forçage du reset"))
 
     @property
     def effective_max_upload_size(self):

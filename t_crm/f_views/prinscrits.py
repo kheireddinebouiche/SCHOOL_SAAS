@@ -141,6 +141,9 @@ def ApiLoadPrinscrits(request):
         # Get missing documents
         missing_docs = get_missing_docs_list(obj)
         
+        # Check for due payments
+        has_due_payments = DuePaiements.objects.filter(client=obj, is_annulated=False).exists()
+        
         liste.append({
             'slug': obj.slug,
             'statut': obj.statut,
@@ -160,6 +163,7 @@ def ApiLoadPrinscrits(request):
             'statut_label': obj.get_statut_display(),
             'missing_docs': missing_docs,
             'is_double': obj.is_double,
+            'has_due_payments': has_due_payments,
         })
     
     return JsonResponse({
@@ -209,6 +213,7 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'adresse': prospect.adresse,
         'date_naissance': prospect.date_naissance.strftime("%Y-%m-%d") if prospect.date_naissance else None,
         'created_at': prospect.created_at.strftime("%Y-%m-%d %H:%M") if prospect.created_at else None,
+        'created_by': prospect.created_by.username if prospect.created_by else "Système",
         'commune' : prospect.commune,
         'preinscri_date' : prospect.preinscri_date.strftime("%Y-%m-%d") if prospect.preinscri_date else None,
         'instance_date' : prospect.instance_date.strftime("%Y-%m-%d") if prospect.instance_date else None,

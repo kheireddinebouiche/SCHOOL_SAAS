@@ -501,6 +501,70 @@ def logout_view(request):
         logout(request)
     return redirect('institut_app:login')
 
+@login_required(login_url='institut_app:login')
+def ChangePasswordForce(request):
+    if request.method == 'POST':
+        password = request.POST.get('password')
+        password_confirm = request.POST.get('password_confirm')
+        
+        if not password or len(password) < 8:
+            messages.error(request, "Le mot de passe doit faire au moins 8 caractères.")
+        elif password != password_confirm:
+            messages.error(request, "Les mots de passe ne correspondent pas.")
+        else:
+            user = request.user
+            user.set_password(password)
+            user.save()
+            
+            # Update last_password_change in profile
+            profile, created = Profile.objects.get_or_create(user=user)
+            profile.last_password_change = timezone.now()
+            profile.save()
+            
+            # Update UserSession to prevent logout from other middlewares if any
+            session_info, _ = UserSession.objects.get_or_create(user=user)
+            session_info.last_session_key = request.session.session_key
+            session_info.save()
+            
+            # We need to re-login the user because set_password logs them out
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            
+            messages.success(request, "Votre mot de passe a été mis à jour avec succès.")
+            return redirect('institut_app:index')
+            
+    return render(request, 'tenant_folder/users/force_password_change.html', {
+        'tenant': request.tenant
+    })
+
+def ForgotPasswordRequestView(request):
+    if request.method == 'POST':
+        identifier = request.POST.get('identifier')
+        if not identifier:
+            return JsonResponse({'status': 'error', 'message': 'Veuillez saisir votre email ou nom d\'utilisateur.'})
+        
+        from django.contrib.auth.models import User
+        from django.db.models import Q
+        user = User.objects.filter(Q(email=identifier) | Q(username=identifier)).first()
+        
+        if user:
+            from .models import PasswordResetRequest
+            if PasswordResetRequest.objects.filter(user=user, is_active=True).exists():
+                return JsonResponse({'status': 'warning', 'message': 'Une demande est déjà en cours pour ce compte.'})
+            
+            PasswordResetRequest.objects.create(user=user)
+            return JsonResponse({'status': 'success', 'message': 'Votre demande a été envoyée à l\'administrateur. Veuillez patienter.'})
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Utilisateur introuvable.'})
+            
+    return render(request, 'registration/forgot_password.html')
+
+def ShowBlockedConnexion(request):
+    if not request.session.get("allow_blocked_page"):
+        return redirect("institut_app:index")  
+    
+    request.session.pop("allow_blocked_page")
+    return render(request, "tenant_folder/blocked_connexion.html")
+
 
 def login_view(request):
     if not request.user.is_authenticated:
@@ -1000,15 +1064,42 @@ def directeur_dashboard(request):
     conversion_rate = (converted_clients / total_prospects_all * 100) if total_prospects_all > 0 else 0
     
     # Demandes en attente
-    # Demandes en attente
     pending_inscriptions = ClientPaiementsRequest.objects.filter(client__statut='instance').count()
     
     # RDV aujourd'hui
     today_date = today.date()
     rdv_today = RendezVous.objects.filter(date_rendez_vous=today_date).count()
     
-    # Top Channels
-    top_channels = Prospets.objects.values('canal').annotate(count=Count('canal')).order_by('-count')[:3]
+    # --- Statistiques d'Acquisition Avancées ---
+    # 1. Canaux d'acquisition (Labels et Counts)
+    canal_labels = dict(Prospets._meta.get_field('canal').choices)
+    acquisition_channels_raw = Prospets.objects.values('canal').annotate(count=Count('canal')).order_by('-count')
+    acquisition_channels = []
+    total_canal_count = 0
+    for item in acquisition_channels_raw:
+        if item['canal']:
+            count = item['count']
+            total_canal_count += count
+            acquisition_channels.append({
+                'label': canal_labels.get(item['canal'], item['canal']),
+                'count': count,
+                'code': item['canal']
+            })
+    
+    # 2. Situation du Contact (Source du Lead)
+    situation_labels = dict(Prospets._meta.get_field('contact_situation').choices)
+    contact_situations_raw = Prospets.objects.values('contact_situation').annotate(count=Count('contact_situation')).order_by('-count')
+    contact_situations = []
+    for item in contact_situations_raw:
+        if item['contact_situation']:
+            contact_situations.append({
+                'label': situation_labels.get(item['contact_situation'], item['contact_situation']),
+                'count': item['count'],
+                'code': item['contact_situation']
+            })
+
+    # Top Channels (for the small list, top 5)
+    top_channels = acquisition_channels[:5]
 
     # --- 2. Finance ---
     # CA du mois (Paiements)
@@ -1043,7 +1134,7 @@ def directeur_dashboard(request):
     # PVs en attente
     pending_pvs = PvExamen.objects.filter(est_valide=False).count()
 
-    # --- 5. CRM Advanced Stats (Copied from CRM Dashboard) ---
+    # --- 5. CRM Advanced Stats ---
     # Répartition des prospects par statut
     prospects_by_status = Prospets.objects.values('statut').annotate(count=Count('statut')).order_by('-count')
     status_labels = {'visiteur': 'Visiteur', 'prinscrit': 'Pré-inscrit', 'instance': 'Instance', 'convertit': 'Converti'}
@@ -1087,7 +1178,10 @@ def directeur_dashboard(request):
                 'conversion_rate': round(conversion_rate, 1),
                 'pending_inscriptions': pending_inscriptions,
                 'rdv_today': rdv_today,
-                'top_channels': top_channels
+                'top_channels': top_channels,
+                'acquisition_channels': acquisition_channels,
+                'contact_situations': contact_situations,
+                'total_canal_count': total_canal_count
             },
             'finance': {
                 'revenue_month': revenue_month,
@@ -1114,6 +1208,7 @@ def directeur_dashboard(request):
         'recent_reminders': recent_reminders
     }
     return render(request, 'tenant_folder/directeur/directeur.html', context)
+
 
 @login_required(login_url="institut_app:login")
 def ApiMarkNotificationRead(request):
@@ -1748,3 +1843,28 @@ def ApiVerifyPassword(request):
             return JsonResponse({'status': 'error', 'message': 'Mot de passe incorrect.'}, status=403)
     
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
+
+@login_required(login_url='institut_app:login')
+def knowledge_center_view(request):
+    try:
+        from saas_admin_app.models import KnowledgeCategory, KnowledgeResource
+        
+        categories = KnowledgeCategory.objects.all().order_by('order', 'name')
+        resources = KnowledgeResource.objects.filter(is_published=True).order_by('category__order', 'order', '-created_at')
+        
+        categories_with_resources = []
+        for cat in categories:
+            cat_resources = resources.filter(category=cat)
+            if cat_resources.exists():
+                categories_with_resources.append({
+                    'category': cat,
+                    'resources': cat_resources
+                })
+    except ImportError:
+        categories_with_resources = []
+        
+    context = {
+        'tenant': request.tenant,
+        'categories_with_resources': categories_with_resources,
+    }
+    return render(request, 'tenant_folder/knowledge/knowledge_center.html', context)

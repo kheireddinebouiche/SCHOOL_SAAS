@@ -213,6 +213,131 @@ def saas_dashboard_view(request):
 
     return render(request, 'saas_admin_app/saas_dashboard.html', context)
 
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_create_tenant_view(request):
+    """Crée un nouveau tenant (Institut), son domaine et son superutilisateur."""
+    if request.method == 'POST':
+        nom = request.POST.get('nom')
+        schema_name = request.POST.get('schema_name')
+        domain_name = request.POST.get('domain_name')
+        admin_username = request.POST.get('admin_username')
+        admin_email = request.POST.get('admin_email')
+        admin_password = request.POST.get('admin_password')
+        tenant_type = request.POST.get('tenant_type', 'second')
+        
+        if not all([nom, schema_name, domain_name, admin_username, admin_email, admin_password]):
+            messages.error(request, "Tous les champs sont obligatoires.")
+            return redirect('saas_admin_app:saas_dashboard')
+            
+        try:
+            # 1. Création du Tenant (Institut)
+            # schema_name doit être unique et conforme aux règles PostgreSQL
+            from app.models import Institut, Domaine
+            
+            if Institut.objects.filter(schema_name=schema_name).exists():
+                messages.error(request, f"Le schéma '{schema_name}' existe déjà.")
+                return redirect('saas_admin_app:saas_dashboard')
+            
+            tenant = Institut(
+                nom=nom,
+                schema_name=schema_name,
+                tenant_type=tenant_type
+            )
+            tenant.save() # Déclenche la création du schéma via django-tenants
+            
+            # 2. Création du Domaine
+            domain = Domaine(
+                domain=domain_name,
+                tenant=tenant,
+                is_primary=True
+            )
+            domain.save()
+            
+            # 3. Création du Super-utilisateur dans le contexte du tenant
+            with tenant_context(tenant):
+                User = get_user_model()
+                user = User.objects.create_superuser(
+                    username=admin_username,
+                    email=admin_email,
+                    password=admin_password
+                )
+                
+                # Initialisation du profil si nécessaire
+                try:
+                    from institut_app.models import Profile
+                    from django.utils import timezone
+                    profile, created = Profile.objects.get_or_create(user=user)
+                    profile.role = 'admin'
+                    profile.last_password_change = timezone.now()
+                    profile.save()
+                except Exception as e:
+                    # On log l'erreur mais on ne bloque pas si le profil échoue (cas rare)
+                    print(f"Erreur création profil: {e}")
+            
+            messages.success(request, f"L'institution '{nom}' a été créée avec succès. Accès : {domain_name}")
+            return redirect('saas_admin_app:saas_dashboard')
+            
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la création : {str(e)}")
+            return redirect('saas_admin_app:saas_dashboard')
+            
+    return redirect('saas_admin_app:saas_dashboard')
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_tenants_manage_view(request):
+    """Page dédiée à la gestion complète des tenants et de leurs domaines."""
+    instituts = Institut.objects.all().order_by('-date_creation')
+    
+    metrics_list = []
+    for inst in instituts:
+        # Get metrics for each tenant
+        user_count = 0
+        db_size = "0 KB"
+        doc_count = 0
+        media_size = "0 KB"
+        unknown_count = 0
+        
+        try:
+            with tenant_context(inst):
+                user_count = get_user_model().objects.count()
+                db_size = format_size(get_schema_size_bytes(inst.schema_name))
+                
+                # Documents CRM
+                try:
+                    from t_crm.models import CRMDocument
+                    doc_count = CRMDocument.objects.count()
+                except: pass
+                
+                # Media size & Orphans
+                media_size_bytes = get_directory_size(os.path.join(settings.MEDIA_ROOT, inst.schema_name))
+                unknown_count = get_unknown_files_count(inst)
+                media_size = format_size(media_size_bytes)
+        except Exception as e:
+            print(f"Error metrics for {inst.schema_name}: {e}")
+
+        # Get domain info
+        primary_domain = inst.domains.filter(is_primary=True).first()
+        other_domains = inst.domains.filter(is_primary=False)
+
+        metrics_list.append({
+            'institut': inst,
+            'primary_domain': primary_domain,
+            'other_domains': other_domains,
+            'user_count': user_count,
+            'db_size': db_size,
+            'doc_count': doc_count,
+            'media_size': media_size,
+            'unknown_count': unknown_count,
+            'date_creation': inst.date_creation
+        })
+
+    context = {
+        'metrics_list': metrics_list,
+        'total_tenants': instituts.count(),
+    }
+    return render(request, 'saas_admin_app/saas_tenants_manage.html', context)
+
+
 from django.utils.decorators import method_decorator
 from functools import wraps
 from django.shortcuts import redirect
@@ -1020,13 +1145,18 @@ def saas_tenant_detail_view(request, tenant_id):
     if request.method == 'POST' and 'update_upload_limit' in request.POST:
         try:
             limit = request.POST.get('max_upload_size')
+            is_visible = request.POST.get('is_visible') == 'on'
+            
             if limit:
                 institut.max_upload_size = int(limit)
             else:
                 institut.max_upload_size = None
+            
+            institut.is_visible = is_visible
             institut.save()
+            
             from django.contrib import messages
-            messages.success(request, f"Limite d'upload mise à jour pour {institut.nom}")
+            messages.success(request, f"Configuration mise à jour pour {institut.nom}")
             return redirect('saas_admin_app:saas_tenant_detail', tenant_id=tenant_id)
         except ValueError:
             pass
@@ -1382,7 +1512,45 @@ def saas_file_browser_view(request, tenant_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+@system_access_required
+def saas_reset_user_sessions_view(request, tenant_id, user_id):
+    """Réinitialise toutes les sessions actives pour un utilisateur spécifique."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+        
+    try:
+        from django_tenants.utils import tenant_context
+        from app.models import Institut
+        from django.contrib.auth import get_user_model
+        from django.contrib.sessions.models import Session
+        from django.utils import timezone
+        
+        institut = Institut.objects.get(id=tenant_id)
+        with tenant_context(institut):
+            User = get_user_model()
+            user = User.objects.get(id=user_id)
+            
+            # Pour vider les sessions en DB
+            sessions = Session.objects.filter(expire_date__gte=timezone.now())
+            count = 0
+            for session in sessions:
+                data = session.get_decoded()
+                if str(user.id) == data.get('_auth_user_id'):
+                    session.delete()
+                    count += 1
+            
+            # Note: Si Redis est utilisé en prod, il faudrait une logique différente
+            # pour scanner les clés redis, mais ici on gère le cas standard DB.
+            
+            return JsonResponse({
+                'success': True, 
+                'message': f"Toutes les sessions ({count}) de {user.username} ont été réinitialisées."
+            })
+            
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@system_access_required
 def saas_file_serve_view(request, tenant_id, file_path):
     """Sert un fichier spécifique d'un tenant."""
     from django.http import FileResponse, Http404, HttpResponseForbidden
@@ -1736,6 +1904,172 @@ def saas_restore_backup_view(request, backup_id):
         
     return redirect('saas_admin_app:saas_backups')
 
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_force_tenant_password_change_view(request, tenant_id):
+    """
+    Active le forçage de changement de mot de passe pour un tenant et déconnecte tous ses utilisateurs.
+    """
+    from django.contrib.sessions.models import Session
+    from django.utils import timezone
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+        
+    try:
+        institut = Institut.objects.get(id=tenant_id)
+        
+        # Basculer l'état
+        institut.force_password_change = not institut.force_password_change
+            
+        if institut.force_password_change:
+            institut.password_reset_date = timezone.now()
+            
+            # Déconnecter tous les utilisateurs de ce tenant
+            with tenant_context(institut):
+                from institut_app.models import UserSession
+                user_sessions = UserSession.objects.all()
+                session_keys = [us.last_session_key for us in user_sessions if us.last_session_key]
+                
+                if session_keys:
+                    Session.objects.filter(session_key__in=session_keys).delete()
+                    # On vide les clés de session pour forcer le re-login
+                    user_sessions.update(last_session_key=None)
+                    
+            message = f"Le forçage de changement de mot de passe a été activé pour {institut.nom}. Tous les utilisateurs ont été déconnectés."
+        else:
+            message = f"Le forçage de changement de mot de passe a été désactivé pour {institut.nom}."
+            
+        institut.save()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': message,
+            'force_password_change': institut.force_password_change
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
+from django.shortcuts import get_object_or_404
 
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_knowledge_center_view(request):
+    from .models import KnowledgeCategory, KnowledgeResource
+    
+    categories = KnowledgeCategory.objects.all().order_by('order', 'name')
+    resources = KnowledgeResource.objects.all().order_by('category__order', 'order', '-created_at')
+    
+    context = {
+        'categories': categories,
+        'resources': resources,
+    }
+    return render(request, 'saas_admin_app/saas_knowledge_list.html', context)
 
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_knowledge_category_action_view(request):
+    from .models import KnowledgeCategory
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'add':
+            name = request.POST.get('name')
+            description = request.POST.get('description')
+            KnowledgeCategory.objects.create(name=name, description=description)
+            messages.success(request, "Catégorie ajoutée avec succès.")
+        elif action == 'edit':
+            cat_id = request.POST.get('id')
+            cat = get_object_or_404(KnowledgeCategory, id=cat_id)
+            cat.name = request.POST.get('name')
+            cat.description = request.POST.get('description')
+            cat.save()
+            messages.success(request, "Catégorie modifiée avec succès.")
+        elif action == 'delete':
+            cat_id = request.POST.get('id')
+            cat = get_object_or_404(KnowledgeCategory, id=cat_id)
+            cat.delete()
+            messages.success(request, "Catégorie supprimée.")
+    return redirect('saas_admin_app:saas_knowledge_center')
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_knowledge_resource_action_view(request):
+    from .models import KnowledgeCategory, KnowledgeResource
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'add':
+            title = request.POST.get('title')
+            cat_id = request.POST.get('category')
+            resource_type = request.POST.get('resource_type')
+            description = request.POST.get('description')
+            video_url = request.POST.get('video_url')
+            is_published = request.POST.get('is_published') == 'on'
+            file_attachment = request.FILES.get('file_attachment')
+            
+            category = get_object_or_404(KnowledgeCategory, id=cat_id)
+            KnowledgeResource.objects.create(
+                title=title, category=category, resource_type=resource_type,
+                description=description, video_url=video_url, is_published=is_published,
+                file_attachment=file_attachment
+            )
+            messages.success(request, "Ressource ajoutée avec succès.")
+        elif action == 'edit':
+            res_id = request.POST.get('id')
+            res = get_object_or_404(KnowledgeResource, id=res_id)
+            res.title = request.POST.get('title')
+            cat_id = request.POST.get('category')
+            res.category = get_object_or_404(KnowledgeCategory, id=cat_id)
+            res.resource_type = request.POST.get('resource_type')
+            res.description = request.POST.get('description')
+            res.video_url = request.POST.get('video_url')
+            res.is_published = request.POST.get('is_published') == 'on'
+            if 'file_attachment' in request.FILES:
+                res.file_attachment = request.FILES.get('file_attachment')
+            res.save()
+            messages.success(request, "Ressource modifiée avec succès.")
+        elif action == 'delete':
+            res_id = request.POST.get('id')
+            res = get_object_or_404(KnowledgeResource, id=res_id)
+            res.delete()
+            messages.success(request, "Ressource supprimée.")
+    return redirect('saas_admin_app:saas_knowledge_center')
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_toggle_tenant_visibility_view(request, tenant_id):
+    """Bascule la visibilité d'un tenant dans la sélection d'organisation."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+        
+    try:
+        institut = Institut.objects.get(id=tenant_id)
+        institut.is_visible = not institut.is_visible
+        institut.save()
+        
+        status_text = "visible" if institut.is_visible else "invisible"
+        message = f"L'institution '{institut.nom}' est désormais {status_text} dans la sélection."
+        
+        return JsonResponse({
+            'success': True, 
+            'message': message,
+            'is_visible': institut.is_visible
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_toggle_tenant_active_view(request, tenant_id):
+    """Bascule l'état actif/désactivé d'un tenant."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+        
+    try:
+        institut = Institut.objects.get(id=tenant_id)
+        institut.is_active = not institut.is_active
+        institut.save()
+        
+        status_text = "activé" if institut.is_active else "désactivé"
+        message = f"L'institution '{institut.nom}' est désormais {status_text}. L'accès via URL est {'autorisé' if institut.is_active else 'bloqué'}."
+        
+        return JsonResponse({
+            'success': True, 
+            'message': message,
+            'is_active': institut.is_active
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

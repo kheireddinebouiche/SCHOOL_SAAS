@@ -4,14 +4,17 @@ from .views import (
     saas_dashboard_view, saas_login_view, saas_logout_view, saas_performance_view, 
     saas_logs_view, saas_tenant_detail_view, saas_update_user_view,
     saas_tenant_files_view, saas_file_browser_view, saas_file_serve_view,
-    saas_reset_user_password_view, saas_email_config_view, saas_test_email_view,
+    saas_reset_user_password_view, saas_reset_user_sessions_view, saas_email_config_view, saas_test_email_view,
     saas_toggle_maintenance_view, saas_backups_view, saas_create_backup_view,
     saas_delete_backup_view, saas_download_backup_view, saas_restore_backup_view,
     saas_processes_view, saas_terminal_view, saas_terminal_exec_view,
     saas_explorer_view, api_explorer_browse, api_explorer_read,
     api_explorer_save, api_explorer_delete, saas_system_lock_view,
     saas_system_logout_view, saas_global_config_view, saas_firewall_view,
-    api_tenant_file_status, saas_performance_view
+    api_tenant_file_status, saas_performance_view, saas_force_tenant_password_change_view,
+    saas_knowledge_center_view, saas_knowledge_category_action_view, saas_knowledge_resource_action_view,
+    saas_create_tenant_view, saas_tenants_manage_view, saas_toggle_tenant_visibility_view,
+    saas_toggle_tenant_active_view
 )
 
 app_name = 'saas_admin_app'
@@ -21,6 +24,8 @@ urlpatterns = [
     path('login/', saas_login_view, name='saas_login'),
     path('logout/', saas_logout_view, name='saas_logout'),
     path('dashboard/', saas_dashboard_view, name='saas_dashboard'),
+    path('tenants/', saas_tenants_manage_view, name='saas_tenants_manage'),
+    path('tenant/create/', saas_create_tenant_view, name='saas_create_tenant'),
     path('performance/', saas_performance_view, name='saas_performance'),
     path('processes/', saas_processes_view, name='saas_processes'),
     path('terminal/', saas_terminal_view, name='saas_terminal'),
@@ -42,6 +47,8 @@ urlpatterns = [
     path('tenant/<int:tenant_id>/files/', saas_tenant_files_view, name='saas_tenant_files'),
     path('api/tenant/<int:tenant_id>/user/<int:user_id>/update/', saas_update_user_view, name='saas_update_user'),
     path('api/tenant/<int:tenant_id>/user/<int:user_id>/reset-password/', saas_reset_user_password_view, name='saas_reset_user_password'),
+    path('api/tenant/<int:tenant_id>/user/<int:user_id>/reset-sessions/', saas_reset_user_sessions_view, name='saas_reset_user_sessions'),
+    path('api/tenant/<int:tenant_id>/force-password-change/', saas_force_tenant_password_change_view, name='saas_force_tenant_password_change'),
     path('api/tenant/<int:tenant_id>/files/browse/', saas_file_browser_view, name='saas_file_browser'),
     path('api/tenant/<int:tenant_id>/file-status/', api_tenant_file_status, name='api_tenant_file_status'),
     path('api/tenant/<int:tenant_id>/files/serve/<path:file_path>', saas_file_serve_view, name='saas_file_serve'),
@@ -50,4 +57,9 @@ urlpatterns = [
     path('api/settings/maintenance/toggle/', saas_toggle_maintenance_view, name='saas_toggle_maintenance'),
     path('settings/global/', saas_global_config_view, name='saas_global_config'),
     path('firewall/', saas_firewall_view, name='saas_firewall'),
+    path('knowledge-center/', saas_knowledge_center_view, name='saas_knowledge_center'),
+    path('api/knowledge-center/category/action/', saas_knowledge_category_action_view, name='saas_knowledge_category_action'),
+    path('api/knowledge-center/resource/action/', saas_knowledge_resource_action_view, name='saas_knowledge_resource_action'),
+    path('api/tenant/<int:tenant_id>/toggle-visibility/', saas_toggle_tenant_visibility_view, name='saas_toggle_tenant_visibility'),
+    path('api/tenant/<int:tenant_id>/toggle-active/', saas_toggle_tenant_active_view, name='saas_toggle_tenant_active'),
 ]

@@ -127,6 +127,11 @@
                     <i class="ri-search-2-line text-muted"></i>
                     <input type="text" class="form-control" id="table-filter" placeholder="Rechercher...">
                   </div>
+                  <div class="filter-select-group" style="min-width: 220px;">
+                    <select id="promo-filter" class="form-select border-0 bg-light py-2" style="border-radius: 10px;">
+                      <option value="0">Toutes les promotions</option>
+                    </select>
+                  </div>
                   <button type="button" class="btn btn-primary btn-rounded shadow-sm px-4" data-bs-toggle="modal" id="btnCreerEcheancier">
                     <i class="ri-add-line me-1 fw-bold"></i> Créer un modèle
                   </button>
@@ -492,7 +497,13 @@ $(document).ready(function () {
             success : function(data){
                 var option = "<option value=''>Sélectionnez une promotion";
                 $.each(data, function(index, item){
-                    option += "<option value="+item.id+">"+item.code+" / "+item.session+" - "+item.begin_year+"-"+item.end_year+"</option>";
+                    var sessionLabel = item.session_label || item.session || '';
+                    var code = item.code || item.label || '';
+                    var begin = item.begin_year || '';
+                    var end = item.end_year || '';
+                    
+                    var label = code + (sessionLabel ? " / " + sessionLabel : "") + (begin ? " - " + begin : "") + (end ? "/" + end : "");
+                    option += "<option value='"+item.id+"'>"+label+"</option>";
                 });
                 $('#promoEcheancier').html(option);
             },
@@ -500,10 +511,14 @@ $(document).ready(function () {
     }
 
     function loadEcheanciers(){
+      var promo_id = $('#promo-filter').val() || 0;
       $.ajax({
         url : "{% url 't_tresorerie:ApiLoadModelEcheancier' %}",
         dataType : "JSON",
         type: "GET",
+        data: {
+          'promo_id': promo_id
+        },
         success: function(data){
           var row = "";
           if(data.length > 0) {
@@ -520,8 +535,11 @@ $(document).ready(function () {
                 year: 'numeric'
               });
                 
+              var doubleMention = item.is_double_diplomation ? 
+                '<span class="badge bg-info-subtle text-info ms-2 px-2 py-1" style="font-size: 0.7rem;"><i class="ri-links-line me-1"></i>Double Diplomation</span>' : '';
+                
               row += '<tr class="align-middle">';
-              row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1 fw-medium'>" + item.label + "</div></div></td>";
+              row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1 fw-medium'>" + item.label + doubleMention + "</div></div></td>";
               row += "<td>" + item.promo_session_label + " - "+item.promo__begin_year+" / "+item.promo__end_year+"</td>";
               row += "<td>" + item.nombre_tranche + "</td>";
               row += "<td>" + statusBadge + "</td>";
@@ -562,6 +580,28 @@ $(document).ready(function () {
     }
       
     loadEcheanciers();
+    loadFilterPromo();
+
+    function loadFilterPromo(){
+        $.ajax({
+            url : "{% url 't_tresorerie:ApiLoadPromo' %}",
+            dataType : 'JSON',
+            type : "GET",
+            success : function(data){
+                var option = "<option value='0'>Toutes les promotions</option>";
+                $.each(data, function(index, item){
+                    var sessionLabel = item.session_label || item.session || '';
+                    var code = item.code || item.label || '';
+                    var begin = item.begin_year || '';
+                    var end = item.end_year || '';
+                    
+                    var label = code + (sessionLabel ? " / " + sessionLabel : "") + (begin ? " - " + begin : "") + (end ? "/" + end : "");
+                    option += "<option value='"+item.id+"'>"+label+"</option>";
+                });
+                $('#promo-filter').html(option);
+            },
+        }); 
+    }
 
     function loadEditPromo(selectedPromoId){
         $.ajax({
@@ -571,8 +611,14 @@ $(document).ready(function () {
             success : function(data){
                 var option = "<option value=''>Sélectionnez une promotion</option>";
                 $.each(data, function(index, item){
+                    var sessionLabel = item.session_label || item.session || '';
+                    var code = item.code || item.label || '';
+                    var begin = item.begin_year || '';
+                    var end = item.end_year || '';
+                    
+                    var label = code + (sessionLabel ? " / " + sessionLabel : "") + (begin ? " - " + begin : "") + (end ? "/" + end : "");
                     var selected = item.id == selectedPromoId ? "selected" : "";
-                    option += "<option value="+item.id+" "+selected+">"+item.code+" / "+item.session_label+" - "+item.begin_year+"-"+item.end_year+"</option>";
+                    option += "<option value='"+item.id+"' "+selected+">"+label+"</option>";
                 });
                 $('#editPromoEcheancier').html(option);
             },
@@ -879,13 +925,16 @@ $(document).ready(function () {
 
       
 
-      // Show/hide info message for edit modal
       $('#editDoubleDiplomationToggle').on('change', function() {
         if ($(this).is(':checked')) {
           $('#editDoubleDiplomationInfo').show();
         } else {
           $('#editDoubleDiplomationInfo').hide();
         }
+      });
+
+      $(document).on('change', '#promo-filter', function(){
+        loadEcheanciers();
       });
 });
 </script>

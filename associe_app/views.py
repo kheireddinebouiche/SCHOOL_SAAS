@@ -12,6 +12,8 @@ from .utils import sync_global_categories
 from django.contrib import messages
 from app.models import Institut
 from django_tenants.utils import schema_context
+from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password
 
 @login_required(login_url='login')
 def update_tenant_type(request):
@@ -27,7 +29,8 @@ def update_tenant_type(request):
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
 
 from t_tresorerie.models import PaymentCategory, DepensesCategory, PaymentType
-from t_crm.models import Prospets, Opportunite
+from t_crm.models import Prospets, Opportunite, FicheDeVoeux
+from t_formations.models import Promos
 from django.db.models import Sum, Count
 from institut_app.models import Entreprise
 from .models import BudgetCampaign, BudgetLine, PostesBudgetaire, BudgetLineDetail
@@ -140,7 +143,8 @@ def _get_payment_categories_list():
             'name': cat.name,
             'parent_id': cat.parent.id if cat.parent else None,
             'type': cat.category_type,
-            'type_display': cat.get_category_type_display()
+            'type_display': cat.get_category_type_display(),
+            'description': cat.description or ''
         })
     return categories_list
 
@@ -153,7 +157,8 @@ def _get_depenses_categories_list():
             'name': cat.name,
             'parent_id': cat.parent.id if cat.parent else None,
             'payment_category': cat.payment_category.name if cat.payment_category else '-',
-            'payment_category_id': cat.payment_category.id if cat.payment_category else None
+            'payment_category_id': cat.payment_category.id if cat.payment_category else None,
+            'description': cat.description or ''
         })
     return categories_list
 
@@ -213,7 +218,8 @@ def global_payment_category_edit(request, pk):
         return JsonResponse({
             'name': category.name,
             'parent': category.parent.id if category.parent else '',
-            'category_type': category.category_type
+            'category_type': category.category_type,
+            'description': category.description or ''
         })
     return redirect('associe_app:global_payment_category_list')
 
@@ -237,7 +243,7 @@ def export_payment_categories(request):
     ws = wb.active
     ws.title = "Payment Categories"
     
-    headers = ['ID', 'Nom', 'Parent_ID', 'Parent_Nom', 'Type']
+    headers = ['ID', 'Nom', 'Parent_ID', 'Parent_Nom', 'Type', 'Description']
     ws.append(headers)
     
     for cat in categories:
@@ -246,7 +252,8 @@ def export_payment_categories(request):
             cat.name,
             cat.parent.id if cat.parent else '',
             cat.parent.name if cat.parent else '',
-            cat.category_type
+            cat.category_type,
+            cat.description or ''
         ])
     
     output = io.BytesIO()
@@ -292,7 +299,8 @@ def import_payment_categories(request):
                     defaults={
                         'name': row.get('Nom') or row.get('name'),
                         'parent': parent,
-                        'category_type': row.get('Type') or row.get('category_type') or 'standard'
+                        'category_type': row.get('Type') or row.get('category_type') or 'standard',
+                        'description': row.get('Description') or row.get('description') or ''
                     }
                 )
                 success_count += 1
@@ -347,7 +355,7 @@ def export_depenses_categories(request):
     ws = wb.active
     ws.title = "Depenses Categories"
     
-    headers = ['ID', 'Nom', 'Parent_ID', 'Parent_Nom', 'Payment_Category_ID', 'Payment_Category_Nom']
+    headers = ['ID', 'Nom', 'Parent_ID', 'Parent_Nom', 'Payment_Category_ID', 'Payment_Category_Nom', 'Description']
     ws.append(headers)
     
     for cat in categories:
@@ -357,7 +365,8 @@ def export_depenses_categories(request):
             cat.parent.id if cat.parent else '',
             cat.parent.name if cat.parent else '',
             cat.payment_category.id if cat.payment_category else '',
-            cat.payment_category.name if cat.payment_category else ''
+            cat.payment_category.name if cat.payment_category else '',
+            cat.description or ''
         ])
     
     output = io.BytesIO()
@@ -406,7 +415,8 @@ def import_depenses_categories(request):
                     defaults={
                         'name': row.get('Nom') or row.get('name'),
                         'parent': parent,
-                        'payment_category': pay_cat
+                        'payment_category': pay_cat,
+                        'description': row.get('Description') or row.get('description') or ''
                     }
                 )
                 success_count += 1
@@ -444,7 +454,8 @@ def global_depenses_category_edit(request, pk):
         return JsonResponse({
             'name': category.name,
             'parent': category.parent.id if category.parent else '',
-            'payment_category': category.payment_category.id if category.payment_category else ''
+            'payment_category': category.payment_category.id if category.payment_category else '',
+            'description': category.description or ''
         })
     return redirect('associe_app:global_depenses_category_list')
 
@@ -633,12 +644,28 @@ def crm_statistics(request):
                     count = all_prospects.filter(statut=s).count()
                     global_stats['status_counts'][s] += count
 
+                # Promo Breakdown
+                promo_stats = []
+                promos = Promos.objects.filter(is_archived=False).order_by('-begin_year')[:10] # Last 10 promos
+                for promo in promos:
+                    p_ids = FicheDeVoeux.objects.filter(promo=promo).values_list('prospect_id', flat=True)
+                    promo_prospects = Prospets.objects.filter(id__in=p_ids)
+                    promo_total = promo_prospects.count()
+                    if promo_total > 0:
+                        s_counts = {s: promo_prospects.filter(statut=s).count() for s in statuses}
+                        promo_stats.append({
+                            'label': promo.label,
+                            'total': promo_total,
+                            'status_counts': s_counts
+                        })
+
                 institutes_stats.append({
                     'id': tenant.id,
                     'name': tenant.nom,
                     'prospects_count': prospects_count,
                     'opportunities_count': opportunities_count,
-                    'budget_sum': budget_sum
+                    'budget_sum': budget_sum,
+                    'promo_stats': promo_stats
                 })
 
                 global_stats['total_prospects'] += prospects_count
@@ -679,16 +706,81 @@ def get_crm_stats_api(request, tenant_id):
                     'percentage': (count / total_prospects * 100) if total_prospects > 0 else 0
                 })
 
+            # Promo Breakdown
+            promo_stats = []
+            promos = Promos.objects.filter(is_archived=False).order_by('-begin_year')
+            for promo in promos:
+                fiches = FicheDeVoeux.objects.filter(promo=promo).select_related('prospect', 'specialite', 'specialite__formation')
+                promo_total = fiches.count()
+                
+                if promo_total > 0:
+                    # Global status breakdown for the promo
+                    s_counts = []
+                    for s in statuses:
+                        count = fiches.filter(prospect__statut=s).count()
+                        s_counts.append({
+                            'statut': s,
+                            'count': count,
+                            'percentage': (count / promo_total * 100) if promo_total > 0 else 0
+                        })
+                    
+                    # Detailed breakdown by Formation / Specialite
+                    formation_data = {}
+                    for f in fiches:
+                        spec = f.specialite
+                        if not spec: continue
+                        form = spec.formation
+                        form_name = form.nom if form else "Sans Formation"
+                        
+                        if form_name not in formation_data:
+                            formation_data[form_name] = {}
+                        
+                        spec_name = spec.label
+                        if spec_name not in formation_data[form_name]:
+                            formation_data[form_name][spec_name] = {st: 0 for st in statuses}
+                            formation_data[form_name][spec_name]['total'] = 0
+                        
+                        status = f.prospect.statut
+                        if status in statuses:
+                            formation_data[form_name][spec_name][status] += 1
+                            formation_data[form_name][spec_name]['total'] += 1
+                    
+                    # Convert to list for JSON
+                    form_list = []
+                    for fn, specs in formation_data.items():
+                        spec_list = []
+                        for sn, s_counts_spec in specs.items():
+                            spec_list.append({
+                                'label': sn,
+                                'total': s_counts_spec['total'],
+                                'status_counts': {st: s_counts_spec[st] for st in statuses}
+                            })
+                        form_list.append({
+                            'label': fn,
+                            'specialites': spec_list
+                        })
+
+                    promo_stats.append({
+                        'id': promo.id,
+                        'label': promo.label,
+                        'session': promo.session,
+                        'total': promo_total,
+                        'status_breakdown': s_counts,
+                        'formations': form_list
+                    })
+
             return JsonResponse({
                 'status': 'success',
                 'tenant_name': tenant.nom,
                 'total_prospects': total_prospects,
                 'active_opportunities': active_opportunities,
                 'total_budget': total_budget,
-                'status_breakdown': status_breakdown
+                'status_breakdown': status_breakdown,
+                'promo_stats': promo_stats
             })
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)})
+        import traceback
+        return JsonResponse({'status': 'error', 'message': str(e), 'trace': traceback.format_exc()})
 
 @login_required(login_url='login')
 def purge_tenant_categories(request, tenant_id):
@@ -1527,4 +1619,105 @@ def import_postes_budgetaires(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': f"Erreur lors de l'import : {str(e)}"})
             
+    return JsonResponse({'status': 'error', 'message': 'Requête invalide.'})
+
+# --- User Management Views ---
+
+@login_required(login_url='login')
+def user_list(request):
+    users = User.objects.all().order_by('-date_joined')
+    return render(request, 'associe_app/users/user_list.html', {'users': users})
+
+@login_required(login_url='login')
+def user_create(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        is_staff = request.POST.get('is_staff') == 'on'
+        is_active = request.POST.get('is_active') == 'on'
+        
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "Ce nom d'utilisateur existe déjà.")
+        else:
+            User.objects.create(
+                username=username,
+                email=email,
+                password=make_password(password),
+                first_name=first_name,
+                last_name=last_name,
+                is_staff=is_staff,
+                is_active=is_active
+            )
+            messages.success(request, "Utilisateur créé avec succès.")
+            return redirect('associe_app:user_list')
+            
+    return render(request, 'associe_app/users/user_form.html')
+
+@login_required(login_url='login')
+def user_edit(request, pk):
+    user = get_object_or_404(User, pk=pk)
+    if request.method == 'POST':
+        user.username = request.POST.get('username')
+        user.email = request.POST.get('email')
+        user.first_name = request.POST.get('first_name')
+        user.last_name = request.POST.get('last_name')
+        user.is_staff = request.POST.get('is_staff') == 'on'
+        user.is_active = request.POST.get('is_active') == 'on'
+        
+        password = request.POST.get('password')
+        if password:
+            user.password = make_password(password)
+            
+        user.save()
+        messages.success(request, "Utilisateur mis à jour avec succès.")
+        return redirect('associe_app:user_list')
+        
+    return render(request, 'associe_app/users/user_form.html', {'edit_user': user})
+
+@login_required(login_url='login')
+def user_delete(request, pk):
+    user = get_object_or_404(User, pk=pk)
+    if user.is_superuser:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'error', 'message': "Impossible de supprimer un super-utilisateur."})
+        messages.error(request, "Impossible de supprimer un super-utilisateur.")
+    else:
+        user.delete()
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': "Utilisateur supprimé."})
+        messages.success(request, "Utilisateur supprimé.")
+    return redirect('associe_app:user_list')
+
+@login_required(login_url='login')
+def user_toggle_status(request, pk):
+    user = get_object_or_404(User, pk=pk)
+    if user.is_superuser and request.user != user:
+         messages.error(request, "Vous ne pouvez pas désactiver un autre super-utilisateur.")
+    else:
+        user.is_active = not user.is_active
+        user.save()
+        status = "activé" if user.is_active else "désactivé"
+        messages.success(request, f"Utilisateur {status}.")
+        
+    return redirect('associe_app:user_list')
+
+@login_required(login_url='login')
+def get_tenant_sync_list(request):
+    tenants = Institut.objects.exclude(schema_name='public').values('nom', 'schema_name')
+    return JsonResponse({'status': 'success', 'tenants': list(tenants)})
+
+@login_required(login_url='login')
+def sync_single_tenant_view(request):
+    if request.method == 'POST':
+        schema_name = request.POST.get('schema_name')
+        if schema_name:
+            from .utils import sync_tenant_categories
+            try:
+                sync_tenant_categories(schema_name)
+                return JsonResponse({'status': 'success', 'message': f'Tenant {schema_name} synchronisé.'})
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Requête invalide.'})

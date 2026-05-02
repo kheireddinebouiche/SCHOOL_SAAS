@@ -209,7 +209,7 @@
                         <div class="card-header card-header-modern align-items-center d-flex">
                             <h5 class="card-title mb-0 flex-grow-1">
                                 <i class="ri-line-chart-line me-2 text-primary"></i>
-                                Évolution des Prospects
+                                Évolution des Prospects (7 derniers jours)
                             </h5>
                         </div>
                         <div class="card-body">
@@ -222,11 +222,41 @@
                         <div class="card-header card-header-modern align-items-center d-flex">
                             <h5 class="card-title mb-0 flex-grow-1">
                                 <i class="ri-pie-chart-fill me-2 text-info"></i>
-                                Répartition Statut
+                                Répartition par Statut
                             </h5>
                         </div>
                         <div class="card-body">
                             <div id="statusChart" class="apex-charts" dir="ltr"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Acquisition Stats Row -->
+            <div class="row g-4 mb-4">
+                <div class="col-xl-7">
+                    <div class="card modern-card">
+                        <div class="card-header card-header-modern align-items-center d-flex">
+                            <h5 class="card-title mb-0 flex-grow-1">
+                                <i class="ri-radar-chart-line me-2 text-success"></i>
+                                Canaux d'Acquisition (Performance)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="canalChart" class="apex-charts" dir="ltr"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-5">
+                    <div class="card modern-card">
+                        <div class="card-header card-header-modern align-items-center d-flex">
+                            <h5 class="card-title mb-0 flex-grow-1">
+                                <i class="ri-bubble-chart-line me-2 text-warning"></i>
+                                Source du Lead (Situation)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="situationChart" class="apex-charts" dir="ltr"></div>
                         </div>
                     </div>
                 </div>
@@ -368,11 +398,11 @@
                                 {% for channel in kpis.commercial.top_channels %}
                                 <div>
                                     <div class="d-flex justify-content-between mb-1">
-                                        <span class="fs-13 fw-medium">{{ channel.canal|title }}</span>
+                                        <span class="fs-13 fw-medium">{{ channel.label }}</span>
                                         <span class="fs-13 text-muted">{{ channel.count }} leads</span>
                                     </div>
                                     <div class="progress rounded-pill" style="height: 6px;">
-                                        <div class="progress-bar bg-info" role="progressbar" style="width: 50%" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
+                                        <div class="progress-bar bg-info" role="progressbar" style="width: {% widthratio channel.count kpis.commercial.total_canal_count 100 %}%" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
                                     </div>
                                 </div>
                                 {% empty %}
@@ -535,6 +565,9 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Colors palette
+        const chartColors = ['#4361ee', '#4cc9f0', '#f72585', '#7209b7', '#3f37c9', '#4895ef', '#560bad', '#480ca8', '#b5179e', '#f15bb5'];
+
         // Chart des prospects
         var prospectsChartOptions = {
             chart: {
@@ -585,7 +618,7 @@
         // Chart de répartition par statut (Pie)
         var statusChartOptions = {
             chart: {
-                height: 300,
+                height: 280,
                 type: 'donut',
                 fontFamily: 'inherit'
             },
@@ -599,12 +632,29 @@
                     {{ status_data.count|default:0 }}{% if not forloop.last %}, {% endif %}
                 {% endfor %}
             ],
-            colors: ['#4361ee', '#4cc9f0', '#f72585', '#7209b7', '#3f37c9', '#4895ef'],
+            colors: chartColors,
             legend: {
                 position: 'bottom',
                 fontSize: '11px'
             },
-            dataLabels: { enabled: false }
+            dataLabels: { enabled: false },
+            plotOptions: {
+                pie: {
+                    donut: {
+                        size: '70%',
+                        labels: {
+                            show: true,
+                            total: {
+                                show: true,
+                                label: 'Total',
+                                formatter: function (w) {
+                                    return w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         };
 
         var statusChart = new ApexCharts(
@@ -612,6 +662,100 @@
             statusChartOptions
         );
         statusChart.render();
+
+        // New Canal Chart (Bar Chart)
+        var canalChartOptions = {
+            chart: {
+                height: 350,
+                type: 'bar',
+                toolbar: { show: false }
+            },
+            plotOptions: {
+                bar: {
+                    borderRadius: 4,
+                    horizontal: true,
+                    distributed: true,
+                    barHeight: '60%',
+                }
+            },
+            colors: chartColors,
+            dataLabels: {
+                enabled: true,
+                textAnchor: 'start',
+                style: { colors: ['#fff'] },
+                formatter: function (val, opt) {
+                    return opt.w.globals.labels[opt.dataPointIndex] + ": " + val
+                },
+                offsetX: 0,
+            },
+            series: [{
+                name: 'Leads',
+                data: [
+                    {% for item in kpis.commercial.acquisition_channels %}
+                        {{ item.count }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                ]
+            }],
+            xaxis: {
+                categories: [
+                    {% for item in kpis.commercial.acquisition_channels %}
+                        "{{ item.label }}"{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                ],
+            },
+            yaxis: { labels: { show: false } },
+            grid: { borderColor: '#f1f1f1' },
+            legend: { show: false }
+        };
+
+        var canalChart = new ApexCharts(
+            document.querySelector("#canalChart"),
+            canalChartOptions
+        );
+        canalChart.render();
+
+        // New Situation Chart (Donut)
+        var situationChartOptions = {
+            chart: {
+                height: 350,
+                type: 'donut',
+                fontFamily: 'inherit'
+            },
+            labels: [
+                {% for item in kpis.commercial.contact_situations %}
+                    "{{ item.label }}"{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            ],
+            series: [
+                {% for item in kpis.commercial.contact_situations %}
+                    {{ item.count }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            ],
+            colors: ['#4361ee', '#4cc9f0', '#f72585'],
+            legend: {
+                position: 'bottom',
+                fontSize: '12px'
+            },
+            plotOptions: {
+                pie: {
+                    donut: {
+                        size: '65%',
+                        labels: {
+                            show: true,
+                            name: { show: true },
+                            value: { show: true }
+                        }
+                    }
+                }
+            }
+        };
+
+        var situationChart = new ApexCharts(
+            document.querySelector("#situationChart"),
+            situationChartOptions
+        );
+        situationChart.render();
     });
 </script>
 {% endblock %}
+

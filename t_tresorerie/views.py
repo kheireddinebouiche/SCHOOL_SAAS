@@ -9,6 +9,7 @@ from t_remise.models import *
 from t_groupe.models import *
 from django.db.models import Sum
 from django.db.models import Q
+from django.views.decorators.http import require_http_methods
 from institut_app.decorators import *
 
 @login_required(login_url="institut_app:login")
@@ -23,20 +24,61 @@ def AttentesPaiements(request):
 @login_required(login_url="insitut_app:login")
 def ApiListeDemandePaiement(request):
     listes = ClientPaiementsRequest.objects.select_related("promo", "specialite", "client",'specialite_double').filter(client__statut = "instance")
+    
+    promo_id = request.GET.get('promo_id')
+    formation_id = request.GET.get('formation_id')
+    
+    if promo_id:
+        listes = listes.filter(promo_id=promo_id)
+        
+    if formation_id:
+        listes = listes.filter(formation_id=formation_id)
     data = []
     for obj in listes:
         has_rembourssement = Rembourssements.objects.filter(client = obj.client, is_done=False).exists()
+
+        # Alertes échéancier spécial
+        special_echeancier = EcheancierSpecial.objects.filter(prospect=obj.client).last()
+        echeancier_special_alerte = None
+        if special_echeancier:
+            if not special_echeancier.is_approuved:
+                echeancier_special_alerte = "en_attente"
+            elif not special_echeancier.is_validate:
+                echeancier_special_alerte = "non_accepte"
+        
+        # Alertes remise
+        remise_appliquer = RemiseAppliquerLine.objects.filter(prospect=obj.client).select_related('remise_appliquer').last()
+        remise_alerte = None
+        if remise_appliquer and remise_appliquer.remise_appliquer:
+            if not remise_appliquer.remise_appliquer.is_approuved:
+                remise_alerte = "en_attente"
+            else:
+                remise_alerte = "traitee"
+
+        # Vérifier si le prospect a des paiements dus ou des paiements effectués
+        has_due_payments = False
+        if obj.client:
+            due_query = Q(client=obj.client)
+            pay_query = Q(prospect=obj.client)
+            if obj.promo:
+                due_query &= Q(promo=obj.promo)
+                pay_query &= Q(promo=obj.promo)
+            
+            has_due_payments = DuePaiements.objects.filter(due_query).exists() or \
+                               Paiements.objects.filter(pay_query).exists() or \
+                               obj.paid
 
         data.append({
             "id": obj.id,
             "motif": obj.motif,
             "motif_label": obj.get_motif_display(),
             "promo": obj.promo.id if obj.promo else None,
+            "formation": obj.formation.id if obj.formation else None,
             "promo_session": obj.promo.session if obj.promo else None,
             "promo_begin" : obj.promo.begin_year,
             "promo_end" : obj.promo.end_year,
             "specialite": obj.specialite.id if obj.specialite else None,
-            "amount" : obj.specialite.formation.prix_formation if obj.specialite else obj.specialite_double.prix,
+            "amount" : obj.amount if obj.amount else (obj.specialite.formation.prix_formation if obj.specialite else obj.specialite_double.prix),
             "nom": obj.client.nom if obj.client else None,
             "prenom": obj.client.prenom if obj.client else None,
             "is_double" : obj.client.is_double if obj.client.is_double else None,
@@ -44,6 +86,10 @@ def ApiListeDemandePaiement(request):
             "etat": obj.etat,
             "etat_label": obj.get_etat_display() if hasattr(obj, "get_etat_display") else None,
             "has_rembourssement" : has_rembourssement,
+            "echeancier_special_alerte": echeancier_special_alerte,
+            "remise_alerte": remise_alerte,
+            "paid": obj.paid,
+            "has_due_payments": has_due_payments,
         })
     
     return JsonResponse(data, safe=False)
@@ -52,6 +98,16 @@ def ApiListeDemandePaiement(request):
 def PageDetailsDemandePaiement(request, pk):
 
     obj = ClientPaiementsRequest.objects.get(id = pk)
+    
+    # Log de consultation
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='VIEW',
+        target_model='ClientPaiementsRequest',
+        target_id=str(pk),
+        details=f"Consultation des détails de la demande de paiement pour l'étudiant {obj.client.nom} {obj.client.prenom}.",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
     context = {
         'tenant' : request.tenant,
         'pk' : pk,
@@ -127,6 +183,36 @@ def ApiRejectRembourssement(request):
 
     return JsonResponse({'status' : 'success'}) 
 
+@login_required(login_url="institut_app:login")
+@require_http_methods(["POST"])
+def ApiSaveSelectedEcheancier(request):
+    try:
+        id_demande = request.POST.get('id_demande')
+        id_echeancier = request.POST.get('id_echeancier')
+        
+        if not id_demande or not id_echeancier:
+            return JsonResponse({'status': 'error', 'message': 'Paramètres manquants'}, status=400)
+            
+        obj = ClientPaiementsRequest.objects.get(id=id_demande)
+        echeancier = EcheancierPaiement.objects.get(id=id_echeancier)
+        
+        obj.ref_echeancier = echeancier
+        obj.save()
+        
+        # Log d'application d'échéancier
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='ClientPaiementsRequest',
+            target_id=str(id_demande),
+            details=f"Application du modèle d'échéancier '{echeancier.model.label}' (ID: {id_echeancier}) pour l'étudiant {obj.client.nom} {obj.client.prenom}.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        return JsonResponse({'status': 'success', 'message': 'Modèle d\'échéancier enregistré avec succès'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500) 
+
 ########################################## Fonction qui permet d'afficher tous les détails du demandeur de paiement ###############################
 @login_required(login_url="institut_app:login")
 def ApiGetDetailsDemandePaiement(request):  
@@ -135,11 +221,50 @@ def ApiGetDetailsDemandePaiement(request):
         obj = ClientPaiementsRequest.objects.get(id = id)
         voeux = FicheDeVoeux.objects.filter(prospect=obj.client, is_confirmed=True).select_related("specialite").first()
 
-        try:
-            echeancierId = EcheancierPaiement.objects.get(formation_id = voeux.specialite.formation.id, is_default=True, model__promo = voeux.promo)
-            frais_inscription = echeancierId.frais_inscription
-        except EcheancierPaiement.DoesNotExist:
-            return JsonResponse({'status': 'error', 'error_type': 'missing_echeancier', 'message': "Échéancier par défaut non trouvé pour cette spécialité et promo."}, status=200)
+        # Check if we should override the default echeancier
+        override_echeancier_id = request.GET.get('override_echeancier_id')
+        echeancierId = None
+        
+        if override_echeancier_id and override_echeancier_id != 'null':
+            try:
+                echeancierId = EcheancierPaiement.objects.get(id=int(override_echeancier_id))
+            except (EcheancierPaiement.DoesNotExist, ValueError):
+                pass
+        
+        # If no override, check if there's a saved echeancier on the request
+        if not echeancierId and obj.ref_echeancier:
+            echeancierId = obj.ref_echeancier
+
+        if not echeancierId:
+            try:
+                # First, try to find a specialty-specific default echeancier
+                echeancierId = EcheancierPaiement.objects.filter(
+                    formation_id=voeux.specialite.formation.id, 
+                    specialite=voeux.specialite,
+                    is_default=True, 
+                    model__promo=voeux.promo
+                ).first()
+
+                # If not found, fallback to the formation-level default echeancier
+                if not echeancierId:
+                    echeancierId = EcheancierPaiement.objects.get(
+                        formation_id=voeux.specialite.formation.id, 
+                        specialite__isnull=True,
+                        is_default=True, 
+                        model__promo=voeux.promo
+                    )
+            except EcheancierPaiement.DoesNotExist:
+                # Fallback to the first active echeancier if no default is found
+                echeancierId = EcheancierPaiement.objects.filter(
+                    formation_id=voeux.specialite.formation.id,
+                    model__promo=voeux.promo,
+                    is_active=True
+                ).first()
+                
+                if not echeancierId:
+                    return JsonResponse({'status': 'error', 'error_type': 'missing_echeancier', 'message': "Échéancier non trouvé pour cette spécialité et promo."}, status=200)
+    
+        frais_inscription = echeancierId.frais_inscription
     
         special_echeancier_data = []
         has_special_echeancier = False
@@ -195,7 +320,9 @@ def ApiGetDetailsDemandePaiement(request):
                     'num' : i.num,
                     'mode_paiement' : i.get_mode_paiement_display(),
                     'reference_paiement' : i.reference_paiement,
-                    'is_refund' : i.is_refund, 'entite_id': i.entite.id if i.entite else None,
+                    'is_refund' : i.is_refund,
+                    'logo_header': i.due_paiements.entite.entete_logo.url if i.due_paiements and i.due_paiements.entite and i.due_paiements.entite.entete_logo else (echeancierId.entite.entete_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.entete_logo else None),
+                    'logo_footer': i.due_paiements.entite.pied_page_logo.url if i.due_paiements and i.due_paiements.entite and i.due_paiements.entite.pied_page_logo else (echeancierId.entite.pied_page_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.pied_page_logo else None),
                 })
 
         else:
@@ -337,13 +464,21 @@ def ApiGetDetailsDemandePaiement(request):
             'entite' : voeux.specialite.formation.entite_legal.designation,
             'entite_ville' : voeux.specialite.formation.entite_legal.ville,
             'promo' : voeux.promo.code,
-            'prix_formation' : voeux.specialite.formation.prix_formation,
+            'prix_formation' : voeux.specialite.prix,
             'frais_inscription' : frais_inscription,
             'logo_header' : voeux.specialite.formation.entite_legal.entete_logo.url,
             'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url,
         }
 
         total_solde = total_initial - total_paiement if has_due_paiement and has_paiement else 0
+
+        # Available echeanciers for this specialty and promo
+        available_echeanciers = EcheancierPaiement.objects.filter(
+            Q(specialite=voeux.specialite) | Q(specialite__isnull=True),
+            formation_id=voeux.specialite.formation.id,
+            model__promo=voeux.promo,
+            is_active=True
+        ).values('id', 'model__label', 'is_default')
 
         data = {
             'user_data' : user_data,
@@ -355,6 +490,7 @@ def ApiGetDetailsDemandePaiement(request):
             'has_special_echeancier' : has_special_echeancier,
             'id_echeancier_special' : obj_echeacncier_speial.id if obj_echeacncier_speial else None,
             'id_echeancier' : echeancierId.id,
+            'available_echeanciers': list(available_echeanciers),
             'special_echeancier_line' : list(special_echeancier_data),
             'echeancier_special_state_approuvel' : echeancier_state_approuvel,
             "has_due_paiement" : has_due_paiement,
@@ -397,10 +533,60 @@ def ApiGetDetailsDemandePaiementDouble(request):
         obj = ClientPaiementsRequest.objects.get(id = id)
         voeux = FicheVoeuxDouble.objects.filter(prospect=obj.client, is_confirmed=True).first()
 
-        echeancierId = EcheancierPaiement.objects.filter(formation_double_id = voeux.specialite.id , is_default=True, model__promo = voeux.promo).last()
+        # Determine target specialty and promo
+        target_spec_double_id = None
+        target_promo_id = None
         
+        if obj.specialite_double:
+            target_spec_double_id = obj.specialite_double.id
+        elif voeux and voeux.specialite:
+            target_spec_double_id = voeux.specialite.id
+            
+        if obj.promo:
+            target_promo_id = obj.promo.id
+        elif voeux and voeux.promo:
+            target_promo_id = voeux.promo.id
+
+        # Check if we should override the default echeancier
+        override_echeancier_id = request.GET.get('override_echeancier_id')
+        echeancierId = None
+        
+        if override_echeancier_id and override_echeancier_id != 'null':
+            try:
+                echeancierId = EcheancierPaiement.objects.get(id=int(override_echeancier_id))
+            except (EcheancierPaiement.DoesNotExist, ValueError):
+                pass
+        
+        # If no override, check if there's a saved echeancier on the request
+        if not echeancierId and obj.ref_echeancier:
+            echeancierId = obj.ref_echeancier
+
+        if not echeancierId and target_spec_double_id and target_promo_id:
+            echeancierId = EcheancierPaiement.objects.filter(
+                formation_double_id=target_spec_double_id, 
+                is_default=True, 
+                model__promo_id=target_promo_id
+            ).last()
+            
+            if not echeancierId:
+                # Fallback to the first active echeancier
+                echeancierId = EcheancierPaiement.objects.filter(
+                    formation_double_id=target_spec_double_id, 
+                    model__promo_id=target_promo_id, 
+                    is_active=True
+                ).first()
+            
         if not echeancierId:
-            return JsonResponse({'status': 'error', 'error_type': 'missing_echeancier', 'message': "Échéancier par défaut non trouvé pour cette double-formation et promo."}, status=200)
+            return JsonResponse({
+                'status': 'error', 
+                'error_type': 'missing_echeancier', 
+                'message': "Échéancier non trouvé.",
+                'debug_info': {
+                    'target_spec_double_id': target_spec_double_id,
+                    'target_promo_id': target_promo_id,
+                    'has_voeux': voeux is not None
+                }
+            }, status=200)
 
         echeancier = echeancierId
         frais_inscription = echeancier.frais_inscription if echeancier else 0
@@ -436,6 +622,8 @@ def ApiGetDetailsDemandePaiementDouble(request):
                     'mode_paiement' : i.get_mode_paiement_display(),
                     'reference_paiement' : i.reference_paiement,
                     'is_refund' : i.is_refund,
+                    'logo_header': i.due_paiements.entite.entete_logo.url if i.due_paiements and i.due_paiements.entite and i.due_paiements.entite.entete_logo else (echeancierId.entite.entete_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.entete_logo else None),
+                    'logo_footer': i.due_paiements.entite.pied_page_logo.url if i.due_paiements and i.due_paiements.entite and i.due_paiements.entite.pied_page_logo else (echeancierId.entite.pied_page_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.pied_page_logo else None),
                 })
 
         else:
@@ -451,7 +639,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
             id_reduction = remiseObj.remise_appliquer.id
             is_applicated_remise = remiseObj.remise_appliquer.is_applicated
             
-            prix_formation = voeux.specialite.prix
+            prix_formation = (voeux.specialite.prix_spec1 or 0) + (voeux.specialite.prix_spec2 or 0)
             
             if remise.is_value:
                 # Fixed amount discount
@@ -572,37 +760,49 @@ def ApiGetDetailsDemandePaiementDouble(request):
             "client_id": obj.client.id,  
         }
 
+        # Use resolved objects for the response
+        resolved_spec_double = obj.specialite_double or (voeux.specialite if voeux else None)
+        resolved_promo = obj.promo or (voeux.promo if voeux else None)
+
         other_data = {
             'id' : echeancierId.id,
-            'modele' : echeancierId.model.label,
-            'formation' : echeancierId.formation_double.label,
-            'specialite_1' : echeancierId.formation_double.specialite1.label,
-            'specialite_2' : echeancierId.formation_double.specialite2.label,
+            'modele' : echeancierId.model.label if echeancierId.model else "Sans modèle",
+            'formation' : f"{echeancierId.formation_double.specialite1.label} / {echeancierId.formation_double.specialite2.label}" if echeancierId.formation_double and echeancierId.formation_double.specialite1 and echeancierId.formation_double.specialite2 else (echeancierId.formation_double.label if echeancierId.formation_double else "Double Diplomation"),
+            'specialite_1' : echeancierId.formation_double.specialite1.label if echeancierId.formation_double and echeancierId.formation_double.specialite1 else "",
+            'specialite_2' : echeancierId.formation_double.specialite2.label if echeancierId.formation_double and echeancierId.formation_double.specialite2 else "",
         }
 
         voeux_data = {
-            'specialite_id' : voeux.specialite.id,
-            'specialite_label' : voeux.specialite.label,
-            'formation' : voeux.specialite.label,
-            # 'entite' : voeux.specialite.formation.entite_legal.designation,
-            # 'entite_ville' : voeux.specialite.formation.entite_legal.ville,
-            'promo' : voeux.promo.code,
-            'prix_formation' : voeux.specialite.prix,
+            'specialite_id' : resolved_spec_double.id if resolved_spec_double else None,
+            'specialite_label' : resolved_spec_double.label if resolved_spec_double else "Non spécifié",
+            'formation' : f"{resolved_spec_double.specialite1.label} / {resolved_spec_double.specialite2.label}" if resolved_spec_double and resolved_spec_double.specialite1 and resolved_spec_double.specialite2 else "Non spécifié",
+            'formation_label' : "Double Diplomation",
+            'promo' : resolved_promo.code if resolved_promo else "N/A",
+            'prix_formation' : (resolved_spec_double.prix_spec1 or 0) + (resolved_spec_double.prix_spec2 or 0) if resolved_spec_double else 0,
             'frais_inscription' : frais_inscription,
-            # 'logo_header' : voeux.specialite.formation.entite_legal.entete_logo.url,
-            # 'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url,
+            'logo_header' : echeancierId.entite.entete_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.entete_logo else None,
+            'logo_footer' : echeancierId.entite.pied_page_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.pied_page_logo else None,
         }
 
         specialite_data_price = {
-            'prix_1' : voeux.specialite.prix_spec1,
-            'formation_1_label' : voeux.specialite.specialite1.formation.nom if voeux.specialite.specialite1 and voeux.specialite.specialite1.formation else "",
-            'specialite_1_label' : voeux.specialite.specialite1.label if voeux.specialite.specialite1 else "Spécialité 1",
-            'entite_1' : voeux.specialite.specialite1.formation.entite_legal.id if voeux.specialite.specialite1 and voeux.specialite.specialite1.formation and voeux.specialite.specialite1.formation.entite_legal else None,
-            'prix_2' : voeux.specialite.prix_spec2,
-            'formation_2_label' : voeux.specialite.specialite2.formation.nom if voeux.specialite.specialite2 and voeux.specialite.specialite2.formation else "",
-            'specialite_2_label' : voeux.specialite.specialite2.label if voeux.specialite.specialite2 else "Spécialité 2",
-            'entite_2' : voeux.specialite.specialite2.formation.entite_legal.id if voeux.specialite.specialite2 and voeux.specialite.specialite2.formation and voeux.specialite.specialite2.formation.entite_legal else None,
+            'prix_1' : resolved_spec_double.prix_spec1 if resolved_spec_double else 0,
+            'formation_1_label' : resolved_spec_double.specialite1.formation.nom if resolved_spec_double and resolved_spec_double.specialite1 and resolved_spec_double.specialite1.formation else "",
+            'specialite_1_label' : resolved_spec_double.specialite1.label if resolved_spec_double and resolved_spec_double.specialite1 else "Spécialité 1",
+            'entite_1' : resolved_spec_double.specialite1.formation.entite_legal.id if resolved_spec_double and resolved_spec_double.specialite1 and resolved_spec_double.specialite1.formation and resolved_spec_double.specialite1.formation.entite_legal else None,
+            'prix_2' : resolved_spec_double.prix_spec2 if resolved_spec_double else 0,
+            'formation_2_label' : resolved_spec_double.specialite2.formation.nom if resolved_spec_double and resolved_spec_double.specialite2 and resolved_spec_double.specialite2.formation else "",
+            'specialite_2_label' : resolved_spec_double.specialite2.label if resolved_spec_double and resolved_spec_double.specialite2 else "Spécialité 2",
+            'entite_2' : resolved_spec_double.specialite2.formation.entite_legal.id if resolved_spec_double and resolved_spec_double.specialite2 and resolved_spec_double.specialite2.formation and resolved_spec_double.specialite2.formation.entite_legal else None,
         }
+
+        # Available echeanciers for this double specialty and promo
+        available_echeanciers = []
+        if resolved_spec_double and resolved_promo:
+            available_echeanciers = EcheancierPaiement.objects.filter(
+                formation_double=resolved_spec_double,
+                model__promo=resolved_promo,
+                is_active=True
+            ).values('id', 'model__label', 'is_default')
 
         data = {
             'user_data' : user_data,
@@ -616,6 +816,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
             "has_paiement" : has_paiement,
             "total_paiement" : total_paiement if has_paiement else 0,
             'id_echeancier' : echeancierId.id,
+            'available_echeanciers': list(available_echeanciers),
             "refund_data" : refund_data,
             "has_pending_refund" : has_pending_refund,
             'has_processed_refund'  : has_processed_refund,
@@ -642,7 +843,11 @@ def ApiGetDetailsDemandePaiementDouble(request):
 @login_required(login_url="institut_app:login")
 def ApiLoadDoubleFormation(request):
     if request.method == "GET":
-        liste = DoubleDiplomation.objects.all().values('id','label','prix','specialite1__label','specialite1__formation__entite_legal__id','prix_spec1','specialite2__label','specialite2__formation__entite_legal__id','prix_spec2')
+        liste = DoubleDiplomation.objects.all().values(
+            'id','label','prix',
+            'specialite1__label','specialite1__formation__nom','specialite1__formation__entite_legal__id','prix_spec1',
+            'specialite2__label','specialite2__formation__nom','specialite2__formation__entite_legal__id','prix_spec2'
+        )
         return JsonResponse(list(liste), safe=False)
 
     else:
@@ -817,6 +1022,7 @@ def ApiDetailsReceivedPaiement(request):
         'observation' :  paiement_obj.observation,
         'mode_paiement' : paiement_obj.get_mode_paiement_display(),
         'reference_paiement' : paiement_obj.reference_paiement,
+        'type_paiement': paiement_obj.payment_type.name if paiement_obj.payment_type else '-',
     }
 
     return JsonResponse(data, safe=False)
@@ -860,10 +1066,26 @@ def ApiSetRembourssement(request):
 @login_required(login_url="institut_app:login")
 def ApiGetEntrepriseDetails(request):
     id_demande = request.GET.get('id_demande')
-    object = ClientPaiementsRequest.objects.get(id = id_demande)
-    voeux = FicheDeVoeux.objects.filter(prospect = object.client, is_confirmed = True).first()
-   
-    entreprise = Entreprise.objects.get(id = voeux.specialite.formation.entite_legal.id)
+    try:
+        obj = ClientPaiementsRequest.objects.get(id=id_demande)
+    except ClientPaiementsRequest.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Demande non trouvée"}, status=404)
+
+    entreprise = None
+    
+    # Try FicheDeVoeux first
+    voeux = FicheDeVoeux.objects.filter(prospect=obj.client, is_confirmed=True).first()
+    if voeux and voeux.specialite and voeux.specialite.formation and voeux.specialite.formation.entite_legal:
+        entreprise = voeux.specialite.formation.entite_legal
+    
+    # If not found, try FicheVoeuxDouble
+    if not entreprise:
+        voeux_double = FicheVoeuxDouble.objects.filter(prospect=obj.client, is_confirmed=True).first()
+        if voeux_double and voeux_double.specialite and voeux_double.specialite.specialite1 and voeux_double.specialite.specialite1.formation and voeux_double.specialite.specialite1.formation.entite_legal:
+            entreprise = voeux_double.specialite.specialite1.formation.entite_legal
+
+    if not entreprise:
+        return JsonResponse({"status": "error", "message": "Informations entreprise non trouvées"}, status=404)
 
     data = {
         'designation' : entreprise.designation,
@@ -940,7 +1162,12 @@ def ApiUpdateFormationPrice(request):
 @login_required(login_url="institut_app:login")
 def ApiListeSpecialitesPrices(request):
     from t_formations.models import Specialites
-    specialites = Specialites.objects.all().values('id', 'label', 'code', 'prix', 'prix_double_diplomation', 'formation__nom')
+    formation_code = request.GET.get('formation_id')
+    query = Specialites.objects.all()
+    if formation_code:
+        query = query.filter(formation=formation_code)
+        
+    specialites = query.values('id', 'label', 'code', 'prix', 'prix_double_diplomation', 'formation__nom')
     return JsonResponse(list(specialites), safe=False)
 
 @login_required(login_url="institut_app:login")
@@ -962,6 +1189,26 @@ def ApiUpdateSpecialitePrice(request):
             return JsonResponse({'status': 'success', 'message': 'Prix mis à jour avec succès'})
         except Specialites.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Spécialité non trouvée'})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiBulkUpdateSpecialitePrice(request):
+    from t_formations.models import Specialites
+    if request.method == "POST":
+        ids = request.POST.getlist('ids[]')
+        prix = request.POST.get('prix')
+        
+        if not ids:
+            return JsonResponse({'status': 'error', 'message': 'Aucune spécialité sélectionnée'})
+        if not prix:
+            return JsonResponse({'status': 'error', 'message': 'Prix non valide'})
+            
+        try:
+            Specialites.objects.filter(id__in=ids).update(prix=prix)
+            return JsonResponse({'status': 'success', 'message': f'{len(ids)} spécialités mises à jour avec succès'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
 
 @login_required(login_url="institut_app:login")

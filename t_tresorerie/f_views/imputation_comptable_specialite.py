@@ -35,9 +35,10 @@ def LoadSpecialiteComptes(request):
 @login_required
 def LoadSpecialites(request):
     """
-    Charge la liste des spécialités
+    Charge la liste des spécialités avec leur statut d'assignation
     """
     specialites = Specialites.objects.all()
+    assigned_specialite_ids = SpecialiteCompte.objects.values_list('specialite_id', flat=True)
     
     data = []
     for specialite in specialites:
@@ -45,6 +46,7 @@ def LoadSpecialites(request):
             'id': specialite.id,
             'label': specialite.label,
             'code': specialite.code,
+            'is_assigned': specialite.id in assigned_specialite_ids
         })
     
     return JsonResponse(data, safe=False)
@@ -53,9 +55,11 @@ def LoadSpecialites(request):
 @login_required
 def LoadComptes(request):
     """
-    Charge la liste des comptes comptables
+    Charge la liste des comptes comptables (PaymentCategory)
     """
-    comptes = PaymentCategory.objects.all()
+    # On ne prend que les catégories qui n'ont pas d'enfants (les feuilles de l'arbre)
+    # ou on prend tout selon le besoin. Ici, on prend tout mais on pourrait filtrer.
+    comptes = PaymentCategory.objects.all().order_by('name')
     
     data = []
     for compte in comptes:
@@ -71,45 +75,55 @@ def LoadComptes(request):
 @csrf_exempt
 def CreateSpecialiteCompte(request):
     """
-    Crée une nouvelle association spécialité-compte
+    Crée une ou plusieurs nouvelles associations spécialité-compte
     """
     if request.method == 'POST':
-        specialite_id = request.POST.get('specialite_id')
+        specialite_ids = request.POST.getlist('specialite_ids[]')
         compte_id = request.POST.get('compte_id')
         
-        try:
-            # Vérifier si l'association existe déjà
-            existing_assoc = SpecialiteCompte.objects.filter(
-                specialite_id=specialite_id,
-                compte_id=compte_id
-            ).first()
-            
-            if existing_assoc:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Cette association existe déjà!'
-                })
-            
-            # Créer la nouvelle association
-            specialite = Specialites.objects.get(id=specialite_id)
-            compte = PaymentCategory.objects.get(id=compte_id)
-            
-            association = SpecialiteCompte.objects.create(
-                specialite=specialite,
-                compte=compte
-            )
-            
-            return JsonResponse({
-                'status': 'success',
-                'message': 'Association créée avec succès!',
-                'id': association.id
-            })
-            
-        except Specialites.DoesNotExist:
+        if not specialite_ids:
+            # Fallback for single ID if needed
+            specialite_id = request.POST.get('specialite_id')
+            if specialite_id:
+                specialite_ids = [specialite_id]
+
+        if not specialite_ids or not compte_id:
             return JsonResponse({
                 'status': 'error',
-                'message': 'Spécialité non trouvée!'
+                'message': 'Données manquantes!'
             })
+            
+        try:
+            compte = PaymentCategory.objects.get(id=compte_id)
+            created_count = 0
+            skipped_count = 0
+            
+            for spec_id in specialite_ids:
+                # Vérifier si l'association existe déjà
+                existing_assoc = SpecialiteCompte.objects.filter(
+                    specialite_id=spec_id,
+                    compte_id=compte_id
+                ).exists()
+                
+                if not existing_assoc:
+                    specialite = Specialites.objects.get(id=spec_id)
+                    SpecialiteCompte.objects.create(
+                        specialite=specialite,
+                        compte=compte
+                    )
+                    created_count += 1
+                else:
+                    skipped_count += 1
+            
+            msg = f"{created_count} association(s) créée(s) avec succès!"
+            if skipped_count > 0:
+                msg += f" ({skipped_count} déjà existante(s))"
+                
+            return JsonResponse({
+                'status': 'success',
+                'message': msg
+            })
+            
         except PaymentCategory.DoesNotExist:
             return JsonResponse({
                 'status': 'error',
@@ -120,11 +134,6 @@ def CreateSpecialiteCompte(request):
                 'status': 'error',
                 'message': f'Erreur lors de la création: {str(e)}'
             })
-    
-    return JsonResponse({
-        'status': 'error',
-        'message': 'Méthode non autorisée!'
-    })
 
 
 @login_required
