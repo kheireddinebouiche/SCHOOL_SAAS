@@ -578,43 +578,47 @@ def update_or_create_specialite_in_tenant(specialite, sync_formation, institut_s
 def update_or_create_module_in_tenant(module, sync_specialite, institut_schema):
     try:
         with schema_context(institut_schema):
-            # Prefer code_interne for matching, fallback to label if code_interne is not set
+            # Use case-insensitive matching and strip whitespace
+            label_clean = module.label.strip()
+            
             if module.code_interne:
                 q_lookup = Q(code_interne=module.code_interne)
             else:
-                q_lookup = Q(label=module.label)
+                q_lookup = Q(label__iexact=label_clean)
 
-            modules_found = Modules.objects.filter(q_lookup, specialite=sync_specialite)
+            # Try to find existing module for this speciality
+            sync_module = Modules.objects.filter(q_lookup, specialite=sync_specialite).first()
             
-            if modules_found.exists():
-                sync_module = modules_found.first()
-                # Update information
-                sync_module.label = module.label
+            if sync_module:
+                # Update existing
+                sync_module.label = label_clean
                 sync_module.coef = module.coef
                 sync_module.duree = module.duree
                 sync_module.n_elimate = module.n_elimate
                 sync_module.systeme_eval = module.systeme_eval
                 sync_module.code_interne = module.code_interne
                 sync_module.save()
-                
-                # Clean up duplicates if any
-                if modules_found.count() > 1:
-                    modules_found.exclude(id=sync_module.id).delete()
             else:
-                # Create new module
-                sync_module = Modules.objects.create(
-                    specialite=sync_specialite,
-                    label=module.label,
-                    coef=module.coef,
-                    duree=module.duree,
-                    n_elimate=module.n_elimate,
-                    systeme_eval=module.systeme_eval,
-                    code_interne=module.code_interne
-                )
+                # Create new
+                # We use a try/except to handle potential race conditions or stray codes
+                try:
+                    sync_module = Modules.objects.create(
+                        specialite=sync_specialite,
+                        label=label_clean,
+                        coef=module.coef,
+                        duree=module.duree,
+                        n_elimate=module.n_elimate,
+                        systeme_eval=module.systeme_eval,
+                        code_interne=module.code_interne
+                    )
+                except Exception as e:
+                    # If it fails (e.g. IntegrityError on code), try one more time by finding by code if possible
+                    # or just re-raise with more context
+                    raise ValueError(f"Erreur lors de la synchronisation du module {label_clean}: {str(e)}")
+            
             return sync_module
     except Exception as e:
-        # Re-raise with more context
-        raise ValueError(f"Erreur lors de la synchronisation du module {module.label}: {str(e)}")
+        raise ValueError(str(e))
 
 def update_or_create_dossier_in_tenant(dossier, sync_formation, institut_schema):
     try:
