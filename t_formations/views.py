@@ -1252,7 +1252,7 @@ def ApiAddModule(request):
     try:
         new_module = Modules.objects.create(
             label = label,
-            coef = coef,
+            coef = coef if coef != '' else None,
             duree = duree,
             specialite = specialite,
             code_interne = code,
@@ -1315,7 +1315,7 @@ def ApiUpdateModule(request):
         module.code_interne = code
     module.duree = duree
     module.label = label
-    module.coef = coef
+    module.coef = coef if coef != '' else None
     module.n_elimate = n_elimate if n_elimate != '' else None
     module.systeme_eval = systeme_eval
 
