@@ -425,9 +425,21 @@ $(document).ready(function(){
                             <div class="d-flex align-items-center gap-3">
                                 <div class="bg-soft-success p-2 rounded-3"><i class="ri-book-2-line text-success"></i></div>
                                 <div>
-                                    <div class="fw-bold text-dark">${c.specialite1_label} <span class="text-muted fw-normal mx-2">+</span> ${c.specialite2_label}</div>
+                                    <div class="fw-bold text-dark">
+                                        <span class="badge badge-soft-primary me-1" title="Code">${c.specialite1_code}</span> 
+                                        ${c.specialite1_label} 
+                                        <span class="text-muted small">(v${c.specialite1_version})</span>
+                                        
+                                        <span class="text-muted fw-normal mx-2">+</span> 
+                                        
+                                        <span class="badge badge-soft-primary me-1" title="Code">${c.specialite2_code}</span> 
+                                        ${c.specialite2_label} 
+                                        <span class="text-muted small">(v${c.specialite2_version})</span>
+                                    </div>
                                     ${warning}
-                                    <div class="small text-muted">${c.specialite1_formation} / ${c.specialite2_formation}</div>
+                                    <div class="small text-muted mt-1">
+                                        <i class="ri-government-line me-1"></i>${c.specialite1_formation} / ${c.specialite2_formation}
+                                    </div>
                                 </div>
                             </div>
                         </td>
@@ -482,7 +494,8 @@ $(document).ready(function(){
         $('#specialite').html('<option value="">Sélectionnez une spécialité</option>').prop('disabled', !fId);
         if (fId) {
             specialtiesData.filter(s => s.formation__id == fId).forEach(s => {
-                $('#specialite').append(`<option value="${s.id}">${s.label}</option>`);
+                let label = `${s.code} - ${s.label} (v${s.version || '1'})`;
+                $('#specialite').append(`<option value="${s.id}">${label}</option>`);
             });
         }
     });
@@ -585,7 +598,10 @@ $(document).ready(function(){
             url: '{% url "t_formations:ApiLoadSpecialites" %}',
             type: 'GET',
             success: function(specs) {
-                let opt = specs.filter(s => s.formation__id == fId).map(s => `<option value="${s.id}" ${s.id == selectedId ? 'selected' : ''}>${s.label}</option>`).join('');
+                let opt = specs.filter(s => s.formation__id == fId).map(s => {
+                    let label = `${s.code} - ${s.label} (v${s.version || '1'})`;
+                    return `<option value="${s.id}" ${s.id == selectedId ? 'selected' : ''}>${label}</option>`;
+                }).join('');
                 $(target).html(opt);
             }
         });
