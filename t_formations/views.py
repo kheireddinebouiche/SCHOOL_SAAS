@@ -1027,6 +1027,7 @@ def detailSpecialite(request, pk):
     if request.tenant.tenant_type == 'master':
         instituts = Institut.objects.filter(tenant_type='second').order_by('nom')
         tenant_visibility = []
+        master_module_count = Modules.objects.filter(specialite=object).count()
         for inst in instituts:
             try:
                 with schema_context(inst.schema_name):
@@ -1034,16 +1035,20 @@ def detailSpecialite(request, pk):
                         spec_local = Specialites.objects.get(code=object.code)
                         is_visible = spec_local.is_visible
                         is_synced = True
+                        module_count = Modules.objects.filter(specialite=spec_local).count()
                     except Specialites.DoesNotExist:
                         is_visible = False
                         is_synced = False
+                        module_count = 0
                 
                 tenant_visibility.append({
                     'id': inst.id,
                     'nom': inst.nom,
                     'schema_name': inst.schema_name,
                     'is_visible': is_visible,
-                    'is_synced': is_synced
+                    'is_synced': is_synced,
+                    'module_count': module_count,
+                    'master_module_count': master_module_count
                 })
             except:
                 pass
