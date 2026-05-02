@@ -150,23 +150,28 @@ class Modules(models.Model):
         if not self.specialite:
             return None
 
-        # Numéro de la spécialité
+        # Numéro de la spécialité (préfixe)
         specialite_index = self.specialite.id
+        prefix = f"M-{specialite_index}-"
 
-        # Dernier numéro utilisé pour cette spécialité
-        last_code = (
-            Modules.objects
-            .filter(specialite=self.specialite, code__isnull=False)
-            .aggregate(max_code=Max('code'))
-        )['max_code']
+        # On cherche le numéro le plus élevé parmi TOUS les codes commençant par ce préfixe,
+        # pour éviter les conflits même si un module a été déplacé ou si le Max() a échoué.
+        max_num = 0
+        codes = Modules.objects.filter(code__startswith=prefix).values_list('code', flat=True)
+        
+        for c in codes:
+            try:
+                # Format attendu : M-ID-XXX
+                parts = c.split('-')
+                if len(parts) >= 3:
+                    num = int(parts[-1])
+                    if num > max_num:
+                        max_num = num
+            except (ValueError, IndexError):
+                continue
 
-        if last_code:
-            last_number = int(last_code.split('-')[-1])
-            next_number = last_number + 1
-        else:
-            next_number = 1
-
-        return f"M-{specialite_index}-{str(next_number).zfill(3)}"
+        next_number = max_num + 1
+        return f"{prefix}{str(next_number).zfill(3)}"
 
     # 🔹 Override save()
     def save(self, *args, **kwargs):
