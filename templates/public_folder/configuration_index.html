@@ -1,30 +1,373 @@
 {% extends 'public_folder/base.html' %} 
 {% load static %}
+{% load humanize %}
+{% block title %} {{ title }} {% endblock title %}
+
 {% block content %}
+<style>
+    :root {
+        --primary-teal: #225787;
+        --secondary-teal: #1b466c;
+        --primary-gradient: linear-gradient(135deg, var(--primary-teal) 0%, var(--secondary-teal) 100%);
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --glass-border: rgba(255, 255, 255, 0.2);
+    }
+
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--glass-border);
+        border-radius: 1.5rem;
+        box-shadow: 0 8px 32px 0 rgba(34, 87, 135, 0.08);
+        transition: all 0.3s ease;
+    }
+
+    .glass-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 45px rgba(34, 87, 135, 0.12);
+    }
+
+    .dashboard-header {
+        background: var(--primary-gradient) !important;
+        border-radius: 1.5rem !important;
+        padding: 2.5rem !important;
+        margin-bottom: 2rem !important;
+        color: white;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(34, 87, 135, 0.2);
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        font-size: 24px;
+    }
+
+    .progress-tracking {
+        height: 8px;
+        border-radius: 10px;
+        background-color: #f1f5f9;
+    }
+
+    .campaign-status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+
+    .btn-create-floating {
+        background: var(--primary-teal) !important;
+        color: white !important;
+        border: none !important;
+        padding: 0.8rem 1.5rem !important;
+        border-radius: 1rem !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 15px rgba(34, 87, 135, 0.3);
+        transition: all 0.3s;
+    }
+
+    .btn-create-floating:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(34, 87, 135, 0.4);
+    }
+
+    .table-custom th {
+        background: #f8fafc !important;
+        font-weight: 600 !important;
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.5px;
+        color: #64748b;
+        border: none !important;
+    }
+
+    .table-custom td {
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
+        padding: 1rem 0.75rem;
+    }
+</style>
+
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-        <div class="row">
-            <div class="col-12">
-                <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                    <h4 class="mb-sm-0">Configuration du budget</h4>
-
-                    <div class="page-title-right">
-                        <ol class="breadcrumb m-0">
-                            <li class="breadcrumb-item"><a href="javascript: void(0);">Configuration</a></li>
-                            <li class="breadcrumb-item active">Accueil</li>
-                        </ol>
+            <!-- Header Section -->
+            <div class="dashboard-header animate__animated animate__fadeInDown">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h1 class="text-white fw-bold mb-1">Configuration du Budget</h1>
+                        <p class="text-white-50 mb-0">Pilotage centralisé des campagnes et allocations budgétaires du groupe.</p>
                     </div>
+                    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                        <button class="btn btn-create-floating" data-bs-toggle="modal" data-bs-target="#createCampaignModal">
+                            <i class="ri-add-circle-line me-2"></i> Nouvelle Campagne
+                        </button>
+                    </div>
+                </div>
+            </div>
 
+            <!-- Stats Row -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6">
+                    <div class="glass-card p-4 mb-4 mb-xl-0">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-soft-primary text-primary me-3">
+                                <i class="ri-calendar-event-line"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted small text-uppercase fw-bold mb-1">Total Campagnes</h6>
+                                <h3 class="mb-0 fw-bold">{{ global_stats.total_campaigns }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="glass-card p-4 mb-4 mb-xl-0">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-soft-success text-success me-3">
+                                <i class="ri-pulse-line"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted small text-uppercase fw-bold mb-1">Campagnes Actives</h6>
+                                <h3 class="mb-0 fw-bold">{{ global_stats.active_count }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="glass-card p-4 mb-4 mb-xl-0">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-soft-warning text-warning me-3">
+                                <i class="ri-exchange-funds-line"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted small text-uppercase fw-bold mb-1">Rallonges en Attente</h6>
+                                <h3 class="mb-0 fw-bold">{{ global_stats.pending_extensions }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="glass-card p-4">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-soft-info text-info me-3">
+                                <i class="ri-building-line"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted small text-uppercase fw-bold mb-1">Total Instituts</h6>
+                                <h3 class="mb-0 fw-bold">{{ global_stats.total_instituts }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Active Campaign Tracking -->
+                <div class="col-xl-4">
+                    <div class="glass-card p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0">Suivi Campagne Active</h5>
+                            <i class="ri-more-2-fill text-muted"></i>
+                        </div>
+                        
+                        {% if active_campaign %}
+                        <div class="text-center py-3">
+                            <h4 class="fw-bold text-teal mb-1">{{ active_campaign.name }}</h4>
+                            <span class="badge bg-soft-success text-success rounded-pill px-3">En Cours</span>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Progression globale</span>
+                                <span class="fw-bold small">{{ active_campaign.progress|floatformat:1 }}%</span>
+                            </div>
+                            <div class="progress progress-tracking mb-4">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ active_campaign.progress }}%" aria-valuenow="{{ active_campaign.progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3 mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="campaign-status-dot bg-success"></div>
+                                        <span class="small fw-medium">Validés</span>
+                                    </div>
+                                    <span class="badge bg-success rounded-pill">{{ active_stats.validated }}</span>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3 mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="campaign-status-dot bg-primary"></div>
+                                        <span class="small fw-medium">Soumis</span>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">{{ active_stats.submitted }}</span>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3 mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="campaign-status-dot bg-warning"></div>
+                                        <span class="small fw-medium">Brouillons</span>
+                                    </div>
+                                    <span class="badge bg-warning rounded-pill">{{ active_stats.draft }}</span>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3 mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="campaign-status-dot bg-danger"></div>
+                                        <span class="small fw-medium">Rejetés</span>
+                                    </div>
+                                    <span class="badge bg-danger rounded-pill">{{ active_stats.rejected }}</span>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="campaign-status-dot bg-secondary"></div>
+                                        <span class="small fw-medium">Non Initialisés</span>
+                                    </div>
+                                    <span class="badge bg-secondary rounded-pill">{{ active_stats.pending }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <a href="{% url 'associe_app:budget_campaign_instituts' active_campaign.slug %}" class="btn btn-primary w-100 py-2 rounded-3">
+                                    Voir les Détails <i class="ri-arrow-right-line ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <div class="avatar-lg bg-soft-light text-muted rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center">
+                                <i class="ri-calendar-close-line fs-32"></i>
+                            </div>
+                            <p class="text-muted">Aucune campagne active actuellement.</p>
+                            <button class="btn btn-soft-primary btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#createCampaignModal">
+                                Initialiser une Campagne
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Recent Campaigns List -->
+                <div class="col-xl-8">
+                    <div class="glass-card p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0">Suivi des Campagnes</h5>
+                            <a href="{% url 'associe_app:budget_campaign_list' %}" class="btn btn-link btn-sm text-primary p-0 text-decoration-none">Voir tout</a>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-custom table-nowrap mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Campagne</th>
+                                        <th>Période</th>
+                                        <th>Status</th>
+                                        <th>Progression</th>
+                                        <th class="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for campaign in campaigns %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-xs bg-soft-primary text-primary rounded me-3 d-flex align-items-center justify-content-center">
+                                                    <i class="ri-calendar-check-line"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-bold">{{ campaign.name }}</h6>
+                                                    <span class="text-muted small">Créée le {{ campaign.created_at|date:"d M Y" }}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="small fw-medium">
+                                                {{ campaign.date_debut|date:"M Y" }} - {{ campaign.date_fin|date:"M Y" }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if campaign.is_active %}
+                                            <span class="badge bg-soft-success text-success px-2 py-1 rounded-pill">ACTIVE</span>
+                                            {% else %}
+                                            <span class="badge bg-soft-secondary text-secondary px-2 py-1 rounded-pill">INACTIVE</span>
+                                            {% endif %}
+                                        </td>
+                                        <td style="width: 200px;">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="progress progress-tracking flex-grow-1" style="height: 6px;">
+                                                    <div class="progress-bar bg-primary" role="progressbar" style="width: {{ campaign.progress }}%"></div>
+                                                </div>
+                                                <span class="small fw-bold">{{ campaign.progress|floatformat:0 }}%</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="{% url 'associe_app:budget_campaign_instituts' campaign.slug %}" class="btn btn-soft-primary btn-icon btn-sm rounded-circle">
+                                                <i class="ri-settings-4-line"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-5 text-muted">Aucune campagne disponible.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
-    <div class="col-12 text-center py-5">
-        <h2 class="text-muted">Bienvenue dans l'espace de gestion consolidée</h2>
-        <p>Sélectionnez une option dans le menu pour commencer.</p>
-    </div>
-    </div>
     </div>
 </div>
+
+<!-- Modern Create Modal -->
+<div class="modal fade" id="createCampaignModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header p-4 bg-light border-0">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-primary text-white rounded-circle me-3 d-flex align-items-center justify-content-center">
+                        <i class="ri-add-line fs-18"></i>
+                    </div>
+                    <h5 class="modal-title fw-bold">Nouvelle Campagne Budgétaire</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'associe_app:budget_campaign_create' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body p-4 pt-2">
+                    <div class="mb-4">
+                        <label for="name" class="form-label fw-bold text-muted small text-uppercase">Nom de la Campagne (Optionnel)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0"><i class="ri-edit-line"></i></span>
+                            <input type="text" class="form-control border-light bg-light" id="name" name="name" placeholder="Ex: Budget 2024-2025">
+                        </div>
+                        <div class="form-text text-muted mt-2">
+                            <i class="ri-information-line me-1"></i> Si laissé vide, le système générera un nom basé sur l'année fiscale.
+                        </div>
+                    </div>
+                    
+                    <div class="bg-soft-primary p-4 rounded-4 mb-2 border border-primary border-opacity-10">
+                        <div class="d-flex align-items-center text-primary fw-bold">
+                            <i class="ri-magic-line me-2 fs-20"></i> Logique Automatique
+                        </div>
+                        <p class="text-primary-emphasis small mb-0 mt-2 opacity-75">
+                            La période sera automatiquement fixée du <strong>01 Août</strong> au <strong>31 Juillet</strong> de l'année fiscale en cours.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer p-4 bg-light border-0">
+                    <button type="button" class="btn btn-link text-muted fw-bold text-decoration-none me-3" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary px-5 py-2 rounded-3 shadow-sm fw-bold">Créer et Initialiser</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

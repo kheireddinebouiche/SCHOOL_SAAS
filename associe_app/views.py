@@ -52,15 +52,56 @@ from .models import BudgetCampaign, BudgetLine, PostesBudgetaire, BudgetLineDeta
 
 @login_required(login_url='login')
 def index(request):
-    return render(request, 'public_folder/configuration_index.html')
+    from .models import BudgetCampaign, BudgetLine, BudgetExtensionRequest
+    
+    # 1. Base Data
+    campaigns = BudgetCampaign.objects.all().order_by('-date_debut')
+    total_instituts = Institut.objects.filter(is_visible=True).exclude(schema_name='public').count()
+    
+    # 2. Process Campaigns (Progress Calculation)
+    for campaign in campaigns:
+        # Progress = % of institutes with VALIDATED budget
+        validated_count = BudgetLine.objects.filter(campaign=campaign, statut='validated').count()
+        campaign.progress = (validated_count / total_instituts * 100) if total_instituts > 0 else 0
+        campaign.validated_count = validated_count
+        
+    # 3. Active Campaign Tracking
+    active_campaign = campaigns.filter(is_active=True).first()
+    active_stats = None
+    if active_campaign:
+        lines = BudgetLine.objects.filter(campaign=active_campaign)
+        active_stats = {
+            'validated': lines.filter(statut='validated').count(),
+            'submitted': lines.filter(statut='submitted').count(),
+            'draft': lines.filter(statut='draft').count(),
+            'rejected': lines.filter(statut='rejected').count(),
+            'total': total_instituts,
+            'pending': total_instituts - lines.count()
+        }
+    
+    # 4. Global Stats
+    global_stats = {
+        'total_campaigns': campaigns.count(),
+        'active_count': campaigns.filter(is_active=True).count(),
+        'pending_extensions': BudgetExtensionRequest.objects.filter(status='pending').count(),
+        'total_instituts': total_instituts
+    }
+    
+    return render(request, 'public_folder/configuration_index.html', {
+        'title': 'Tableau de Bord Budget',
+        'campaigns': campaigns,
+        'active_campaign': active_campaign,
+        'active_stats': active_stats,
+        'global_stats': global_stats,
+    })
 
 @login_required(login_url='login')
 def configuration_budget(request):
-    return render(request, 'public_folder/configuration.html')
+    return render(request, 'public_folder/configuration.html', {'title': 'Configuration Budget'})
 
 @login_required(login_url='login')
 def configuration_structure(request):
-    return render(request, 'public_folder/configuration.html')
+    return render(request, 'public_folder/configuration.html', {'title': 'Configuration Structure'})
 
 # --- Global Payment Type Views ---
 
@@ -84,7 +125,8 @@ def global_payment_type_list(request):
     return render(request, 'associe_app/global_payment_type_list.html', {
         'types': types, 
         'types_json': types_json,
-        'form': form
+        'form': form,
+        'title': 'Types de Paiement Globaux'
     })
 
 @login_required(login_url='login')
@@ -172,7 +214,8 @@ def global_payment_category_list(request):
     form = GlobalPaymentCategoryForm()
     return render(request, 'associe_app/global_payment_category_list.html', {
         'categories_json': categories_json,
-        'form': form
+        'form': form,
+        'title': 'Catégories de Paiement Globales'
     })
 
 @login_required(login_url='login')
@@ -325,7 +368,8 @@ def global_depenses_category_list(request):
     form = GlobalDepensesCategoryForm()
     return render(request, 'associe_app/global_depenses_category_list.html', {
         'categories_json': categories_json,
-        'form': form
+        'form': form,
+        'title': 'Catégories de Dépenses Globales'
     })
 
 @login_required(login_url='login')
@@ -490,8 +534,11 @@ def sync_categories_view(request):
 
 @login_required(login_url='login')
 def tenant_data_list(request):
-    tenants = Institut.objects.exclude(schema_name='public')
-    return render(request, 'associe_app/tenant_visualization.html', {'tenants': tenants})
+    tenants = Institut.objects.filter(is_visible=True).exclude(schema_name='public')
+    return render(request, 'associe_app/tenant_visualization.html', {
+        'tenants': tenants,
+        'title': 'Visualisation des Données Tenants'
+    })
 
 @login_required(login_url='login')
 def tenant_workspace(request, tenant_id):
@@ -527,7 +574,8 @@ def tenant_workspace(request, tenant_id):
     
     return render(request, 'associe_app/tenant_workspace.html', {
         'tenant': tenant,
-        'grouped_models': grouped_models
+        'grouped_models': grouped_models,
+        'title': f'Espace de Travail - {tenant.nom}'
     })
 
 @login_required(login_url='login')
@@ -616,7 +664,7 @@ def delete_tenant_payment_type(request, tenant_id, payment_type_id):
 
 @login_required(login_url='login')
 def crm_statistics(request):
-    tenants = Institut.objects.exclude(schema_name='public').order_by('nom')
+    tenants = Institut.objects.filter(is_visible=True).exclude(schema_name='public').order_by('nom')
     institutes_stats = []
     
     # Prospect Status List
@@ -678,6 +726,7 @@ def crm_statistics(request):
         'tenants': tenants, # For the selector
         'institutes_stats': institutes_stats,
         'global_stats': global_stats,
+        'title': 'Statistiques CRM Globales'
     }
     return render(request, 'associe_app/crm_statistics.html', context)
 
@@ -962,6 +1011,7 @@ def list_orphaned_schemas(request):
     
     return render(request, 'associe_app/schema_management.html', {
         'orphaned_schemas': orphaned_schemas,
+        'title': 'Gestion des Schémas Orphelins'
     })
 
 @login_required(login_url='login')
@@ -1029,7 +1079,8 @@ def postes_budgetaires_list(request):
     form = PostesBudgetaireForm()
     return render(request, 'associe_app/postes_budgetaires_list.html', {
         'postes': postes, 
-        'form': form
+        'form': form,
+        'title': 'Plan Comptable - Postes Budgétaires'
     })
 
 @login_required(login_url='login')
@@ -1090,7 +1141,8 @@ def budget_campaign_list(request):
     active_count = BudgetCampaign.objects.filter(is_active=True).count()
     return render(request, 'associe_app/budget_campaign_list.html', {
         'campaigns': campaigns,
-        'active_count': active_count
+        'active_count': active_count,
+        'title': 'Campagnes Budgétaires'
     })
 
 
@@ -1127,7 +1179,7 @@ def budget_campaign_delete(request, campaign_slug):
 @login_required(login_url='login')
 def budget_campaign_instituts(request, campaign_slug):
     campaign = get_object_or_404(BudgetCampaign, slug=campaign_slug)
-    instituts = Institut.objects.exclude(schema_name='public')
+    instituts = Institut.objects.filter(is_visible=True).exclude(schema_name='public')
     
     # 1. Process Form Submission (Bulk Save)
     if request.method == 'POST':
@@ -1200,6 +1252,7 @@ def budget_campaign_instituts(request, campaign_slug):
         'configured_count': configured_instituts,
         'pending_count': total_inst - configured_instituts,
         'progress': progress,
+        'title': f'Objectifs par Institut - {campaign.name}'
     })
 
 @login_required(login_url='login')
@@ -1420,16 +1473,18 @@ def budget_campaign_review(request, campaign_slug, institut_id):
         'combined_postes': realization_data['combined_postes'],
         'realization_totals': realization_data['totals']
     }
+    context['title'] = f'Révision Budget - {institut.nom}'
     return render(request, 'associe_app/budget_campaign_review.html', context)
 
 @login_required(login_url="login")
 def extension_requests_list(request):
     from .models import BudgetExtensionRequest
     
-    requests = BudgetExtensionRequest.objects.select_related('campaign', 'institut').order_by('-created_at')
+    requests = BudgetExtensionRequest.objects.filter(institut__is_visible=True).select_related('campaign', 'institut').order_by('-created_at')
     
     context = {
-        'requests': requests
+        'requests': requests,
+        'title': 'Demandes de Rallonge Budgétaire'
     }
     return render(request, 'associe_app/extension_requests_list.html', context)
 
@@ -1508,6 +1563,7 @@ def review_extension(request, request_id):
         'items': items,
         'entreprise_map': entreprise_map,
     }
+    context['title'] = f'Révision de Rallonge - {ext_request.institut.nom}'
     return render(request, 'associe_app/review_extension.html', context)
 
 
@@ -1626,7 +1682,10 @@ def import_postes_budgetaires(request):
 @login_required(login_url='login')
 def user_list(request):
     users = User.objects.all().order_by('-date_joined')
-    return render(request, 'associe_app/users/user_list.html', {'users': users})
+    return render(request, 'associe_app/users/user_list.html', {
+        'users': users,
+        'title': 'Gestion des Utilisateurs'
+    })
 
 @login_required(login_url='login')
 def user_create(request):
@@ -1654,7 +1713,7 @@ def user_create(request):
             messages.success(request, "Utilisateur créé avec succès.")
             return redirect('associe_app:user_list')
             
-    return render(request, 'associe_app/users/user_form.html')
+    return render(request, 'associe_app/users/user_form.html', {'title': 'Nouvel Utilisateur'})
 
 @login_required(login_url='login')
 def user_edit(request, pk):
@@ -1675,7 +1734,10 @@ def user_edit(request, pk):
         messages.success(request, "Utilisateur mis à jour avec succès.")
         return redirect('associe_app:user_list')
         
-    return render(request, 'associe_app/users/user_form.html', {'edit_user': user})
+    return render(request, 'associe_app/users/user_form.html', {
+        'edit_user': user,
+        'title': "Modifier l'Utilisateur"
+    })
 
 @login_required(login_url='login')
 def user_delete(request, pk):

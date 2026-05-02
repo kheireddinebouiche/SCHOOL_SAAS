@@ -162,11 +162,6 @@
                                             <button type="button" id="syncBtn" class="btn btn-soft-primary btn-sm" title="Synchroniser">
                                                 <i class='ri-sync-line me-2'></i>Synchroniser
                                             </button>
-                                            <div id="update-btn-content">
-                                                <button class="btn btn-soft-success btn-sm" data-bs-toggle="modal" data-bs-target="#confirmUpdateModal">
-                                                    <i class="ri-refresh-line me-2"></i>Mise à jour
-                                                </button>
-                                            </div>   
                                         </div>
                                     {% endif %}
                                 </div>
@@ -697,7 +692,7 @@
 <script>
     $(document).ready(function(){
 
-        var code_formation = "{{formation.code}}";
+        var code_formation = "{{formation.code|escapejs}}";
         // Variable pour stocker l'index du document à supprimer
         var documentIndexToDelete = null;
 
@@ -710,12 +705,28 @@
                 success : function(data){
                     $('#listeItem').empty();
                     $.each(data, function(index, item) {
+                        var actions = '';
+                        var institutNom = item.nom || item.schema_name;
+                        
+                        if (item.has_formation) {
+                            actions = '<button class="btn btn-success px-3 py-1 me-2" disabled><i class="ri-check-line me-1"></i>Déjà lié</button>' +
+                                      '<button id="unsyncBTN" class="btn btn-soft-danger px-3 py-1" data-name="' + item.schema_name + '" data-nom="' + institutNom + '"><i class="ri-delete-bin-line me-1"></i>Délier</button>';
+                        } else if (item.has_partenaire) {
+                            actions = '<button id="synBTN" class="btn btn-primary px-3 py-1" data-name="' + item.schema_name + '"><i class="ri-link-line me-1"></i>Synchroniser</button>';
+                        } else {
+                            actions = '<span class="text-muted small">Veuillez synchroniser le partenaire d\'abord</span>';
+                        }
+
                         var row = '<tr>' +
-                            '<td><span class="fw-semibold">' + item.schema_name + '</span></td>' +
-                            '<td>' +(item.has_partenaire ? (item.has_formation 
-                                ? '<button class="btn btn-success px-3 py-1" disabled><i class="ri-check-line me-1"></i>Déjà lié</button>'
-                                : '<button id="synBTN" class="btn btn-primary px-3 py-1" data-name='+item.schema_name+'><i class="ri-link-line me-1"></i>Synchroniser</button>') : '<span class="text-muted">Veuillez synchroniser le partenaire d\'abord</span>')+
+                            '<td>' +
+                                '<div class="d-flex align-items-center">' +
+                                    '<div class="avatar-xs bg-soft-primary text-primary rounded me-2 d-flex align-items-center justify-content-center">' +
+                                        '<i class="ri-building-line"></i>' +
+                                    '</div>' +
+                                    '<span class="fw-semibold">' + institutNom + ' <small class="text-muted">(' + item.schema_name + ')</small></span>' +
+                                '</div>' +
                             '</td>' +
+                            '<td>' + actions + '</td>' +
                         '</tr>';
                         $('#listeItem').append(row);
                     });
@@ -744,6 +755,9 @@
 
         $(document).on('click','#synBTN', function(){
             var schema = $(this).data('name');
+            var btn = $(this);
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>');
+            
             $.ajax({
                 url :"{% url 't_formations:ApiSyncFormation' %}",
                 dataType: "JSON",
@@ -754,10 +768,44 @@
                         alertify.success(response.message);
                         loadSyncState();
                     }else{
+                        btn.prop('disabled', false).html('<i class="ri-link-line me-1"></i>Synchroniser');
                         alertify.error(response.message);
                     }                   
                 },
             });
+        });
+
+        $(document).on('click', '#unsyncBTN', function() {
+            var schema = $(this).data('name');
+            var nom = $(this).data('nom');
+            var btn = $(this);
+
+            alertify.confirm("Délier la formation", 
+                "Êtes-vous sûr de vouloir retirer cette formation de l'institut <b>" + nom + "</b> ? Toutes les spécialités et modules liés seront supprimés dans cet établissement.",
+                function() {
+                    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>');
+                    $.ajax({
+                        url: "{% url 't_formations:ApiUnsyncFormation' %}",
+                        dataType: "JSON",
+                        type: 'POST',
+                        data: {
+                            'code_formation': code_formation,
+                            'schema_name': schema,
+                            'csrfmiddlewaretoken': '{{ csrf_token }}'
+                        },
+                        success: function(response) {
+                            if (response.status) {
+                                alertify.success(response.message);
+                                loadSyncState();
+                            } else {
+                                btn.prop('disabled', false).html('<i class="ri-delete-bin-line me-1"></i>Délier');
+                                alertify.error(response.message);
+                            }
+                        }
+                    });
+                },
+                function() {}
+            ).set('labels', {ok:'Confirmer', cancel:'Annuler'});
         });
 
         $(document).on('click','#confirmSyncUpdateBtn',function(){

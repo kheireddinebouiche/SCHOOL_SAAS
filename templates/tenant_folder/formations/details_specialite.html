@@ -137,6 +137,9 @@
                                     <button class="btn btn-soft-success shadow-sm px-4" data-bs-toggle="modal" data-bs-target="#visibilityModal" title="Contrôler quels établissements standards peuvent voir cette spécialité dans leur catalogue.">
                                         <i class="ri-eye-line me-2"></i>Gestion de la visibilité
                                     </button>
+                                    <button class="btn btn-success shadow-sm px-4" id="openSyncModalBtn">
+                                        <i class="ri-refresh-line me-2"></i>Mise à jour
+                                    </button>
                                     {% endif %}
                                     
                                     {% if not is_foreign_program or request.tenant.tenant_type == 'master' %}
@@ -321,14 +324,30 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-end pe-4">
-                                    <div class="form-check form-switch form-switch-md d-inline-block">
-                                        <input class="form-check-input tenant-visibility-toggle" 
-                                               type="checkbox" 
-                                               role="switch" 
-                                               data-tenant-id="{{ inst.id }}"
-                                               data-tenant-name="{{ inst.nom }}"
-                                               {% if inst.is_visible %}checked{% endif %}
-                                               {% if not inst.is_synced %}disabled{% endif %}>
+                                    <div class="d-flex align-items-center justify-content-end gap-2">
+                                        <div class="form-check form-switch form-switch-md">
+                                            <input class="form-check-input tenant-visibility-toggle" 
+                                                   type="checkbox" 
+                                                   role="switch" 
+                                                   data-tenant-id="{{ inst.id }}"
+                                                   data-tenant-name="{{ inst.nom }}"
+                                                   {% if inst.is_visible %}checked{% endif %}
+                                                   {% if not inst.is_synced %}disabled{% endif %}>
+                                        </div>
+                                        {% if is_foreign_program and inst.is_synced %}
+                                        <button class="btn btn-sm btn-soft-primary sync-modules-btn" 
+                                                data-tenant-name="{{ inst.nom }}" 
+                                                data-schema="{{ inst.schema_name }}"
+                                                title="Synchroniser les modules">
+                                            <i class="ri-refresh-line"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-soft-danger clear-modules-btn" 
+                                                data-tenant-name="{{ inst.nom }}" 
+                                                data-schema="{{ inst.schema_name }}"
+                                                title="Vider les modules">
+                                            <i class="ri-delete-bin-line"></i>
+                                        </button>
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>
@@ -345,6 +364,72 @@
             </div>
             <div class="modal-footer border-0 bg-light px-4 py-3">
                 <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if request.tenant.tenant_type == 'master' %}
+<!-- Modal État de Synchronisation Spécialité -->
+<div id="syncSpecialiteModal" class="modal fade" tabindex="-1" aria-labelledby="syncSpecialiteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-refresh-line text-success fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-success mb-1" id="syncSpecialiteModalLabel">Synchronisation de la spécialité</h5>
+                        <p class="text-muted small mb-0">Comparaison avec les instituts partenaires</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="syncWarningAlert" class="alert alert-warning d-none mb-4" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-error-warning-line fs-20 me-2"></i>
+                        <div>Des différences ont été détectées entre le compte maître et certains établissements.</div>
+                    </div>
+                
+                <div class="row mb-3 g-2 align-items-center">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-muted mb-1">Filtrer par état</label>
+                        <select id="syncFilterVisibility" class="form-select border-0 bg-light py-2">
+                            <option value="all">Tous les établissements</option>
+                            <option value="visible">Visibles uniquement</option>
+                            <option value="hidden">Masqués uniquement</option>
+                            <option value="diff">Avec différences uniquement</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 text-md-end pt-3">
+                        <span id="syncCountDisplay" class="text-muted small"></span>
+                    </div>
+                </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Institut</th>
+                                <th>État</th>
+                                <th>Modules</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="syncResultsBody">
+                            <!-- Rempli par AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-success px-4 py-2" id="btnSyncUpdateAll">
+                    <i class="ri-refresh-line me-2"></i>Mise à jour globale
+                </button>
             </div>
         </div>
     </div>
@@ -1701,8 +1786,239 @@
             });
         });
 
-    });
+        // Gestion pour synchroniser les modules d'un établissement
+        $(document).on('click', '.sync-modules-btn', function() {
+            const tenantName = $(this).data('tenant-name');
+            const schema = $(this).data('schema');
+            const specCode = "{{ object.code }}";
+            const btn = $(this);
 
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+            $.ajax({
+                url: "{% url 't_formations:ApiSyncSpecialiteModulesToTenant' %}",
+                type: 'POST',
+                data: {
+                    'schema_name': schema,
+                    'spec_code': specCode,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status) {
+                        alertify.success(response.message);
+                    } else {
+                        alertify.error(response.message);
+                    }
+                    btn.prop('disabled', false).html('<i class="ri-refresh-line"></i>');
+                },
+                error: function() {
+                    alertify.error('Erreur réseau lors de la synchronisation.');
+                    btn.prop('disabled', false).html('<i class="ri-refresh-line"></i>');
+                }
+            });
+        });
+
+        // Gestion pour vider les modules d'un établissement
+        $(document).on('click', '.clear-modules-btn', function() {
+            const tenantName = $(this).data('tenant-name');
+            const schema = $(this).data('schema');
+            const specCode = "{{ object.code }}";
+            const btn = $(this);
+
+            alertify.confirm("Vider la liste des modules", 
+                "Êtes-vous sûr de vouloir supprimer TOUS les modules de cette spécialité pour l'établissement <b>" + tenantName + "</b> ? Cette action est irréversible.",
+                function() {
+                    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+                    $.ajax({
+                        url: "{% url 't_formations:ApiClearTenantModules' %}",
+                        type: 'POST',
+                        data: {
+                            'schema_name': schema,
+                            'specialite_code': specCode,
+                            'csrfmiddlewaretoken': '{{ csrf_token }}'
+                        },
+                        success: function(response) {
+                            if (response.status) {
+                                alertify.success(response.message);
+                            } else {
+                                alertify.error(response.message);
+                            }
+                            btn.prop('disabled', false).html('<i class="ri-delete-bin-line"></i>');
+                        },
+                        error: function() {
+                            alertify.error('Erreur réseau lors de la suppression.');
+                            btn.prop('disabled', false).html('<i class="ri-delete-bin-line"></i>');
+                        }
+                    });
+                },
+                function() {}
+            ).set('labels', {ok:'Confirmer', cancel:'Annuler'});
+        });
+
+        let syncRawResults = [];
+
+        function renderSyncResults() {
+            const filterValue = $('#syncFilterVisibility').val();
+            let html = '';
+            let filteredResults = syncRawResults;
+
+            if (filterValue === 'visible') {
+                filteredResults = syncRawResults.filter(r => r.is_visible_tenant);
+            } else if (filterValue === 'hidden') {
+                filteredResults = syncRawResults.filter(r => r.spec_exists && !r.is_visible_tenant);
+            } else if (filterValue === 'diff') {
+                filteredResults = syncRawResults.filter(r => r.diff_found);
+            }
+
+            filteredResults.forEach(res => {
+                let stateBadge = '';
+                if (!res.spec_exists) {
+                    stateBadge = '<span class="badge bg-danger">Manquant</span>';
+                } else if (!res.spec_up_to_date) {
+                    stateBadge = '<span class="badge bg-warning text-dark">Modifié</span>';
+                } else {
+                    stateBadge = '<span class="badge bg-success">À jour</span>';
+                }
+
+                let visibilityBadge = res.is_visible_tenant 
+                    ? '<span class="badge bg-soft-success text-success small ms-2"><i class="ri-eye-line"></i> Visible</span>' 
+                    : '<span class="badge bg-soft-danger text-danger small ms-2"><i class="ri-eye-off-line"></i> Masqué</span>';
+
+                let modulesInfo = `<span class="fw-bold">${res.modules_tenant}</span> / ${res.modules_master}`;
+                let moduleClass = res.modules_tenant === res.modules_master ? 'text-success' : 'text-danger fw-bold';
+
+                html += `
+                    <tr>
+                        <td>
+                            <div class="fw-medium">${res.nom}</div>
+                            <div class="text-muted small">${res.schema_name}</div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                ${stateBadge}
+                                ${res.spec_exists ? visibilityBadge : ''}
+                            </div>
+                            ${res.message ? `<div class="text-danger small mt-1"><i class="ri-error-warning-line"></i> ${res.message}</div>` : ''}
+                        </td>
+                        <td class="${moduleClass}">${modulesInfo}</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-soft-primary individual-sync-btn" 
+                                    data-schema="${res.schema_name}" 
+                                    title="Mettre à jour cet institut">
+                                <i class="ri-refresh-line"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            if (filteredResults.length === 0) {
+                html = '<tr><td colspan="4" class="text-center py-4 text-muted">Aucun établissement ne correspond au filtre.</td></tr>';
+            }
+
+            $('#syncResultsBody').html(html);
+            $('#syncCountDisplay').text(`${filteredResults.length} établissement(s) affiché(s)`);
+        }
+
+        // Changement de filtre
+        $('#syncFilterVisibility').on('change', function() {
+            renderSyncResults();
+        });
+
+        // Ouvrir le modal de synchronisation et charger les données
+        $('#openSyncModalBtn').on('click', function() {
+            $('#syncResultsBody').html('<tr><td colspan="4" class="text-center py-5"><div class="spinner-border text-primary"></div><br>Analyse des établissements...</td></tr>');
+            $('#syncWarningAlert').addClass('d-none');
+            $('#syncCountDisplay').text('');
+            $('#syncSpecialiteModal').modal('show');
+
+            $.ajax({
+                url: "{% url 't_formations:ApiCheckSpecialiteSyncState' %}",
+                type: 'GET',
+                data: { 'spec_code': "{{ object.code }}" },
+                success: function(response) {
+                    if (response.status) {
+                        syncRawResults = response.results;
+                        let hasDiff = syncRawResults.some(r => r.diff_found);
+                        renderSyncResults();
+                        if (hasDiff) $('#syncWarningAlert').removeClass('d-none');
+                    } else {
+                        $('#syncResultsBody').html(`<tr><td colspan="4" class="text-center text-danger py-4">${response.message}</td></tr>`);
+                    }
+                },
+                error: function() {
+                    $('#syncResultsBody').html('<tr><td colspan="4" class="text-center text-danger py-4">Erreur lors du chargement des données.</td></tr>');
+                }
+            });
+        });
+
+        // Mise à jour individuelle d'un institut depuis le modal
+        $(document).on('click', '.individual-sync-btn', function() {
+            const btn = $(this);
+            const schema = btn.data('schema');
+            const specCode = "{{ object.code }}";
+
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+            
+            $.ajax({
+                url: "{% url 't_formations:ApiSyncSpecialiteModulesToTenant' %}",
+                type: 'POST',
+                data: {
+                    'schema_name': schema,
+                    'spec_code': specCode,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status) {
+                        alertify.success(response.message);
+                        // Recharger les données du modal
+                        $('#openSyncModalBtn').click();
+                    } else {
+                        alertify.error(response.message);
+                        btn.prop('disabled', false).html('<i class="ri-refresh-line"></i>');
+                    }
+                },
+                error: function() {
+                    alertify.error('Erreur réseau.');
+                    btn.prop('disabled', false).html('<i class="ri-refresh-line"></i>');
+                }
+            });
+        });
+
+        // Mise à jour globale depuis le modal
+        $('#btnSyncUpdateAll').on('click', function() {
+            const btn = $(this);
+            const specCode = "{{ object.code }}";
+
+            alertify.confirm("Mise à jour globale", 
+                "Voulez-vous mettre à jour tous les instituts ?",
+                function() {
+                    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>En cours...');
+                    
+                    $.ajax({
+                        url: "{% url 't_formations:ApiSyncUpdateSpecialite' %}",
+                        type: 'POST',
+                        data: {
+                            'spec_code': specCode,
+                            'csrfmiddlewaretoken': '{{ csrf_token }}'
+                        },
+                        success: function(response) {
+                            if (response.status) {
+                                alertify.success(response.message);
+                                $('#syncSpecialiteModal').modal('hide');
+                            } else {
+                                alertify.error(response.message);
+                                btn.prop('disabled', false).html('<i class="ri-refresh-line me-2"></i>Mise à jour globale');
+                            }
+                        },
+                        error: function() {
+                            alertify.error('Erreur réseau.');
+                            btn.prop('disabled', false).html('<i class="ri-refresh-line me-2"></i>Mise à jour globale');
+                        }
+                    });
+                }
+            );
+        });
+    });
 </script>
 
 {% endblock content %}
