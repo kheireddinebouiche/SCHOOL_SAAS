@@ -384,8 +384,6 @@ def ApiCheckSpecialiteSyncState(request):
                     # Compare ALL fields
                     diffs = []
                     if spec_tenant.label != specialite_master.label: diffs.append("libellé")
-                    if spec_tenant.prix != specialite_master.prix: diffs.append("prix")
-                    if spec_tenant.prix_double_diplomation != specialite_master.prix_double_diplomation: diffs.append("prix double")
                     if spec_tenant.duree != specialite_master.duree: diffs.append("durée")
                     if spec_tenant.version != specialite_master.version: diffs.append("version")
                     if spec_tenant.condition_access != specialite_master.condition_access: diffs.append("conditions")
@@ -522,10 +520,12 @@ def update_or_create_formation_in_tenant(formation, institut_schema):
                     'partenaire': formation.partenaire,
                     'type_formation': formation.type_formation,
                     'qualification': formation.qualification,
-                    'frais_inscription': formation.frais_inscription,
-                    'prix_formation': formation.prix_formation,
                 }
             )
+            if created:
+                sync_formation.frais_inscription = formation.frais_inscription
+                sync_formation.prix_formation = formation.prix_formation
+                sync_formation.save()
             return sync_formation
     except Exception as e:
         raise ValueError(f"Erreur lors de la mise à jour de la formation {formation.nom}: {str(e)}")
@@ -552,8 +552,6 @@ def update_or_create_specialite_in_tenant(specialite, sync_formation, institut_s
                 defaults={
                     'formation': sync_formation,
                     'label': specialite.label,
-                    'prix': specialite.prix,
-                    'prix_double_diplomation': specialite.prix_double_diplomation,
                     'duree': specialite.duree,
                     'version': specialite.version,
                     'condition_access': specialite.condition_access,
@@ -565,6 +563,14 @@ def update_or_create_specialite_in_tenant(specialite, sync_formation, institut_s
                     'etat': 'last', # Marquer comme à jour
                 }
             )
+            
+            # Si c'est une création, on peut initialiser les prix, 
+            # mais ensuite on n'y touche plus lors des synchronisations suivantes.
+            if created:
+                sync_specialite.prix = specialite.prix
+                sync_specialite.prix_double_diplomation = specialite.prix_double_diplomation
+                sync_specialite.save()
+
             return sync_specialite
     except Exception as e:
         raise ValueError(f"Erreur lors de la mise à jour de la spécialité {specialite.label}: {str(e)}")
