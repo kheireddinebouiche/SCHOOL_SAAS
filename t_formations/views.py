@@ -1510,7 +1510,7 @@ def ApiGetModules(request):
         en_attente_count = Modules.objects.filter(is_archived=False, est_valider=False).count()
             
         # Pagination
-        paginator = Paginator(queryset.values('id', 'label', 'coef', 'duree', 'code', 'est_valider', 'created_at'), page_size)
+        paginator = Paginator(queryset.values('id', 'label', 'coef', 'duree', 'code', 'est_valider', 'created_at', 'specialite__label'), page_size)
         page_obj = paginator.get_page(page_number)
         
         data = {
@@ -1569,6 +1569,7 @@ def ApiGetModuleDetails(request):
             'coef': details.coef,
             'n_elimate': details.n_elimate,
             'systeme_eval': details.systeme_eval,
+            'specialite_label': details.specialite.label if details.specialite else 'N/A',
             'associated_trainers': trainers_list
         }
         
