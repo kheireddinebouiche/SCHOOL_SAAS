@@ -92,6 +92,70 @@
         color: #3b82f6;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
+
+    /* Dropdown Z-index & Overflow Fix */
+    .table-responsive {
+        overflow: visible !important;
+    }
+
+    .dropdown-menu {
+        z-index: 2000 !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+        border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    }
+
+    /* Prevent cell clipping */
+    .table td {
+        position: relative;
+    }
+    
+    .table td:last-child {
+        overflow: visible !important;
+    }
+    /* Premium Badges & Status Dots */
+    .badge-soft-success {
+        background-color: rgba(16, 185, 129, 0.1) !important;
+        color: #059669 !important;
+        border: 1px solid rgba(16, 185, 129, 0.2) !important;
+    }
+    .badge-soft-warning {
+        background-color: rgba(245, 158, 11, 0.1) !important;
+        color: #d97706 !important;
+        border: 1px solid rgba(245, 158, 11, 0.2) !important;
+    }
+    .badge-soft-danger {
+        background-color: rgba(244, 63, 94, 0.1) !important;
+        color: #e11d48 !important;
+        border: 1px solid rgba(244, 63, 94, 0.2) !important;
+    }
+    .badge-soft-info {
+        background-color: rgba(14, 165, 233, 0.1) !important;
+        color: #0284c7 !important;
+        border: 1px solid rgba(14, 165, 233, 0.2) !important;
+    }
+
+    .dot {
+        height: 8px;
+        width: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .bg-success { background-color: #10b981 !important; }
+    .bg-warning { background-color: #f59e0b !important; }
+
+    @keyframes pulse-warning {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+    .animate-pulse {
+        animation: pulse-warning 2s infinite;
+    }
+
+    .btn-ghost-dark:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+        color: #000;
+    }
 </style>
 
 <!-- ============================================================== -->
@@ -442,6 +506,19 @@
                                         <i class="ri-folder-line text-muted"></i>
                                     </span>
                                     <select class="form-select border-0 bg-light py-2" id="edit_category">
+                                      
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label fw-medium">Entité</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-0 bg-light">
+                                        <i class="ri-community-line text-muted"></i>
+                                    </span>
+                                    <select class="form-select border-0 bg-light py-2" id="edit_entite">
                                       
                                     </select>
                                 </div>
@@ -830,6 +907,133 @@
             });
         }
         
+        function createRowHtml(d) {
+            var row = "<tr class='align-middle border-bottom border-light'>";
+            
+            // Designation with icon
+            row += "<td>";
+            row += "<div class='d-flex align-items-center p-1'>";
+            row += "<div class='avatar-xs me-3'>";
+            row += "<div class='avatar-title bg-soft-danger text-danger rounded-3 shadow-sm'>";
+            row += "<i class='ri-file-list-3-line fs-5'></i>";
+            row += "</div>";
+            row += "</div>";
+            row += "<div>";
+            row += "<h6 class='mb-0 fw-bold text-dark' style='letter-spacing: -0.2px;'>"+(d.label || d.designation || '-')+"</h6>";
+            row += "<small class='text-muted' style='font-size: 11px;'>"+(d.category_name || d.categorie__label || 'Sans catégorie')+"</small>";
+            row += "</div>";
+            row += "</div>";
+            row += "</td>";
+            
+            // Beneficiary with avatar
+            var beneficiary = d.fournisseur__designation || (d.client__nom && d.client__prenom ? d.client__nom+' '+d.client__prenom : '-');
+            if (typeof beneficiary !== 'string') beneficiary = String(beneficiary);
+            var initials = (beneficiary && beneficiary !== '-') ? beneficiary.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase() : '?';
+            row += "<td>";
+            row += "<div class='d-flex align-items-center'>";
+            row += "<div class='avatar-xs me-2'>";
+            row += "<div class='avatar-title bg-soft-primary text-primary rounded-circle fw-bold shadow-sm' style='font-size: 11px;'>";
+            row += initials;
+            row += "</div>";
+            row += "</div>";
+            row += "<span class='text-dark fw-semibold' style='font-size: 0.9rem;'>"+beneficiary+"</span>";
+            row += "</div>";
+            row += "</td>";
+            
+            // Amount with enhanced badge
+            var montant = d.montant_ttc || d.montant_ht || d.montant_total || 0;
+            row += "<td>";
+            row += "<div class='d-flex align-items-center'>";
+            row += "<span class='badge rounded-pill fw-bold px-3 py-2' style='background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.2); font-size: 0.85rem;'>";
+            row += formatMoney(montant) + " DA";
+            row += "</span>";
+            row += "</div>";
+            row += "</td>";
+            
+            // Payment mode with icon
+            var modeMap = {
+                'che': {label: 'Chèque', icon: 'ri-bank-card-2-line', color: '#0ea5e9', bg: 'rgba(14, 165, 233, 0.12)'},
+                'esp': {label: 'Espèce', icon: 'ri-coins-line', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)'},
+                'vir': {label: 'Virement', icon: 'ri-arrow-left-right-line', color: '#6366f1', bg: 'rgba(99, 102, 241, 0.12)'}
+            };
+            var modeInfo = modeMap[d.mode_paiement] || {label: d.mode_paiement || '-', icon: 'ri-question-line', color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)'};
+            row += "<td>";
+            row += "<div class='d-flex align-items-center'>";
+            row += "<span class='badge rounded-pill d-flex align-items-center px-3 py-2' style='background: "+modeInfo.bg+"; color: "+modeInfo.color+"; border: 1px solid "+modeInfo.color+"33; font-size: 0.8rem;'>";
+            row += "<i class='"+modeInfo.icon+" me-2'></i>" + modeInfo.label;
+            row += "</span>";
+            row += "</div>";
+            row += "</td>";
+            
+            // Operation date with icon
+            row += "<td>";
+            row += "<div class='d-flex align-items-center text-muted'>";
+            row += "<i class='ri-time-line me-2 opacity-75'></i>";
+            row += "<span style='font-size: 0.85rem;'>"+(d.created_at || d.date_depense || '-')+"</span>";
+            row += "</div>";
+            row += "</td>";
+            
+            // Payment date with enhanced styling
+            row += "<td>";
+            if(d.date_paiement) {
+                row += "<div class='d-flex align-items-center text-success'>";
+                row += "<i class='ri-calendar-check-fill me-2 opacity-75 fs-5'></i>";
+                row += "<span class='fw-bold' style='font-size: 0.85rem;'>"+d.date_paiement+"</span>";
+                row += "</div>";
+            } else {
+                row += "<span class='badge rounded-pill px-3 py-2' style='background: rgba(244, 63, 94, 0.1); color: #e11d48; border: 1px solid rgba(244, 63, 94, 0.2); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;'>";
+                row += "<i class='ri-error-warning-line me-1'></i>Non payé";
+                row += "</span>";
+            }
+            row += "</td>";
+            
+            // State with modern badge
+            row += "<td>";
+            if(d.etat){
+                row += "<span class='badge rounded-pill d-inline-flex align-items-center px-3 py-2' style='background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid #05966933; font-size: 0.8rem;'>";
+                row += "<span class='dot bg-success me-2'></span>Validé";
+                row += "</span>";
+            }else{
+                row += "<span class='badge rounded-pill d-inline-flex align-items-center px-3 py-2' style='background: rgba(245, 158, 11, 0.12); color: #d97706; border: 1px solid #d9770633; font-size: 0.8rem;'>";
+                row += "<span class='dot bg-warning me-2 animate-pulse'></span>En attente";
+                row += "</span>";
+            }
+            row += "</td>";
+           
+            row += "<td class='text-center'>";
+            row += "<div class='dropdown'>";
+            row += "<button class='btn btn-ghost-dark btn-sm rounded-circle p-2' type='button' data-bs-toggle='dropdown' data-bs-boundary='viewport' aria-expanded='false' style='width: 32px; height: 32px;'>";
+            row += "<i class='ri-more-2-fill fs-5'></i>";
+            row += "</button>";
+            row += "<ul class='dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 overflow-hidden' style='min-width: 180px;'>";
+            row += "<li><a class='dropdown-item py-2 view-details-btn' href='#' data-id='"+d.id+"'><i class='ri-eye-line align-bottom me-2 text-primary'></i> <span class='fw-medium'>Détails</span></a></li>";
+            if(!d.etat) {
+                row += "<li><div class='dropdown-divider my-1'></div></li>";
+                row += "<li><a class='dropdown-item py-2 edit-item-btn' href='#' data-id='"+d.id+"'><i class='ri-edit-2-line align-bottom me-2 text-warning'></i> <span class='fw-medium'>Modifier</span></a></li>";
+                row += "<li><a class='dropdown-item py-2 payment-item-btn' href='#' data-id='"+d.id+"'><i class='ri-bank-card-line align-bottom me-2 text-info'></i> <span class='fw-medium'>Payer</span></a></li>";
+                row += "<li><a class='dropdown-item py-2 validate-item-btn' href='#' data-id='"+d.id+"'><i class='ri-checkbox-circle-line align-bottom me-2 text-success'></i> <span class='fw-medium'>Valider</span></a></li>";
+                row += "<li><div class='dropdown-divider my-1'></div></li>";
+                row += "<li><a class='dropdown-item py-2 remove-item-btn text-danger' href='#' data-id='"+d.id+"'><i class='ri-delete-bin-6-line align-bottom me-2'></i> <span class='fw-medium'>Supprimer</span></a></li>";
+            }
+            row += "</ul>";
+            row += "</div>";
+            row += "</td>";
+            row += "</tr>";
+            return row;
+        }
+
+        function formatMoney(amount) {
+            if (amount === null || amount === undefined) return '0,00';
+            if (typeof amount === 'string') {
+                amount = parseFloat(amount);
+            }
+            if (isNaN(amount)) return '0,00';
+            return amount.toLocaleString('fr-FR', {
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2
+            });
+        }
+
         function renderTable(data){
              // Apply Entity Filter
             if (currentEntityFilter !== 'all') {
@@ -840,252 +1044,97 @@
             updateStatistics(data);
 
             if (data.length > 0){
-                var row = "";
+                var rows = "";
                 $.each(data, function(index, d){
-                            row += "<tr class='align-middle'>";
-                            
-                            // Designation with icon
-                            row += "<td>";
-                            row += "<div class='d-flex align-items-center'>";
-                            row += "<div class='avatar-xs me-2'>";
-                            row += "<div class='avatar-title bg-danger bg-opacity-10 text-danger rounded'>";
-                            row += "<i class='ri-file-text-line'></i>";
-                            row += "</div>";
-                            row += "</div>";
-                            row += "<div>";
-                            row += "<h6 class='mb-0 fw-semibold text-dark'>"+d.label+"</h6>";
-                            row += "</div>";
-                            row += "</div>";
-                            row += "</td>";
-                            
-                            // Beneficiary with avatar
-                            var beneficiary = d.fournisseur__designation ? d.fournisseur__designation : d.client__nom+' '+d.client__prenom;
-                            var initials = beneficiary.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase();
-                            row += "<td>";
-                            row += "<div class='d-flex align-items-center'>";
-                            row += "<div class='avatar-xs me-2'>";
-                            row += "<div class='avatar-title bg-primary bg-opacity-10 text-primary rounded-circle fw-semibold'>";
-                            row += initials;
-                            row += "</div>";
-                            row += "</div>";
-                            row += "<span class='text-dark fw-medium'>"+beneficiary+"</span>";
-                            row += "</div>";
-                            row += "</td>";
-                            
-                            // Amount with enhanced badge
-                            row += "<td>";
-                            row += "<div class='d-flex align-items-center'>";
-                            row += "<i class='ri-money-dollar-circle-line text-success me-2 fs-5'></i>";
-                            row += "<span class='badge bg-success bg-opacity-20 text-success fw-semibold px-3 py-2 rounded-pill'>";
-                            row += d.montant_ht+" DA";
-                            row += "</span>";
-                            row += "</div>";
-                            row += "</td>";
-                            
-                            // Payment mode with icon
-                            var modeMap = {
-                                'che': {label: 'Chèque', icon: 'ri-bank-card-line', color: 'info'},
-                                'esp': {label: 'Espèce', icon: 'ri-cash-line', color: 'warning'},
-                                'vir': {label: 'Virement', icon: 'ri-exchange-line', color: 'primary'}
-                            };
-                            var modeInfo = modeMap[d.mode_paiement] || {label: d.mode_paiement || '-', icon: 'ri-question-line', color: 'secondary'};
-                            row += "<td>";
-                            row += "<div class='d-flex align-items-center'>";
-                            row += "<i class='"+modeInfo.icon+" text-"+modeInfo.color+" me-2 fs-5'></i>";
-                            row += "<span class='text-"+modeInfo.color+" fw-medium'>"+modeInfo.label+"</span>";
-                            row += "</div>";
-                            row += "</td>";
-                            
-                            // Operation date with icon
-                            row += "<td>";
-                            row += "<div class='d-flex align-items-center'>";
-                            row += "<i class='ri-calendar-line text-muted me-2'></i>";
-                            row += "<span class='text-muted'>"+d.created_at+"</span>";
-                            row += "</div>";
-                            row += "</td>";
-                            
-                            // Payment date with enhanced styling
-                            row += "<td>";
-                            if(d.date_paiement) {
-                                row += "<div class='d-flex align-items-center'>";
-                                row += "<i class='ri-calendar-check-line text-success me-2'></i>";
-                                row += "<span class='text-success fw-medium'>"+d.date_paiement+"</span>";
-                                row += "</div>";
-                            } else {
-                                row += "<span class='badge bg-danger bg-opacity-20 text-danger fw-semibold px-3 py-2 rounded-pill'>";
-                                row += "<i class='ri-close-circle-line me-1'></i>Non payé";
-                                row += "</span>";
-                            }
-                            row += "</td>";
-                            
-                            // State with modern badge
-                            row += "<td>";
-                            if(d.etat){
-                                row += "<span class='badge bg-success bg-opacity-20 text-success fw-semibold px-3 py-2 rounded-pill'>";
-                                row += "<i class='ri-checkbox-circle-line me-1'></i>Validé";
-                                row += "</span>";
-                            }else{
-                                row += "<span class='badge bg-warning bg-opacity-20 text-warning fw-semibold px-3 py-2 rounded-pill'>";
-                                row += "<i class='ri-time-line me-1'></i>En attente";
-                                row += "</span>";
-                            }
-                            row += "</td>";
-                           
-                            row += "<td class='text-center'>";
-                            row += "<div class='dropdown'>";
-                            row += "<button class='btn btn-soft-secondary btn-sm' type='button' data-bs-toggle='dropdown' aria-expanded='false'>";
-                            row += "<i class='ri-more-fill align-middle'></i>";
-                            row += "</button>";
-                            row += "<ul class='dropdown-menu dropdown-menu-end'>";
-                            row += "<li><a class='dropdown-item view-details-btn' href='#' data-id='"+d.id+"'><i class='ri-eye-line align-bottom me-2 text-muted'></i> Détails</a></li>";
-                            // Only show payment button if not validated
-                            if(!d.etat) {
-                                row += "<li><a class='dropdown-item payment-item-btn' href='#' data-id='"+d.id+"'><i class='ri-money-dollar-circle-line align-bottom me-2 text-muted'></i> Effectuer le paiement</a></li>";
-                            }
-                            row += "<li><a class='dropdown-item remove-item-btn' href='#' data-id='"+d.id+"'><i class='ri-delete-bin-fill align-bottom me-2 text-muted'></i> Supprimer</a></li>";
-                            row += "</ul>";
-                            row += "</div>";
-                            row += "</td>";
-                            row += "</tr>"
-                            
-                            
-                        });
-                    }else{
-                        row = "<tr><td colspan='9'> <div class='d-flex flex-column align-items-center justify-content-center py-5'>"+
-                                            '<div class="avatar-sm mb-4">'+
-                                                '<div class="avatar-title bg-light text-muted rounded-circle fs-1">'+
-                                                    '<i class="ri-wallet-3-line"></i>'+
-                                                '</div>'+
-                                            '</div>'+
-                                            '<h5 class="mb-2">Aucune dépense trouvée</h5>'+
-                                            '<p class="text-muted mb-0">Il n\'y a aucune dépense enregistrée pour le moment</p>'+
-                                        '</div></td></tr>';
-                    }
-                    $('#listeItem').html(row);
+                    rows += createRowHtml(d);
+                });
+                $('#listeItem').html(rows);
+            } else {
+                var emptyState = `
+                    <tr>
+                        <td colspan="9" class="text-center py-5">
+                            <div class="d-flex flex-column align-items-center justify-content-center">
+                                <div class="avatar-lg mb-4">
+                                    <div class="avatar-title bg-light text-muted rounded-circle display-4">
+                                        <i class="ri-wallet-3-line"></i>
+                                    </div>
+                                </div>
+                                <h5 class="mb-2 fw-bold text-dark">Aucune dépense trouvée</h5>
+                                <p class="text-muted mb-0">Il n'y a aucune dépense correspondant à vos critères</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                $('#listeItem').html(emptyState);
+            }
+        }
+
+        function loadItems(){
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiListeDepenses' %}", 
+                dataType : 'JSON',
+                type : 'GET',
+                success : function(data){
+                    allExpenses = data; // Save data
+                    renderTable(data);
                 }
-
-
-        loadItems();
+            });
+        }
 
         // Filter functionality
         function filterItems() {
             var searchTerm = $('#table-filter').val().toLowerCase();
             var dateFrom = $('#dateFrom').val();
             var dateTo = $('#dateTo').val();
-            var expenseType = $('#expenseType').val();
+            var expenseType = $('#categoryFilter').val();
             
-            // Re-fetch items with filters
-            $.ajax({
-                url: "{% url 't_tresorerie:ApiListeDepenses' %}", 
-                dataType: 'JSON',
-                type: 'GET',
-                success: function(data){
-                    if (data.length > 0){
-                        var filteredData = data;
-                        
-                        // Apply search filter
-                        if (searchTerm) {
-                            filteredData = filteredData.filter(function(item) {
-                                return (item.designation && item.designation.toLowerCase().includes(searchTerm)) ||
-                                       (item.fournisseur && item.fournisseur.toLowerCase().includes(searchTerm)) ||
-                                       (item.montant_total && item.montant_total.toString().includes(searchTerm)) ||
-                                       (item.type && item.type.toLowerCase().includes(searchTerm)) ||
-                                       (item.date_depense && item.date_depense.toLowerCase().includes(searchTerm));
-                            });
-                        }
-                        
-                        // Apply expense category filter
-                        if (expenseType) {
-                            filteredData = filteredData.filter(function(item) {
-                                // Check both new category and old type/category label
-                                var catName = item.category_name || item.categorie__label || item.type || "";
-                                return catName.toLowerCase().includes(expenseType.toLowerCase());
-                            });
-                        }
-                        
-                        // Apply date filters
-                        if (dateFrom || dateTo) {
-                            filteredData = filteredData.filter(function(item) {
-                                var itemDate = new Date(item.date_depense);
-                                var from = dateFrom ? new Date(dateFrom) : null;
-                                var to = dateTo ? new Date(dateTo) : null;
-
-                                if (from && to) {
-                                    return itemDate >= from && itemDate <= to;
-                                } else if (from) {
-                                    return itemDate >= from;
-                                } else if (to) {
-                                    return itemDate <= to;
-                                }
-                                return true;
-                            });
-                        }
-
-                        // Transform data to match the structure expected by updateStatistics() function
-                        var transformedData = filteredData.map(function(item) {
-                            return {
-                                id: item.id,
-                                label: item.designation,
-                                fournisseur__designation: item.fournisseur,
-                                montant_ttc: item.montant_total,
-                                montant_ht: item.montant_ht || 0,
-                                tva: item.tva || 0,
-                                categorie__label: item.category_name || item.categorie__label || item.type,
-                                category_name: item.category_name,
-                                date: item.date_depense,
-                                etat: item.etat || false,
-                                fournisseur: item.fournisseur,
-                                montant_total: item.montant_total,
-                                type: item.type,
-                                date_depense: item.date_depense,
-                                status: item.status
-                            };
-                        });
-
-                        var row = "";
-                        if (filteredData.length > 0) {
-                            $.each(filteredData, function(index, d){
-                                row += "<tr data-type='"+d.type+"'>";
-                                row += "<td>"+d.designation+"</td>";
-                                row += "<td>"+d.fournisseur+"</td>";
-                                row += "<td>"+d.montant_total+" DA</td>";
-                                row += "<td data-type='"+d.type+"'>"+d.type+"</td>";
-                                row += "<td>"+d.date_depense+"</td>";
-                                row += "<td class='text-center'>";
-                                row += "<div class='dropdown'>";
-                                row += "<button class='btn btn-soft-secondary btn-sm dropdown-toggle' type='button' data-bs-toggle='dropdown' aria-expanded='false'>";
-                                row += "<i class='ri-more-fill align-middle'></i>";
-                                row += "</button>";
-                                row += "<ul class='dropdown-menu dropdown-menu-end'>";
-                                row += "<li><a class='dropdown-item view-details-btn' href='#' data-id='"+d.id+"'><i class='ri-eye-line align-bottom me-2 text-muted'></i> Détails</a></li>";
-
-                                // Only show edit, delete, and validate buttons if the expense is not validated (etat = false)
-                                if(!d.etat) {
-                                    row += "<li><a class='dropdown-item edit-item-btn' href='#' data-id='"+d.id+"'><i class='ri-pencil-fill align-bottom me-2 text-muted'></i> Modifier</a></li>";
-                                    row += "<li><a class='dropdown-item remove-item-btn' href='#' data-id='"+d.id+"'><i class='ri-delete-bin-fill align-bottom me-2 text-muted'></i> Supprimer</a></li>";
-                                    row += "<li><a class='dropdown-item validate-item-btn' href='#' data-id='"+d.id+"'><i class='ri-checkbox-circle-line align-bottom me-2 text-muted'></i> Valider</a></li>";
-                                }
-
-                                row += "</ul>";
-                                row += "</div>";
-                                row += "</td>";
-                                row += "</tr>"
-
-                            });
-                        } else {
-                            row = "<tr><td colspan='6'>Aucune dépense trouvée</td></tr>";
-                        }
-                        $('#listeItem').html(row);
-
-                        // Update statistics based on filtered data (using transformed data)
-                        updateStatistics(transformedData);
-                    }else{
-                        row = "<tr><td colspan='6'>Aucune dépense enregistrée pour le moment</td></tr>";
-                        $('#listeItem').html(row);
-                        updateStatistics(data);
-                    }
+            if (allExpenses.length > 0){
+                var filteredData = allExpenses;
+                
+                // Apply search filter
+                if (searchTerm) {
+                    filteredData = filteredData.filter(function(item) {
+                        return (item.label && item.label.toLowerCase().includes(searchTerm)) ||
+                               (item.designation && item.designation.toLowerCase().includes(searchTerm)) ||
+                               (item.fournisseur__designation && item.fournisseur__designation.toLowerCase().includes(searchTerm)) ||
+                               (item.fournisseur && item.fournisseur.toLowerCase().includes(searchTerm)) ||
+                               (item.montant_ttc && item.montant_ttc.toString().includes(searchTerm)) ||
+                               (item.montant_ht && item.montant_ht.toString().includes(searchTerm)) ||
+                               (item.category_name && item.category_name.toLowerCase().includes(searchTerm)) ||
+                               (item.date_paiement && item.date_paiement.toLowerCase().includes(searchTerm));
+                    });
                 }
-            });
+                
+                // Apply expense category filter
+                if (expenseType) {
+                    filteredData = filteredData.filter(function(item) {
+                        var catName = item.category_name || item.categorie__label || "";
+                        return catName.toLowerCase().includes(expenseType.toLowerCase());
+                    });
+                }
+                
+                // Apply date filters
+                if (dateFrom || dateTo) {
+                    filteredData = filteredData.filter(function(item) {
+                        var itemDateStr = item.date_paiement || item.date_depense || item.created_at;
+                        if (!itemDateStr) return true;
+                        var itemDate = new Date(itemDateStr);
+                        var from = dateFrom ? new Date(dateFrom) : null;
+                        var to = dateTo ? new Date(dateTo) : null;
+
+                        if (from && to) {
+                            return itemDate >= from && itemDate <= to;
+                        } else if (from) {
+                            return itemDate >= from;
+                        } else if (to) {
+                            return itemDate <= to;
+                        }
+                        return true;
+                    });
+                }
+
+                renderTable(filteredData);
+            }
         }
 
         // Search input event
@@ -1102,7 +1151,7 @@
         $('#clearDateFilter').click(function() {
             $('#dateFrom').val('');
             $('#dateTo').val('');
-            $('#expenseType').val('');  // Reset expense type filter
+            $('#categoryFilter').val('');  // Reset category filter
             filterItems();
         });
 
@@ -1111,8 +1160,51 @@
             filterItems();
         });
 
-        // Initialize categories
+        function loadCategories(selectedId){
+             $.ajax({
+                url : "{% url 't_tresorerie:ApiLoadDepensesCategories' %}",
+                dataType : "JSON",
+                type : "GET",
+                success: function(data){
+                    // Populate Filter
+                    var filterOption = "<option value=''>Toutes les catégories</option>";
+                    // Populate Edit Select
+                    var editOption = "<option value=''>Veuillez sélectionner une catégorie</option>";
+                    
+                    $.each(data, function(index, c){
+                        var displayName = (c.parent_name ? c.parent_name + " > " : "") + c.name;
+                        filterOption += "<option value='"+c.name+"'>"+displayName+"</option>"; // Filter by name
+                        
+                        var isSelected = (selectedId && c.id == selectedId) ? 'selected' : '';
+                        editOption += "<option value='"+c.id+"' "+isSelected+">"+displayName+"</option>";
+                    });
+                    
+                    // Update filter if it's the initial load or needs update
+                    $('#categoryFilter').html(filterOption);
+                    $('#edit_category').html(editOption);
+                }
+            });
+        }
+
+        function loadFournisseurs(selectedId){
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiLoadFournisseur' %}",
+                dataType : "JSON",
+                type : "GET",
+                success: function(data){
+                    var option = "<option value=''>Sélectionner un fournisseur</option>";
+                    $.each(data, function(index, f){
+                        var isSelected = (selectedId && f.id == selectedId) ? 'selected' : '';
+                        option += "<option value='"+f.id+"' "+isSelected+">"+f.designation+"</option>";
+                    });
+                    $('#edit_fournisseur').html(option);
+                }
+            });
+        }
+
+        // Initialize page data
         loadCategories();
+        loadItems();
 
         // Function to update statistics based on filtered data
         function updateStatistics(data) {
@@ -1195,68 +1287,28 @@
             $('#edit_montant_ttc').val(ttc.toFixed(2));
         });
 
+        function loadEntites(selectedId){
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiLoadEntites' %}",
+                dataType: 'JSON',
+                type: 'GET',
+                success: function(data){
+                    var option = "<option value=''>Sélectionner une entité</option>";
+                    $.each(data, function(index, e){
+                        var isSelected = (selectedId && e.id == selectedId) ? 'selected' : '';
+                        option += "<option value='"+e.id+"' "+isSelected+">"+(e.entite_afficher || e.designation)+"</option>";
+                    });
+                    $('#edit_entite').html(option);
+                }
+            });
+        }
+
         // Handle edit button click
         $(document).on('click', '.edit-item-btn', function(e) {
             e.preventDefault();
-            var expenseId = $(this).data('id');
-
-            // For now, just open the modal - you'll implement the logic to populate the form
-            $('#editExpenseModal').modal('show');
-
-            // In a full implementation, you would fetch the expense details here
-            // and populate the form fields with the data
-        });
-
-        function loadFournisseurs(fournisseur){
-            $.ajax({
-                url : "{% url 't_tresorerie:ApiLoadFournisseur' %}",
-                dataType : "JSON",
-                type : "GET",
-                success: function(data){
-                    var option = "<option value='0'>Veuillez sélectionner un fournisseur</option>";
-                    $.each(data, function(index, p){
-                        option += "<option "+(p.id === fournisseur ? 'selected' : '')+" value="+p.id+">"+p.designation+"</option>";
-                    });
-                    $('#edit_fournisseur').html(option);
-                }
-            });
-        }
-
-        function loadCategories(selectedId){
-             $.ajax({
-                url : "{% url 't_tresorerie:ApiLoadDepensesCategories' %}",
-                dataType : "JSON",
-                type : "GET",
-                success: function(data){
-                    // Populate Filter
-                    var filterOption = "<option value=''>Toutes</option>";
-                    // Populate Edit Select
-                    var editOption = "<option value=''>Veuillez sélectionner une catégorie</option>";
-                    
-                    // Simple recursive function or flat list processing if data is flat with parent_id
-                    // The API returns a flat list with parent_id and parent_name
-                    
-                    $.each(data, function(index, c){
-                        var displayName = (c.parent_name ? c.parent_name + " > " : "") + c.name;
-                        filterOption += "<option value='"+c.name+"'>"+displayName+"</option>"; // Filter by name
-                        
-                        var isSelected = (selectedId && c.id == selectedId) ? 'selected' : '';
-                        editOption += "<option value='"+c.id+"' "+isSelected+">"+displayName+"</option>";
-                    });
-                    
-                    // Only update filter if it's empty (initial load)
-                    if ($('#categoryFilter option').length <= 1) {
-                         $('#categoryFilter').html(filterOption);
-                    }
-                    
-                    $('#edit_category').html(editOption);
-                }
-            });
-        }
-
-        $(document).on('click','#updateBtn', function(){
             var id = $(this).data('id');
-            $('#saveExpenseChangesBtn').data('id',id);
+            $('#saveExpenseChangesBtn').data('id', id);
+            
             $.ajax({
                 url : "{% url 't_tresorerie:ApiGetDepenseDetails' %}",
                 dataType : "JSON",
@@ -1270,6 +1322,7 @@
                     $('#edit_tva').val(data.tva);
                     $('#edit_montant_ht').val(data.montant_ht);
                     $('#edit_montant_ttc').val(data.montant_ttc);
+                    $('#edit_description').val(data.description);
                     
                     if (data.piece) {
                         $("#existing_piece").attr("href", data.piece);
@@ -1280,15 +1333,17 @@
                     
                     loadFournisseurs(data.fournisseur);
                     loadCategories(data.category);
-                    // loadSousCategorie(data.categorie, data.sous_categorie); // Removed
+                    loadEntites(data.entite);
+                    
+                    $('#editExpenseModal').modal('show');
+                },
+                error: function() {
+                    alertify.error("Erreur lors de la récupération des détails de la dépense");
                 }
-
             });
-
-            
-
-            $('#editExpenseModal').modal('show');
         });
+
+
 
         $(document).on('click', '#saveExpenseChangesBtn', function(){
             var id = $(this).data('id');
@@ -1301,6 +1356,7 @@
             var edit_date             = $('#edit_date').val();
             var edit_categorie        = $('#edit_category').val(); // Using edit_category now
             // var edit_sous_categorie   = $('#edit_sous_categorie').val(); // Removed
+            var edit_entite           = $('#edit_entite').val();
             var edit_description      = $('#edit_description').val();
             var edit_piece            = $('#edit_piece')[0].files[0];
 
@@ -1314,7 +1370,8 @@
             formData.append('edit_montant_ttc', edit_montant_ttc);
             formData.append('edit_date', edit_date);
             formData.append('edit_categorie', edit_categorie);
-            formData.append('edit_sous_categorie', edit_sous_categorie);
+            // formData.append('edit_sous_categorie', edit_sous_categorie); // Removed
+            formData.append('edit_entite', edit_entite);
             formData.append('edit_description', edit_description);
 
             if (edit_piece) {

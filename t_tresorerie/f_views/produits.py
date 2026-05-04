@@ -295,7 +295,14 @@ def ApiGetAutrePaiement(request, pk):
             'date_operation': paiement.date_operation.strftime('%Y-%m-%d') if paiement.date_operation else '-',
             'reference': paiement.reference or '-',
             'date_paiement': paiement.date_paiement.strftime('%Y-%m-%d') if paiement.date_paiement else '-',
-            'compte_id': paiement.payment_type.id if paiement.payment_type else None
+            'compte_id': paiement.payment_type.id if paiement.payment_type else None,
+            'client_nom': paiement.client.nom if paiement.client else '-',
+            'client_prenom': paiement.client.prenom if paiement.client else '',
+            'client_telephone': paiement.client.telephone if paiement.client else '-',
+            'client_email': paiement.client.email if paiement.client else '-',
+            'client_type': paiement.client.get_type_prospect_display() if paiement.client else '-',
+            'client_nin': paiement.client.nin if paiement.client else '-',
+            'client_adresse': f"{paiement.client.adresse or ''} {paiement.client.commune or ''} {paiement.client.wilaya or ''}".strip() or '-' if paiement.client else '-'
         })
     except AutreProduit.DoesNotExist:
         return JsonResponse({'error': 'Paiement non trouvé'}, status=404)

@@ -30,3 +30,25 @@ def get_dict_value(dictionary, key):
     if not dictionary:
         return None
     return dictionary.get(str(key))
+
+@register.filter
+def format_comptable(value):
+    """Formats a number as Algerian accounting format: 1.234,56 DA (negative in parentheses)"""
+    if value is None:
+        return "0,00 DA"
+    try:
+        val = float(value)
+    except (ValueError, TypeError):
+        return "0,00 DA"
+    
+    abs_val = abs(val)
+    # Format with US defaults: 1,234.56
+    formatted = "{:,.2f}".format(abs_val)
+    # Swap separators to get 1.234,56
+    # Note: we use temporary placeholders to avoid double swapping
+    formatted = formatted.replace(",", "TEMP").replace(".", ",").replace("TEMP", ".")
+    
+    res = f"{formatted} DA"
+    if val < 0:
+        res = f"({res})"
+    return res

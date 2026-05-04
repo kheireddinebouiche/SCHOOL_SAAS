@@ -100,6 +100,10 @@ class BudgetCampaign(models.Model):
     date_debut = models.DateField()
     date_fin = models.DateField()
     is_active = models.BooleanField(default=False)
+    
+    target_revenue = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name="Objectif Recettes (Global)")
+    target_expense = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name="Objectif Dépenses (Global)")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -1,5 +1,7 @@
-{% extends 'tenant_folder/base.html' %} 
+{% extends "tenant_folder/base.html" %}
+{% load static %}
 {% load humanize %}
+{% load budget_tags %}
 
 {% block content %}
 <style>
@@ -183,6 +185,17 @@
 {{ allocations|json_script:"allocations-data" }}
 
 <script>
+    function formatCurrency(val) {
+        let res = new Intl.NumberFormat('fr-FR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(Math.abs(val));
+        res = res.replace(/\s|[\u00A0\u202F]/g, '.');
+        res += ' DA';
+        if (val < 0) res = `(${res})`;
+        return res;
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // 1. Data Loading & Pre-filling
         const allocationsData = JSON.parse(document.getElementById('allocations-data').textContent);
@@ -203,10 +216,10 @@
             
             if (allocationsData[key] !== undefined) {
                 const val = parseFloat(allocationsData[key]);
-                span.textContent = val.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                span.textContent = formatCurrency(val);
                 span.dataset.value = val; // Store numeric value for calcs if needed
             } else {
-                span.textContent = "0,00";
+                span.textContent = "0,00 DA";
                 span.dataset.value = 0;
             }
         });
@@ -240,13 +253,13 @@
             for (const [posteId, val] of Object.entries(rowTotals)) {
                 // Correct ID based on what's in the template for row totals
                 const el = document.getElementById(`row_total_${posteId}_0`);
-                if(el) el.textContent = val.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                if(el) el.textContent = formatCurrency(val);
             }
 
             // Footer
-            document.getElementById('total-current-all').textContent = colCurrentTotal.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('total-prop-all').textContent = colPropTotal.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('grand-total').textContent = (colCurrentTotal + colPropTotal).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('total-current-all').textContent = formatCurrency(colCurrentTotal);
+            document.getElementById('total-prop-all').textContent = formatCurrency(colPropTotal);
+            document.getElementById('grand-total').textContent = formatCurrency(colCurrentTotal + colPropTotal);
 
             // Update Parent Totals
             document.querySelectorAll('.parent-poste-row').forEach(parentRow => {
@@ -276,9 +289,9 @@
                     next = next.nextElementSibling;
                 }
                 
-                document.getElementById(`parent_current_total_${parentId}`).textContent = sumCurrent.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                document.getElementById(`parent_prop_total_${parentId}`).textContent = sumProp.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                document.getElementById(`parent_total_${parentId}`).textContent = sumTarget.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                document.getElementById(`parent_current_total_${parentId}`).textContent = formatCurrency(sumCurrent);
+                document.getElementById(`parent_prop_total_${parentId}`).textContent = formatCurrency(sumProp);
+                document.getElementById(`parent_total_${parentId}`).textContent = formatCurrency(sumTarget);
             });
         }
 

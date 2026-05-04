@@ -154,7 +154,7 @@ ASGI_APPLICATION = 'school.asgi.application'
 if os.name == 'nt':
     CHANNEL_LAYERS = {
         "default": {
-            "BACKEND": "channels.layers.InMemoryChannelLayer"
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
         }
     }
 else:
@@ -162,7 +162,7 @@ else:
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [("redis://:1230042690%40aZeRTy@127.0.0.1:6379/1")],
+                "hosts": ["redis://:1230042690%40aZeRTy@127.0.0.1:6379/1"],
             },
         },
     }

@@ -55,7 +55,8 @@ from .views import (
     preview_tenant_table_reset,
     delete_orphaned_schema,
     get_tenant_sync_list,
-    sync_single_tenant_view
+    sync_single_tenant_view,
+    mise_en_route
 )
 
 
@@ -63,6 +64,7 @@ app_name = 'associe_app'
 
 urlpatterns = [
     path('', index, name='configuration_index'),
+    path('mise-en-route/', mise_en_route, name='mise_en_route'),
 
 
 

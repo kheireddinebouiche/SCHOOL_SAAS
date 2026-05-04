@@ -10,9 +10,9 @@ from django.contrib import messages
 def PageDepenses(request):
     return render(request,'tenant_folder/comptabilite/depenses/liste_des_depenses.html')
 
-@login_required(login_url="institut_app:ApiListeDepenses")
+@login_required(login_url="institut_app:login")
 def ApiListeDepenses(request):
-    liste = Depenses.objects.all().values('id','label', 'category__name', 'category__parent__name','montant_ht','tva','date_paiement','client__prenom','client__nom','fournisseur__designation','etat','created_at', 'mode_paiement', 'entite__id', 'entite__designation').order_by('-id')
+    liste = Depenses.objects.all().values('id','label', 'category__name', 'category__parent__name','montant_ht','tva','montant_ttc','date_paiement','client__prenom','client__nom','fournisseur__designation','etat','created_at', 'mode_paiement', 'entite__id', 'entite__designation').order_by('-id')
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
@@ -27,7 +27,8 @@ def ApiLoadEntites(request):
 
 @login_required(login_url="institut_app:login")
 def PageNouvelleDepense(request):
-    return render(request, "tenant_folder/comptabilite/depenses/nouvelle_depense.html")
+    entites = Entreprise.objects.all()
+    return render(request, "tenant_folder/comptabilite/depenses/nouvelle_depense.html", {'entites': entites})
 
 @login_required(login_url="institut_app:login")
 def ApiLoadTypeDepense(request):
@@ -119,7 +120,7 @@ def ApiFilterSousCategrorie(request):
     else:
         return JsonResponse({"status":"error"})
 
-@login_required(login_url="insitut_app:login")
+@login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiStoreDepense(request):
     if request.method == "POST":
@@ -151,7 +152,8 @@ def ApiStoreDepense(request):
             piece = piece,
             description = description,
             mode_paiement = mode_paiement,
-            reference = reference_paiement
+            reference = reference_paiement,
+            entite_id = request.POST.get('entite')
         )
 
         if mode_paiement == "che" or mode_paiement == "vir":
@@ -189,12 +191,13 @@ def ApiGetDepenseDetails(request):
             'piece' : obj.piece.url if obj.piece else None,
             'description' : obj.description,
             'tva'  : obj.tva,
+            'entite' : obj.entite.id if obj.entite else None,
         }
         return JsonResponse(data)
     else:
         return JsonResponse({"status":"error"})
     
-@login_required(login_url="institut_app")
+@login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiUpdateDepense(request):
     if request.method == "POST":
@@ -209,6 +212,7 @@ def ApiUpdateDepense(request):
         edit_sous_categorie = request.POST.get('edit_sous_categorie')
         edit_description = request.POST.get('edit_description')
         edit_piece = request.FILES.get('edit_piece')
+        edit_entite = request.POST.get('edit_entite')
         obj = Depenses.objects.get(id = id)
 
         if request.POST.get('edit_category'):
@@ -223,6 +227,7 @@ def ApiUpdateDepense(request):
         if edit_piece:
             obj.piece = edit_piece
         obj.description = edit_description
+        obj.entite_id = edit_entite
 
         obj.save()
         return JsonResponse({"status":"success"})

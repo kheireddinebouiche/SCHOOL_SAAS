@@ -21,7 +21,7 @@ def ApiLoadConvertedProspects(request):
         total_paye=Sum('paiements__montant_paye', filter=Q(paiements__is_refund=False))
     )
 
-    promos = list(Promos.objects.filter(etat="active").values('id', 'code', 'date_debut', 'date_fin', 'begin_year', 'end_year', 'session'))
+    promos = list(Promos.objects.filter(etat="active").values('id', 'code', 'begin_year', 'end_year', 'session'))
 
     for promo in promos:
         # Total à payer : Somme des montants dûs de tous les étudiants convertis de la promo

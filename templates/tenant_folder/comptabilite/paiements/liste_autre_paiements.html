@@ -91,6 +91,26 @@
         color: #3b82f6;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
+
+    /* Dropdown Z-index & Overflow Fix */
+    .table-responsive {
+        overflow: visible !important;
+    }
+
+    .dropdown-menu {
+        z-index: 2000 !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+        border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    }
+
+    /* Prevent cell clipping */
+    .table td {
+        position: relative;
+    }
+    
+    .table td:last-child {
+        overflow: visible !important;
+    }
 </style>
 
 <div class="main-content">
@@ -133,7 +153,7 @@
               </div>
               <div>
                 <h3 class="mb-0 fw-bold text-dark" id="totalPaiements">0</h3>
-                <p class="text-muted mb-0 small uppercase fw-bold">Total Paiements</p>
+                <p class="text-muted mb-0 small uppercase fw-bold">Total Opérations</p>
               </div>
             </div>
           </div>
@@ -142,11 +162,11 @@
           <div class="card glass-card stat-card-premium p-4 border-0 text-center text-md-start">
             <div class="d-flex align-items-center justify-content-center justify-content-md-start">
               <div class="icon-container-premium bg-soft-success me-3">
-                <i class="ri-checkbox-circle-line text-success fs-3"></i>
+                <i class="ri-wallet-3-line text-success fs-3"></i>
               </div>
               <div>
-                <h3 class="mb-0 fw-bold text-dark" id="valideCount">0</h3>
-                <p class="text-muted mb-0 small uppercase fw-bold">Validés</p>
+                <h3 class="mb-0 fw-bold text-dark" id="totalMontant">0 DA</h3>
+                <p class="text-muted mb-0 small uppercase fw-bold">Montant Total</p>
               </div>
             </div>
           </div>
@@ -155,11 +175,11 @@
           <div class="card glass-card stat-card-premium p-4 border-0 text-center text-md-start">
             <div class="d-flex align-items-center justify-content-center justify-content-md-start">
               <div class="icon-container-premium bg-soft-warning me-3">
-                <i class="ri-time-line text-warning fs-3"></i>
+                <i class="ri-hand-coin-line text-warning fs-3"></i>
               </div>
               <div>
-                <h3 class="mb-0 fw-bold text-dark" id="enAttenteCount">0</h3>
-                <p class="text-muted mb-0 small uppercase fw-bold">En attente</p>
+                <h3 class="mb-0 fw-bold text-dark" id="especeCount">0</h3>
+                <p class="text-muted mb-0 small uppercase fw-bold">Paiements Espèces</p>
               </div>
             </div>
           </div>
@@ -168,11 +188,11 @@
           <div class="card glass-card stat-card-premium p-4 border-0 text-center text-md-start">
             <div class="d-flex align-items-center justify-content-center justify-content-md-start">
               <div class="icon-container-premium bg-soft-info me-3">
-                <i class="ri-file-list-3-line text-info fs-3"></i>
+                <i class="ri-bank-card-line text-info fs-3"></i>
               </div>
               <div>
-                <h3 class="mb-0 fw-bold text-dark" id="draftCount">0</h3>
-                <p class="text-muted mb-0 small uppercase fw-bold">Brouillons</p>
+                <h3 class="mb-0 fw-bold text-dark" id="autreModeCount">0</h3>
+                <p class="text-muted mb-0 small uppercase fw-bold">Chèques/Virements</p>
               </div>
             </div>
           </div>
@@ -200,12 +220,53 @@
             <!-- Filters & Data Table -->
             <div class="row">
                 <div class="col-lg-12">
+                    <div class="card glass-card border-0 mb-4">
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="search-input-group">
+                                        <i class="ri-search-line"></i>
+                                        <input type="text" class="form-control" id="table-filter" placeholder="Rechercher un paiement, client, référence...">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="date" class="form-control" id="dateFrom" placeholder="De">
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="date" class="form-control" id="dateTo" placeholder="À">
+                                </div>
+                                <div class="col-md-2">
+                                    <select class="form-select" id="paymentType">
+                                        <option value="">Tous les types</option>
+                                        <option value="scolarite">Scolarité</option>
+                                        <option value="frais_dossier">Frais de dossier</option>
+                                        <option value="autre">Autre</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2 d-flex gap-2">
+                                    <button class="btn btn-primary w-100 btn-rounded" id="filterByDate">
+                                        <i class="ri-filter-3-line"></i>
+                                    </button>
+                                    <button class="btn btn-soft-danger w-100 btn-rounded" id="clearDateFilter">
+                                        <i class="ri-refresh-line"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                      </div>
                     </div>
-                    <div class="card-body p-0">
-                        <div>
-                            <table id="example" class="table table-hover align-middle mb-0">
+
+                    <div class="card glass-card border-0">
+                        <div class="card-header bg-transparent border-0 pt-4 px-4">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <h5 class="card-title mb-0 fw-bold">Historique des Transactions</h5>
+                                <button class="btn btn-soft-primary btn-sm btn-rounded" id="refreshPaiements">
+                                    <i class="ri-refresh-line me-1"></i> Actualiser
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table id="example" class="table table-hover align-middle mb-0">
                                 <thead class="bg-light">
                                     <tr>
                                         <th class="border-0 rounded-start ps-4">Client</th>
@@ -260,33 +321,70 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <!-- Section Client -->
+                <div class="mb-4">
+                    <h6 class="text-primary text-uppercase fw-bold mb-3 border-bottom pb-2">Informations du Client</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label text-muted small mb-0">Nom complet</label>
+                            <p id="detailClientNom" class="fw-bold mb-0"></p>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label text-muted small mb-0">NIN</label>
+                            <p id="detailClientNin" class="mb-0"></p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label text-muted small mb-0">Type</label>
+                            <p id="detailClientType" class="mb-0"></p>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label text-muted small mb-0">Email</label>
+                            <p id="detailClientEmail" class="mb-0"></p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label text-muted small mb-0">Téléphone</label>
+                            <p id="detailClientTel" class="mb-0"></p>
+                        </div>
+                        <div class="col-md-12 mb-2">
+                            <label class="form-label text-muted small mb-0">Adresse</label>
+                            <p id="detailClientAdresse" class="mb-0"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Paiement -->
+                <h6 class="text-primary text-uppercase fw-bold mb-3 border-bottom pb-2">Informations du Paiement</h6>
                 <div class="mb-3">
-                    <label class="form-label text-muted">Description</label>
-                    <p id="detailLabel" class="fw-medium"></p>
+                    <label class="form-label text-muted small mb-0">Description</label>
+                    <p id="detailLabel" class="fw-medium mb-0"></p>
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Montant</label>
-                        <p id="detailMontant" class="fw-bold text-primary"></p>
+                        <label class="form-label text-muted small mb-0">Montant</label>
+                        <p id="detailMontant" class="fw-bold text-primary mb-0"></p>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Mode de paiement</label>
-                        <p id="detailMode"></p>
+                        <label class="form-label text-muted small mb-0">Mode de paiement</label>
+                        <p id="detailMode" class="mb-0"></p>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Référence</label>
-                        <p id="detailRef"></p>
+                        <label class="form-label text-muted small mb-0">Référence</label>
+                        <p id="detailRef" class="mb-0"></p>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Date Opération</label>
-                        <p id="detailDateOp"></p>
+                        <label class="form-label text-muted small mb-0">Date Opération</label>
+                        <p id="detailDateOp" class="mb-0"></p>
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label text-muted">Date Paiement</label>
-                    <p id="detailDatePaiement"></p>
+                    <label class="form-label text-muted small mb-0">Date Paiement</label>
+                    <p id="detailDatePaiement" class="mb-0"></p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -388,11 +486,11 @@
 
         // Filter functionality
         function filterItems() {
-            var searchTerm = $('#table-filter').val().toLowerCase();
+            var searchTerm = ($('#table-filter').val() || "").toLowerCase();
             var dateFrom = $('#dateFrom').val();
             var dateTo = $('#dateTo').val();
             var paymentType = $('#paymentType').val();
-            var entiteId = $('.nav-pills .nav-link.active').data('id');
+            var entiteId = $('.nav-pills-premium .nav-link.active').data('id');
 
             // Re-fetch items with filters
             $.ajax({
@@ -517,26 +615,25 @@
 
         // Function to update statistics based on filtered data
         function updateStatistics(data) {
-            var totalPaiements = data.length;
-            var paidPaiements = 0;
-            var partiallyPaidPaiements = 0;
+            var totalCount = data.length;
             var totalMontant = 0;
+            var especeCount = 0;
+            var autreModeCount = 0;
 
             $.each(data, function(index, p) {
                 totalMontant += parseFloat(p.montant_paye) || 0;
-                // Add logic based on payment status if available in your data
-                // Assuming here that context might indicate payment status
-                if (p.context && p.context.toLowerCase().includes('payé')) {
-                    paidPaiements++;
-                } else if (p.context && p.context.toLowerCase().includes('partiel')) {
-                    partiallyPaidPaiements++;
+                
+                if (p.mode_paiement === 'Espèce') {
+                    especeCount++;
+                } else {
+                    autreModeCount++;
                 }
             });
 
-            $('#totalPaiements').text(totalPaiements);
-            $('#paidPaiements').text(paidPaiements);
-            $('#partiallyPaidPaiements').text(partiallyPaidPaiements);
+            $('#totalPaiements').text(totalCount);
             $('#totalMontant').text(formatMoney(totalMontant) + ' DA');
+            $('#especeCount').text(especeCount);
+            $('#autreModeCount').text(autreModeCount);
         }
 
 
@@ -560,6 +657,14 @@
                         $('#detailLabel').text(data.label);
                         $('#detailMontant').text(formatMoney(data.montant_paiement) + ' DA');
                         
+                        // Populate Client Details
+                        $('#detailClientNom').text(data.client_nom + ' ' + data.client_prenom);
+                        $('#detailClientNin').text(data.client_nin);
+                        $('#detailClientType').text(data.client_type);
+                        $('#detailClientEmail').text(data.client_email);
+                        $('#detailClientTel').text(data.client_telephone);
+                        $('#detailClientAdresse').text(data.client_adresse);
+
                         var modeLabel = data.mode_paiement;
                         // Mapping mode codes to labels if needed, or backend sends display name?
                         // Backend 'ApiGetAutrePaiement' returns raw 'Espèce', 'Chèque' etc? 

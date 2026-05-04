@@ -1,318 +1,681 @@
 {% extends 'public_folder/base.html' %} 
 {% load static %}
 {% load humanize %}
+{% load budget_tags %}
 {% block title %} {{ title }} {% endblock title %}
 
 {% block content %}
 <style>
+    /* Modern UI Variables */
     :root {
         --primary-teal: #225787;
         --secondary-teal: #1b466c;
         --primary-gradient: linear-gradient(135deg, var(--primary-teal) 0%, var(--secondary-teal) 100%);
-        --glass-bg: rgba(255, 255, 255, 0.95);
-        --glass-border: rgba(255, 255, 255, 0.2);
+        --primary-soft: rgba(34, 87, 135, 0.1);
+        --text-dark: #1e293b;
+        --text-muted: #64748b;
+        --border-color: #e2e8f0;
+        
+        --color-blue: #3b82f6;
+        --color-cyan: #06b6d4;
+        --color-green: #10b981;
+        --color-orange: #f59e0b;
+        --color-red: #ef4444;
     }
 
-    .glass-card {
-        background: var(--glass-bg);
-        backdrop-filter: blur(10px);
-        border: 1px solid var(--glass-border);
-        border-radius: 1.5rem;
-        box-shadow: 0 8px 32px 0 rgba(34, 87, 135, 0.08);
-        transition: all 0.3s ease;
+    .dashboard-container {
+        padding: 1.5rem;
+        background-color: #f1f5f9;
+        min-height: 100vh;
     }
 
-    .glass-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 45px rgba(34, 87, 135, 0.12);
-    }
-
-    .dashboard-header {
+    .page-title-box {
         background: var(--primary-gradient) !important;
         border-radius: 1.5rem !important;
-        padding: 2.5rem !important;
-        margin-bottom: 2rem !important;
+        padding: 2rem !important;
         color: white;
-        position: relative;
-        overflow: hidden;
         box-shadow: 0 10px 30px rgba(34, 87, 135, 0.2);
     }
 
-    .stat-icon {
-        width: 48px;
-        height: 48px;
+    /* Animated entry */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .staggered-item {
+        animation: fadeInUp 0.5s ease forwards;
+        opacity: 0;
+        animation-delay: calc(var(--index) * 0.1s);
+    }
+
+    /* Summary Cards */
+    .summary-card {
+        background: white;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .summary-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .summary-card.border-blue { border-top: 4px solid var(--color-blue); }
+    .summary-card.border-cyan { border-top: 4px solid var(--color-cyan); }
+    .summary-card.border-green { border-top: 4px solid var(--color-green); }
+    .summary-card.border-orange { border-top: 4px solid var(--color-orange); }
+
+    .summary-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        letter-spacing: 0.05em;
+        margin-bottom: 1rem;
+    }
+
+    .summary-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--text-dark);
+        margin-bottom: 0.25rem;
+    }
+
+    .summary-value span {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        margin-left: 0.25rem;
+        font-weight: 500;
+    }
+
+    .summary-icon {
+        position: absolute;
+        bottom: 1.25rem;
+        right: 1.25rem;
+        width: 44px;
+        height: 44px;
         display: flex;
         align-items: center;
         justify-content: center;
         border-radius: 12px;
-        font-size: 24px;
+        font-size: 1.25rem;
     }
 
-    .progress-tracking {
-        height: 8px;
+    .bg-blue-soft { background-color: rgba(59, 130, 246, 0.1); color: var(--color-blue); }
+    .bg-cyan-soft { background-color: rgba(6, 182, 212, 0.1); color: var(--color-cyan); }
+    .bg-green-soft { background-color: rgba(16, 185, 129, 0.1); color: var(--color-green); }
+    .bg-orange-soft { background-color: rgba(245, 158, 11, 0.1); color: var(--color-orange); }
+
+    /* Filter Bar */
+    .filter-bar {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    .filter-btn {
+        background: white;
+        border: 1px solid var(--border-color);
+        padding: 0.6rem 1.2rem;
         border-radius: 10px;
-        background-color: #f1f5f9;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-dark);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        cursor: pointer;
     }
 
-    .campaign-status-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 5px;
+    select.filter-btn {
+        appearance: none;
+        padding-right: 2.5rem;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'%3E%3Cpath d='M12 16L6 10H18L12 16Z'%3E%3C/path%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 1.25rem;
     }
 
-    .btn-create-floating {
-        background: var(--primary-teal) !important;
-        color: white !important;
-        border: none !important;
-        padding: 0.8rem 1.5rem !important;
-        border-radius: 1rem !important;
-        font-weight: 600 !important;
-        box-shadow: 0 4px 15px rgba(34, 87, 135, 0.3);
-        transition: all 0.3s;
+    .filter-btn:hover {
+        background: #f8fafc;
+        border-color: var(--primary-teal);
+        color: var(--primary-teal);
     }
 
-    .btn-create-floating:hover {
-        transform: scale(1.05);
-        box-shadow: 0 6px 20px rgba(34, 87, 135, 0.4);
+    /* Section Header */
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 3rem;
+        margin-bottom: 1.5rem;
+        background: white;
+        padding: 1rem 1.5rem;
+        border-radius: 1rem;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
 
-    .table-custom th {
-        background: #f8fafc !important;
-        font-weight: 600 !important;
+    .section-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.25rem;
+    }
+
+    .bg-revenue { background-color: var(--color-cyan); }
+    .bg-expense { background-color: var(--color-orange); }
+
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: var(--text-dark);
         text-transform: uppercase;
-        font-size: 11px;
-        letter-spacing: 0.5px;
-        color: #64748b;
-        border: none !important;
+        letter-spacing: 0.05em;
+        margin: 0;
     }
 
-    .table-custom td {
-        vertical-align: middle;
-        border-bottom: 1px solid #f1f5f9;
+    /* Analytics Row */
+    .analytics-card {
+        background: white;
+        border-radius: 1rem;
+        border: 1px solid var(--border-color);
+        padding: 1.75rem;
+        height: 100%;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .card-subtitle {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        margin-bottom: 1.5rem;
+        letter-spacing: 0.05em;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-subtitle::before {
+        content: '';
+        width: 4px;
+        height: 12px;
+        background: var(--primary-teal);
+        border-radius: 2px;
+    }
+
+    /* Gauge Chart */
+    .gauge-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        padding: 1rem 0;
+    }
+
+    .gauge-circle {
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 2rem;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+    }
+
+    .text-cyan { color: var(--color-cyan) !important; }
+    .text-orange { color: var(--color-orange) !important; }
+    .bg-soft-info { background-color: rgba(6, 182, 212, 0.1) !important; }
+    .bg-soft-warning { background-color: rgba(245, 158, 11, 0.1) !important; }
+    .bg-cyan { background-color: var(--color-cyan) !important; }
+    .bg-orange { background-color: var(--color-orange) !important; }
+    .text-pos { color: var(--color-green) !important; }
+    .text-neg { color: var(--color-red) !important; }
+
+    .gauge-inner {
+        width: 130px;
+        height: 130px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    .gauge-percent {
+        font-size: 2.5rem;
+        font-weight: 900;
+        line-height: 1;
+    }
+
+    .text-red { color: #ef4444; }
+    .text-green { color: #10b981; }
+
+    /* Premium Table Styling */
+    .premium-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 0.5rem;
+    }
+
+    .premium-table th {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
         padding: 1rem 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .premium-table td {
+        padding: 1.25rem 0.75rem;
+        font-size: 0.85rem;
+        vertical-align: middle;
+        background: transparent;
+        transition: all 0.2s;
+    }
+
+    .premium-table tr:hover td {
+        background: #f8fafc;
+    }
+
+    .period-cell {
+        font-weight: 800;
+        color: var(--primary-teal);
+        width: 80px;
+    }
+
+    .amount-cell {
+        font-family: 'JetBrains Mono', monospace; /* Optional for tabular numbers */
+        font-weight: 500;
+        text-align: right;
+    }
+
+    .amount-cell.bold {
+        font-weight: 800;
+        color: var(--text-dark);
+    }
+
+    .progress-mini-container {
+        width: 100px;
+        height: 6px;
+        background: #f1f5f9;
+        border-radius: 10px;
+        overflow: hidden;
+        display: inline-block;
+        margin-right: 0.75rem;
+        vertical-align: middle;
+    }
+
+    .progress-mini-fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.5s ease-out;
+    }
+
+    .status-badge-premium {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 0.4rem 0.8rem;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .text-val { font-weight: 700; color: var(--text-dark); }
+    .text-neg { color: #f43f5e; font-weight: 700; }
+    .text-pos { color: #10b981; font-weight: 700; }
+
+    /* Campus List */
+    .campus-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.25rem;
+    }
+
+    .campus-name {
+        flex: 1;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+
+    .progress-bar-container {
+        flex: 2;
+        height: 8px;
+        background: #f1f5f9;
+        border-radius: 10px;
+        margin: 0 1.25rem;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: var(--primary-teal);
+        border-radius: 10px;
+        opacity: 0.8;
+    }
+
+    .campus-percent {
+        font-size: 0.875rem;
+        font-weight: 800;
+        color: var(--primary-teal);
+        min-width: 45px;
+        text-align: right;
     }
 </style>
 
 <div class="main-content">
     <div class="page-content">
-        <div class="container-fluid">
+        <div class="dashboard-container">
             <!-- Header Section -->
-            <div class="dashboard-header animate__animated animate__fadeInDown">
-                <div class="row align-items-center">
-                    <div class="col-md-8">
-                        <h1 class="text-white fw-bold mb-1">Configuration du Budget</h1>
-                        <p class="text-white-50 mb-0">Pilotage centralisé des campagnes et allocations budgétaires du groupe.</p>
-                    </div>
-                    <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                        <button class="btn btn-create-floating" data-bs-toggle="modal" data-bs-target="#createCampaignModal">
-                            <i class="ri-add-circle-line me-2"></i> Nouvelle Campagne
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <div class="row mb-5 staggered-item" style="--index: 1;">
+                <div class="col-12">
+                    <div class="page-title-box d-sm-flex align-items-center justify-content-between p-4 shadow-sm">
+                        <div>
+                            <h2 class="mb-1 text-white fw-bold display-6">Pilotage Budgétaire - Groupe INSIM</h2>
+                            <p class="text-white-50 mb-0">Vue consolidée pour l'Année Scolaire {{ active_campaign.date_debut|date:"Y" }}-{{ active_campaign.date_fin|date:"Y" }}</p>
+                        </div>
+                        <form id="filterForm" method="GET" class="filter-bar mt-3 mt-sm-0">
+                            <div class="d-flex gap-2">
+                                <select name="tenant_id" class="filter-btn form-select" onchange="this.form.submit()">
+                                    <option value="all" {% if not selected_tenant %}selected{% endif %}>🏢 Tous les Campus</option>
+                                    {% for inst in all_instituts %}
+                                        <option value="{{ inst.id }}" {% if selected_tenant.id == inst.id %}selected{% endif %}>📍 {{ inst.nom }}</option>
+                                    {% endfor %}
+                                </select>
 
-            <!-- Stats Row -->
-            <div class="row mb-4">
-                <div class="col-xl-3 col-md-6">
-                    <div class="glass-card p-4 mb-4 mb-xl-0">
-                        <div class="d-flex align-items-center">
-                            <div class="stat-icon bg-soft-primary text-primary me-3">
-                                <i class="ri-calendar-event-line"></i>
-                            </div>
-                            <div>
-                                <h6 class="text-muted small text-uppercase fw-bold mb-1">Total Campagnes</h6>
-                                <h3 class="mb-0 fw-bold">{{ global_stats.total_campaigns }}</h3>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <div class="glass-card p-4 mb-4 mb-xl-0">
-                        <div class="d-flex align-items-center">
-                            <div class="stat-icon bg-soft-success text-success me-3">
-                                <i class="ri-pulse-line"></i>
-                            </div>
-                            <div>
-                                <h6 class="text-muted small text-uppercase fw-bold mb-1">Campagnes Actives</h6>
-                                <h3 class="mb-0 fw-bold">{{ global_stats.active_count }}</h3>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <div class="glass-card p-4 mb-4 mb-xl-0">
-                        <div class="d-flex align-items-center">
-                            <div class="stat-icon bg-soft-warning text-warning me-3">
-                                <i class="ri-exchange-funds-line"></i>
-                            </div>
-                            <div>
-                                <h6 class="text-muted small text-uppercase fw-bold mb-1">Rallonges en Attente</h6>
-                                <h3 class="mb-0 fw-bold">{{ global_stats.pending_extensions }}</h3>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <div class="glass-card p-4">
-                        <div class="d-flex align-items-center">
-                            <div class="stat-icon bg-soft-info text-info me-3">
-                                <i class="ri-building-line"></i>
-                            </div>
-                            <div>
-                                <h6 class="text-muted small text-uppercase fw-bold mb-1">Total Instituts</h6>
-                                <h3 class="mb-0 fw-bold">{{ global_stats.total_instituts }}</h3>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                                <select name="campaign_id" class="filter-btn form-select" onchange="this.form.submit()">
+                                    {% for campaign in campaigns %}
+                                        <option value="{{ campaign.id }}" {% if active_campaign.id == campaign.id %}selected{% endif %}>📅 {{ campaign.date_debut|date:"Y" }}-{{ campaign.date_fin|date:"Y" }}</option>
+                                    {% endfor %}
+                                </select>
 
-            <div class="row">
-                <!-- Active Campaign Tracking -->
-                <div class="col-xl-4">
-                    <div class="glass-card p-4 h-100">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h5 class="fw-bold mb-0">Suivi Campagne Active</h5>
-                            <i class="ri-more-2-fill text-muted"></i>
-                        </div>
-                        
-                        {% if active_campaign %}
-                        <div class="text-center py-3">
-                            <h4 class="fw-bold text-teal mb-1">{{ active_campaign.name }}</h4>
-                            <span class="badge bg-soft-success text-success rounded-pill px-3">En Cours</span>
-                        </div>
-                        
-                        <div class="mt-4">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted small">Progression globale</span>
-                                <span class="fw-bold small">{{ active_campaign.progress|floatformat:1 }}%</span>
-                            </div>
-                            <div class="progress progress-tracking mb-4">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ active_campaign.progress }}%" aria-valuenow="{{ active_campaign.progress }}" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
+                                <select name="trimester" class="filter-btn form-select" onchange="this.form.submit()">
+                                    <option value="all" {% if not selected_trimester or selected_trimester == 'all' %}selected{% endif %}>⏱️ Toutes Périodes</option>
+                                    <option value="t1" {% if selected_trimester == 't1' %}selected{% endif %}>❶ Trimestre 1</option>
+                                    <option value="t2" {% if selected_trimester == 't2' %}selected{% endif %}>❷ Trimestre 2</option>
+                                    <option value="t3" {% if selected_trimester == 't3' %}selected{% endif %}>❸ Trimestre 3</option>
+                                    <option value="t4" {% if selected_trimester == 't4' %}selected{% endif %}>❹ Trimestre 4</option>
+                                </select>
+                                
+                                <select name="month" class="filter-btn form-select" onchange="this.form.submit()">
+                                    <option value="all" {% if not selected_month or selected_month == 'all' %}selected{% endif %}>📅 Tous les mois</option>
+                                    {% for m_val, m_name in month_list %}
+                                        <option value="{{ m_val }}" {% if selected_month == m_val|stringformat:"i" %}selected{% endif %}>{{ m_name }}</option>
+                                    {% endfor %}
+                                </select>
 
-                            <div class="space-y-3">
-                                <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3 mb-2">
-                                    <div class="d-flex align-items-center">
-                                        <div class="campaign-status-dot bg-success"></div>
-                                        <span class="small fw-medium">Validés</span>
-                                    </div>
-                                    <span class="badge bg-success rounded-pill">{{ active_stats.validated }}</span>
-                                </div>
-                                <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3 mb-2">
-                                    <div class="d-flex align-items-center">
-                                        <div class="campaign-status-dot bg-primary"></div>
-                                        <span class="small fw-medium">Soumis</span>
-                                    </div>
-                                    <span class="badge bg-primary rounded-pill">{{ active_stats.submitted }}</span>
-                                </div>
-                                <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3 mb-2">
-                                    <div class="d-flex align-items-center">
-                                        <div class="campaign-status-dot bg-warning"></div>
-                                        <span class="small fw-medium">Brouillons</span>
-                                    </div>
-                                    <span class="badge bg-warning rounded-pill">{{ active_stats.draft }}</span>
-                                </div>
-                                <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3 mb-2">
-                                    <div class="d-flex align-items-center">
-                                        <div class="campaign-status-dot bg-danger"></div>
-                                        <span class="small fw-medium">Rejetés</span>
-                                    </div>
-                                    <span class="badge bg-danger rounded-pill">{{ active_stats.rejected }}</span>
-                                </div>
-                                <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3">
-                                    <div class="d-flex align-items-center">
-                                        <div class="campaign-status-dot bg-secondary"></div>
-                                        <span class="small fw-medium">Non Initialisés</span>
-                                    </div>
-                                    <span class="badge bg-secondary rounded-pill">{{ active_stats.pending }}</span>
-                                </div>
-                            </div>
-                            
-                            <div class="mt-4">
-                                <a href="{% url 'associe_app:budget_campaign_instituts' active_campaign.slug %}" class="btn btn-primary w-100 py-2 rounded-3">
-                                    Voir les Détails <i class="ri-arrow-right-line ms-1"></i>
+                                <select name="view_mode" class="filter-btn form-select bg-soft-info border-info text-info fw-bold" onchange="this.form.submit()">
+                                    <option value="prorata" {% if view_mode == 'prorata' %}selected{% endif %}>⏱️ Prorata (Aujourd'hui)</option>
+                                    <option value="full" {% if view_mode == 'full' %}selected{% endif %}>🎯 Annuel (Cible Finale)</option>
+                                </select>
+
+                                <!-- Reset Button -->
+                                <a href="{% url 'associe_app:configuration_index' %}" class="btn btn-outline-light border-0 opacity-75 hover-opacity-100 d-flex align-items-center px-2" title="Réinitialiser les filtres">
+                                    <i class="ri-refresh-line fs-5"></i>
                                 </a>
                             </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Summary Cards -->
+            <div class="row g-4">
+                <div class="col-md-3 staggered-item" style="--index: 2;">
+                    <div class="summary-card border-blue">
+                        <div class="summary-label">Objectif Assigné</div>
+                        <div class="summary-value">{{ stats.objectif_global|format_comptable }}</div>
+                        <div class="summary-icon bg-blue-soft"><i class="ri-focus-3-line"></i></div>
+                    </div>
+                </div>
+                <div class="col-md-3 staggered-item" style="--index: 3;">
+                    <div class="summary-card border-cyan">
+                        <div class="summary-label">Total Prévu (Validé)</div>
+                        <div class="summary-value">{{ stats.total_prevu|format_comptable }}</div>
+                        <div class="summary-icon bg-cyan-soft"><i class="ri-file-list-3-line"></i></div>
+                    </div>
+                </div>
+                <div class="col-md-3 staggered-item" style="--index: 4;">
+                    <div class="summary-card border-green">
+                        <div class="summary-label">Écart Objectif / Prévu</div>
+                        <div class="summary-value text-pos">{{ stats.ecart_objectif|format_comptable }}</div>
+                        <div class="summary-icon bg-green-soft"><i class="ri-scales-line"></i></div>
+                    </div>
+                </div>
+                <div class="col-md-3 staggered-item" style="--index: 5;">
+                    <div class="summary-card border-orange">
+                        <div class="summary-label">Rallonges Approuvées</div>
+                        <div class="summary-value">{{ stats.rallonges_approuvees|format_comptable }}</div>
+                        <div class="summary-icon bg-orange-soft"><i class="ri-add-circle-line"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revenue Section -->
+            <div class="section-header staggered-item" style="--index: 6;">
+                <div class="section-icon bg-revenue shadow-sm"><i class="ri-money-dollar-circle-line"></i></div>
+                <h2 class="section-title">Chiffre d'Affaires Global (Budget vs Réalisé)</h2>
+            </div>
+
+            <div class="row g-4">
+                <!-- Gauge -->
+                <div class="col-md-3 staggered-item" style="--index: 7;">
+                    <div class="analytics-card">
+                        <div class="card-subtitle">
+                            Taux de Réalisation 
+                            {% if selected_month and selected_month != 'all' %}
+                                {% for m_val, m_name in month_list %}
+                                    {% if selected_month == m_val|stringformat:"i" %}({{ m_name }}){% endif %}
+                                {% endfor %}
+                            {% elif selected_trimester and selected_trimester != 'all' %}
+                                ({{ selected_trimester|upper }})
+                            {% else %}
+                                (Annuel)
+                            {% endif %}
                         </div>
-                        {% else %}
-                        <div class="text-center py-5">
-                            <div class="avatar-lg bg-soft-light text-muted rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center">
-                                <i class="ri-calendar-close-line fs-32"></i>
+                        <div class="gauge-container">
+                            <div class="gauge-circle" style="background: conic-gradient(var(--color-cyan) {{ stats.ca_global.taux }}%, #f1f5f9 0);">
+                                <div class="gauge-inner">
+                                    <div class="gauge-percent text-cyan">{{ stats.ca_global.taux }}%</div>
+                                </div>
                             </div>
-                            <p class="text-muted">Aucune campagne active actuellement.</p>
-                            <button class="btn btn-soft-primary btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#createCampaignModal">
-                                Initialiser une Campagne
-                            </button>
+                            <div class="w-100">
+                                <div class="d-flex justify-content-between mb-3 p-2 bg-light rounded-3">
+                                    <span class="text-muted small fw-semibold">
+                                        {% if view_mode == 'prorata' %}Objectif Prorata{% else %}Objectif Final{% endif %}
+                                    </span>
+                                    <span class="text-val small">{{ stats.ca_global.budget|format_comptable }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-3 p-2 bg-light rounded-3">
+                                    <span class="text-muted small fw-semibold">Réalisé</span>
+                                    <span class="text-val small">{{ stats.ca_global.realise|format_comptable }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between p-2 bg-soft-info rounded-3">
+                                    <span class="text-info small fw-bold">Écart / {% if view_mode == 'prorata' %}Prorata{% else %}Objectif{% endif %}</span>
+                                    <span class="text-info small">{{ stats.ca_global.ecart|format_comptable }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trimestres Table -->
+                <div class="col-md-6 staggered-item" style="--index: 8;">
+                    <div class="analytics-card">
+                        <div class="card-subtitle">Détail par Trimestre</div>
+                        <div class="table-responsive">
+                            <table class="premium-table">
+                                <thead>
+                                    <tr>
+                                        <th>Période</th>
+                                        <th class="text-end" title="Objectif global pour l'année">Objectif Annuel</th>
+                                        <th class="text-end">Réalisé</th>
+                                        <th class="text-end" title="Écart par rapport à l'objectif théorique (Prorata ou Final)">Écart / {% if view_mode == 'prorata' %}Prorata{% else %}Objectif{% endif %}</th>
+                                        <th class="text-end" title="Taux d'atteinte de la cible sélectionnée">Taux</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for t in stats.ca_global.trimestres %}
+                                    <tr>
+                                        <td class="period-cell">{{ t.label }}</td>
+                                        <td class="amount-cell text-muted">{{ t.full_budget|format_comptable }}</td>
+                                        <td class="amount-cell bold">{{ t.realise|format_comptable }}</td>
+                                        <td class="amount-cell {% if t.ecart < 0 %}text-neg{% else %}text-pos{% endif %}">
+                                            {{ t.ecart|format_comptable }}
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="d-flex align-items-center justify-content-end">
+                                                <div class="progress-mini-container d-none d-lg-block">
+                                                    <div class="progress-mini-fill {% if t.taux < 95 %}bg-orange{% elif t.taux < 105 %}bg-success{% else %}bg-cyan{% endif %}" style="width: {% if t.taux > 100 %}100{% else %}{{ t.taux }}{% endif %}%"></div>
+                                                </div>
+                                                <span class="fw-bold {% if t.taux < 95 %}text-orange{% elif t.taux < 105 %}text-success{% else %}text-cyan{% endif %}">{{ t.taux|floatformat:0 }}%</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if stats.unallocated_recette > 0 %}
+                        <div class="mt-3 p-2 bg-soft-warning rounded-3 border-start border-3 border-warning">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-warning small fw-bold"><i class="ri-alert-line me-1"></i> Objectif non ventilé</span>
+                                <span class="text-warning small fw-black">{{ stats.unallocated_recette|format_comptable }}</span>
+                            </div>
+                            <p class="mb-0 fs-10 text-muted mt-1">Cet écart n'est pas inclus dans le détail par trimestre mais impacte le taux global.</p>
                         </div>
                         {% endif %}
                     </div>
                 </div>
 
-                <!-- Recent Campaigns List -->
-                <div class="col-xl-8">
-                    <div class="glass-card p-4 h-100">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h5 class="fw-bold mb-0">Suivi des Campagnes</h5>
-                            <a href="{% url 'associe_app:budget_campaign_list' %}" class="btn btn-link btn-sm text-primary p-0 text-decoration-none">Voir tout</a>
+                <!-- Campus List -->
+                <div class="col-md-3 staggered-item" style="--index: 9;">
+                    <div class="analytics-card">
+                        <div class="card-subtitle">Performance (Campus)</div>
+                        <div class="mt-2">
+                            {% for campus in stats.ca_global.campus %}
+                            <div class="campus-item">
+                                <div class="campus-name">{{ campus.name }}</div>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-fill" style="width: {{ campus.taux }}%; background: var(--color-cyan);"></div>
+                                </div>
+                                <div class="campus-percent text-cyan">{{ campus.taux }}%</div>
+                            </div>
+                            {% endfor %}
                         </div>
-                        
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expense Section -->
+            <div class="section-header staggered-item" style="--index: 10;">
+                <div class="section-icon bg-expense shadow-sm"><i class="ri-hand-coin-line"></i></div>
+                <h2 class="section-title">Dépenses Globales (Budget vs Réalisé)</h2>
+            </div>
+
+            <div class="row g-4 mb-5">
+                <!-- Gauge -->
+                <div class="col-md-3 staggered-item" style="--index: 11;">
+                    <div class="analytics-card">
+                        <div class="card-subtitle">
+                            Taux de Consommation
+                            {% if selected_month and selected_month != 'all' %}
+                                {% for m_val, m_name in month_list %}
+                                    {% if selected_month == m_val|stringformat:"i" %}({{ m_name }}){% endif %}
+                                {% endfor %}
+                            {% elif selected_trimester and selected_trimester != 'all' %}
+                                ({{ selected_trimester|upper }})
+                            {% else %}
+                                (Annuel)
+                            {% endif %}
+                        </div>
+                        <div class="gauge-container">
+                            <div class="gauge-circle" style="background: conic-gradient(var(--color-orange) {{ stats.depenses_globales.taux }}%, #f1f5f9 0);">
+                                <div class="gauge-inner">
+                                    <div class="gauge-percent text-orange">{{ stats.depenses_globales.taux }}%</div>
+                                </div>
+                            </div>
+                            <div class="w-100">
+                                <div class="d-flex justify-content-between mb-3 p-2 bg-light rounded-3">
+                                    <span class="text-muted small fw-semibold">{% if view_mode == 'prorata' %}Budget Prorata{% else %}Budget Annuel{% endif %}</span>
+                                    <span class="text-val small">{{ stats.depenses_globales.budget|format_comptable }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between p-2 bg-soft-warning rounded-3">
+                                    <span class="text-warning small fw-bold">Réalisé</span>
+                                    <span class="text-val small text-orange">{{ stats.depenses_globales.realise|format_comptable }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between p-2 mt-2 bg-soft-orange rounded-3">
+                                    <span class="text-orange small fw-bold">Écart / {% if view_mode == 'prorata' %}Prorata{% else %}Budget{% endif %}</span>
+                                    <span class="text-val small text-orange">{{ stats.depenses_globales.ecart|format_comptable }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trimestres Table -->
+                <div class="col-md-6 staggered-item" style="--index: 12;">
+                    <div class="analytics-card">
+                        <div class="card-subtitle">Détail par Trimestre</div>
                         <div class="table-responsive">
-                            <table class="table table-custom table-nowrap mb-0">
+                            <table class="premium-table">
                                 <thead>
                                     <tr>
-                                        <th>Campagne</th>
                                         <th>Période</th>
-                                        <th>Status</th>
-                                        <th>Progression</th>
-                                        <th class="text-end">Action</th>
+                                        <th class="text-end" title="Cible budgétaire pour la période">
+                                            {% if view_mode == 'prorata' %}Budget Prorata{% else %}Budget Annuel{% endif %}
+                                        </th>
+                                        <th class="text-end">Consommé</th>
+                                        <th class="text-end" title="Différence par rapport à la cible sélectionnée">
+                                            {% if view_mode == 'prorata' %}Écart / Prorata{% else %}Restant{% endif %}
+                                        </th>
+                                        <th class="text-end" title="Taux de consommation">Taux</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for campaign in campaigns %}
+                                    {% for t in stats.depenses_globales.trimestres %}
                                     <tr>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="avatar-xs bg-soft-primary text-primary rounded me-3 d-flex align-items-center justify-content-center">
-                                                    <i class="ri-calendar-check-line"></i>
-                                                </div>
-                                                <div>
-                                                    <h6 class="mb-0 fw-bold">{{ campaign.name }}</h6>
-                                                    <span class="text-muted small">Créée le {{ campaign.created_at|date:"d M Y" }}</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="small fw-medium">
-                                                {{ campaign.date_debut|date:"M Y" }} - {{ campaign.date_fin|date:"M Y" }}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            {% if campaign.is_active %}
-                                            <span class="badge bg-soft-success text-success px-2 py-1 rounded-pill">ACTIVE</span>
-                                            {% else %}
-                                            <span class="badge bg-soft-secondary text-secondary px-2 py-1 rounded-pill">INACTIVE</span>
-                                            {% endif %}
-                                        </td>
-                                        <td style="width: 200px;">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <div class="progress progress-tracking flex-grow-1" style="height: 6px;">
-                                                    <div class="progress-bar bg-primary" role="progressbar" style="width: {{ campaign.progress }}%"></div>
-                                                </div>
-                                                <span class="small fw-bold">{{ campaign.progress|floatformat:0 }}%</span>
-                                            </div>
+                                        <td class="period-cell">{{ t.label }}</td>
+                                        <td class="amount-cell text-muted">{{ t.full_budget|format_comptable }}</td>
+                                        <td class="amount-cell bold">{{ t.realise|format_comptable }}</td>
+                                        <td class="amount-cell text-pos">
+                                            {{ t.restant|format_comptable }}
                                         </td>
                                         <td class="text-end">
-                                            <a href="{% url 'associe_app:budget_campaign_instituts' campaign.slug %}" class="btn btn-soft-primary btn-icon btn-sm rounded-circle">
-                                                <i class="ri-settings-4-line"></i>
-                                            </a>
+                                            <div class="d-flex align-items-center justify-content-end">
+                                                <div class="progress-mini-container d-none d-lg-block">
+                                                    <div class="progress-mini-fill {% if t.taux > 100 %}bg-danger{% else %}bg-orange{% endif %}" style="width: {% if t.taux > 100 %}100{% else %}{{ t.taux }}{% endif %}%"></div>
+                                                </div>
+                                                <span class="fw-bold {% if t.taux > 100 %}text-danger{% else %}text-orange{% endif %}">{{ t.taux|floatformat:0 }}%</span>
+                                            </div>
                                         </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="5" class="text-center py-5 text-muted">Aucune campagne disponible.</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -320,54 +683,275 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Campus List -->
+                <div class="col-md-3 staggered-item" style="--index: 13;">
+                    <div class="analytics-card">
+                        <div class="card-subtitle">Consommation (Campus)</div>
+                        <div class="mt-2">
+                            {% for campus in stats.depenses_globales.campus %}
+                            <div class="campus-item">
+                                <div class="campus-name">{{ campus.name }}</div>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-fill" style="width: {{ campus.taux }}%; background: var(--color-orange);"></div>
+                                </div>
+                                <div class="campus-percent text-orange">{{ campus.taux }}%</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <!-- Margin Section -->
+            <div class="section-header staggered-item" style="--index: 14;">
+                <div class="section-icon shadow-sm" style="background: var(--color-cyan) !important; color: white;"><i class="ri-funds-line"></i></div>
+                <h2 class="section-title">Résultat Net (Marge)</h2>
+            </div>
+
+            <div class="row g-4 mb-5">
+                <!-- Gauge -->
+                <div class="col-md-3 staggered-item" style="--index: 15;">
+                    <div class="analytics-card">
+                        <div class="card-subtitle">
+                            Taux de Réalisation (Marge)
+                            {% if selected_month and selected_month != 'all' %}
+                                {% for m_val, m_name in month_list %}
+                                    {% if selected_month == m_val|stringformat:"i" %}({{ m_name }}){% endif %}
+                                {% endfor %}
+                            {% elif selected_trimester and selected_trimester != 'all' %}
+                                ({{ selected_trimester|upper }})
+                            {% else %}
+                                (Annuel)
+                            {% endif %}
+                        </div>
+                        <div class="gauge-container">
+                            <div class="gauge-circle" style="background: conic-gradient(var(--color-cyan) {{ stats.marge_globale.taux }}%, #f1f5f9 0);">
+                                <div class="gauge-inner">
+                                    <div class="gauge-percent text-cyan">{{ stats.marge_globale.taux }}%</div>
+                                </div>
+                            </div>
+                            <div class="w-100">
+                                <div class="d-flex justify-content-between mb-3 p-2 bg-light rounded-3">
+                                    <span class="text-muted small fw-semibold">
+                                        {% if view_mode == 'prorata' %}Marge Prorata{% else %}Marge Annuelle{% endif %}
+                                    </span>
+                                    <span class="text-val small">{{ stats.marge_globale.budget|format_comptable }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2 p-2 bg-soft-info rounded-3">
+                                    <span class="text-info small fw-bold">Marge Réalisée</span>
+                                    <span class="text-val small text-cyan">{{ stats.marge_globale.realise|format_comptable }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between p-2 {% if stats.marge_globale.ecart < 0 %}bg-soft-danger{% else %}bg-soft-success{% endif %} rounded-3">
+                                    <span class="{% if stats.marge_globale.ecart < 0 %}text-danger{% else %}text-success{% endif %} small fw-bold">Écart / {% if view_mode == 'prorata' %}Prorata{% else %}Objectif{% endif %}</span>
+                                    <span class="text-val small {% if stats.marge_globale.ecart < 0 %}text-danger{% else %}text-success{% endif %}">{{ stats.marge_globale.ecart|format_comptable }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trimestres Table -->
+                <div class="col-md-6 staggered-item" style="--index: 16;">
+                    <div class="analytics-card">
+                        <div class="card-subtitle">Marge par Trimestre</div>
+                        <div class="table-responsive">
+                            <table class="premium-table">
+                                <thead>
+                                    <tr>
+                                        <th>Période</th>
+                                        <th class="text-end">Marge Prévue</th>
+                                        <th class="text-end">Marge Réalisée</th>
+                                        <th class="text-end">Écart</th>
+                                        <th class="text-end">Marge %</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for t in stats.marge_globale.trimestres %}
+                                    <tr>
+                                        <td class="period-cell">{{ t.label }}</td>
+                                        <td class="amount-cell text-muted">{{ t.prevu|format_comptable }}</td>
+                                        <td class="amount-cell bold">{{ t.realise|format_comptable }}</td>
+                                        <td class="amount-cell {% if t.ecart < 0 %}text-danger{% else %}text-success{% endif %}">
+                                            {{ t.ecart|format_comptable }}
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="d-flex align-items-center justify-content-end">
+                                                <div class="progress-mini-container d-none d-lg-block">
+                                                    <div class="progress-mini-fill {% if t.taux < 95 %}bg-orange{% elif t.taux < 105 %}bg-success{% else %}bg-cyan{% endif %}" style="width: {% if t.taux > 100 %}100{% else %}{{ t.taux }}{% endif %}%"></div>
+                                                </div>
+                                                <span class="fw-bold {% if t.taux < 95 %}text-orange{% elif t.taux < 105 %}text-success{% else %}text-cyan{% endif %}">{{ t.taux|floatformat:0 }}%</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Campus List -->
+                <div class="col-md-3 staggered-item" style="--index: 17;">
+                    <div class="analytics-card">
+                        <div class="card-subtitle">Marge (Campus)</div>
+                        <div class="mt-2">
+                            {% for campus in stats.marge_globale.campus %}
+                            <div class="campus-item">
+                                <div class="campus-name">{{ campus.name }}</div>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-fill" style="width: {{ campus.taux }}%; background: var(--color-cyan);"></div>
+                                </div>
+                                <div class="campus-percent text-cyan">{{ campus.taux }}%</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
 
-<!-- Modern Create Modal -->
-<div class="modal fade" id="createCampaignModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-header p-4 bg-light border-0">
-                <div class="d-flex align-items-center">
-                    <div class="avatar-sm bg-primary text-white rounded-circle me-3 d-flex align-items-center justify-content-center">
-                        <i class="ri-add-line fs-18"></i>
-                    </div>
-                    <h5 class="modal-title fw-bold">Nouvelle Campagne Budgétaire</h5>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{% url 'associe_app:budget_campaign_create' %}" method="POST">
-                {% csrf_token %}
-                <div class="modal-body p-4 pt-2">
-                    <div class="mb-4">
-                        <label for="name" class="form-label fw-bold text-muted small text-uppercase">Nom de la Campagne (Optionnel)</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-light border-0"><i class="ri-edit-line"></i></span>
-                            <input type="text" class="form-control border-light bg-light" id="name" name="name" placeholder="Ex: Budget 2024-2025">
-                        </div>
-                        <div class="form-text text-muted mt-2">
-                            <i class="ri-information-line me-1"></i> Si laissé vide, le système générera un nom basé sur l'année fiscale.
-                        </div>
-                    </div>
+    <!-- Harmonized Loading Modal -->
+    <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true" style="z-index: 1060;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 bg-harmonized-glass shadow-2xl overflow-hidden">
+                <div class="modal-body text-center p-5 position-relative">
+                    <!-- Dynamic Branded Glow -->
+                    <div class="loading-glow-teal"></div>
                     
-                    <div class="bg-soft-primary p-4 rounded-4 mb-2 border border-primary border-opacity-10">
-                        <div class="d-flex align-items-center text-primary fw-bold">
-                            <i class="ri-magic-line me-2 fs-20"></i> Logique Automatique
+                    <!-- Text Content with Animation -->
+                    <div class="animate__animated animate__fadeInUp py-4">
+                        <h2 class="text-white fw-extra-bold mb-3 ls-tight display-5">Pilotage Budgétaire</h2>
+                        <div class="d-flex align-items-center justify-content-center gap-2 mb-4">
+                            <div class="typing-indicator">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <p class="text-white-50 mb-0 fs-5 text-uppercase fw-bold tracking-widest">Analyse en cours...</p>
                         </div>
-                        <p class="text-primary-emphasis small mb-0 mt-2 opacity-75">
-                            La période sera automatiquement fixée du <strong>01 Août</strong> au <strong>31 Juillet</strong> de l'année fiscale en cours.
-                        </p>
+                        
+                        <!-- Mini Progress Line -->
+                        <div class="loading-bar-container mt-5">
+                            <div class="loading-bar-progress-teal"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer p-4 bg-light border-0">
-                    <button type="button" class="btn btn-link text-muted fw-bold text-decoration-none me-3" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary px-5 py-2 rounded-3 shadow-sm fw-bold">Créer et Initialiser</button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
-</div>
 
-{% endblock %}
+    <style>
+        .bg-harmonized-glass {
+            background: linear-gradient(135deg, rgba(34, 87, 135, 0.9) 0%, rgba(27, 70, 108, 0.95) 100%) !important;
+            backdrop-filter: blur(15px) saturate(150%) !important;
+            -webkit-backdrop-filter: blur(15px) saturate(150%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 1.5rem;
+        }
+
+        .fw-extra-bold { font-weight: 800; }
+        .ls-tight { letter-spacing: -0.025em; }
+        .tracking-widest { letter-spacing: 0.1em; }
+
+        .loading-glow-teal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 180px;
+            height: 180px;
+            background: #ffffff;
+            filter: blur(100px);
+            opacity: 0.15;
+            z-index: -1;
+            animation: pulse-glow-teal 2s infinite alternate;
+        }
+
+        @keyframes pulse-glow-teal {
+            from { transform: translate(-50%, -50%) scale(0.8); opacity: 0.1; }
+            to { transform: translate(-50%, -50%) scale(1.2); opacity: 0.25; }
+        }
+
+        .loading-bar-container {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            width: 160px;
+            margin: 0 auto;
+        }
+
+        .loading-bar-progress-teal {
+            height: 100%;
+            background: linear-gradient(90deg, transparent, #ffffff, transparent);
+            width: 60%;
+            animation: move-progress-teal 1.5s infinite linear;
+        }
+
+        @keyframes move-progress-teal {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(200%); }
+        }
+
+        .typing-indicator span {
+            width: 5px;
+            height: 5px;
+            background-color: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            display: inline-block;
+            animation: typing 1s infinite ease-in-out;
+            margin: 0 2px;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 100% { transform: translateY(0); opacity: 0.4; }
+            50% { transform: translateY(-4px); opacity: 1; }
+        }
+    </style>
+{% endblock content %}
+
+{% block extra_js %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loadingModalElement = document.getElementById('loadingModal');
+            const loadingModal = new bootstrap.Modal(loadingModalElement);
+            const filterForm = document.getElementById('filterForm');
+
+            // Function to handle delayed action
+            function delayedAction(callback) {
+                loadingModal.show();
+                setTimeout(callback, 3000); // 3 seconds delay
+            }
+
+            // 1. Handle Select Changes
+            const filterSelects = document.querySelectorAll('#filterForm select');
+            filterSelects.forEach(select => {
+                // Remove inline onchange if it exists to avoid double submit
+                select.removeAttribute('onchange');
+                
+                select.addEventListener('change', function() {
+                    delayedAction(() => {
+                        filterForm.submit();
+                    });
+                });
+            });
+
+            // 2. Handle Reset Button and Filter Links
+            const filterLinks = document.querySelectorAll('a[href*="tenant_id="], a[href*="campaign_id="], a[title="Réinitialiser les filtres"]');
+            filterLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetUrl = this.href;
+                    delayedAction(() => {
+                        window.location.href = targetUrl;
+                    });
+                });
+            });
+        });
+    </script>
+{% endblock extra_js %}

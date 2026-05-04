@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 import io
 import openpyxl
 from openpyxl import Workbook
@@ -34,7 +35,7 @@ from t_formations.models import Promos
 from django.db.models import Sum, Count
 from institut_app.models import Entreprise
 from .models import BudgetCampaign, BudgetLine, PostesBudgetaire, BudgetLineDetail
-from .budget_utils import get_campaign_realization_data
+from .budget_utils import get_campaign_realization_data, month_ratio
 
 @login_required
 def sync_payment_types(request):
@@ -52,6 +53,388 @@ from .models import BudgetCampaign, BudgetLine, PostesBudgetaire, BudgetLineDeta
 
 @login_required(login_url='login')
 def index(request):
+    from .models import BudgetCampaign, BudgetLine, BudgetExtensionRequest, BudgetExtensionItem
+    from django.db.models import Sum
+    from .budget_utils import get_campaign_realization_data
+    
+    # 1. Get Filters
+    tenant_id = request.GET.get('tenant_id')
+    campaign_id = request.GET.get('campaign_id')
+    selected_trimester = request.GET.get('trimester', 'all')
+    selected_month = request.GET.get('month', 'all')
+    view_mode = request.GET.get('view_mode', 'prorata') # 'prorata' or 'full'
+    
+    # 2. Get Campaigns & Active Campaign
+    campaigns = BudgetCampaign.objects.all().order_by('-date_debut')
+    if campaign_id:
+        active_campaign = campaigns.filter(id=campaign_id).first()
+    else:
+        active_campaign = campaigns.filter(is_active=True).first()
+    
+    if not active_campaign:
+        # Fallback to campaign management if no active campaign
+        return redirect('associe_app:mise_en_route')
+
+    # 3. Get Tenants
+    all_instituts = Institut.objects.filter(is_visible=True).exclude(schema_name='public')
+    if tenant_id and tenant_id != 'all':
+        selected_tenant = all_instituts.filter(id=tenant_id).first()
+        tenants_to_process = [selected_tenant] if selected_tenant else all_instituts
+    else:
+        selected_tenant = None
+        tenants_to_process = all_instituts
+
+    # 4. Determine As-Of Date for ratios
+    as_of_date = date.today()
+    if selected_month and selected_month != 'all':
+        m = int(selected_month)
+        y = active_campaign.date_debut.year if m >= 8 else active_campaign.date_debut.year + 1
+        import calendar
+        last_day = calendar.monthrange(y, m)[1]
+        as_of_date = date(y, m, last_day)
+
+    # 5. Get Realization Data
+    realization_data = get_campaign_realization_data(active_campaign, tenants_to_process, as_of_date=as_of_date)
+    
+    # 6. Calculate Summary Stats
+    totals = realization_data['totals']
+    
+    # OBJECTIF ASSIGNÉ
+    if selected_tenant:
+        line = BudgetLine.objects.filter(campaign=active_campaign, institut=selected_tenant).first()
+        target_revenue = line.montant if line else 0
+    else:
+        # Global target from campaign, or fallback to sum of all institute objectives
+        target_revenue = active_campaign.target_revenue or BudgetLine.objects.filter(campaign=active_campaign).aggregate(Sum('montant'))['montant__sum'] or 0
+    
+    # TOTAL PRÉVU (VALIDÉ)
+    # If global, we take the sum of all validated budget lines (envelopes)
+    # If filtered, we take the sum of detailed plans (dispatched)
+    if selected_tenant:
+        total_prevu = totals['dispatched_recette']
+    else:
+        total_prevu = BudgetLine.objects.filter(
+            campaign=active_campaign, 
+            statut='validated'
+        ).aggregate(Sum('montant'))['montant__sum'] or 0
+    
+    # ÉCART OBJECTIF / PRÉVU
+    ecart_objectif = total_prevu - target_revenue
+    
+    # RALLONGES APPROUVÉES
+    approved_extensions_query = BudgetExtensionItem.objects.filter(
+        request__campaign=active_campaign, 
+        request__status='approved'
+    )
+    if selected_tenant:
+        approved_extensions_query = approved_extensions_query.filter(request__institut=selected_tenant)
+        
+    approved_extensions = approved_extensions_query.aggregate(
+        total=Sum('requested_amount') - Sum('old_amount')
+    )['total'] or 0
+
+    # 6. Preparation for Campus Breakdown
+    campus_performance = []
+    campus_consommation = []
+    
+    # Calculate avg_ratio for unallocated portion
+    avg_ratio = sum(Decimal(str(realization_data['ratios'].get(t, 0))) for t in ['t1', 't2', 't3', 't4']) / 4
+    
+    # Pre-fetch budget goals to avoid N+1
+    budget_goals = {bl.institut_id: bl.montant for bl in BudgetLine.objects.filter(campaign=active_campaign)}
+    
+    for inst in tenants_to_process:
+        inst_data = get_campaign_realization_data(active_campaign, [inst])
+        inst_totals = inst_data['totals']
+        
+        if selected_month and selected_month != 'all':
+            m_key = int(selected_month)
+            m_data = inst_data['monthly_totals'][m_key]
+            
+            # Recettes
+            inst_target_m = budget_goals.get(inst.id, 0) / 12
+            # Monthly unallocated: approx gap / 12
+            inst_unallocated_m = max(0, Decimal(str(inst_target_m)) - m_data['plan_r'])
+            # Month ratio handled by as_of_date context
+            inst_prorata_r = m_data['pro_r'] + (inst_unallocated_m * Decimal(str(month_ratio(m_key, as_of_date))))
+            taux_r = (m_data['real_r'] / inst_prorata_r * 100) if inst_prorata_r > 0 else 0
+            
+            # Depenses
+            inst_prorata_d = m_data['pro_d']
+            taux_d = (m_data['real_d'] / inst_prorata_d * 100) if inst_prorata_d > 0 else 0
+        elif selected_trimester and selected_trimester != 'all':
+            t_key = selected_trimester
+            t_data = inst_data['trimester_totals'][t_key]
+            
+            # Recettes
+            inst_target_t = budget_goals.get(inst.id, 0) / 4
+            inst_unallocated_t = max(0, Decimal(str(inst_target_t)) - t_data['full_r'])
+            t_ratio = realization_data['ratios'].get(t_key, 0)
+            inst_prorata_r = t_data['pro_r'] + (inst_unallocated_t * Decimal(str(t_ratio)))
+            taux_r = (t_data['real_r'] / inst_prorata_r * 100) if inst_prorata_r > 0 else 0
+            
+            # Depenses
+            inst_prorata_d = t_data['pro_d']
+            taux_d = (t_data['real_d'] / inst_prorata_d * 100) if inst_prorata_d > 0 else 0
+        else:
+            # Chiffre d'affaires - include unallocated gap for consistency with global gauge
+            inst_target = budget_goals.get(inst.id, 0)
+            inst_unallocated = max(0, Decimal(str(inst_target)) - inst_totals['dispatched_recette'])
+            inst_prorata_r = inst_totals['pro_rata_recette'] + (inst_unallocated * avg_ratio)
+            
+            real_r = inst_totals['realized_recette']
+            taux_r = (real_r / inst_prorata_r * 100) if inst_prorata_r > 0 else 0
+            
+            # Dépenses - Use pro-rata for "on track" percentage
+            prev_d = inst_totals['pro_rata_depense']
+            real_d = inst_totals['realized_depense']
+            taux_d = (real_d / prev_d * 100) if prev_d > 0 else 0
+        
+        campus_performance.append({
+            'id': inst.id,
+            'name': inst.nom,
+            'budget': inst_prorata_r,
+            'realise': real_r,
+            'taux': round(taux_r, 1)
+        })
+        
+        campus_consommation.append({
+            'id': inst.id,
+            'name': inst.nom,
+            'budget': prev_d,
+            'realise': real_d,
+            'taux': round(taux_d, 1)
+        })
+
+    # 7. Detail par Trimestre
+    trimestre_details_recette = []
+    trimestre_details_depense = []
+    
+    # Calculate how much of the target_revenue is NOT yet dispatched to specific postes
+    total_dispatched_recette_details = 0
+    for group in realization_data['combined_postes']:
+        for dp in group['display_postes']:
+            if dp['poste'].type == 'recette':
+                total_dispatched_recette_details += dp['global']['full_prevu']
+    
+    unallocated_recette = max(0, target_revenue - total_dispatched_recette_details)
+    unallocated_per_t = unallocated_recette / 4
+
+    for t in ['t1', 't2', 't3', 't4']:
+        t_ratio = realization_data['ratios'].get(t, 0)
+        t_full_r = Decimal('0')
+        t_prorata_r = Decimal('0')
+        t_realise_r = 0
+        
+        t_full_d = Decimal('0')
+        t_prorata_d = Decimal('0')
+        t_realise_d = 0
+        
+        for group in realization_data['combined_postes']:
+            for dp in group['display_postes']:
+                if dp['poste'].type == 'recette':
+                    t_full_r += dp[t]['full_prevu']
+                    t_prorata_r += dp[t]['prevu']
+                    t_realise_r += dp[t]['realise']
+                else:
+                    t_full_d += dp[t]['full_prevu']
+                    t_prorata_d += dp[t]['prevu']
+                    t_realise_d += dp[t]['realise']
+        
+        # Add unallocated portion to prorata_budget for revenue
+        t_unallocated_prorata = Decimal(str(unallocated_per_t)) * Decimal(str(t_ratio))
+        t_prorata_r_total = t_prorata_r + t_unallocated_prorata
+
+        trimestre_details_recette.append({
+            'label': t.upper(),
+            'full_budget': t_full_r,
+            'prorata_budget': t_prorata_r_total,
+            'realise': t_realise_r,
+            'ecart': t_realise_r - t_prorata_r_total,
+            'taux': (t_realise_r / t_prorata_r_total * 100) if t_prorata_r_total > 0 else 0
+        })
+        
+        trimestre_details_depense.append({
+            'label': t.upper(),
+            'full_budget': t_full_d,
+            'prorata_budget': t_prorata_d,
+            'realise': t_realise_d,
+            'restant': t_full_d - t_realise_d,
+            'taux': (t_realise_d / t_prorata_d * 100) if t_prorata_d > 0 else 0
+        })
+
+    # Filter tables if a specific trimester is selected
+    if selected_trimester and selected_trimester != 'all':
+        trimestre_details_recette = [t for t in trimestre_details_recette if t['label'].lower() == selected_trimester]
+        trimestre_details_depense = [t for t in trimestre_details_depense if t['label'].lower() == selected_trimester]
+
+    # 8. Final Global KPIs (Corrected to include unallocated portion in denominator)
+    if selected_month and selected_month != 'all':
+        m_key = int(selected_month)
+        m_all_data = realization_data['monthly_totals'][m_key]
+        
+        current_realized_r = m_all_data['real_r']
+        current_realized_d = m_all_data['real_d']
+        
+        # Global Target for the month
+        current_target_r = target_revenue / 12
+        current_unallocated_m = max(0, Decimal(str(current_target_r)) - m_all_data['plan_r'])
+        current_prorata_r = m_all_data['pro_r'] + (current_unallocated_m * Decimal(str(month_ratio(m_key, as_of_date))))
+        current_prorata_d = m_all_data['pro_d']
+        
+        taux_realisation_global = (current_realized_r / current_prorata_r * 100) if current_prorata_r > 0 else 0
+        taux_consommation_global = (current_realized_d / current_prorata_d * 100) if current_prorata_d > 0 else 0
+        
+        global_budget_r = m_all_data['plan_r']
+        global_budget_d = m_all_data['plan_d']
+    elif selected_trimester and selected_trimester != 'all':
+        t_key = selected_trimester
+        t_all_data = realization_data['trimester_totals'][t_key]
+        
+        current_realized_r = t_all_data['real_r']
+        current_realized_d = t_all_data['real_d']
+        
+        # Global Target for the trimester
+        current_target_r = target_revenue / 4
+        current_unallocated_r = max(0, Decimal(str(current_target_r)) - t_all_data['full_r'])
+        t_ratio = realization_data['ratios'].get(t_key, 0)
+        current_prorata_r = t_all_data['pro_r'] + (current_unallocated_r * Decimal(str(t_ratio)))
+        
+        current_prorata_d = t_all_data['pro_d']
+        
+        taux_realisation_global = (current_realized_r / current_prorata_r * 100) if current_prorata_r > 0 else 0
+        taux_consommation_global = (current_realized_d / current_prorata_d * 100) if current_prorata_d > 0 else 0
+        
+        global_budget_r = t_all_data['full_r']
+        global_budget_d = t_all_data['full_d']
+    else:
+        current_prorata_r = sum(t['prorata_budget'] for t in trimestre_details_recette)
+        current_prorata_d = sum(t['prorata_budget'] for t in trimestre_details_depense)
+
+        current_realized_r = totals['realized_recette']
+        current_realized_d = totals['realized_depense']
+        
+        taux_realisation_global = (current_realized_r / current_prorata_r * 100) if current_prorata_r > 0 else 0
+        taux_consommation_global = (current_realized_d / current_prorata_d * 100) if current_prorata_d > 0 else 0
+        
+        global_budget_r = totals['dispatched_recette']
+        global_budget_d = totals['dispatched_depense']
+
+    # 8. Override Prorata if View Mode is 'Full'
+    if view_mode == 'full':
+        current_prorata_r = global_budget_r + unallocated_recette
+        current_prorata_d = global_budget_d
+        
+        # Also update trimester details for 'Full' view
+        for t_r in trimestre_details_recette:
+            t_r['prorata_budget'] = t_r['full_budget'] + (unallocated_recette / 4)
+            t_r['taux'] = (t_r['realise'] / t_r['prorata_budget'] * 100) if t_r['prorata_budget'] > 0 else 0
+            t_r['ecart'] = t_r['realise'] - t_r['prorata_budget']
+            
+        for t_d in trimestre_details_depense:
+            t_d['prorata_budget'] = t_d['full_budget']
+            t_d['taux'] = (t_d['realise'] / t_d['prorata_budget'] * 100) if t_d['prorata_budget'] > 0 else 0
+            t_d['restant'] = t_d['full_budget'] - t_d['realise']
+
+        for cp in campus_performance:
+            # Need to re-calculate inst_target if possible, or use pro-rata as best effort
+            # For simplicity in 'Full' mode, we use the dispatched target
+            pass # Keep them as is or refine if user insists on full campus target
+
+    # 9. Margin Calculations (Universal)
+    global_marge_budget = current_prorata_r - current_prorata_d
+    global_marge_realise = current_realized_r - current_realized_d
+    taux_marge_realisation = (global_marge_realise / global_marge_budget * 100) if global_marge_budget != 0 else 0
+
+    # 9. Trimester Details for Margin
+    trimestre_details_marge = []
+    for t_key in ['t1', 't2', 't3', 't4']:
+        # Find matching details in revenue and expense lists
+        t_r_item = next((t for t in trimestre_details_recette if t['label'].lower() == t_key), None)
+        t_d_item = next((t for t in trimestre_details_depense if t['label'].lower() == t_key), None)
+        
+        if t_r_item and t_d_item:
+            marge_b = t_r_item['prorata_budget'] - t_d_item['prorata_budget']
+            marge_r = t_r_item['realise'] - t_d_item['realise']
+            
+            trimestre_details_marge.append({
+                'label': t_r_item['label'],
+                'prevu': marge_b,
+                'realise': marge_r,
+                'ecart': marge_r - marge_b,
+                'taux': (marge_r / marge_b * 100) if marge_b != 0 else 0
+            })
+
+    # 10. Campus Performance for Margin
+    campus_marge = []
+    for cp_r in campus_performance:
+        cp_d = next((c for c in campus_consommation if c['name'] == cp_r['name']), {'budget': 0, 'realise': 0})
+        marge_b = cp_r['budget'] - cp_d['budget']
+        marge_r = cp_r['realise'] - cp_d['realise']
+        campus_marge.append({
+            'name': cp_r['name'],
+            'budget': marge_b,
+            'realise': marge_r,
+            'taux': round((marge_r / marge_b * 100), 1) if marge_b != 0 else 0
+        })
+
+    # Filter tables if a specific trimester is selected
+    if selected_trimester and selected_trimester != 'all':
+        trimestre_details_marge = [t for t in trimestre_details_marge if t['label'].lower() == selected_trimester]
+
+    MONTHS = [
+        (8, 'Août'), (9, 'Septembre'), (10, 'Octobre'),
+        (11, 'Novembre'), (12, 'Décembre'), (1, 'Janvier'),
+        (2, 'Février'), (3, 'Mars'), (4, 'Avril'),
+        (5, 'Mai'), (6, 'Juin'), (7, 'Juillet')
+    ]
+
+    return render(request, 'public_folder/configuration_index.html', {
+        'title': 'Pilotage Budgétaire',
+        'active_campaign': active_campaign,
+        'campaigns': campaigns,
+        'all_instituts': all_instituts,
+        'selected_tenant': selected_tenant,
+        'selected_trimester': selected_trimester,
+        'selected_month': selected_month,
+        'month_list': MONTHS,
+        'stats': {
+            'objectif_global': target_revenue,
+            'total_prevu': total_prevu,
+            'ecart_objectif': ecart_objectif,
+            'rallonges_approuvees': approved_extensions,
+            
+            'ca_global': {
+                'taux': round(taux_realisation_global, 1),
+                'budget': global_budget_r,
+                'realise': current_realized_r,
+                'ecart': current_realized_r - global_budget_r,
+                'trimestres': trimestre_details_recette,
+                'campus': campus_performance
+            },
+            'depenses_globales': {
+                'taux': round(taux_consommation_global, 1),
+                'budget': global_budget_d,
+                'realise': current_realized_d,
+                'ecart': current_realized_d - global_budget_d,
+                'trimestres': trimestre_details_depense,
+                'campus': campus_consommation
+            },
+            'marge_globale': {
+                'taux': round(taux_marge_realisation, 1),
+                'budget': global_marge_budget,
+                'realise': global_marge_realise,
+                'ecart': global_marge_realise - global_marge_budget,
+                'trimestres': trimestre_details_marge,
+                'campus': campus_marge
+            },
+            'unallocated_recette': unallocated_recette,
+            'view_mode': view_mode,
+        }
+    })
+
+@login_required(login_url='login')
+def mise_en_route(request):
     from .models import BudgetCampaign, BudgetLine, BudgetExtensionRequest
     
     # 1. Base Data
@@ -87,8 +470,8 @@ def index(request):
         'total_instituts': total_instituts
     }
     
-    return render(request, 'public_folder/configuration_index.html', {
-        'title': 'Tableau de Bord Budget',
+    return render(request, 'associe_app/mise_en_route.html', {
+        'title': 'Mise en Route - Budget',
         'campaigns': campaigns,
         'active_campaign': active_campaign,
         'active_stats': active_stats,

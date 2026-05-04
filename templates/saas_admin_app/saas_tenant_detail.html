@@ -230,6 +230,25 @@
                                             <li><a class="dropdown-item" href="javascript:void(0)" onclick="resetUserSessions(this, {{ user.id }}, {{ tenant_data.institut.id }}, '{{ user.username }}')"><i class="ri-logout-circle-line me-2 text-info"></i>Vider les sessions</a></li>
                                             <li><hr class="dropdown-divider opacity-50"></li>
                                             <li>
+                                                <a class="dropdown-item {% if user.is_superuser %}text-warning{% else %}text-danger{% endif %}" href="javascript:void(0)" onclick="toggleUserRole(this, {{ user.id }}, {{ tenant_data.institut.id }}, 'is_superuser', {{ user.is_superuser|yesno:'true,false' }})">
+                                                    {% if user.is_superuser %}
+                                                        <i class="ri-admin-line me-2"></i>Rétrograder Superadmin
+                                                    {% else %}
+                                                        <i class="ri-admin-fill me-2"></i>Promouvoir Superadmin
+                                                    {% endif %}
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item {% if user.is_staff %}text-info{% else %}text-primary{% endif %}" href="javascript:void(0)" onclick="toggleUserRole(this, {{ user.id }}, {{ tenant_data.institut.id }}, 'is_staff', {{ user.is_staff|yesno:'true,false' }})">
+                                                    {% if user.is_staff %}
+                                                        <i class="ri-user-settings-line me-2"></i>Rétrograder Staff
+                                                    {% else %}
+                                                        <i class="ri-user-settings-fill me-2"></i>Promouvoir Staff
+                                                    {% endif %}
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider opacity-50"></li>
+                                            <li>
                                                 <a class="dropdown-item {% if user.is_active %}text-danger{% else %}text-success{% endif %}" href="javascript:void(0)" onclick="toggleUserStatus(this, {{ user.id }}, {{ tenant_data.institut.id }}, {{ user.is_active|yesno:'true,false' }})">
                                                     {% if user.is_active %}
                                                         <i class="ri-user-unfollow-line me-2"></i>Désactiver
@@ -450,9 +469,11 @@
         background: rgba(255,255,255,0.8) !important;
     }
 
-    .badge-soft-danger { background: rgba(239, 35, 60, 0.1); color: #ef233c; }
-    .badge-soft-info { background: rgba(76, 201, 240, 0.1); color: #4cc9f0; }
-    .badge-soft-secondary { background: rgba(100, 116, 139, 0.1); color: #64748b; }
+    .bg-soft-danger { background: rgba(239, 35, 60, 0.1) !important; color: #ef233c !important; }
+    .bg-soft-info { background: rgba(76, 201, 240, 0.1) !important; color: #4cc9f0 !important; }
+    .bg-soft-secondary { background: rgba(100, 116, 139, 0.1) !important; color: #64748b !important; }
+    .bg-soft-primary { background: rgba(67, 97, 238, 0.1) !important; color: #4361ee !important; }
+    .bg-soft-warning { background: rgba(245, 158, 11, 0.1) !important; color: #f59e0b !important; }
 
     .dropdown-menu {
         backdrop-filter: blur(15px);
@@ -643,6 +664,37 @@
             },
             function() {}
         ).set('labels', {ok: 'Déconnecter', cancel: 'Annuler'});
+    }
+
+    function toggleUserRole(btn, userId, tenantId, roleField, currentStatus) {
+        const roleLabel = roleField === 'is_superuser' ? 'Superadmin' : 'Staff';
+        const action = currentStatus ? 'retirer' : 'attribuer';
+        const confirmMessage = `Voulez-vous vraiment <strong>${action}</strong> le rôle <strong>${roleLabel}</strong> à cet utilisateur ?`;
+        
+        alertify.confirm(
+            'Gestion des Rôles',
+            confirmMessage,
+            function() {
+                const formData = new FormData();
+                formData.append(roleField, !currentStatus);
+                
+                fetch(`/saas-admin/api/tenant/${tenantId}/user/${userId}/update/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alertify.success(`Rôle ${roleLabel} mis à jour`);
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        alertify.error(data.error);
+                    }
+                });
+            },
+            function() {}
+        ).set('labels', {ok: 'Confirmer', cancel: 'Annuler'});
     }
 </script>
 
