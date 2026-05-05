@@ -1,159 +1,161 @@
 {% extends 'public_folder/base.html' %}
 {% load humanize %}
+{% load budget_tags %}
 {% block title %} {{ title }} {% endblock title %}
 
 {% block content %}
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-
     :root {
-        --primary-teal: #225787;
-        --secondary-teal: #1b466c;
-        --accent-cyan: #06b6d4;
-        --bg-main: #f4f7fe;
-        --card-glass: rgba(255, 255, 255, 0.95);
-        --border-glass: rgba(255, 255, 255, 0.5);
-        --font-main: 'Plus Jakarta Sans', sans-serif;
-    }
-
-    body {
-        font-family: var(--font-main) !important;
-        background-color: var(--bg-main) !important;
-    }
-
-    .main-content {
-        padding-top: 20px;
-    }
-
-    /* Premium Header */
-    .dashboard-header {
-        background: linear-gradient(135deg, var(--primary-teal) 0%, var(--secondary-teal) 100%) !important;
-        border-radius: 24px !important;
-        padding: 2.5rem !important;
-        position: relative;
-        overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 15px 35px rgba(13, 71, 161, 0.2);
-        margin-bottom: 2rem;
+        --kpi-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
     }
 
     .header-title {
+        font-family: 'Outfit', sans-serif !important;
         font-weight: 800;
-        letter-spacing: -1px;
+        letter-spacing: -0.02em;
         color: white;
     }
 
-    /* Glass Cards - Fixed Alignment */
+    /* Premium Header - Re-styled for harmony */
+    .dashboard-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%) !important;
+        border-radius: var(--card-radius) !important;
+        padding: 2rem !important;
+        position: relative;
+        overflow: hidden;
+        border: none !important;
+        box-shadow: 0 10px 30px rgba(var(--vz-primary-rgb), 0.15);
+        margin-bottom: 2rem;
+    }
+
+    /* Stat Cards - Harmonized with base.html .card */
     .stat-card {
-        background: var(--card-glass) !important;
-        backdrop-filter: blur(10px) !important;
-        border: 1px solid var(--border-glass) !important;
-        border-radius: 20px !important;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        background: #ffffff !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: var(--card-radius) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: var(--card-shadow);
         height: 100%;
-        padding: 1.5rem !important; /* Explicit padding */
+        padding: 1.5rem !important;
         position: relative;
         overflow: hidden;
     }
 
     .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     }
 
     .stat-icon {
         min-width: 48px;
         width: 48px;
         height: 48px;
-        border-radius: 14px;
+        border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 1.4rem;
-        flex-shrink: 0; /* Prevent squeezing */
+        flex-shrink: 0;
     }
 
-    /* KPI Colors */
-    .kpi-primary { background: linear-gradient(135deg, var(--primary-teal), var(--secondary-teal)); color: white; box-shadow: 0 8px 16px rgba(34, 87, 135, 0.2); }
-    .kpi-cyan { background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; box-shadow: 0 8px 16px rgba(6, 182, 212, 0.2); }
-    .kpi-amber { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; box-shadow: 0 8px 16px rgba(245, 158, 11, 0.2); }
-    .kpi-emerald { background: linear-gradient(135deg, #10b981, #059669); color: white; box-shadow: 0 8px 16px rgba(16, 185, 129, 0.2); }
+    /* KPI Colors - Harmonized */
+    .kpi-primary { background: var(--vz-primary-bg-subtle); color: var(--primary-color); }
+    .kpi-cyan { background: rgba(6, 182, 212, 0.1); color: #0891b2; }
+    .kpi-amber { background: rgba(245, 158, 11, 0.1); color: #d97706; }
+    .kpi-emerald { background: rgba(16, 185, 129, 0.1); color: #059669; }
     
-    .bg-primary-teal { background-color: var(--primary-teal) !important; color: white !important; }
-    
-    @media (min-width: 992px) {
-        .border-end-lg { border-right: 1px solid #f1f5f9 !important; }
-    }
-
     /* Progress fixes */
-    .progress-wrap {
-        padding-top: 20px;
-        margin-bottom: 1.5rem;
-    }
-
     .progress {
-        height: 6px !important;
+        height: 8px !important;
         background-color: #f1f5f9 !important;
         border-radius: 10px !important;
-        margin-top: 8px;
     }
 
     .progress-bar {
         border-radius: 10px !important;
-        background: linear-gradient(to right, var(--primary-teal), var(--accent-cyan)) !important;
+        background: var(--primary-color) !important;
     }
 
-    /* Card Bottom Border */
-    .stat-card::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: transparent;
-        transition: all 0.3s ease;
-    }
-
-    .stat-card.border-primary::after { background: var(--primary-teal); }
-    .stat-card.border-warning::after { background: #f59e0b; }
-    .stat-card.border-success::after { background: #10b981; }
-    .stat-card.border-info::after { background: #06b6d4; }
-
-    /* Selector - Fixed Contrast */
+    /* Selector */
     .institute-selector {
-        background: rgba(255, 255, 255, 0.1) !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        background: rgba(255, 255, 255, 0.15) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
         color: #ffffff !important;
-        border-radius: 12px !important;
-        padding: 0.8rem 1.2rem !important;
-        font-weight: 700 !important;
+        border-radius: 10px !important;
+        padding: 0.75rem 1rem !important;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 600 !important;
         cursor: pointer;
-        transition: all 0.3s ease;
-        -webkit-appearance: none;
-        appearance: none;
+        backdrop-filter: blur(5px);
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
         background-repeat: no-repeat !important;
         background-position: right 1rem center !important;
         background-size: 1.2em !important;
-        padding-right: 3rem !important;
     }
 
-    .institute-selector:hover {
-        background: rgba(255, 255, 255, 0.2) !important;
+    .institute-selector:focus {
         border-color: rgba(255, 255, 255, 0.5) !important;
+        box-shadow: none;
     }
 
     .institute-selector option {
-        color: #1e293b !important;
+        color: var(--vz-body-color) !important;
         background-color: #ffffff !important;
-        padding: 10px !important;
     }
 
-    /* Table */
-    .custom-table td {
+    /* Table Styling */
+    .custom-table {
+        border-collapse: separate;
+        border-spacing: 0 8px;
+    }
+    
+    .custom-table thead th {
+        border: none;
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        padding: 1rem !important;
+    }
+
+    .custom-table tbody tr {
+        background: transparent;
+        transition: all 0.2s ease;
+    }
+
+    .custom-table tbody td {
+        background: #fbfcfe;
+        border-top: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
         padding: 1.25rem 1rem !important;
+    }
+
+    .custom-table tbody td:first-child {
+        border-left: 1px solid var(--border-color);
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+    }
+
+    .custom-table tbody td:last-child {
+        border-right: 1px solid var(--border-color);
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+    }
+
+    .custom-table tbody tr:hover td {
+        background: #f8fafc;
+        border-color: var(--vz-primary);
+    }
+
+    /* Badge Premium */
+    .badge-premium {
+        padding: 0.5rem 0.85rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.75rem;
+        display: inline-flex;
+        align-items: center;
     }
 
     /* Animations */
@@ -163,7 +165,7 @@
     }
 
     .animate-up {
-        animation: fadeInUp 0.5s ease-out forwards;
+        animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
     }
 </style>
 
@@ -180,7 +182,7 @@
                         </div>
                         <div class="mt-4 mt-lg-0 position-relative z-1" style="min-width: 350px;">
                             <div class="d-flex align-items-center gap-2 mb-2">
-                                <div class="bg-primary-teal p-1 rounded-circle"></div>
+                                <div class="bg-white bg-opacity-50 p-1 rounded-circle"></div>
                                 <span class="text-white-50 fs-13 fw-semibold">SÉLECTION DE L'ÉTABLISSEMENT</span>
                             </div>
                             <select class="form-select institute-selector w-100" id="instituteSelector" onchange="loadInstituteStats(this.value)">
@@ -260,7 +262,7 @@
                         <div class="stat-card h-100 p-4">
                             <div class="d-flex align-items-center justify-content-between mb-5">
                                 <h5 class="fw-bold mb-0 d-flex align-items-center gap-3">
-                                    <div class="bg-primary-teal p-2 rounded-3 text-white"><i class="ri-bar-chart-2-fill"></i></div>
+                                    <div class="bg-primary p-2 rounded-3 text-white"><i class="ri-bar-chart-2-fill"></i></div>
                                     Analyse des Statuts
                                 </h5>
                                 <div class="badge-premium bg-light text-primary-teal border" id="currentViewLabel">VUE GLOBALE</div>
@@ -283,7 +285,7 @@
                     <div class="col-lg-4">
                         <div class="stat-card h-100 p-4">
                             <h5 class="fw-bold mb-5 d-flex align-items-center gap-3">
-                                <div class="bg-amber-500 p-2 rounded-3 text-white" style="background:#f59e0b"><i class="ri-filter-fill"></i></div>
+                                <div class="bg-warning p-2 rounded-3 text-white"><i class="ri-filter-fill"></i></div>
                                 Entonnoir CRM
                             </h5>
                             <div class="d-flex flex-column gap-4">
@@ -301,7 +303,7 @@
                                     </div>
                                     <h4 class="fw-bold mb-0" id="pipePrinscrit">{{ global_stats.status_counts.prinscrit }}</h4>
                                 </div>
-                                <div class="d-flex align-items-center justify-content-between p-3 rounded-4 bg-primary-teal text-white shadow-lg hover-scale">
+                                <div class="d-flex align-items-center justify-content-between p-3 rounded-4 bg-primary text-white shadow-lg hover-scale">
                                     <div class="d-flex align-items-center gap-3">
                                         <div class="stat-icon bg-white bg-opacity-20" style="width:40px;height:40px;font-size:1.2rem;"><i class="ri-user-follow-line"></i></div>
                                         <span class="fw-semibold">Convertis</span>
@@ -319,7 +321,7 @@
                         <div class="stat-card p-4">
                             <div class="d-flex align-items-center justify-content-between mb-4">
                                 <h5 class="fw-bold mb-0 d-flex align-items-center gap-3">
-                                    <div class="bg-primary-teal p-2 rounded-3 text-white"><i class="ri-calendar-todo-fill"></i></div>
+                                    <div class="bg-primary p-2 rounded-3 text-white"><i class="ri-calendar-todo-fill"></i></div>
                                     Reporting par Promo
                                 </h5>
                             </div>
@@ -336,7 +338,7 @@
                         <div class="stat-card p-4">
                             <div class="d-flex align-items-center justify-content-between mb-4">
                                 <h5 class="fw-bold mb-0 d-flex align-items-center gap-3">
-                                    <div class="bg-primary-teal p-2 rounded-3 text-white"><i class="ri-community-line"></i></div>
+                                    <div class="bg-primary p-2 rounded-3 text-white"><i class="ri-community-line"></i></div>
                                     Analyse par Institut
                                 </h5>
                             </div>
@@ -355,7 +357,7 @@
                                         <tr>
                                             <td class="ps-4">
                                                 <div class="d-flex align-items-center gap-3">
-                                                    <div class="stat-icon bg-light text-primary-teal fw-bold" style="width:45px;height:45px;font-size:1rem;">
+                                                    <div class="stat-icon bg-light text-primary fw-bold" style="width:45px;height:45px;font-size:1rem;">
                                                         {{ stat.name|slice:":1"|upper }}
                                                     </div>
                                                     <div>
@@ -368,10 +370,10 @@
                                                 <span class="badge-premium bg-light text-dark border">{{ stat.prospects_count }}</span>
                                             </td>
                                             <td class="text-center">
-                                                <span class="badge-premium bg-success-soft text-success">{{ stat.opportunities_count }}</span>
+                                                <span class="badge-premium bg-success bg-opacity-10 text-success">{{ stat.opportunities_count }}</span>
                                             </td>
                                             <td class="text-end pe-4">
-                                                <span class="fw-bold text-primary-teal fs-15">{{ stat.budget_sum|format_comptable }}</span>
+                                                <span class="fw-bold text-primary fs-15">{{ stat.budget_sum|format_comptable }}</span>
                                             </td>
                                         </tr>
                                         {% endfor %}
@@ -517,7 +519,7 @@
                     let tableRows = '';
                     promo.formations.forEach(form => {
                         tableRows += `
-                            <tr class="bg-primary-teal bg-opacity-10">
+                            <tr class="bg-primary bg-opacity-10">
                                 <td colspan="7" class="fw-bold py-2 ps-4 text-primary-teal fs-12">
                                     <i class="ri-bookmark-3-fill me-2"></i> ${form.label.toUpperCase()}
                                 </td>

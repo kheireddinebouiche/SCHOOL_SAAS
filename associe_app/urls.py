@@ -53,7 +53,9 @@ from .views import (
     reset_tenant_table,
     tenant_workspace,
     preview_tenant_table_reset,
+    delete_tenant,
     delete_orphaned_schema,
+    list_orphaned_schemas,
     get_tenant_sync_list,
     sync_single_tenant_view,
     mise_en_route
@@ -125,4 +127,17 @@ urlpatterns = [
     path('users/edit/<int:pk>/', user_edit, name='user_edit'),
     path('users/delete/<int:pk>/', user_delete, name='user_delete'),
     path('users/toggle-status/<int:pk>/', user_toggle_status, name='user_toggle_status'),
+    
+    # Tenants
+    path('tenants/', tenant_data_list, name='tenant_data_list'),
+    path('tenants/orphans/', list_orphaned_schemas, name='schema_management'),
+    path('tenants/orphans/delete/', delete_orphaned_schema, name='delete_orphaned_schema'),
+    path('tenants/workspace/<int:tenant_id>/', tenant_workspace, name='tenant_workspace'),
+    path('tenants/delete/<int:tenant_id>/', delete_tenant, name='delete_tenant'),
+    path('tenants/update-type/', update_tenant_type, name='update_tenant_type'),
+    path('tenants/workspace/<int:tenant_id>/categories/', get_tenant_categories, name='get_tenant_categories'),
+    path('tenants/workspace/<int:tenant_id>/purge/', purge_tenant_categories, name='purge_tenant_categories'),
+    path('tenants/workspace/<int:tenant_id>/delete-pt/<int:payment_type_id>/', delete_tenant_payment_type, name='delete_tenant_payment_type'),
+    path('tenants/workspace/reset-table/', reset_tenant_table, name='reset_tenant_table'),
+    path('tenants/workspace/preview-reset/', preview_tenant_table_reset, name='preview_tenant_table_reset'),
 ]

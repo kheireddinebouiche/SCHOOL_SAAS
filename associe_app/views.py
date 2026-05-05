@@ -72,8 +72,17 @@ def index(request):
         active_campaign = campaigns.filter(is_active=True).first()
     
     if not active_campaign:
-        # Fallback to campaign management if no active campaign
-        return redirect('associe_app:mise_en_route')
+        return render(request, 'public_folder/configuration_index.html', {
+            'title': 'Pilotage Budgétaire',
+            'active_campaign': None,
+            'campaigns': campaigns,
+            'all_instituts': Institut.objects.filter(is_visible=True).exclude(schema_name='public'),
+            'selected_tenant': None,
+            'selected_trimester': selected_trimester,
+            'selected_month': selected_month,
+            'view_mode': view_mode,
+            'stats': None,
+        })
 
     # 3. Get Tenants
     all_instituts = Institut.objects.filter(is_visible=True).exclude(schema_name='public')
