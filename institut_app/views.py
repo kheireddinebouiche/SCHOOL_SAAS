@@ -1417,17 +1417,21 @@ def budget_campaign_dispatch(request, campaign_slug):
                             if not clean_val:
                                 amount_val = Decimal('0')
                             else:
-                                # Replace comma with dot for standard decimal parsing
-                                # Handle cases like 1 500,00 or 1,500.00
-                                clean_val = clean_val.replace('\xa0', '').replace('\u202f', '').replace(' ', '')
+                                # Robust cleaning: remove 'DA', all types of spaces, and handle separators
+                                clean_val = clean_val.replace('DA', '').replace('\xa0', '').replace('\u202f', '').replace(' ', '').strip()
+                                
                                 if ',' in clean_val and '.' in clean_val:
-                                    # Mixed: remove the thousands separator
+                                    # Mixed format: handle based on last separator
                                     if clean_val.rfind('.') > clean_val.rfind(','):
+                                        # 1,500.00 format
                                         clean_val = clean_val.replace(',', '')
                                     else:
+                                        # 1.500,00 format
                                         clean_val = clean_val.replace('.', '').replace(',', '.')
                                 elif ',' in clean_val:
+                                    # 1500,00 format
                                     clean_val = clean_val.replace(',', '.')
+                                # 1500.00 or 1500 format - no change needed
                                 
                                 try:
                                     amount_val = Decimal(clean_val)
