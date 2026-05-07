@@ -187,6 +187,7 @@
                                             <th style="width: 40px;"></th>
                                             <th class="ps-2">Étudiant</th>
                                             <th>Promotion</th>
+                                            <th>Formation/Spécialité</th>
                                             <th>Groupe</th>
                                             <th class="text-end">Total Dû</th>
                                             <th class="text-end">Total Payé</th>
@@ -245,7 +246,7 @@
                     if (displayDues.length > 0) {
                         duesHtml = `
                             <tr class="nested-row" id="dues-${item.id}">
-                                <td colspan="9" class="p-0">
+                                <td colspan="10" class="p-0">
                                     <div class="p-3">
                                         <table class="table table-sm tree-table mb-0">
                                             <thead>
@@ -284,7 +285,7 @@
                     } else if (unpaidOnly) {
                         duesHtml = `
                             <tr class="nested-row" id="dues-${item.id}">
-                                <td colspan="9" class="p-0">
+                                <td colspan="10" class="p-0">
                                     <div class="p-4 text-center">
                                         <div class="avatar-sm mx-auto mb-3">
                                             <div class="avatar-title bg-success-subtle text-success fs-2 rounded-circle">
@@ -312,6 +313,7 @@
                             <small class="text-muted">${item.telephone || item.email}</small>
                         </td>
                         <td><span class="badge badge-soft-info">${item.promo}</span></td>
+                        <td><span class="text-muted small">${item.specialite || 'N/A'}</span></td>
                         <td><span class="badge badge-soft-primary">${item.groupe}</span></td>
                         <td class="text-end fw-medium">${formatMoney(item.total_due)}</td>
                         <td class="text-end fw-medium text-success">${formatMoney(item.total_paid)}</td>
@@ -335,8 +337,28 @@
                 `;
             });
 
-            if (html === '') {
-                html = '<tr><td colspan="9" class="text-center p-5 text-muted">Aucun impayé trouvé pour les critères sélectionnés.</td></tr>';
+            if (filteredCount === 0) {
+                html = `
+                    <tr>
+                        <td colspan="10" class="text-center py-5">
+                            <div class="d-flex flex-column align-items-center justify-content-center py-4">
+                                <div class="avatar-lg mb-4">
+                                    <div class="avatar-title bg-light text-primary rounded-circle display-4">
+                                        <i class="ri-money-dollar-circle-line"></i>
+                                    </div>
+                                </div>
+                                <h5 class="fw-bold">Aucune donnée trouvée</h5>
+                                <p class="text-muted mx-auto" style="max-width: 450px;">
+                                    Il n'y a actuellement aucune donnée de suivi correspondant à vos critères. 
+                                    Cela peut arriver si aucun étudiant n'est converti ou si aucun échéancier n'est rattaché aux promotions sélectionnées.
+                                </p>
+                                <button class="btn btn-primary rounded-pill px-4 mt-2" onclick="location.reload()">
+                                    <i class="ri-refresh-line me-1"></i> Actualiser la page
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
             }
 
             $('#paiementsTableBody').html(html);

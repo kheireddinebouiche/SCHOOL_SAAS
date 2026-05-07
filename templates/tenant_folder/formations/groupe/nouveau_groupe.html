@@ -228,6 +228,31 @@
     </div><!-- End Page-content -->
 </div>
 
+<!-- Warning Modal for Empty Abbreviation -->
+<div class="modal fade" id="abrWarningModal" tabindex="-1" aria-labelledby="abrWarningModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-body text-center p-5">
+                <div class="avatar-lg mx-auto mb-4">
+                    <div class="avatar-title bg-warning bg-opacity-10 text-warning rounded-circle display-5">
+                        <i class="ri-error-warning-line"></i>
+                    </div>
+                </div>
+                <h4 class="fw-bold mb-3">Abréviation manquante</h4>
+                <p class="text-muted mb-4">
+                    Cette spécialité n'a pas d'abréviation configurée. Pour générer un nom de groupe correct, veuillez configurer l'abréviation dans les détails de la spécialité.
+                </p>
+                <div class="hstack gap-2 justify-content-center">
+                    <button type="button" class="btn btn-light btn-rounded px-4" data-bs-dismiss="modal">Fermer</button>
+                    <a href="#" id="abrWarningLink" class="btn btn-primary btn-rounded px-4">
+                        <i class="ri-settings-4-line me-1"></i> Configurer maintenant
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- SCRIPT TO CHECK BEGINNING DATE AND ENDING DATE-->
 <script>
     document.addEventListener("DOMContentLoaded", function() {
@@ -352,8 +377,8 @@
                         return;
                     }
                     $.each(data, function(index, p){
-                        option += "<option data-abreviation="+p.abr+" value="+p.id+">"+p.label+ "("+p.version+")</option>";
-
+                        var abr = p.abr || '';
+                        option += "<option data-abreviation='"+abr+"' value='"+p.id+"'>"+p.label+ " ("+p.version+")</option>";
                     });
 
                     $('#_formSelectSpecialite').html(option);
@@ -365,6 +390,13 @@
             var specialiteId = $(this).val();
             var selectedOption = $(this).find('option:selected');
             selectedSpecialiteAbreviation = selectedOption.data('abreviation') || '';
+
+            // Warning if abbreviation is empty
+            if (specialiteId !== "0" && !selectedSpecialiteAbreviation) {
+                var detailUrl = "{% url 't_formations:detailSpecialite' pk=0 %}".replace('0', specialiteId);
+                $('#abrWarningLink').attr('href', detailUrl);
+                $('#abrWarningModal').modal('show');
+            }
 
             // Update the group number with the selected speciality abbreviation
             var freeNumber = $('#id_numero_libre').val();

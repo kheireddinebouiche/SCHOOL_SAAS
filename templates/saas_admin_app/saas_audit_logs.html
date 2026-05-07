@@ -1,0 +1,207 @@
+{% extends 'saas_admin_app/saas_base.html' %}
+{% load static %}
+{% block title %} Audit des Tenants {% endblock title %}
+{% block content %}
+
+<div class="container-fluid">
+    <!-- Page Title -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="d-sm-flex align-items-center justify-content-between glass-card p-3">
+                 <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                        <i class="ri-history-line text-primary fs-4"></i>
+                    </div>
+                    <h4 class="mb-0 text-primary">Audit des Tenants</h4>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#clearLogsModal">
+                        <i class="ri-delete-bin-line"></i> Nettoyer Centralisé
+                    </button>
+                    <div class="page-title-right">
+                        <ol class="breadcrumb m-0 bg-transparent">
+                            <li class="breadcrumb-item"><a href="{% url 'saas_admin_app:saas_dashboard' %}">Tableau de bord</a></li>
+                            <li class="breadcrumb-item active">Audit</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card modern-card">
+                <div class="card-body p-3">
+                    <form method="GET" action="" class="row g-3 align-items-end">
+                        <div class="col-xl-4 col-md-6">
+                            <label class="form-label fs-13 fw-medium text-muted">Tenant</label>
+                            <select name="tenant" class="form-select form-control-sm" onchange="this.form.submit()">
+                                <option value="">Tous les tenants</option>
+                                {% for inst in instituts %}
+                                    <option value="{{ inst.id }}" {% if selected_tenant_id == inst.id %}selected{% endif %}>{{ inst.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <label class="form-label fs-13 fw-medium text-muted">Type d'action</label>
+                            <select name="action_type" class="form-select form-control-sm" onchange="this.form.submit()">
+                                <option value="">Toutes les actions</option>
+                                {% for val, label in action_choices %}
+                                    <option value="{{ val }}" {% if selected_action == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-xl-2 col-md-12">
+                            <button type="submit" class="btn btn-primary btn-sm w-100">
+                                <i class="ri-filter-3-line me-1"></i> Filtrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Entries -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card modern-card">
+                <div class="card-header card-header-modern d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0 fs-15">
+                        <i class="ri-list-check-2 me-2 text-primary"></i> Dernières actions utilisateurs
+                    </h5>
+                    <span class="badge bg-primary">{{ logs|length }} actions</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-modern mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Tenant</th>
+                                    <th>Date</th>
+                                    <th>Utilisateur</th>
+                                    <th>Action</th>
+                                    <th>Description</th>
+                                    <th>IP</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in logs %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-soft-primary text-primary">{{ entry.tenant.nom }}</span>
+                                    </td>
+                                    <td class="text-muted fs-13">
+                                        {{ entry.log.created_at|date:"d/m/Y H:i:s" }}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-xs me-2">
+                                                <div class="avatar-title rounded-circle bg-soft-info text-info">
+                                                    {% if entry.log.user %}
+                                                        {{ entry.log.user.first_name|slice:":1"|upper }}{{ entry.log.user.last_name|slice:":1"|upper }}
+                                                    {% else %}
+                                                        ?
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fs-13">
+                                                    {% if entry.log.user %}
+                                                        {{ entry.log.user.get_full_name|default:entry.log.user.username }}
+                                                    {% else %}
+                                                        <span class="text-muted">Utilisateur supprimé</span>
+                                                    {% endif %}
+                                                </h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if 'CREATE' in entry.log.action_type %}bg-success{% elif 'DELETE' in entry.log.action_type %}bg-danger{% else %}bg-info{% endif %} bg-opacity-10 text-{% if 'CREATE' in entry.log.action_type %}success{% elif 'DELETE' in entry.log.action_type %}danger{% else %}info{% endif %}">
+                                            {{ entry.log.get_action_type_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-muted fs-13">
+                                        <div class="fw-medium text-dark">{{ entry.log.target_model|default:"" }}</div>
+                                        <div class="small">{{ entry.log.details|default:"-" }}</div>
+                                    </td>
+                                    <td class="text-muted fs-12">
+                                        {{ entry.log.ip_address|default:"-" }}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        Aucun log d'audit trouvé.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Clear Logs Modal -->
+<div class="modal fade" id="clearLogsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-0 bg-danger bg-opacity-10">
+                <h5 class="modal-title text-danger"><i class="ri-delete-bin-line me-2"></i>Nettoyage Centralisé des Logs</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'saas_admin_app:saas_clear_tenant_logs' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Tenant cible</label>
+                        <select name="tenant_id" class="form-select">
+                            <option value="all">Tous les tenants (GLOBAL)</option>
+                            {% for inst in instituts %}
+                                <option value="{{ inst.id }}">{{ inst.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Option de suppression</label>
+                        <select name="delete_mode" class="form-select" id="deleteModeSelector">
+                            <option value="all">Tout vider (Irréversible)</option>
+                            <option value="older_than">Plus ancien que...</option>
+                        </select>
+                    </div>
+                    <div id="olderThanInput" class="mb-3 d-none">
+                        <label class="form-label">Supprimer avant le :</label>
+                        <input type="date" name="date_threshold" class="form-control">
+                    </div>
+                    
+                    <div class="alert alert-warning border-0 d-flex align-items-center">
+                        <i class="ri-error-warning-line me-2 fs-4"></i>
+                        <div class="small">Cette action supprimera définitivement les logs d'audit sélectionnés pour les tenants choisis.</div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger btn-sm px-4 shadow-sm">Confirmer le nettoyage</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('deleteModeSelector')?.addEventListener('change', function() {
+        const olderThanInput = document.getElementById('olderThanInput');
+        if (this.value === 'older_than') {
+            olderThanInput.classList.remove('d-none');
+        } else {
+            olderThanInput.classList.add('d-none');
+        }
+    });
+</script>
+
+{% endblock content %}

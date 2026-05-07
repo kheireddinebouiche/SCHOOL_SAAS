@@ -47,24 +47,42 @@
         border-radius: 0.75rem;
     }
 
-    .btn-edit-premium {
+    .btn-action-premium {
         width: 32px;
         height: 32px;
         padding: 0;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border-radius: 8px;
+        border-radius: 10px;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        color: #64748b;
-        background: transparent;
+        border: 1px solid transparent;
+        backdrop-filter: blur(4px);
     }
 
-    .btn-edit-premium:hover {
+    .btn-action-premium:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        background: #f8fafc;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .btn-action-details {
+        background: rgba(59, 130, 246, 0.1);
         color: #3b82f6;
+    }
+
+    .btn-action-details:hover {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .btn-action-delete {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+
+    .btn-action-delete:hover {
+        background: #ef4444;
+        color: white;
     }
 
     .kpi-card {
@@ -267,6 +285,7 @@
                                         <thead>
                                             <tr>
                                                 <th class="ps-4">Client</th>
+                                                <th>Formation/Spécialité</th>
                                                 <th>Motif</th>
                                                 <th>Montant</th>
                                                 <th>Etat</th>
@@ -333,8 +352,8 @@
             "autoWidth": false,
             "responsive": true,
             "columnDefs": [
-                { "orderable": true, "targets": [0, 1, 2, 4] },
-                { "orderable": false, "targets": [3, 5] }
+                { "orderable": true, "targets": [0, 1, 2, 3, 5] },
+                { "orderable": false, "targets": [4, 6] }
             ],
             "data": [], // Initialize with empty data
             "dom": '<"row"<"col-sm-12"tr>>'
@@ -370,6 +389,14 @@
             }
 
             row.push(clientName + remboursementIcon + alertes + '</div>');
+            
+            // Formation / Spécialité
+            var formationSpec = '<div class="d-flex flex-column">' +
+                '<span class="fw-bold text-primary small">' + p.formation_label + '</span>' +
+                (p.specialite_label ? '<span class="text-muted extra-small" style="font-size: 0.7rem;">' + p.specialite_label + '</span>' : '') +
+                '</div>';
+            row.push(formationSpec);
+
             row.push('<span class="fw-medium">' + p.motif_label + '</span>');
             row.push('<span class="fw-bold text-dark">' + formatCurrency(p.amount) + '</span>');
             row.push((p.etat == 'en_attente' ? "<span class='badge badge-soft-warning'>En attente</span>" 
@@ -377,10 +404,10 @@
             row.push('<span class="text-muted small">' + p.created_at.split('T')[0] + '</span>');
             
             var actions = '<div class="hstack gap-2 justify-content-center pe-3">'+
-                '<a id="detailsBtn" data-type-cursus='+p.is_double+' data-id='+p.id+' href="#" class="btn btn-soft-info btn-icon btn-sm rounded-circle" title="Détails">'+
+                '<a class="btn-action-premium btn-action-details detailsBtn" data-type-cursus='+p.is_double+' data-id='+p.id+' href="#" title="Détails">'+
                 '<i class="ri-eye-line"></i>'+
                 '</a>'+
-                '<button ' + (p.has_due_payments ? 'style="display:none !important;"' : '') + ' id="deleteConfirmation" data-id="'+p.id+'" class="btn btn-soft-danger btn-icon btn-sm rounded-circle remove-item-btn" title="Supprimer">'+
+                '<button ' + (p.has_due_payments ? 'style="display:none !important;"' : '') + ' data-id="'+p.id+'" class="btn-action-premium btn-action-delete deleteConfirmation remove-item-btn" title="Supprimer">'+
                 '<i class="ri-delete-bin-line"></i>'+
                 '</button>'+
                 '</div>';
@@ -439,7 +466,9 @@
                         (payment.prenom && payment.prenom.toLowerCase().includes(currentSearchTerm)) ||
                         (payment.motif_label && payment.motif_label.toLowerCase().includes(currentSearchTerm)) ||
                         (payment.amount && payment.amount.toString().includes(currentSearchTerm)) ||
-                        (payment.etat && payment.etat.toLowerCase().includes(currentSearchTerm))
+                        (payment.etat && payment.etat.toLowerCase().includes(currentSearchTerm)) ||
+                        (payment.formation_label && payment.formation_label.toLowerCase().includes(currentSearchTerm)) ||
+                        (payment.specialite_label && payment.specialite_label.toLowerCase().includes(currentSearchTerm))
                     );
                 });
             }
@@ -475,8 +504,8 @@
             applyFilters();
         });
 
-        $(document).on('click', '#detailsBtn', function(){
-            var type_cursus = $(this).data('type-cursus');
+        $(document).on('click', '.detailsBtn', function(e){
+            e.preventDefault();
             var id = $(this).data('id');
             window.location.href="{% url 't_tresorerie:PageDetailsDemandePaiement' pk=0 %}".replace('0', id);
         });
@@ -596,14 +625,39 @@
             });
         }
 
-        $(document).on('click', '#deleteConfirmation', function(){
+        $(document).on('click', '.deleteConfirmation', function(){
             var id_demande = $(this).data('id');
-            var row = '<button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>'+
-                   '<button id="confirmDeleteBtn" data-id='+id_demande+' class="btn btn-danger">Confirmer</button>';
+            var row = '<button type="button" class="btn btn-light btn-rounded px-4" data-bs-dismiss="modal">Annuler</button>'+
+                   '<button id="confirmDeleteBtn" data-id="'+id_demande+'" class="btn btn-danger btn-rounded px-4">Confirmer la suppression</button>';
 
-            $('.hstack').html(row);
-
+            $('.deleteModal .hstack').html(row);
             $('.deleteModal').modal('show');
+        });
+
+        $(document).on('click', '#confirmDeleteBtn', function() {
+            var id_demande = $(this).data('id');
+            var btn = $(this);
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Suppression...');
+
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiDeleteDemandePaiement' %}",
+                type: 'GET',
+                data: { 'id_demande': id_demande },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('.deleteModal').modal('hide');
+                        alertify.success(response.message);
+                        loadItems(); // Refresh table
+                    } else {
+                        alertify.error(response.message);
+                        btn.prop('disabled', false).text('Confirmer la suppression');
+                    }
+                },
+                error: function() {
+                    alertify.error("Une erreur s'est produite lors de la suppression.");
+                    btn.prop('disabled', false).text('Confirmer la suppression');
+                }
+            });
         });
     });
 </script>

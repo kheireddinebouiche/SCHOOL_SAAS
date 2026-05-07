@@ -167,7 +167,7 @@
                                 </div>
                                 <div class="card-body p-4 pt-4">
                                     <div class="row g-4">
-                                        <div class="col-lg-3">
+                                        <div class="col-lg-2">
                                             <div class="p-3 rounded-4 bg-light bg-opacity-50 h-100 border border-light">
                                                 <small class="text-muted d-block mb-1 text-uppercase fs-11 fw-bold">Nom</small>
                                                 <span class="fw-bold text-dark fs-14">{{formation.nom}}</span>
@@ -185,13 +185,29 @@
                                                 <span class="fw-bold text-dark fs-14">{{formation.get_type_formation_display}}</span>
                                             </div>
                                         </div>   
-                                        <div class="col-lg-3">
+                                        <div class="col-lg-2">
                                             <div class="p-3 rounded-4 bg-light bg-opacity-50 h-100 border border-light">
                                                 <small class="text-muted d-block mb-1 text-uppercase fs-11 fw-bold">Partenaire</small>
                                                 <span class="fw-bold text-dark fs-14">{{formation.partenaire|default:"-"}}</span>
                                             </div>
                                         </div>   
                                         
+                                        <div class="col-lg-2">
+                                            <div class="p-3 rounded-4 bg-light bg-opacity-50 h-100 border border-light">
+                                                <small class="text-muted d-block mb-1 text-uppercase fs-11 fw-bold">Entité Légale</small>
+                                                {% if tenant.tenant_type == 'second' and formation.type_formation == 'etrangere' %}
+                                                    <select id="entiteLegalSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold text-dark p-0" style="box-shadow: none; cursor: pointer;">
+                                                        <option value="">Sélectionner</option>
+                                                        {% for entite in entreprises %}
+                                                            <option value="{{ entite.id }}" {% if formation.entite_legal_id == entite.id %}selected{% endif %}>{{ entite.designation }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                {% else %}
+                                                    <span class="fw-bold text-dark fs-14">{{ formation.entite_legal|default:"-" }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
                                         <div class="col-lg-2">
                                             <div class="d-flex align-items-center p-3 rounded-4 bg-light bg-opacity-50 h-100 border border-light">
                                                 <div>
@@ -689,12 +705,95 @@
             </div>
         </div>
 
+        <!-- Modal Confirmation Changement Entité Légale -->
+        <div class="modal fade" id="confirmLegalEntityModal" tabindex="-1" aria-labelledby="confirmLegalEntityModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 shadow-lg border-0">
+                    <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+                        <div class="d-flex align-items-center">
+                            <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+                                <i class="ri-government-line text-warning fs-4"></i>
+                            </div>
+                            <div>
+                                <h5 class="modal-title fw-semibold text-warning mb-1" id="confirmLegalEntityModalLabel">Confirmation du changement</h5>
+                                <p class="text-muted small mb-0">Modifier l'entité légale de cette formation ?</p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4 text-center">
+                        <div class="avatar-xl mx-auto mb-4">
+                            <div class="avatar-title bg-warning bg-opacity-10 text-warning rounded-circle display-4">
+                                <i class="ri-error-warning-line"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-2 fs-15">
+                            <h4>Changer l'entité légale ?</h4>
+                            <p class="text-muted mx-4 mb-0">Voulez-vous vraiment changer l'entité légale associée à cette formation ? Cela pourrait affecter les documents administratifs générés.</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 bg-light px-4 py-3">
+                        <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">Annuler</button>
+                        <button type="button" id="confirmLegalEntityBtn" class="btn btn-warning px-4 py-2">Confirmer le changement</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 <script>
     $(document).ready(function(){
 
         var code_formation = "{{formation.code|escapejs}}";
-        // Variable pour stocker l'index du document à supprimer
-        var documentIndexToDelete = null;
+        var formation_id = "{{ formation.id }}";
+        var pendingEntiteId = null;
+        var previousEntiteId = "{{ formation.entite_legal_id|default_if_none:'' }}";
+
+        $(document).on('change', '#entiteLegalSelect', function() {
+            pendingEntiteId = $(this).val();
+            $('#confirmLegalEntityModal').modal('show');
+        });
+
+        // If modal is closed without confirmation, revert the select value
+        $('#confirmLegalEntityModal').on('hidden.bs.modal', function () {
+            if (!$('#confirmLegalEntityBtn').data('confirmed')) {
+                $('#entiteLegalSelect').val(previousEntiteId);
+            }
+            $('#confirmLegalEntityBtn').data('confirmed', false);
+        });
+
+        $(document).on('click', '#confirmLegalEntityBtn', function() {
+            $(this).data('confirmed', true);
+            var select = $('#entiteLegalSelect');
+            var modal = $('#confirmLegalEntityModal');
+            
+            modal.modal('hide');
+            select.prop('disabled', true);
+
+            $.ajax({
+                url: "{% url 't_formations:ApiUpdateFormationLegalEntity' %}",
+                type: 'POST',
+                data: {
+                    'formation_id': formation_id,
+                    'entite_id': pendingEntiteId,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    select.prop('disabled', false);
+                    if (response.success) {
+                        previousEntiteId = pendingEntiteId;
+                        alertify.success(response.message);
+                    } else {
+                        $('#entiteLegalSelect').val(previousEntiteId);
+                        alertify.error(response.message);
+                    }
+                },
+                error: function() {
+                    select.prop('disabled', false);
+                    $('#entiteLegalSelect').val(previousEntiteId);
+                    alertify.error("Une erreur est survenue lors de la mise à jour.");
+                }
+            });
+        });
 
         function loadSyncState(){
             $.ajax({

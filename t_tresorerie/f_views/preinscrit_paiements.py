@@ -63,13 +63,13 @@ def ApiGetPaiementRequestDetails(request):
             cleaned_montant = clean_montant(i['montant_final'])
             ApiStorePaiements(obj_client,i['libelle'],i['date_echeance'],cleaned_montant,obj_promo.promo.id,id_echeancier, i.get('entite_id'))  
                
-        # Log de génération/consultation de la lettre d'engagement
+        # Log de génération de l'échéancier
         UserActionLog.objects.create(
             user=request.user,
-            action_type='VIEW',
-            target_model='Paiement',
+            action_type='CREATE',
+            target_model='DuePaiements',
             target_id=str(id_client),
-            details=f"Génération/Impression de la lettre d'engagement pour l'étudiant {obj_client.nom} {obj_client.prenom}.",
+            details=f"Génération de l'échéancier de paiement ({total_final} DA) pour l'étudiant {obj_client.nom} {obj_client.prenom}.",
             ip_address=request.META.get('REMOTE_ADDR')
         )
              
@@ -118,13 +118,13 @@ def ApiGetPaiementRequestDetailsDouble(request):
                 cleaned_montant = clean_montant(i['montant_final'])
                 ApiStorePaiementsDouble(obj_client,i['libelle'],i['date_echeance'],cleaned_montant,obj_promo.promo.id,id_echeancier,i['entite'])  
                 
-            # Log de génération/consultation de la lettre d'engagement (Double)
+            # Log de génération de l'échéancier (Double)
             UserActionLog.objects.create(
                 user=request.user,
-                action_type='VIEW',
-                target_model='Paiement',
+                action_type='CREATE',
+                target_model='DuePaiements',
                 target_id=str(id_client),
-                details=f"Génération/Impression de la lettre d'engagement (Double Diplôme) pour l'étudiant {obj_client.nom} {obj_client.prenom}.",
+                details=f"Génération de l'échéancier de paiement Double Diplomation ({total_final} DA) pour l'étudiant {obj_client.nom} {obj_client.prenom}.",
                 ip_address=request.META.get('REMOTE_ADDR')
             )
 
@@ -327,6 +327,16 @@ def ApiApplyEcheancierSpecial(request):
         obj_echeancier_special = EcheancierSpecial.objects.get(id = id_echeancier_special)
         obj_echeancier_special.is_validate = True
         obj_echeancier_special.save()
+        
+        # Log de validation d'échéancier spécial
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='EcheancierSpecial',
+            target_id=str(id_echeancier_special),
+            details=f"Validation de l'échéancier spécial pour l'étudiant {obj_echeancier_special.prospect.nom} {obj_echeancier_special.prospect.prenom}.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
         
         return JsonResponse({"status" : "success"})
     else:

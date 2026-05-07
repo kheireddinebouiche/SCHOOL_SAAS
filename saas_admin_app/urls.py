@@ -11,10 +11,12 @@ from .views import (
     saas_explorer_view, api_explorer_browse, api_explorer_read,
     api_explorer_save, api_explorer_delete, saas_system_lock_view,
     saas_system_logout_view, saas_global_config_view, saas_firewall_view,
-    api_tenant_file_status, saas_performance_view, saas_force_tenant_password_change_view,
+    api_tenant_file_status, saas_force_tenant_password_change_view,
     saas_knowledge_center_view, saas_knowledge_category_action_view, saas_knowledge_resource_action_view,
     saas_create_tenant_view, saas_tenants_manage_view, saas_toggle_tenant_visibility_view,
-    saas_toggle_tenant_active_view
+    saas_toggle_tenant_active_view, saas_tenant_data_summary_view, saas_tenant_data_explorer_view,
+    saas_update_voeu_action_view, saas_update_prospect_action_view,
+    saas_audit_logs_view, saas_clear_tenant_logs_view
 )
 
 app_name = 'saas_admin_app'
@@ -25,6 +27,8 @@ urlpatterns = [
     path('logout/', saas_logout_view, name='saas_logout'),
     path('dashboard/', saas_dashboard_view, name='saas_dashboard'),
     path('tenants/', saas_tenants_manage_view, name='saas_tenants_manage'),
+    path('tenant-data-summary/', saas_tenant_data_summary_view, name='saas_tenant_data_summary'),
+    path('tenant/<int:tenant_id>/data-explorer/', saas_tenant_data_explorer_view, name='saas_tenant_data_explorer'),
     path('tenant/create/', saas_create_tenant_view, name='saas_create_tenant'),
     path('performance/', saas_performance_view, name='saas_performance'),
     path('processes/', saas_processes_view, name='saas_processes'),
@@ -62,4 +66,8 @@ urlpatterns = [
     path('api/knowledge-center/resource/action/', saas_knowledge_resource_action_view, name='saas_knowledge_resource_action'),
     path('api/tenant/<int:tenant_id>/toggle-visibility/', saas_toggle_tenant_visibility_view, name='saas_toggle_tenant_visibility'),
     path('api/tenant/<int:tenant_id>/toggle-active/', saas_toggle_tenant_active_view, name='saas_toggle_tenant_active'),
+    path('api/tenant/<int:tenant_id>/voeu/<int:voeu_id>/update/', saas_update_voeu_action_view, name='saas_update_voeu_action'),
+    path('api/tenant/<int:tenant_id>/prospect/<int:prospect_id>/update/', saas_update_prospect_action_view, name='saas_update_prospect_action'),
+    path('audit-logs/', saas_audit_logs_view, name='saas_audit_logs'),
+    path('audit-logs/clear/', saas_clear_tenant_logs_view, name='saas_clear_tenant_logs'),
 ]

@@ -974,14 +974,55 @@ def detailFormation(request, pk):
         queryset = queryset.filter(is_visible=True)
 
     master_tenant = Institut.objects.filter(tenant_type='master').exclude(schema_name='public').first()
+    
+    entreprises = None
+    if request.tenant.tenant_type == 'second':
+        from institut_app.models import Entreprise
+        entreprises = Entreprise.objects.all()
 
     context = {
         'formation' : formation,
         'tenant' : request.tenant,
         'specialite' : queryset,
-        'master_tenant_name': master_tenant.nom if master_tenant else "l'établissement maître"
+        'master_tenant_name': master_tenant.nom if master_tenant else "l'établissement maître",
+        'entreprises': entreprises,
     }
     return render(request, 'tenant_folder/formations/details_formation.html', context)
+
+@login_required(login_url="institut_app:login")
+def ApiUpdateFormationLegalEntity(request):
+    if request.method != "POST":
+        return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})
+    
+    formation_id = request.POST.get('formation_id')
+    entite_id = request.POST.get('entite_id')
+    
+    if not formation_id:
+        return JsonResponse({'success': False, 'message': 'ID de formation manquant'})
+        
+    try:
+        formation = Formation.objects.get(id=formation_id)
+        
+        # Security check: only allow if foreign formation and secondary tenant
+        if formation.type_formation != 'etrangere' or request.tenant.tenant_type != 'second':
+            return JsonResponse({'success': False, 'message': 'Action non autorisée pour ce type de formation ou d\'établissement.'})
+            
+        if entite_id:
+            from institut_app.models import Entreprise
+            try:
+                entite = Entreprise.objects.get(id=entite_id)
+                formation.entite_legal = entite
+            except Entreprise.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'Entité légale introuvable'})
+        else:
+            formation.entite_legal = None
+            
+        formation.save()
+        return JsonResponse({'success': True, 'message': 'Entité légale mise à jour avec succès'})
+    except Formation.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Formation introuvable'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic

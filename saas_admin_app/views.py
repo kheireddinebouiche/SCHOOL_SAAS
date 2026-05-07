@@ -17,6 +17,8 @@ from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth import get_user_model
 from .models import DatabaseBackup, SaaSEmailConfiguration, SaaSMaintenanceConfiguration, SaaSGlobalConfiguration
 from .utils_backup import perform_backup, perform_restore
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
 
 
 
@@ -212,6 +214,223 @@ def saas_dashboard_view(request):
     context['maintenance_config'] = SaaSMaintenanceConfiguration.get_solo()
 
     return render(request, 'saas_admin_app/saas_dashboard.html', context)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_tenant_data_summary_view(request):
+    """Affiche une synthèse des données (Prospects, Vœux, Formations, Spécialités) pour chaque tenant."""
+    instituts = Institut.objects.all().order_by('nom')
+    data_summary = []
+    
+    total_prospects = 0
+    total_voeux = 0
+    total_voeux_double = 0
+    total_formations = 0
+    total_specialites = 0
+
+    for inst in instituts:
+        if inst.schema_name == 'public':
+            continue
+            
+        metrics = {
+            'institut': inst,
+            'prospect_count': 0,
+            'voeux_count': 0,
+            'voeux_double_count': 0,
+            'formation_count': 0,
+            'specialite_count': 0,
+        }
+        
+        try:
+            with tenant_context(inst):
+                # Importation dynamique pour éviter les erreurs si l'app n'est pas installée
+                try:
+                    from t_crm.models import Prospets, FicheDeVoeux, FicheVoeuxDouble
+                    metrics['prospect_count'] = Prospets.objects.count()
+                    metrics['voeux_count'] = FicheDeVoeux.objects.count()
+                    metrics['voeux_double_count'] = FicheVoeuxDouble.objects.count()
+                except ImportError:
+                    pass
+                
+                try:
+                    from t_formations.models import Formation, Specialites
+                    metrics['formation_count'] = Formation.objects.count()
+                    metrics['specialite_count'] = Specialites.objects.count()
+                except ImportError:
+                    pass
+                    
+                # Totaux globaux
+                total_prospects += metrics['prospect_count']
+                total_voeux += metrics['voeux_count']
+                total_voeux_double += metrics['voeux_double_count']
+                total_formations += metrics['formation_count']
+                total_specialites += metrics['specialite_count']
+                
+        except Exception as e:
+            print(f"Erreur lors de la récupération des données pour {inst.schema_name}: {e}")
+            
+        data_summary.append(metrics)
+        
+    context = {
+        'data_summary': data_summary,
+        'totals': {
+            'prospects': total_prospects,
+            'voeux': total_voeux,
+            'voeux_double': total_voeux_double,
+            'formations': total_formations,
+            'specialites': total_specialites,
+        }
+    }
+    
+    return render(request, 'saas_admin_app/saas_tenant_data_summary.html', context)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_tenant_data_explorer_view(request, tenant_id):
+    """Affiche les listes détaillées (Prospects, Vœux, Formations, Spécialités) pour un tenant spécifique."""
+    try:
+        institut = Institut.objects.get(id=tenant_id)
+    except Institut.DoesNotExist:
+        from django.http import Http404
+        raise Http404("Tenant non trouvé")
+        
+    context = {
+        'institut': institut,
+        'prospects': [],
+        'voeux': [],
+        'voeux_double': [],
+        'formations': [],
+        'specialites': [],
+        'promos': [],
+    }
+    
+    try:
+        with tenant_context(institut):
+            # Prospects
+            try:
+                from t_crm.models import Prospets
+                context['prospects'] = list(Prospets.objects.all().order_by('-created_at')[:500])
+            except:
+                context['prospects'] = []
+            
+            # Vœux
+            try:
+                from t_crm.models import FicheDeVoeux
+                # Pre-fetch specialite__formation to avoid queries in template
+                context['voeux'] = list(FicheDeVoeux.objects.all().select_related('prospect', 'specialite__formation', 'promo').order_by('-created_at')[:500])
+            except:
+                context['voeux'] = []
+            
+            # Vœux Doubles
+            try:
+                from t_crm.models import FicheVoeuxDouble
+                context['voeux_double'] = list(FicheVoeuxDouble.objects.all().select_related('prospect', 'specialite__formation', 'promo').order_by('-created_at')[:500])
+            except:
+                context['voeux_double'] = []
+            
+            # Formations
+            try:
+                from t_formations.models import Formation
+                context['formations'] = list(Formation.objects.all().order_by('nom'))
+            except:
+                context['formations'] = []
+            
+            # Spécialités
+            try:
+                from t_formations.models import Specialites
+                context['specialites'] = list(Specialites.objects.all().select_related('formation').order_by('label'))
+            except:
+                context['specialites'] = []
+                
+            # Promos
+            try:
+                from t_formations.models import Promos
+                context['promos'] = list(Promos.objects.all().order_by('-created_at'))
+            except:
+                context['promos'] = []
+            
+    except Exception as e:
+        context['error'] = str(e)
+        
+    return render(request, 'saas_admin_app/saas_tenant_data_explorer.html', context)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_update_voeu_action_view(request, tenant_id, voeu_id):
+    """Permet de modifier la spécialité ou supprimer une fiche de voeux (standard ou double)."""
+    from django.http import JsonResponse
+    from app.models import Institut
+    
+    institut = get_object_or_404(Institut, id=tenant_id)
+    action = request.POST.get('action') # 'delete' ou 'update_specialite'
+    voeu_type = request.POST.get('voeu_type') # 'standard' ou 'double'
+    
+    try:
+        with tenant_context(institut):
+            from t_crm.models import FicheDeVoeux, FicheVoeuxDouble
+            from t_formations.models import Specialites
+            
+            model = FicheDeVoeux if voeu_type == 'standard' else FicheVoeuxDouble
+            voeu = get_object_or_404(model, id=voeu_id)
+            
+            if action == 'delete':
+                voeu.delete()
+                return JsonResponse({'status': 'success', 'message': 'Fiche de vœux supprimée avec succès.'})
+            
+            elif action == 'update_specialite':
+                new_specialite_id = request.POST.get('specialite_id')
+                new_promo_id = request.POST.get('promo_id')
+                
+                new_specialite = get_object_or_404(Specialites, id=new_specialite_id)
+                voeu.specialite = new_specialite
+                
+                if new_promo_id:
+                    from t_formations.models import Promos
+                    new_promo = get_object_or_404(Promos, id=new_promo_id)
+                    voeu.promo = new_promo
+                
+                voeu.save()
+                return JsonResponse({
+                    'status': 'success', 
+                    'message': 'Fiche de vœux mise à jour avec succès.',
+                    'new_label': new_specialite.label,
+                    'new_formation': new_specialite.formation.nom,
+                    'new_promo': voeu.promo.label if voeu.promo else 'Standard'
+                })
+                
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+    return JsonResponse({'status': 'error', 'message': 'Action non reconnue.'}, status=400)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_update_prospect_action_view(request, tenant_id, prospect_id):
+    """Permet de modifier l'état et le statut d'un prospect."""
+    from django.http import JsonResponse
+    from app.models import Institut
+    
+    institut = get_object_or_404(Institut, id=tenant_id)
+    new_etat = request.POST.get('etat')
+    new_statut = request.POST.get('statut')
+    
+    try:
+        with tenant_context(institut):
+            from t_crm.models import Prospets
+            prospect = get_object_or_404(Prospets, id=prospect_id)
+            
+            if new_etat:
+                prospect.etat = new_etat
+            if new_statut:
+                prospect.statut = new_statut
+                
+            prospect.save()
+            
+            return JsonResponse({
+                'status': 'success', 
+                'message': 'Prospect mis à jour avec succès.',
+                'new_etat_display': prospect.get_etat_display(),
+                'new_statut_display': prospect.get_statut_display()
+            })
+                
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @user_passes_test(superadmin_only, login_url='/saas-admin/login/')
 def saas_create_tenant_view(request):
@@ -2073,3 +2292,77 @@ def saas_toggle_tenant_active_view(request, tenant_id):
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_audit_logs_view(request):
+    """Affiche les logs d'audit (UserActionLog) de tous les tenants."""
+    instituts = Institut.objects.all().order_by('nom')
+    all_logs = []
+    
+    selected_tenant_id = request.GET.get('tenant')
+    action_type = request.GET.get('action_type')
+    
+    for inst in instituts:
+        if selected_tenant_id and str(inst.id) != selected_tenant_id:
+            continue
+            
+        try:
+            with tenant_context(inst):
+                from t_crm.models import UserActionLog
+                qs = UserActionLog.objects.all()
+                if action_type:
+                    qs = qs.filter(action_type=action_type)
+                logs = qs.select_related('user').order_by('-created_at')[:50]
+                for log in logs:
+                    all_logs.append({
+                        'log': log,
+                        'tenant': inst,
+                    })
+        except Exception:
+            pass
+            
+    # Sort all logs by date
+    all_logs.sort(key=lambda x: x['log'].created_at, reverse=True)
+    all_logs = all_logs[:200] # Limit to 200 for performance
+    
+    from t_crm.models import UserActionLog
+    action_choices = UserActionLog.ACTION_CHOICES
+    
+    context = {
+        'logs': all_logs,
+        'instituts': instituts,
+        'action_choices': action_choices,
+        'selected_tenant_id': int(selected_tenant_id) if selected_tenant_id else None,
+        'selected_action': action_type,
+    }
+    return render(request, 'saas_admin_app/saas_audit_logs.html', context)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_clear_tenant_logs_view(request):
+    """Vide les logs d'audit pour un ou tous les tenants."""
+    if request.method == 'POST':
+        tenant_id = request.POST.get('tenant_id')
+        delete_mode = request.POST.get('delete_mode')
+        date_threshold = request.POST.get('date_threshold')
+        
+        instituts = Institut.objects.all()
+        if tenant_id and tenant_id != 'all':
+            instituts = instituts.filter(id=tenant_id)
+            
+        total_deleted = 0
+        for inst in instituts:
+            try:
+                with tenant_context(inst):
+                    from t_crm.models import UserActionLog
+                    qs = UserActionLog.objects.all()
+                    
+                    if delete_mode == 'older_than' and date_threshold:
+                        qs = qs.filter(created_at__lt=date_threshold)
+                    
+                    count, _ = qs.delete()
+                    total_deleted += count
+            except Exception:
+                pass
+                
+        messages.success(request, f"Nettoyage terminé : {total_deleted} entrées supprimées au total.")
+        
+    return redirect('saas_admin_app:saas_audit_logs')

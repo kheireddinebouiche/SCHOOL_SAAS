@@ -84,6 +84,19 @@ def ApiSuiviPaiements(request):
                 'is_overdue': not d.is_done and d.date_echeance < today if d.date_echeance else False
             })
 
+        # Get formation/specialite
+        from t_crm.models import FicheDeVoeux, FicheVoeuxDouble
+        specialite_name = "N/A"
+        
+        # Check standard wish first
+        fiche = FicheDeVoeux.objects.filter(prospect=p, is_confirmed=True).select_related('specialite__formation').first()
+        if fiche and fiche.specialite:
+            specialite_name = f"{fiche.specialite.formation.nom} / {fiche.specialite.label}"
+        elif p.is_double:
+            fiche_double = FicheVoeuxDouble.objects.filter(prospect=p, is_confirmed=True).select_related('specialite__formation').first()
+            if fiche_double and fiche_double.specialite:
+                specialite_name = f"{fiche_double.specialite.formation.nom} / {fiche_double.specialite.label}"
+
         data.append({
             'id': p.id,
             'nom': p.nom,
@@ -92,6 +105,7 @@ def ApiSuiviPaiements(request):
             'email': p.email,
             'telephone': p.telephone,
             'promo': promo_name,
+            'specialite': specialite_name,
             'groupe': group_name,
             'total_due': float(total_due),
             'total_paid': float(total_paid),

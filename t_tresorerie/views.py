@@ -78,7 +78,7 @@ def ApiListeDemandePaiement(request):
             "promo_begin" : obj.promo.begin_year,
             "promo_end" : obj.promo.end_year,
             "specialite": obj.specialite.id if obj.specialite else None,
-            "amount" : obj.amount if obj.amount else (obj.specialite.formation.prix_formation if obj.specialite else obj.specialite_double.prix),
+            "amount" : obj.amount if obj.amount else (obj.specialite.prix if obj.specialite else ((obj.specialite_double.prix_spec1 or 0) + (obj.specialite_double.prix_spec2 or 0)) if obj.specialite_double else 0),
             "nom": obj.client.nom if obj.client else None,
             "prenom": obj.client.prenom if obj.client else None,
             "is_double" : obj.client.is_double if obj.client.is_double else None,
@@ -90,6 +90,8 @@ def ApiListeDemandePaiement(request):
             "remise_alerte": remise_alerte,
             "paid": obj.paid,
             "has_due_payments": has_due_payments,
+            "formation_label": obj.specialite.formation.nom if obj.specialite else (obj.specialite_double.label if obj.specialite_double else ""),
+            "specialite_label": obj.specialite.label if obj.specialite else "",
         })
     
     return JsonResponse(data, safe=False)
@@ -368,7 +370,7 @@ def ApiGetDetailsDemandePaiement(request):
             id_reduction = remiseObj.remise_appliquer.id
             is_applicated_remise = remiseObj.remise_appliquer.is_applicated
             
-            prix_formation = voeux.specialite.formation.prix_formation
+            prix_formation = voeux.specialite.prix
             
             if remise.is_value:
                 # Fixed amount discount
@@ -857,10 +859,29 @@ def ApiLoadDoubleFormation(request):
 
 def ApiDeleteDemandePaiement(request):
     id_demande = request.GET.get('id_demande')
-    obj = ClientPaiementsRequest(id = id_demande)
-    obj.delete()
-
-    return JsonResponse({'status' : 'success', "message" : "La suppression a été effectuée avec succès"})
+    try:
+        obj = ClientPaiementsRequest.objects.get(id=id_demande)
+        client = obj.client
+        if client:
+            client.statut = 'prinscrit'
+            client.save()
+            
+            # Log the deletion
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='ClientPaiementsRequest',
+                target_id=str(obj.id),
+                details=f"Suppression de la demande de paiement (Motif: {obj.get_motif_display()}) pour l'étudiant {client.nom} {client.prenom}. Statut client réinitialisé à 'Pré-inscrit'.",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+        obj.delete()
+        return JsonResponse({'status' : 'success', "message" : "La suppression a été effectuée avec succès et le statut du client a été réinitialisé."})
+    except ClientPaiementsRequest.DoesNotExist:
+        return JsonResponse({'status' : 'error', "message" : "Demande de paiement introuvable."})
+    except Exception as e:
+        return JsonResponse({'status' : 'error', "message" : str(e)})
 
 def PageConfigPaiementSeuil(request):
     return render(request, 'tenant_folder/comptabilite/tresorerie/config.html', {'tenant' : request.tenant})

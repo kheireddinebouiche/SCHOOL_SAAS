@@ -1,0 +1,218 @@
+{% extends 'saas_admin_app/saas_base.html' %}
+{% load static %}
+
+{% block title %}Synthèse des Données Tenants | SaaS Admin{% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Title -->
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                <h4 class="mb-sm-0">Synthèse des Données Tenants</h4>
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{% url 'saas_admin_app:saas_dashboard' %}">SaaS Admin</a></li>
+                        <li class="breadcrumb-item active">Synthèse des Données</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Totals Cards -->
+    <div class="row">
+        <div class="col-xl-2 col-md-4">
+            <div class="card modern-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-box primary me-3">
+                            <i class="ri-user-follow-line"></i>
+                        </div>
+                        <div>
+                            <p class="stat-tile-title mb-0">Total Prospects</p>
+                            <h2 class="stat-tile-value mb-0">{{ totals.prospects }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4">
+            <div class="card modern-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-box success me-3">
+                            <i class="ri-file-list-3-line"></i>
+                        </div>
+                        <div>
+                            <p class="stat-tile-title mb-0">Total Vœux</p>
+                            <h2 class="stat-tile-value mb-0">{{ totals.voeux }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-4">
+            <div class="card modern-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-box warning me-3">
+                            <i class="ri-file-copy-2-line"></i>
+                        </div>
+                        <div>
+                            <p class="stat-tile-title mb-0">Total Vœux Doubles</p>
+                            <h2 class="stat-tile-value mb-0">{{ totals.voeux_double }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-6">
+            <div class="card modern-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-box info me-3">
+                            <i class="ri-book-open-line"></i>
+                        </div>
+                        <div>
+                            <p class="stat-tile-title mb-0">Total Formations</p>
+                            <h2 class="stat-tile-value mb-0">{{ totals.formations }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card modern-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-box danger me-3">
+                            <i class="ri-stack-line"></i>
+                        </div>
+                        <div>
+                            <p class="stat-tile-title mb-0">Total Spécialités</p>
+                            <h2 class="stat-tile-value mb-0">{{ totals.specialites }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card modern-card">
+                <div class="card-header-modern d-flex align-items-center justify-content-between">
+                    <h5 class="card-title mb-0">Répartition par Institution</h5>
+                    <div class="d-flex gap-3 align-items-center">
+                        <div class="search-box">
+                            <i class="ri-search-line search-icon"></i>
+                            <input type="text" id="tenantSearch" class="form-control form-control-pill" placeholder="Filtrer par institution...">
+                        </div>
+                        <button type="button" class="btn btn-sm btn-light" onclick="window.location.reload()">
+                            <i class="ri-refresh-line align-middle"></i> Actualiser
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-modern align-middle" id="tenantTable">
+                            <thead>
+                                <tr>
+                                    <th>Institution</th>
+                                    <th class="text-center">Prospects</th>
+                                    <th class="text-center">Vœux</th>
+                                    <th class="text-center">Vœux Doubles</th>
+                                    <th class="text-center">Formations</th>
+                                    <th class="text-center">Spécialités</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in data_summary %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="tenant-avatar tenant-avatar-{% cycle '1' '2' '3' %} me-3">
+                                                {{ item.institut.nom|slice:":1"|upper }}
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0">{{ item.institut.nom }}</h6>
+                                                <small class="text-muted">{{ item.institut.schema_name }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary-subtle text-primary fs-12 px-2 py-1">
+                                            {{ item.prospect_count }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-success-subtle text-success fs-12 px-2 py-1">
+                                            {{ item.voeux_count }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-warning-subtle text-warning fs-12 px-2 py-1">
+                                            {{ item.voeux_double_count }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info-subtle text-info fs-12 px-2 py-1">
+                                            {{ item.formation_count }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-danger-subtle text-danger fs-12 px-2 py-1">
+                                            {{ item.specialite_count }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <a href="{% url 'saas_admin_app:saas_tenant_data_explorer' item.institut.id %}" class="btn btn-sm btn-soft-primary" title="Explorer les données">
+                                                <i class="ri-search-eye-line align-middle"></i>
+                                            </a>
+                                            <a href="{% url 'saas_admin_app:saas_tenant_detail' item.institut.id %}" class="btn btn-sm btn-soft-info" title="Détails du tenant">
+                                                <i class="ri-building-line align-middle"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-5 text-muted">
+                                        <i class="ri-database-2-line fs-1 display-4 d-block mb-3 opacity-50"></i>
+                                        Aucune institution trouvée.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('tenantSearch')?.addEventListener('input', function(e) {
+        const term = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#tenantTable tbody tr');
+        
+        rows.forEach(row => {
+            const tenantName = row.querySelector('h6')?.innerText.toLowerCase() || '';
+            const schemaName = row.querySelector('small')?.innerText.toLowerCase() || '';
+            
+            if (tenantName.includes(term) || schemaName.includes(term)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock extra_js %}

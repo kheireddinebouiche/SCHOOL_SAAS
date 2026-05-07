@@ -98,6 +98,8 @@ urlpatterns = [
     path('formation/<int:pk>/get-print-documents/', get_print_documents, name="get_print_documents"),
     path('ApiLoadDocumentTemplate', ApiLoadDocumentTemplate, name="ApiLoadDocumentTemplate"),
 
+    path('ApiUpdateFormationLegalEntity', ApiUpdateFormationLegalEntity, name="ApiUpdateFormationLegalEntity"),
+
     ### TRAITEMENT DES FORMATEURS ###
     path('formateurs/liste/',PageFormateurs, name="PageFormateurs"),
     path('create_formateur/', create_formateur, name="create_formateur"),
