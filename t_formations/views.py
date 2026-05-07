@@ -20,8 +20,8 @@ from django.db.models import Q
 import json
 from .data.modules_data import MODULES_DATA
 
-TenantModel = get_tenant_model()
 from app.models import Institut
+from t_crm.models import UserActionLog
 
 def listModules(request):
     modules = Modules.objects.all()
@@ -174,7 +174,15 @@ def AddPartenaire(request):
     if request.method == 'POST':
         form = NewPartenaireForm(request.POST, request.FILES, current_tenant=request.tenant)
         if form.is_valid():
-            form.save()
+            partenaire = form.save()
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Partenaire',
+                target_id=str(partenaire.id),
+                details=f"Création du partenaire : {partenaire.nom} (Code: {partenaire.code})",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
             messages.success(request, 'Partenaire ajouté avec succès')
             return redirect('t_formations:listPartenaires')
     else:
@@ -819,12 +827,30 @@ def ApiSyncPartenaire(request):
                 'type_partenaire': partenaire.type_partenaire,
             }
         )
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Partenaire',
+            target_id=str(partenaire.id),
+            details=f"Synchronisation du partenaire {partenaire.nom} vers le tenant {institut.nom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
         message = 'Partenaire synchronisé avec succès' if created else 'Informations du partenaire mises à jour avec succès'
         return JsonResponse({'success': True, 'message': message})
         
 def deletePartenaire(request, pk):
     partenaire = Partenaires.objects.get(id=pk)
+    details = f"Suppression du partenaire : {partenaire.nom} (Code: {partenaire.code})"
+    partenaire_id = partenaire.id
     partenaire.delete()
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='DELETE',
+        target_model='Partenaire',
+        target_id=str(partenaire_id),
+        details=details,
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
     messages.success(request, 'Partenaire supprimé avec succès')
     return redirect('t_formations:listPartenaires')
 
@@ -847,6 +873,14 @@ def UpdatePartenaire(request, pk):
         form = NewPartenaireForm(request.POST, request.FILES ,instance=partenaire)
         if form.is_valid():
             updated_partenaire = form.save()
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Partenaire',
+                target_id=str(updated_partenaire.id),
+                details=f"Modification du partenaire : {updated_partenaire.nom} (Code: {updated_partenaire.code})",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
             if updated_partenaire.type_partenaire == 'etranger':
                 instituts = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
                 for tenant in instituts:
@@ -1972,6 +2006,14 @@ def export_formations(request):
 def export_partenaires(request):
     format_type = request.GET.get('format', 'csv')
     partenaires = Partenaires.objects.all()
+
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='EXPORT',
+        target_model='Partenaire',
+        details=f"Exportation de la liste des partenaires (Format: {format_type})",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
 
     if format_type == 'excel':
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
