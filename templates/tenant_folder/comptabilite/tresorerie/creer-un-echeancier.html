@@ -526,31 +526,46 @@
                           </select>
                           <div class="form-text">Sélectionnez un modèle d'échéancier existant</div>
                         </div>
-
-                        <div class="row g-3">
-                            <div class="col-lg-6">
+                        <div class="row g-3 mb-3">
+                            <div class="col-lg-4">
                                 <label class="form-label fw-medium" for="frais_inscription">Frais d'inscription</label>
-                                <input type="number" step="0.1" class="form-control" id="frais_inscription">
-                                <div class="form-text">Veuillez donner le montant des frais d'inscription à appliquer pour cette promotion</div>
+                                <input type="number" step="0.1" class="form-control py-2" id="frais_inscription">
+                                <div class="form-text">Montant des frais</div>
                             </div>
-    
-                            <div class="col-lg-6">
-                                <label class="form-label fw-medium" for="entiteEcheancier">Entité d'encaissement</label>
+
+                            <div class="col-lg-4">
+                                <label class="form-label fw-medium" for="entiteEcheancier">Entité (Frais d'inscription)</label>
                                 <select class="form-select py-2" id="entiteEcheancier" name="entite">
-                                    <option value="">Sélectionnez l'entité juridique d'encaissement</option>
+                                    <option value="">Sélectionnez l'entité</option>
                                     <!-- Options à charger dynamiquement -->
                                 </select>
-                                <div class="form-text">L'entité qui va servir à définir l'entreprise d'encaissement</div>
+                                <div class="form-text">Entité dédiée aux frais</div>
+                            </div>
+    
+                            <div class="col-lg-4">
+                                <label class="form-label fw-medium">Remise / Majoration</label>
+                                <button type="button" class="btn btn-soft-info w-100 py-2 d-flex align-items-center justify-content-between" data-bs-toggle="modal" data-bs-target="#ajustementsModal">
+                                    <span>Configurer</span>
+                                    <i class="ri-settings-4-line"></i>
+                                </button>
+                                <div class="form-text">Ajustements du tarif</div>
+                                
+                                <!-- Hidden fields -->
+                                <input type="hidden" id="remise_echeancier" value="0">
+                                <input type="hidden" id="type_remise_echeancier" value="fixe">
+                                <input type="hidden" id="majoration_echeancier" value="0">
+                                <input type="hidden" id="type_majoration_echeancier" value="fixe">
                             </div>
                         </div>
-                        
-                        <div class="col-lg-12" id="formationField">
-                          <label class="form-label fw-medium" for="formationEcheancier">Formation</label>
-                          <select class="form-select py-2" id="formationEcheancier" name="formation_echeancier">
-                            <option value="">Sélectionnez une formation</option>
-                            <!-- Options à charger dynamiquement -->
-                          </select>
-                          <div class="form-text">Sélectionnez la formation associée à cet échéancier</div>
+
+                        <div class="row g-3">
+                            <div class="col-lg-12" id="formationField">
+                                <label class="form-label fw-medium" for="formationEcheancier">Formation</label>
+                                <select class="form-select py-2" id="formationEcheancier" name="formation_echeancier">
+                                    <option value="">Sélectionnez une formation</option>
+                                </select>
+                                <div class="form-text">Formation associée</div>
+                            </div>
                         </div>
 
                         <div class="col-lg-12" id="specialiteField" style="display: none;">
@@ -716,6 +731,23 @@
                         <h6 class="mb-2">Montant total</h6>
                         <div class="border rounded-3 p-2 bg-light" id="resumeTotal">-</div>
                       </div>
+
+                      <div class="mb-3">
+                        <h6 class="mb-2 text-danger">Remise appliquée</h6>
+                        <div class="border rounded-3 p-2 bg-danger bg-opacity-10 text-danger fw-bold" id="resumeRemise">0.00 DA</div>
+                        <div class="small text-muted mt-1" id="resumeRemiseType">Type: Montant Fixe</div>
+                      </div>
+
+                      <div class="mb-3">
+                        <h6 class="mb-2 text-primary">Majoration appliquée</h6>
+                        <div class="border rounded-3 p-2 bg-primary bg-opacity-10 text-primary fw-bold" id="resumeMajoration">0.00 DA</div>
+                        <div class="small text-muted mt-1" id="resumeMajorationType">Type: Montant Fixe</div>
+                      </div>
+
+                      <div class="mb-3">
+                        <h6 class="mb-2 text-success">Total après ajustements</h6>
+                        <div class="border rounded-3 p-2 bg-success bg-opacity-10 text-success fw-bold" id="resumeTotalFinal">-</div>
+                      </div>
                       
                       <div>
                         <h6 class="mb-2">Progression</h6>
@@ -774,6 +806,68 @@
           <i class="ri-close-line me-2"></i>Fermer
         </button>
         
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal Ajustements (Remise / Majoration) -->
+<div class="modal fade" id="ajustementsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg overflow-hidden">
+      <div class="modal-header bg-info px-4 py-3 border-0">
+        <h5 class="modal-title text-white fw-bold"><i class="ri-settings-4-line me-2"></i>Ajustements du Tarif</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row g-4">
+          <!-- Remise Section -->
+          <div class="col-12">
+            <div class="p-3 bg-danger bg-opacity-10 rounded-4 border border-danger border-opacity-20">
+              <label class="form-label fw-bold text-danger mb-2"><i class="ri-subtract-line me-1"></i>Remise de prix</label>
+              <div class="input-group">
+                <input type="number" step="0.1" class="form-control border-danger border-opacity-20" id="modal_remise_value" value="0">
+                <select class="form-select border-danger border-opacity-20 bg-white" id="modal_remise_type" style="max-width: 100px;">
+                  <option value="fixe">DA</option>
+                  <option value="pourcentage">%</option>
+                </select>
+              </div>
+              <div class="form-text text-danger opacity-75 small mt-2">Sera déduit du montant total de la spécialité.</div>
+            </div>
+          </div>
+
+          <!-- Majoration Section -->
+          <div class="col-12">
+            <div class="p-3 bg-primary bg-opacity-10 rounded-4 border border-primary border-opacity-20">
+              <label class="form-label fw-bold text-primary mb-2"><i class="ri-add-line me-1"></i>Majoration de prix</label>
+              <div class="input-group">
+                <input type="number" step="0.1" class="form-control border-primary border-opacity-20" id="modal_majoration_value" value="0">
+                <select class="form-select border-primary border-opacity-20 bg-white" id="modal_majoration_type" style="max-width: 100px;">
+                  <option value="fixe">DA</option>
+                  <option value="pourcentage">%</option>
+                </select>
+              </div>
+              <div class="form-text text-primary opacity-75 small mt-2">Sera ajouté au montant total de la spécialité.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview Section -->
+        <div class="mt-4 p-3 bg-light rounded-4">
+            <div class="d-flex justify-content-between align-items-center small text-muted mb-2">
+                <span>Total de base (estimé)</span>
+                <span id="modal_base_preview">0.00 DA</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center fw-bold text-dark">
+                <span>Total ajusté</span>
+                <span id="modal_total_preview">0.00 DA</span>
+            </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 px-4 py-3 bg-light d-flex justify-content-between">
+        <button type="button" class="btn btn-link text-muted fw-medium text-decoration-none" id="btnResetAjustements">Réinitialiser</button>
+        <button type="button" class="btn btn-info px-4 rounded-pill fw-bold" id="btnApplyAjustements">
+          Appliquer les modifications
+        </button>
       </div>
     </div>
   </div>
@@ -935,7 +1029,16 @@ $(document).ready(function () {
                 prixFormation = parseFloat(selectedFormation.data('prix')) || 0;
             }
             
-            var montant = (prixFormation * pourcentage / 100).toFixed(2);
+            var remise = parseFloat($('#remise_echeancier').val()) || 0;
+            var typeRemise = $('#type_remise_echeancier').val();
+            var actualDiscount = (typeRemise === 'pourcentage') ? (prixFormation * remise / 100) : remise;
+            
+            var majoration = parseFloat($('#majoration_echeancier').val()) || 0;
+            var typeMajoration = $('#type_majoration_echeancier').val();
+            var actualMajoration = (typeMajoration === 'pourcentage') ? (prixFormation * majoration / 100) : majoration;
+            
+            var prixNet = Math.max(0, prixFormation - actualDiscount + actualMajoration);
+            var montant = (prixNet * pourcentage / 100).toFixed(2);
         }
 
         // Mettre à jour le champ montant correspondant
@@ -948,6 +1051,66 @@ $(document).ready(function () {
         loadSpecialites(formationId);
         updateTranchesAmounts();
     });
+
+    $('#btnApplyAjustements').on('click', function() {
+        $('#remise_echeancier').val($('#modal_remise_value').val());
+        $('#type_remise_echeancier').val($('#modal_remise_type').val());
+        $('#majoration_echeancier').val($('#modal_majoration_value').val());
+        $('#type_majoration_echeancier').val($('#modal_majoration_type').val());
+        
+        updateResume();
+        if ($('#tranchesContainer').is(':visible')) {
+            updateTranchesAmounts();
+        }
+        
+        $('#ajustementsModal').modal('hide');
+        alertify.success("Ajustements appliqués");
+    });
+
+    $('#btnResetAjustements').on('click', function() {
+        $('#modal_remise_value').val(0);
+        $('#modal_remise_type').val('fixe');
+        $('#modal_majoration_value').val(0);
+        $('#modal_majoration_type').val('fixe');
+        updateModalPreview();
+    });
+
+    function updateModalPreview() {
+        var basePrice = 0;
+        if (isDoubleDiplomationMode) {
+            basePrice = parseFloat($('#doubleSpecialiteEchancier option:selected').data('prix')) || 0;
+        } else {
+            var selectedSpec = $('#specialiteEcheancier option:selected');
+            if (selectedSpec.val()) {
+                basePrice = parseFloat(selectedSpec.data('prix')) || 0;
+            } else {
+                basePrice = parseFloat($('#formationEcheancier option:selected').data('prix')) || 0;
+            }
+        }
+
+        var remiseVal = parseFloat($('#modal_remise_value').val()) || 0;
+        var remiseType = $('#modal_remise_type').val();
+        var actualRemise = (remiseType === 'pourcentage') ? (basePrice * remiseVal / 100) : remiseVal;
+
+        var majorationVal = parseFloat($('#modal_majoration_value').val()) || 0;
+        var majorationType = $('#modal_majoration_type').val();
+        var actualMajoration = (majorationType === 'pourcentage') ? (basePrice * majorationVal / 100) : majorationVal;
+
+        var total = basePrice - actualRemise + actualMajoration;
+        
+        $('#modal_base_preview').text(basePrice.toLocaleString() + " DA");
+        $('#modal_total_preview').text(total.toLocaleString() + " DA");
+    }
+
+    $('#ajustementsModal').on('show.bs.modal', function () {
+        $('#modal_remise_value').val($('#remise_echeancier').val());
+        $('#modal_remise_type').val($('#type_remise_echeancier').val());
+        $('#modal_majoration_value').val($('#majoration_echeancier').val());
+        $('#modal_majoration_type').val($('#type_majoration_echeancier').val());
+        updateModalPreview();
+    });
+
+    $('#modal_remise_value, #modal_remise_type, #modal_majoration_value, #modal_majoration_type').on('input change', updateModalPreview);
 
     $('#specialiteEcheancier, #doubleSpecialiteEchancier').on('change', function() {
         if ($(this).val()) {
@@ -962,8 +1125,17 @@ $(document).ready(function () {
         if($('#tranchesContainer').is(':visible')) {
             $('.tranche-pourcentage').each(function() {
                 var basePrice = parseFloat($(this).data('base-price')) || 0;
+                var remise = parseFloat($('#remise_echeancier').val()) || 0;
+                var typeRemise = $('#type_remise_echeancier').val();
+                var actualDiscount = (typeRemise === 'pourcentage') ? (basePrice * remise / 100) : remise;
+                
+                var majoration = parseFloat($('#majoration_echeancier').val()) || 0;
+                var typeMajoration = $('#type_majoration_echeancier').val();
+                var actualMajoration = (typeMajoration === 'pourcentage') ? (basePrice * majoration / 100) : majoration;
+                
+                var basePriceNet = Math.max(0, basePrice - actualDiscount + actualMajoration);
                 var pourcentage = parseFloat($(this).val()) || 0;
-                var montant = (basePrice * pourcentage / 100).toFixed(2);
+                var montant = (basePriceNet * pourcentage / 100).toFixed(2);
                 $(this).closest('.row').find('.montant-echeance').val(montant);
             });
         }
@@ -1096,6 +1268,22 @@ $(document).ready(function () {
 
                     $('#resumeTotal').text(prixFormation.toFixed(2) + " DA");
 
+                    var remiseValue = parseFloat($('#remise_echeancier').val()) || 0;
+                    var typeRemise = $('#type_remise_echeancier').val();
+                    var actualDiscount = (typeRemise === 'pourcentage') ? (prixFormation * remiseValue / 100) : remiseValue;
+                    
+                    var majorationValue = parseFloat($('#majoration_echeancier').val()) || 0;
+                    var typeMajoration = $('#type_majoration_echeancier').val();
+                    var actualMajoration = (typeMajoration === 'pourcentage') ? (prixFormation * majorationValue / 100) : majorationValue;
+                    
+                    $('#resumeRemise').text(actualDiscount.toFixed(2) + " DA");
+                    $('#resumeRemiseType').text("Type: " + (typeRemise === 'pourcentage' ? "Pourcentage (" + remiseValue + "%)" : "Montant Fixe"));
+                    
+                    $('#resumeMajoration').text(actualMajoration.toFixed(2) + " DA");
+                    $('#resumeMajorationType').text("Type: " + (typeMajoration === 'pourcentage' ? "Pourcentage (" + majorationValue + "%)" : "Montant Fixe"));
+                    
+                    $('#resumeTotalFinal').text((prixFormation - actualDiscount + actualMajoration).toFixed(2) + " DA");
+
                     // Mettre à jour la formation/spécialités dans le résumé
                     $('#resumeFormation').text(selectedText);
                     
@@ -1123,6 +1311,10 @@ $(document).ready(function () {
         var prixFormation = 0;
         var prixSpec1 = 0;
         var prixSpec2 = 0;
+        var remise = parseFloat($('#remise_echeancier').val()) || 0;
+        var typeRemise = $('#type_remise_echeancier').val();
+        var majoration = parseFloat($('#majoration_echeancier').val()) || 0;
+        var typeMajoration = $('#type_majoration_echeancier').val();
 
         if (isDoubleDiplomationMode) {
             // For double diplomation mode, get the individual prices for each specialization
@@ -1140,12 +1332,26 @@ $(document).ready(function () {
             var formation2 = selectedFormation.data('specialite2-formation') || 'Formation 2';
 
             if (tranches && tranches.length > 0) {
-                renderTranchesBlock(container, tranches, prixSpec1, label1, selectedFormation.data('specialite1-id'), formation1);
-                renderTranchesBlock(container, tranches, prixSpec2, label2, selectedFormation.data('specialite2-id'), formation2);
+                // For double diplomation, remise is split or applied to total? 
+                // We'll apply the percentage or half fixed remise to each.
+                var actualRemise1 = (typeRemise === 'pourcentage') ? (prixSpec1 * remise / 100) : (remise / 2);
+                var actualRemise2 = (typeRemise === 'pourcentage') ? (prixSpec2 * remise / 100) : (remise / 2);
+                
+                var actualMajoration1 = (typeMajoration === 'pourcentage') ? (prixSpec1 * majoration / 100) : (majoration / 2);
+                var actualMajoration2 = (typeMajoration === 'pourcentage') ? (prixSpec2 * majoration / 100) : (majoration / 2);
+                
+                renderTranchesBlock(container, tranches, prixSpec1, label1, selectedFormation.data('specialite1-id'), formation1, actualRemise1, actualMajoration1);
+                renderTranchesBlock(container, tranches, prixSpec2, label2, selectedFormation.data('specialite2-id'), formation2, actualRemise2, actualMajoration2);
             } else {
                 var pourcentageParTranche = (100 / nombreTranches).toFixed(2);
-                renderTranchesBlock(container, Array(nombreTranches).fill({label: "Versement", value: pourcentageParTranche}), prixSpec1, label1, selectedFormation.data('specialite1-id'), formation1);
-                renderTranchesBlock(container, Array(nombreTranches).fill({label: "Versement", value: pourcentageParTranche}), prixSpec2, label2, selectedFormation.data('specialite2-id'), formation2);
+                var actualRemise1 = (typeRemise === 'pourcentage') ? (prixSpec1 * remise / 100) : (remise / 2);
+                var actualRemise2 = (typeRemise === 'pourcentage') ? (prixSpec2 * remise / 100) : (remise / 2);
+                
+                var actualMajoration1 = (typeMajoration === 'pourcentage') ? (prixSpec1 * majoration / 100) : (majoration / 2);
+                var actualMajoration2 = (typeMajoration === 'pourcentage') ? (prixSpec2 * majoration / 100) : (majoration / 2);
+                
+                renderTranchesBlock(container, Array(nombreTranches).fill({label: "Versement", value: pourcentageParTranche}), prixSpec1, label1, selectedFormation.data('specialite1-id'), formation1, actualRemise1, actualMajoration1);
+                renderTranchesBlock(container, Array(nombreTranches).fill({label: "Versement", value: pourcentageParTranche}), prixSpec2, label2, selectedFormation.data('specialite2-id'), formation2, actualRemise2, actualMajoration2);
             }
         } else {
             // Récupérer le prix de la formation sélectionnée
@@ -1160,8 +1366,10 @@ $(document).ready(function () {
             if (selectedSpecialiteId) {
                 // MODE : Une seule spécialité sélectionnée
                 var prixSpec = parseFloat(selectedSpecialite.data('prix')) || 0;
+                var actualRemise = (typeRemise === 'pourcentage') ? (prixSpec * remise / 100) : remise;
+                var actualMajoration = (typeMajoration === 'pourcentage') ? (prixSpec * majoration / 100) : majoration;
                 var trArray = tranches && tranches.length > 0 ? tranches : Array(parseInt(nombreTranches)).fill({label: "Versement", value: (100 / nombreTranches).toFixed(2)});
-                renderTranchesBlock(container, trArray, prixSpec, selectedSpecialite.text(), selectedSpecialiteId);
+                renderTranchesBlock(container, trArray, prixSpec, selectedSpecialite.text(), selectedSpecialiteId, null, actualRemise, actualMajoration);
             } else if (hasPriceDifferences && globalSpecialites.length > 0) {
                 // MODE : Multi-spécialités (prix différents détectés) - Groupement par prix
                 var trArray = tranches && tranches.length > 0 ? tranches : Array(parseInt(nombreTranches)).fill({label: "Versement", value: (100 / nombreTranches).toFixed(2)});
@@ -1182,25 +1390,32 @@ $(document).ready(function () {
                 $.each(priceGroups, function(priceStr, group) {
                     var label = group.specs.map(s => s.label).join(", ");
                     var specIds = group.specs.map(s => s.id).join(",");
-                    renderTranchesBlock(container, trArray, group.price, label, specIds);
+                    var actualRemise = (typeRemise === 'pourcentage') ? (group.price * remise / 100) : remise;
+                    var actualMajoration = (typeMajoration === 'pourcentage') ? (group.price * majoration / 100) : majoration;
+                    renderTranchesBlock(container, trArray, group.price, label, specIds, null, actualRemise, actualMajoration);
                 });
             } else {
                 // MODE : Par défaut (Formation seule ou prix identiques)
                 var prixSpec = prixBaseFormation;
+                var actualRemise = (typeRemise === 'pourcentage') ? (prixSpec * remise / 100) : remise;
+                var actualMajoration = (typeMajoration === 'pourcentage') ? (prixSpec * majoration / 100) : majoration;
                 var trArray = tranches && tranches.length > 0 ? tranches : Array(parseInt(nombreTranches)).fill({label: "Versement", value: (100 / nombreTranches).toFixed(2)});
-                renderTranchesBlock(container, trArray, prixSpec, "Formation", null);
+                renderTranchesBlock(container, trArray, prixSpec, "Formation", null, null, actualRemise, actualMajoration);
             }
         }
     }
 
     // Helper function to render a block of tranches
-    function renderTranchesBlock(container, tranches, basePrice, label, specId, subLabel = null) {
+    function renderTranchesBlock(container, tranches, basePrice, label, specId, subLabel = null, remise = 0, majoration = 0) {
+        var basePriceNet = Math.max(0, basePrice - remise + majoration);
         var blockId = 'block-' + (specId || 'global').toString().replace(/,/g, '-');
         container.append(`
             <div class="specialite-header mb-3 mt-4" id="${blockId}">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="text-primary fw-bold mb-0">
-                        <i class="ri-building-line me-2"></i>Échéancier ${isDoubleDiplomationMode ? 'pour ' + label : ''} d'un montant de ${basePrice.toLocaleString('fr-FR')} DA
+                        <i class="ri-building-line me-2"></i>Échéancier ${isDoubleDiplomationMode ? 'pour ' + label : ''} d'un montant de ${basePriceNet.toLocaleString('fr-FR')} DA
+                        ${remise > 0 ? `<span class="badge bg-danger-subtle text-danger ms-2" style="font-size: 0.7rem;">Remise: -${remise.toLocaleString('fr-FR')} DA</span>` : ''}
+                        ${majoration > 0 ? `<span class="badge bg-primary-subtle text-primary ms-2" style="font-size: 0.7rem;">Majoration: +${majoration.toLocaleString('fr-FR')} DA</span>` : ''}
                         <span class="ms-2" data-bs-toggle="tooltip" data-bs-html="true" title="<div class='text-start'><strong>Spécialités concernées :</strong><br>${label.split(', ').join('<br>')}</div>">
                             <i class="ri-information-line text-muted fs-6" style="cursor: pointer;"></i>
                         </span>
@@ -1229,7 +1444,7 @@ $(document).ready(function () {
                 libelleDefault += " - " + label;
             }
             
-            var montantEcheance = (basePrice * parseFloat(tranche.value) / 100).toFixed(2);
+            var montantEcheance = (basePriceNet * parseFloat(tranche.value) / 100).toFixed(2);
             var trancheHtml = `
                 <div class="tranche-item mb-3 p-3 bg-light rounded-3">
                     <div class="row g-3 align-items-end">
@@ -1275,6 +1490,10 @@ $(document).ready(function () {
         var formationId = $('#formationEcheancier').val();
         var doubleFormation = $('#doubleSpecialiteEchancier').val();
         var frais_inscription = $('#frais_inscription').val();
+        var remise = $('#remise_echeancier').val() || 0;
+        var type_remise = $('#type_remise_echeancier').val() || 'fixe';
+        var majoration = $('#majoration_echeancier').val() || 0;
+        var type_majoration = $('#type_majoration_echeancier').val() || 'fixe';
         var entite = $('#entiteEcheancier').val();
 
         if(!modeleId) {
@@ -1341,6 +1560,10 @@ $(document).ready(function () {
                 'tranches': JSON.stringify(tranchesData),
                 'is_double_diplomation': isDoubleDiplomationMode,
                 'frais_inscription' : frais_inscription,
+                'remise' : remise,
+                'type_remise' : type_remise,
+                'majoration' : majoration,
+                'type_majoration' : type_majoration,
                 'entite': entite,
                 // Ajouter les identifiants des spécialités si en mode double diplomation
                 'specialite1_id': isDoubleDiplomationMode ? $('#doubleSpecialiteEchancier').find('option:selected').data('specialite1-id') : null,
@@ -1358,6 +1581,10 @@ $(document).ready(function () {
                     setTimeout(function() {
                         $('#modeleEcheancier').val('');
                         $('#formationEcheancier').val('');
+                        $('#remise_echeancier').val('0');
+                        $('#type_remise_echeancier').val('fixe');
+                        $('#majoration_echeancier').val('0');
+                        $('#type_majoration_echeancier').val('fixe');
                         $('#tranchesContainer').hide();
                         $('#resumeContainer').hide();
                         $('#listeTranchesContainer').empty();

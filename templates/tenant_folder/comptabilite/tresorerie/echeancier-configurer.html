@@ -242,6 +242,8 @@
                       <th class="border-0">Tarif Formation</th>
                       <th class="border-0">Nombre de Tranches</th>
                       <th class="border-0">Frais d'inscrip.</th>
+                      <th class="border-0">Remise</th>
+                      <th class="border-0">Majoration</th>
                       <th class="border-0">Disponible</th>
                       <th class="border-0">Date de création</th>
                       <th class="border-0 rounded-end text-center">Actions</th>
@@ -355,8 +357,22 @@
                 <div class="border rounded-3 p-2 bg-light" id="detailEcheancierFraisInscription">-</div>
               </div>
               <div class="col-lg-6">
-                <label class="form-label fw-medium">Tarif Formation</label>
-                <div class="border rounded-3 p-2 bg-light fw-bold text-primary" id="detailEcheancierTarif">-</div>
+                <label class="form-label fw-medium">Remise</label>
+                <div class="border rounded-3 p-2 bg-danger bg-opacity-10 text-danger fw-bold" id="detailEcheancierRemise">-</div>
+                <div class="small text-muted mt-1" id="detailEcheancierRemiseType">Type: -</div>
+              </div>
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">Majoration</label>
+                <div class="border rounded-3 p-2 bg-primary bg-opacity-10 text-primary fw-bold" id="detailEcheancierMajoration">-</div>
+                <div class="small text-muted mt-1" id="detailEcheancierMajorationType">Type: -</div>
+              </div>
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">Tarif Formation (Base)</label>
+                <div class="border rounded-3 p-2 bg-light" id="detailEcheancierTarif">-</div>
+              </div>
+              <div class="col-lg-6">
+                <label class="form-label fw-medium">Net à payer</label>
+                <div class="border rounded-3 p-2 bg-success bg-opacity-10 text-success fw-bold" id="detailEcheancierNet">-</div>
               </div>
             </div>
           </div>
@@ -686,9 +702,29 @@
                   <select class="form-select" id="editEcheancierEntite">
                   </select>
                 </div>
-                <div class="col-lg-12">
-                  <label class="form-label fw-medium">Frais d'inscription (DZD)</label>
+                <div class="col-lg-4">
+                  <label class="form-label fw-medium">Frais Inscription</label>
                   <input type="number" step="0.01" class="form-control" id="editEcheancierFraisInscription">
+                </div>
+                <div class="col-lg-4">
+                  <label class="form-label fw-medium">Remise</label>
+                  <div class="input-group">
+                    <input type="number" step="0.01" class="form-control" id="editEcheancierRemise">
+                    <select class="form-select" id="editEcheancierTypeRemise" style="max-width: 70px;">
+                      <option value="fixe">DA</option>
+                      <option value="pourcentage">%</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-lg-4">
+                  <label class="form-label fw-medium">Majoration</label>
+                  <div class="input-group">
+                    <input type="number" step="0.01" class="form-control" id="editEcheancierMajoration">
+                    <select class="form-select" id="editEcheancierTypeMajoration" style="max-width: 70px;">
+                      <option value="fixe">DA</option>
+                      <option value="pourcentage">%</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -826,7 +862,7 @@ $(document).ready(function () {
                     currentPromo = item.promo_label;
                     currentModel = null; // Réinitialiser le modèle quand la promo change
                     row += `<tr class="bg-light bg-opacity-50">
-                                <td colspan="9" class="py-2 px-4 border-bottom">
+                                <td colspan="10" class="py-2 px-4 border-bottom">
                                     <div class="d-flex align-items-center">
                                         <i class="ri-calendar-event-line text-primary me-2"></i>
                                         <span class="fw-bold text-primary text-uppercase small" style="letter-spacing: 0.1em;">
@@ -841,7 +877,7 @@ $(document).ready(function () {
                 if (item.model_label !== currentModel) {
                     currentModel = item.model_label;
                     row += `<tr class="bg-info bg-opacity-10">
-                                <td colspan="9" class="py-1 px-5 border-bottom">
+                                <td colspan="10" class="py-1 px-5 border-bottom">
                                     <div class="d-flex align-items-center">
                                         <i class="ri-layout-grid-line text-info me-2 small"></i>
                                         <span class="fw-bold text-info small">
@@ -853,11 +889,7 @@ $(document).ready(function () {
                 }
 
                 // Déterminer le badge d'état
-                // Déterminer le badge d'état
                 let statusBadge = '';
-                let defaultBadge = '';
-
-
                 
                 // Format the date
                 var createdDate = new Date(item.created_at);
@@ -896,9 +928,26 @@ $(document).ready(function () {
                 row += '<td><div class="form-check custom-checkbox"><input type="checkbox" class="form-check-input echeancier-checkbox" data-id="'+item.id+'"></div></td>';
                 row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1 fw-bold text-primary'>" + item.model_label + "</div></div></td>";
                 row += "<td>" + formationCell + "</td>";
-                row += "<td><span class='fw-bold'>" + (item.tarif_formation || '0.00') + " DZD</span></td>";
+                row += "<td><span class='fw-bold'>" + parseFloat(item.tarif_formation || 0).toLocaleString() + " DZD</span></td>";
                 row += "<td>" + item.nombre_tranches + "</td>";
-                row += "<td><span class='fw-bold'>" + (item.frais_inscription || '0.00') + " DZD</span></td>";
+                row += "<td><span class='fw-bold'>" + parseFloat(item.frais_inscription || 0).toLocaleString() + " DZD</span></td>";
+                
+                let remiseText = parseFloat(item.remise || 0).toLocaleString();
+                if (item.type_remise === 'pourcentage') {
+                    remiseText = item.remise + " %";
+                } else {
+                    remiseText = remiseText + " DZD";
+                }
+                
+                let majorationText = parseFloat(item.majoration || 0).toLocaleString();
+                if (item.type_majoration === 'pourcentage') {
+                    majorationText = item.majoration + " %";
+                } else {
+                    majorationText = majorationText + " DZD";
+                }
+                
+                row += "<td><span class='text-danger fw-bold'>-" + remiseText + "</span></td>";
+                row += "<td><span class='text-primary fw-bold'>+" + majorationText + "</span></td>";
                 
                 let disponibleBadge = item.is_active ? 
                     '<span class="badge bg-success-subtle text-success px-2 py-1"><i class="ri-check-line"></i></span>' : 
@@ -941,7 +990,7 @@ $(document).ready(function () {
                 row += '</tr>';
             });
         } else {
-            row += '<tr><td colspan="9" class="text-center py-4">';
+            row += '<tr><td colspan="10" class="text-center py-4">';
             row += '<div class="d-flex flex-column align-items-center">';
             row += '<i class="ri-calendar-check-line ri-2x text-muted mb-2"></i>';
             row += '<p class="text-muted mb-0">Aucun échéancier configuré pour le moment</p>';
@@ -1081,9 +1130,26 @@ $(document).ready(function () {
                     $('#detailEcheancierEtat').html(statusBadge);
                     
                     $('#detailEcheancierDate').text(data.created_at);
-                    $('#detailEcheancierEntite').text(data.entite_label);
-                    $('#detailEcheancierFraisInscription').text(data.frais_inscription + " DZD");
-                    $('#detailEcheancierTarif').text(data.tarif_formation + " DZD");
+                    $('#detailEcheancierEntite').text(data.entite_label || 'Non définie');
+                    $('#detailEcheancierFraisInscription').text(parseFloat(data.frais_inscription).toLocaleString() + ' DA');
+                    
+                    var tarif = parseFloat(data.tarif_formation) || 0;
+                    var remise = parseFloat(data.remise) || 0;
+                    var typeRemise = data.type_remise;
+                    var majoration = parseFloat(data.majoration) || 0;
+                    var typeMajoration = data.type_majoration;
+                    
+                    var actualDiscount = (typeRemise === 'pourcentage') ? (tarif * remise / 100) : remise;
+                    var actualMajoration = (typeMajoration === 'pourcentage') ? (tarif * majoration / 100) : majoration;
+                    
+                    $('#detailEcheancierRemise').text('-' + actualDiscount.toLocaleString() + ' DA');
+                    $('#detailEcheancierRemiseType').text('Type: ' + (typeRemise === 'pourcentage' ? 'Pourcentage (' + remise + '%)' : 'Montant Fixe'));
+                    
+                    $('#detailEcheancierMajoration').text('+' + actualMajoration.toLocaleString() + ' DA');
+                    $('#detailEcheancierMajorationType').text('Type: ' + (typeMajoration === 'pourcentage' ? 'Pourcentage (' + majoration + '%)' : 'Montant Fixe'));
+                    
+                    $('#detailEcheancierTarif').text(tarif.toLocaleString() + ' DA');
+                    $('#detailEcheancierNet').text((tarif - actualDiscount + actualMajoration).toLocaleString() + ' DA');
                     
                     // Remplir les tranches
                     var tranchesRow = "";
@@ -1095,13 +1161,13 @@ $(document).ready(function () {
                             tranchesRow += '<tr>';
                             tranchesRow += '<td>'+tranche.value+'</td>';
                             tranchesRow += '<td>'+tranche.taux+' %</td>';
-                            tranchesRow += '<td>'+tranche.montant_tranche+'DZD </td>';
+                            tranchesRow += '<td>'+parseFloat(tranche.montant_tranche).toLocaleString()+' DA </td>';
                             tranchesRow += '<td>'+dateEcheance+'</td>';
                             tranchesRow += '<td>'+(tranche.description || '-')+'</td>';
                             tranchesRow += '</tr>';
                         });
                     } else {
-                        tranchesRow += '<tr><td colspan="4" class="text-center">Aucune tranche définie</td></tr>';
+                        tranchesRow += '<tr><td colspan="5" class="text-center">Aucune tranche définie</td></tr>';
                     }
                     
                     $('#detailTranchesList').html(tranchesRow);
@@ -1302,6 +1368,10 @@ $(document).ready(function () {
 
                         // Set registration fees
                         $('#editEcheancierFraisInscription').val(data.frais_inscription);
+                        $('#editEcheancierRemise').val(data.remise);
+                        $('#editEcheancierTypeRemise').val(data.type_remise);
+                        $('#editEcheancierMajoration').val(data.majoration);
+                        $('#editEcheancierTypeMajoration').val(data.type_majoration);
                         
                         // Fill the tranches - allow editing libellé and dates
                         var tranchesHtml = '';
@@ -1338,9 +1408,13 @@ $(document).ready(function () {
     // Save echeancier changes
     $('#saveEcheancierChanges').on('click', function() {
         var echeancierId = $('#editEcheancierId').val();
-        var isActive = $('#editEcheancierStatus').val();
+        var is_active = $('#editEcheancierStatus').val();
         var entite = $('#editEcheancierEntite').val();
-        var fraisInscription = $('#editEcheancierFraisInscription').val();
+        var frais_inscription = $('#editEcheancierFraisInscription').val();
+        var remise = $('#editEcheancierRemise').val();
+        var type_remise = $('#editEcheancierTypeRemise').val();
+        var majoration = $('#editEcheancierMajoration').val();
+        var type_majoration = $('#editEcheancierTypeMajoration').val();
         
         // Collect tranche data (libellé and date)
         var trancheUpdates = [];
@@ -1363,10 +1437,15 @@ $(document).ready(function () {
         // Prepare data for submission
         var formData = new FormData();
         formData.append('id', echeancierId);
-        formData.append('is_active', isActive);
+        formData.append('is_active', is_active);
         formData.append('entite', entite);
-        formData.append('frais_inscription', fraisInscription);
+        formData.append('frais_inscription', frais_inscription);
+        formData.append('remise', remise);
+        formData.append('type_remise', type_remise);
+        formData.append('majoration', majoration);
+        formData.append('type_majoration', type_majoration);
         formData.append('tranche_updates', JSON.stringify(trancheUpdates));
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
         
         // Show loading indicator
         $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enregistrement...');

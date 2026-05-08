@@ -227,6 +227,11 @@ class EcheancierPaiement(models.Model):
     formation_double = models.ForeignKey(DoubleDiplomation, on_delete=models.CASCADE, null=True, blank=True)
 
     entite = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)
+    remise = models.DecimalField(decimal_places=2, max_digits=20, default=0, null=True, blank=True)
+    type_remise = models.CharField(max_length=20, default='fixe', choices=[('fixe', 'Montant Fixe'), ('pourcentage', 'Pourcentage')])
+    
+    majoration = models.DecimalField(decimal_places=2, max_digits=20, default=0, null=True, blank=True)
+    type_majoration = models.CharField(max_length=20, default='fixe', choices=[('fixe', 'Montant Fixe'), ('pourcentage', 'Pourcentage')])
     
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=False)

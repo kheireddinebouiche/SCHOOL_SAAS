@@ -62,6 +62,9 @@ def ApiLoadEcheancierDetails(request):
         
         # Calculer le tarif de la formation
         tarif_formation = 0
+        remise_val = echeancier.remise or 0
+        type_remise = echeancier.type_remise or 'fixe'
+        
         try:
             if echeancier.formation_double:
                 tarif_formation = (echeancier.formation_double.prix_spec1 or 0) + (echeancier.formation_double.prix_spec2 or 0)
@@ -72,6 +75,18 @@ def ApiLoadEcheancierDetails(request):
         except Exception as e:
             print(f"Error calculating tarif: {e}")
             tarif_formation = 0
+
+        # Calculate actual discount amount
+        actual_discount = remise_val
+        if type_remise == 'pourcentage':
+            actual_discount = (tarif_formation * remise_val / 100)
+
+        # Calculate actual majoration amount
+        majoration_val = echeancier.majoration or 0
+        type_majoration = echeancier.type_majoration or 'fixe'
+        actual_majoration = majoration_val
+        if type_majoration == 'pourcentage':
+            actual_majoration = (tarif_formation * majoration_val / 100)
             
         data = {
             'id': echeancier.id,
@@ -84,7 +99,12 @@ def ApiLoadEcheancierDetails(request):
             'entite' : echeancier.entite.id if echeancier.entite else None,
             'entite_label' : echeancier.entite.designation if echeancier.entite else None,
             'frais_inscription' : str(echeancier.frais_inscription) if echeancier.frais_inscription else "0.00",
+            'remise': str(remise_val),
+            'type_remise': type_remise,
+            'majoration': str(majoration_val),
+            'type_majoration': type_majoration,
             'tarif_formation': tarif_formation,
+            'total_after_adjustments': str(tarif_formation - actual_discount + actual_majoration),
         }
         
         return JsonResponse({'status': 'success', 'data': data}, safe=False)
@@ -102,6 +122,10 @@ def ApiSaveEcheancier(request):
             tranches_data = request.POST.get('tranches')
             is_double_diplomation = request.POST.get('is_double_diplomation', 'false') == 'true'
             frais_inscription = request.POST.get('frais_inscription')
+            remise = request.POST.get('remise', 0)
+            type_remise = request.POST.get('type_remise', 'fixe')
+            majoration = request.POST.get('majoration', 0)
+            type_majoration = request.POST.get('type_majoration', 'fixe')
             entite_id = request.POST.get('entite')
 
             # Helper to sanitize IDs from potential 'null'/'undefined' strings
@@ -167,6 +191,10 @@ def ApiSaveEcheancier(request):
                         specialite=spec_obj,
                         is_active=True,
                         frais_inscription=frais_inscription,
+                        remise=remise,
+                        type_remise=type_remise,
+                        majoration=majoration,
+                        type_majoration=type_majoration,
                         entite_id=entite_id,
                     )
                     
@@ -215,6 +243,10 @@ def ApiSaveEcheancier(request):
                 formation_double=double_obj,
                 is_active=True,
                 frais_inscription=frais_inscription,
+                remise=remise,
+                type_remise=type_remise,
+                majoration=majoration,
+                type_majoration=type_majoration,
                 entite_id=entite_id,
             )
 
@@ -341,7 +373,7 @@ def ListeEcheanciersConfigures(request):
 def ApiLoadEcheanciersConfigures(request):
     try:
         echeanciers = EcheancierPaiement.objects.all().values(
-            'id', 'model__label', 'formation__nom', 'formation__prix_formation', 'specialite__label', 'specialite__prix', 'specialite__prix_double_diplomation', 'is_active', 'is_archived', 'created_at','is_default','formation_double__label','formation_double__prix','formation_double__prix_spec1','formation_double__prix_spec2','model__is_double_diplomation', 'frais_inscription',
+            'id', 'model__label', 'formation__nom', 'formation__prix_formation', 'specialite__label', 'specialite__prix', 'specialite__prix_double_diplomation', 'is_active', 'is_archived', 'created_at','is_default','formation_double__label','formation_double__prix','formation_double__prix_spec1','formation_double__prix_spec2','model__is_double_diplomation', 'frais_inscription', 'remise', 'type_remise', 'majoration', 'type_majoration',
             'model__promo_id', 'model__promo__label', 'formation_double__specialite1__label', 'formation_double__specialite2__label'
         )
         
@@ -377,6 +409,10 @@ def ApiLoadEcheanciersConfigures(request):
                 echeancier['model__label'],
                 echeancier['formation__nom'] or '',
                 str(echeancier['frais_inscription'] or '0.00'),
+                str(echeancier['remise'] or '0.00'),
+                echeancier['type_remise'],
+                str(echeancier['majoration'] or '0.00'),
+                echeancier['type_majoration'],
                 str(prix), # Include base price in grouping
                 tranches_sig
             )
@@ -398,6 +434,10 @@ def ApiLoadEcheanciersConfigures(request):
                     'nombre_tranches': lines.count(),
                     'is_default': echeancier['is_default'],
                     'frais_inscription': echeancier['frais_inscription'],
+                    'remise': echeancier['remise'],
+                    'type_remise': echeancier['type_remise'],
+                    'majoration': echeancier['majoration'],
+                    'type_majoration': echeancier['type_majoration'],
                     'tarif_formation': prix,
                     'spec1': echeancier.get('formation_double__specialite1__label'),
                     'spec2': echeancier.get('formation_double__specialite2__label')
@@ -436,6 +476,10 @@ def ApiLoadEcheanciersConfigures(request):
                 'nombre_tranches': group['nombre_tranches'],
                 'is_default': group['is_default'],
                 'frais_inscription': group['frais_inscription'],
+                'remise': group['remise'],
+                'type_remise': group['type_remise'],
+                'majoration': group['majoration'],
+                'type_majoration': group['type_majoration'],
                 'tarif_formation': group['tarif_formation']
             })
         
@@ -566,6 +610,10 @@ def ApiUpdateEcheancier(request):
             is_active_val = request.POST.get('is_active') == '1'
             entite_id = request.POST.get('entite')
             frais_inscription = request.POST.get('frais_inscription')
+            remise = request.POST.get('remise')
+            type_remise = request.POST.get('type_remise')
+            majoration = request.POST.get('majoration')
+            type_majoration = request.POST.get('type_majoration')
             tranche_updates_json = request.POST.get('tranche_updates')
             import json
             tranche_updates = json.loads(tranche_updates_json)
@@ -580,6 +628,14 @@ def ApiUpdateEcheancier(request):
                     echeancier.entite_id = entite_id
                 if frais_inscription:
                     echeancier.frais_inscription = frais_inscription
+                if remise is not None:
+                    echeancier.remise = remise
+                if type_remise:
+                    echeancier.type_remise = type_remise
+                if majoration is not None:
+                    echeancier.majoration = majoration
+                if type_majoration:
+                    echeancier.type_majoration = type_majoration
                 echeancier.save()
                 
                 # Update tranches
