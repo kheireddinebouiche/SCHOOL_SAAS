@@ -314,15 +314,30 @@ def saas_tenant_data_explorer_view(request, tenant_id):
             # Vœux
             try:
                 from t_crm.models import FicheDeVoeux
-                # Pre-fetch specialite__formation to avoid queries in template
-                context['voeux'] = list(FicheDeVoeux.objects.all().select_related('prospect', 'specialite__formation', 'promo').order_by('-created_at')[:500])
+                voeux_list = list(FicheDeVoeux.objects.all().select_related('prospect', 'specialite__formation', 'promo').order_by('-created_at')[:500])
+                context['voeux'] = voeux_list
+                
+                # Detect duplicates for standard voeux
+                prospect_voeux_counts = {}
+                for v in voeux_list:
+                    if v.prospect_id:
+                        prospect_voeux_counts[v.prospect_id] = prospect_voeux_counts.get(v.prospect_id, 0) + 1
+                context['duplicate_voeux_prospect_ids'] = [pid for pid, count in prospect_voeux_counts.items() if count > 1]
             except:
                 context['voeux'] = []
             
             # Vœux Doubles
             try:
                 from t_crm.models import FicheVoeuxDouble
-                context['voeux_double'] = list(FicheVoeuxDouble.objects.all().select_related('prospect', 'specialite__formation', 'promo').order_by('-created_at')[:500])
+                voeux_double_list = list(FicheVoeuxDouble.objects.all().select_related('prospect', 'specialite__formation', 'promo').order_by('-created_at')[:500])
+                context['voeux_double'] = voeux_double_list
+                
+                # Detect duplicates for double voeux
+                prospect_double_counts = {}
+                for v in voeux_double_list:
+                    if v.prospect_id:
+                        prospect_double_counts[v.prospect_id] = prospect_double_counts.get(v.prospect_id, 0) + 1
+                context['duplicate_double_prospect_ids'] = [pid for pid, count in prospect_double_counts.items() if count > 1]
             except:
                 context['voeux_double'] = []
             
