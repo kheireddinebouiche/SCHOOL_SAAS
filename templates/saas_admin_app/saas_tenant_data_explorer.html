@@ -411,8 +411,8 @@
                                             <td class="pe-4 text-end">
                                                 <div class="d-flex justify-content-end gap-2">
                                                     <button class="btn btn-soft-primary btn-sm rounded-circle p-0 avatar-xs" 
-                                                            onclick="openEditVoeuModal('{{ v.id }}', 'standard', '{{ v.specialite.id }}', '{{ v.prospect.nom }} {{ v.prospect.prenom }}', '{{ v.promo.id }}')"
-                                                            title="Modifier la spécialité">
+                                                            onclick="openEditVoeuModal('{{ v.id }}', 'standard', '{{ v.specialite.id }}', '{{ v.prospect.nom }} {{ v.prospect.prenom }}', '{{ v.promo.id }}', '{{ v.is_confirmed|yesno:'true,false' }}')"
+                                                            title="Modifier la fiche">
                                                         <i class="ri-pencil-line"></i>
                                                     </button>
                                                     <button class="btn btn-soft-danger btn-sm rounded-circle p-0 avatar-xs" 
@@ -494,8 +494,8 @@
                                             <td class="pe-4 text-end">
                                                 <div class="d-flex justify-content-end gap-2">
                                                     <button class="btn btn-soft-warning btn-sm rounded-circle p-0 avatar-xs" 
-                                                            onclick="openEditVoeuModal('{{ v.id }}', 'double', '{{ v.specialite.id }}', '{{ v.prospect.nom }} {{ v.prospect.prenom }}', '{{ v.promo.id }}')"
-                                                            title="Modifier la spécialité">
+                                                            onclick="openEditVoeuModal('{{ v.id }}', 'double', '{{ v.specialite.id }}', '{{ v.prospect.nom }} {{ v.prospect.prenom }}', '{{ v.promo.id }}', '{{ v.is_confirmed|yesno:'true,false' }}')"
+                                                            title="Modifier la fiche">
                                                         <i class="ri-pencil-line"></i>
                                                     </button>
                                                     <button class="btn btn-soft-danger btn-sm rounded-circle p-0 avatar-xs" 
@@ -645,6 +645,13 @@
                             {% endfor %}
                         </select>
                     </div>
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold">État de confirmation</label>
+                        <select class="form-select rounded-pill border-light shadow-sm" id="editVoeuConfirmedSelect">
+                            <option value="false">En attente</option>
+                            <option value="true">Confirmé</option>
+                        </select>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer border-0 p-4 pt-0">
@@ -762,12 +769,13 @@
 
     const editModal = new bootstrap.Modal(document.getElementById('editVoeuModal'));
 
-    function openEditVoeuModal(id, type, currentSpecId, prospectName, currentPromoId) {
+    function openEditVoeuModal(id, type, currentSpecId, prospectName, currentPromoId, isConfirmed) {
         document.getElementById('editVoeuId').value = id;
         document.getElementById('editVoeuType').value = type;
         document.getElementById('editVoeuProspectName').innerText = prospectName;
         document.getElementById('editVoeuSpecialiteSelect').value = currentSpecId;
         document.getElementById('editVoeuPromoSelect').value = currentPromoId || "";
+        document.getElementById('editVoeuConfirmedSelect').value = isConfirmed === 'true' || isConfirmed === true ? 'true' : 'false';
         editModal.show();
     }
 
@@ -776,6 +784,7 @@
         const type = document.getElementById('editVoeuType').value;
         const specId = document.getElementById('editVoeuSpecialiteSelect').value;
         const promoId = document.getElementById('editVoeuPromoSelect').value;
+        const isConfirmed = document.getElementById('editVoeuConfirmedSelect').value;
         const btn = document.getElementById('saveVoeuBtn');
 
         if (!specId) {
@@ -791,6 +800,7 @@
         formData.append('voeu_type', type);
         formData.append('specialite_id', specId);
         formData.append('promo_id', promoId);
+        formData.append('is_confirmed', isConfirmed);
         formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
 
         fetch(`/saas-admin/api/tenant/{{ institut.id }}/voeu/${id}/update/`, {
@@ -810,10 +820,18 @@
                         row.querySelector('.spec-formation').innerText = data.new_formation;
                     }
                     
+                    // Update confirmation badge
+                    const badgeCell = row.cells[3]; // Confirmation column
+                    if (data.new_is_confirmed) {
+                        badgeCell.innerHTML = '<span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">Confirmé</span>';
+                    } else {
+                        badgeCell.innerHTML = '<span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">En attente</span>';
+                    }
+                    
                     // Update the onclick of the edit button to reflect new values
                     const editBtn = row.querySelector('button[onclick^="openEditVoeuModal"]');
                     const prospectName = document.getElementById('editVoeuProspectName').innerText;
-                    editBtn.setAttribute('onclick', `openEditVoeuModal('${id}', '${type}', '${specId}', '${prospectName}', '${promoId}')`);
+                    editBtn.setAttribute('onclick', `openEditVoeuModal('${id}', '${type}', '${specId}', '${prospectName}', '${promoId}', '${data.new_is_confirmed}')`);
                 }
                 editModal.hide();
                 Swal.fire('Succès', data.message, 'success');

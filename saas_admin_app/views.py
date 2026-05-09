@@ -392,14 +392,18 @@ def saas_update_voeu_action_view(request, tenant_id, voeu_id):
             elif action == 'update_specialite':
                 new_specialite_id = request.POST.get('specialite_id')
                 new_promo_id = request.POST.get('promo_id')
+                is_confirmed = request.POST.get('is_confirmed') == 'true'
                 
                 new_specialite = get_object_or_404(Specialites, id=new_specialite_id)
                 voeu.specialite = new_specialite
+                voeu.is_confirmed = is_confirmed
                 
                 if new_promo_id:
                     from t_formations.models import Promos
                     new_promo = get_object_or_404(Promos, id=new_promo_id)
                     voeu.promo = new_promo
+                else:
+                    voeu.promo = None
                 
                 voeu.save()
                 return JsonResponse({
@@ -407,7 +411,8 @@ def saas_update_voeu_action_view(request, tenant_id, voeu_id):
                     'message': 'Fiche de vœux mise à jour avec succès.',
                     'new_label': new_specialite.label,
                     'new_formation': new_specialite.formation.nom,
-                    'new_promo': voeu.promo.label if voeu.promo else 'Standard'
+                    'new_promo': voeu.promo.label if voeu.promo else 'Standard',
+                    'new_is_confirmed': voeu.is_confirmed
                 })
                 
     except Exception as e:
