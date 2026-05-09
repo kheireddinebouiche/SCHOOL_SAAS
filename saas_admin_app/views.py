@@ -422,6 +422,7 @@ def saas_update_prospect_action_view(request, tenant_id, prospect_id):
     from app.models import Institut
     
     institut = get_object_or_404(Institut, id=tenant_id)
+    action = request.POST.get('action')
     new_etat = request.POST.get('etat')
     new_statut = request.POST.get('statut')
     
@@ -430,6 +431,10 @@ def saas_update_prospect_action_view(request, tenant_id, prospect_id):
             from t_crm.models import Prospets
             prospect = get_object_or_404(Prospets, id=prospect_id)
             
+            if action == 'delete':
+                prospect.delete()
+                return JsonResponse({'status': 'success', 'message': 'Prospect supprimé avec succès.'})
+
             if new_etat:
                 prospect.etat = new_etat
             if new_statut:

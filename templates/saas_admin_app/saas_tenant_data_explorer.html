@@ -139,7 +139,22 @@
         margin-bottom: 1rem;
         display: block;
     }
+    /* SweetAlert2 Customization */
+    .swal2-popup {
+        border-radius: 20px !important;
+        padding: 2rem !important;
+    }
+    .swal2-styled.swal2-confirm {
+        border-radius: 50px !important;
+        padding: 0.75rem 2rem !important;
+    }
+    .swal2-styled.swal2-cancel {
+        border-radius: 50px !important;
+        padding: 0.75rem 2rem !important;
+    }
 </style>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {% endblock extra_css %}
 
 {% block content %}
@@ -311,11 +326,18 @@
                                                 <div class="text-muted extra-small opacity-75">{{ p.created_at|date:"H:i" }}</div>
                                             </td>
                                             <td class="pe-4 text-end">
-                                                <button class="btn btn-soft-primary btn-sm rounded-circle p-0 avatar-xs" 
-                                                        onclick="openEditProspectModal('{{ p.id }}', '{{ p.nom }} {{ p.prenom }}', '{{ p.etat }}', '{{ p.statut }}')"
-                                                        title="Modifier état/statut">
-                                                    <i class="ri-edit-2-line"></i>
-                                                </button>
+                                                <div class="d-flex justify-content-end gap-2">
+                                                    <button class="btn btn-soft-primary btn-sm rounded-circle p-0 avatar-xs" 
+                                                            onclick="openEditProspectModal('{{ p.id }}', '{{ p.nom }} {{ p.prenom }}', '{{ p.etat }}', '{{ p.statut }}')"
+                                                            title="Modifier état/statut">
+                                                        <i class="ri-edit-2-line"></i>
+                                                    </button>
+                                                    <button class="btn btn-soft-danger btn-sm rounded-circle p-0 avatar-xs" 
+                                                            onclick="confirmDeleteProspect('{{ p.id }}')"
+                                                            title="Supprimer le prospect">
+                                                        <i class="ri-delete-bin-line"></i>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                         {% empty %}
@@ -917,6 +939,43 @@
         .finally(() => {
             btn.disabled = false;
             btn.innerHTML = '<i class="ri-save-line me-1"></i> Enregistrer';
+        });
+    }
+
+    function confirmDeleteProspect(id) {
+        Swal.fire({
+            title: 'Supprimer le prospect ?',
+            text: "Toutes les données associées (vœux, documents, etc.) seront également supprimées.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Oui, supprimer !',
+            cancelButtonText: 'Annuler'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const formData = new FormData();
+                formData.append('action', 'delete');
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                fetch(`/saas-admin/api/tenant/{{ institut.id }}/prospect/${id}/update/`, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        document.getElementById(`prospect-${id}`)?.remove();
+                        Swal.fire('Supprimé !', data.message, 'success');
+                    } else {
+                        Swal.fire('Erreur', data.message, 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.fire('Erreur', 'Une erreur est survenue lors de la suppression.', 'error');
+                });
+            }
         });
     }
 </script>
