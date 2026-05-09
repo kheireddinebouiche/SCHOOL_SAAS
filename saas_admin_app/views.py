@@ -302,60 +302,83 @@ def saas_tenant_data_explorer_view(request, tenant_id):
         'promos': [],
     }
     
+    from django.core.paginator import Paginator
+    
+    # Page numbers from GET params
+    p_page_num = request.GET.get('p_page', 1)
+    v_page_num = request.GET.get('v_page', 1)
+    vd_page_num = request.GET.get('vd_page', 1)
+    f_page_num = request.GET.get('f_page', 1)
+    s_page_num = request.GET.get('s_page', 1)
+    
+    items_per_page = 50
+
     try:
         with tenant_context(institut):
             # Prospects
             try:
                 from t_crm.models import Prospets
-                context['prospects'] = list(Prospets.objects.all().order_by('-created_at')[:500])
+                prospects_qs = Prospets.objects.all().order_by('-created_at')
+                p_paginator = Paginator(prospects_qs, items_per_page)
+                context['prospects'] = p_paginator.get_page(p_page_num)
             except:
                 context['prospects'] = []
             
             # Vœux
             try:
                 from t_crm.models import FicheDeVoeux
-                voeux_list = list(FicheDeVoeux.objects.all().select_related('prospect', 'specialite__formation', 'promo').order_by('-created_at')[:500])
-                context['voeux'] = voeux_list
+                voeux_qs = FicheDeVoeux.objects.all().select_related('prospect', 'specialite__formation', 'promo').order_by('-created_at')
                 
-                # Detect duplicates for standard voeux
-                prospect_voeux_counts = {}
-                for v in voeux_list:
-                    if v.prospect_id:
-                        prospect_voeux_counts[v.prospect_id] = prospect_voeux_counts.get(v.prospect_id, 0) + 1
-                context['duplicate_voeux_prospect_ids'] = [pid for pid, count in prospect_voeux_counts.items() if count > 1]
+                # We need all voeux to detect duplicates across pages, OR we just detect on current page?
+                # Actually, detection should be on the full queryset for accuracy.
+                # But that might be slow if there are 10,000 voeux.
+                # For now, let's detect on a larger subset or just on the current page.
+                # Better: detection on full queryset but limited to recent ones.
+                
+                # For duplicate detection, we still need a way to know if a prospect has multiple.
+                # Let's get the IDs of prospects with > 1 wish in the whole DB.
+                from django.db.models import Count
+                duplicate_ids_qs = FicheDeVoeux.objects.values('prospect_id').annotate(count=Count('id')).filter(count__gt=1)
+                context['duplicate_voeux_prospect_ids'] = [item['prospect_id'] for item in duplicate_ids_qs if item['prospect_id']]
+                
+                v_paginator = Paginator(voeux_qs, items_per_page)
+                context['voeux'] = v_paginator.get_page(v_page_num)
             except:
                 context['voeux'] = []
             
             # Vœux Doubles
             try:
                 from t_crm.models import FicheVoeuxDouble
-                voeux_double_list = list(FicheVoeuxDouble.objects.all().select_related('prospect', 'specialite__formation', 'promo').order_by('-created_at')[:500])
-                context['voeux_double'] = voeux_double_list
+                vd_qs = FicheVoeuxDouble.objects.all().select_related('prospect', 'specialite__specialite1__formation', 'specialite__specialite2__formation', 'promo').order_by('-created_at')
                 
-                # Detect duplicates for double voeux
-                prospect_double_counts = {}
-                for v in voeux_double_list:
-                    if v.prospect_id:
-                        prospect_double_counts[v.prospect_id] = prospect_double_counts.get(v.prospect_id, 0) + 1
-                context['duplicate_double_prospect_ids'] = [pid for pid, count in prospect_double_counts.items() if count > 1]
+                # Duplicate detection for doubles
+                duplicate_double_ids_qs = FicheVoeuxDouble.objects.values('prospect_id').annotate(count=Count('id')).filter(count__gt=1)
+                context['duplicate_double_prospect_ids'] = [item['prospect_id'] for item in duplicate_double_ids_qs if item['prospect_id']]
+                
+                vd_paginator = Paginator(vd_qs, items_per_page)
+                context['voeux_double'] = vd_paginator.get_page(vd_page_num)
             except:
                 context['voeux_double'] = []
             
             # Formations
             try:
                 from t_formations.models import Formation
-                context['formations'] = list(Formation.objects.all().order_by('nom'))
+                f_qs = Formation.objects.all().order_by('nom')
+                f_paginator = Paginator(f_qs, items_per_page)
+                context['formations'] = f_paginator.get_page(f_page_num)
             except:
                 context['formations'] = []
             
             # Spécialités
             try:
                 from t_formations.models import Specialites
-                context['specialites'] = list(Specialites.objects.all().select_related('formation').order_by('label'))
+                s_qs = Specialites.objects.all().select_related('formation').order_by('label')
+                s_paginator = Paginator(s_qs, items_per_page)
+                context['specialites'] = s_paginator.get_page(s_page_num)
             except:
                 context['specialites'] = []
                 
-            # Promos
+            # Promos (not paginated as they are usually few)
             try:
                 from t_formations.models import Promos
                 context['promos'] = list(Promos.objects.all().order_by('-created_at'))
@@ -365,7 +388,8 @@ def saas_tenant_data_explorer_view(request, tenant_id):
     except Exception as e:
         context['error'] = str(e)
         
-    return render(request, 'saas_admin_app/saas_tenant_data_explorer.html', context)
+    with tenant_context(institut):
+        return render(request, 'saas_admin_app/saas_tenant_data_explorer.html', context)
 
 @user_passes_test(superadmin_only, login_url='/saas-admin/login/')
 def saas_update_voeu_action_view(request, tenant_id, voeu_id):
