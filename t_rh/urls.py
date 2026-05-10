@@ -44,6 +44,9 @@ urlpatterns = [
 
     path('ApiCreateContrat', ApiCreateContrat, name="ApiCreateContrat"),
 
+    path('liste-des-contrats/', listeDesContrats, name="liste_des_contrats"),
+    path('nouveau-contrat/', nouveauContrat, name="nouveau_contrat"),
+
     path('liste-des-postes/', ListeDesPostes , name="ListeDesPostes"),
     path('ApiAddPoste', ApiAddPoste, name="ApiAddPoste"),
     path('ApiListePostes', ApiListePostes, name="ApiListePostes"),

@@ -18,6 +18,9 @@
                     </div>
                 </div>
                 <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-soft-info d-flex align-items-center gap-2 rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#syncPedagogicalModal" onclick="loadSyncList()">
+                        <i class="ri-sync-line"></i> Sync. Pédagogique
+                    </button>
                     <button type="button" class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createTenantModal">
                         <i class="ri-add-line"></i> Nouveau Tenant
                     </button>
@@ -178,6 +181,58 @@
 <!-- Réutilisation de la modale de création -->
 {% include 'saas_admin_app/saas_modal_create_tenant.html' %}
 
+<!-- Modal de Synchronisation Pédagogique -->
+<div class="modal fade" id="syncPedagogicalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content glass-modal border-0">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-primary">
+                    <i class="ri-sync-line me-2"></i>Synchronisation Pédagogique Globale
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-soft-info d-flex align-items-center gap-3 mb-4 rounded-4 border-0">
+                    <i class="ri-information-line fs-3 text-info"></i>
+                    <div>
+                        <strong>Note :</strong> Cette action synchronise les formations, spécialités et modules depuis le tenant MASTER vers les tenants sélectionnés.
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="fw-bold mb-2"><i class="ri-book-open-line me-1"></i>1. Sélectionner les formations à synchroniser</label>
+                    <div id="masterFormationsList" class="border rounded-4 p-3 bg-light bg-opacity-50" style="max-height: 200px; overflow-y: auto;">
+                        <div class="text-center py-2"><i class="ri-loader-4-line spin"></i> Chargement des formations...</div>
+                    </div>
+                    <div class="form-text mt-1 text-info"><i class="ri-question-line me-1"></i>Laissez tout décoché pour synchroniser toutes les formations.</div>
+                </div>
+
+                <label class="fw-bold mb-2"><i class="ri-building-line me-1"></i>2. Sélectionner les tenants cibles</label>
+                <div class="table-responsive" style="max-height: 300px;">
+                    <table class="table table-modern align-middle" id="syncTenantsTable">
+                        <thead>
+                            <tr>
+                                <th>Tenant</th>
+                                <th>Statut</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="syncTenantsList">
+                            <!-- Rempli en JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-soft-secondary rounded-pill px-4" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4" onclick="syncAllVisible()">
+                    <i class="ri-refresh-line me-1"></i> Tout synchroniser
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock content %}
 
 {% block extra_js %}
@@ -253,5 +308,118 @@
             }
         });
     });
+
+    // Pedagogical Sync Logic
+    function loadSyncList() {
+        const list = document.getElementById('syncTenantsList');
+        list.innerHTML = '<tr><td colspan="3" class="text-center py-4"><i class="ri-loader-4-line spin fs-3"></i></td></tr>';
+        
+        // Load formations too
+        loadMasterFormations();
+
+        fetch('/saas-admin/api/tenants/pedagogical-sync-list/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    list.innerHTML = '';
+                    if (data.tenants.length === 0) {
+                        list.innerHTML = '<tr><td colspan="3" class="text-center py-4">Aucun tenant secondaire trouvé</td></tr>';
+                        return;
+                    }
+                    data.tenants.forEach(t => {
+                        const row = `
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">${t.nom}</div>
+                                    <small class="text-muted">${t.schema_name}</small>
+                                </td>
+                                <td><span class="badge bg-soft-secondary text-secondary" id="status-${t.id}">En attente</span></td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-icon btn-soft-primary rounded-circle" onclick="syncOne(${t.id})" id="btn-${t.id}">
+                                        <i class="ri-refresh-line"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                        list.innerHTML += row;
+                    });
+                }
+            });
+    }
+
+    function loadMasterFormations() {
+        const container = document.getElementById('masterFormationsList');
+        fetch('/saas-admin/api/master/formations/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    container.innerHTML = '';
+                    if (data.formations.length === 0) {
+                        container.innerHTML = '<div class="text-muted">Aucune formation trouvée dans le Master</div>';
+                        return;
+                    }
+                    data.formations.forEach(f => {
+                        container.innerHTML += `
+                            <div class="form-check mb-1">
+                                <input class="form-check-input formation-checkbox" type="checkbox" value="${f.id}" id="form-sync-${f.id}">
+                                <label class="form-check-label small" for="form-sync-${f.id}">${f.nom}</label>
+                            </div>
+                        `;
+                    });
+                }
+            });
+    }
+
+    function syncOne(tenantId) {
+        const btn = document.getElementById(`btn-${tenantId}`);
+        const status = document.getElementById(`status-${tenantId}`);
+        
+        if (!btn || btn.disabled) return;
+
+        // Get selected formations
+        const selectedFormations = Array.from(document.querySelectorAll('.formation-checkbox:checked')).map(cb => cb.value);
+        
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        selectedFormations.forEach(id => formData.append('formation_ids[]', id));
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ri-loader-4-line spin"></i>';
+        status.className = 'badge bg-soft-info text-info';
+        status.innerHTML = '<i class="ri-loader-4-line spin me-1"></i> Sync...';
+        
+        fetch(`/saas-admin/api/tenant/${tenantId}/sync-pedagogical-data/`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                status.className = 'badge bg-soft-success text-success';
+                status.innerText = 'Synchronisé';
+                btn.innerHTML = '<i class="ri-checkbox-circle-line"></i>';
+            } else {
+                status.className = 'badge bg-soft-danger text-danger';
+                status.innerText = 'Erreur';
+                btn.innerHTML = '<i class="ri-error-warning-line"></i>';
+                if (typeof alertify !== 'undefined') {
+                    alertify.error(`Erreur ${tenantId}: ${data.error}`);
+                }
+            }
+        })
+        .catch(err => {
+            status.className = 'badge bg-soft-danger text-danger';
+            status.innerText = 'Erreur réseau';
+            btn.innerHTML = '<i class="ri-close-line"></i>';
+        });
+    }
+
+    function syncAllVisible() {
+        const buttons = document.querySelectorAll('[id^="btn-"]');
+        buttons.forEach(btn => {
+            const id = btn.id.split('-')[1];
+            syncOne(id);
+        });
+    }
 </script>
 {% endblock extra_js %}

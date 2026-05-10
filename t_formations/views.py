@@ -7,6 +7,8 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction, IntegrityError
 from django.db.models.deletion import ProtectedError
 from django_tenants.utils import get_tenant_model, schema_context
+from django.utils import timezone
+from .sync_utils import *
 from django.http import JsonResponse, HttpResponse
 import csv
 import openpyxl
@@ -514,134 +516,6 @@ def ApiLoadSpecialites(request):
     else:
         return JsonResponse({'status':"error"})
 
-######### methode de syncronisation des formations #############################################
-def update_or_create_formation_in_tenant(formation, institut_schema):
-    try:
-        with schema_context(institut_schema):
-            # Chercher si la formation existe déjà dans le schéma
-            sync_formation, created = Formation.objects.update_or_create(
-                code=formation.code,
-                defaults={
-                    'nom': formation.nom,
-                    'description': formation.description,
-                    'duree': formation.duree,
-                    'partenaire': formation.partenaire,
-                    'type_formation': formation.type_formation,
-                    'qualification': formation.qualification,
-                }
-            )
-            if created:
-                sync_formation.frais_inscription = formation.frais_inscription
-                sync_formation.prix_formation = formation.prix_formation
-                sync_formation.save()
-            return sync_formation
-    except Exception as e:
-        raise ValueError(f"Erreur lors de la mise à jour de la formation {formation.nom}: {str(e)}")
-    
-def update_or_create_specialite_in_tenant(specialite, sync_formation, institut_schema):
-    try:
-        with schema_context(institut_schema):
-            # Determine visibility:
-            # 1. If it's new, take master's value.
-            # 2. If it exists:
-            #    - If master is False, force False (global deactivation).
-            #    - If master is True, keep tenant's existing preference.
-            existing_spec = Specialites.objects.filter(code=specialite.code).first()
-            if existing_spec:
-                if specialite.is_visible:
-                    new_visibility = existing_spec.is_visible
-                else:
-                    new_visibility = False
-            else:
-                new_visibility = specialite.is_visible
-
-            sync_specialite, created = Specialites.objects.update_or_create(
-                code=specialite.code,
-                defaults={
-                    'formation': sync_formation,
-                    'label': specialite.label,
-                    'duree': specialite.duree,
-                    'version': specialite.version,
-                    'condition_access': specialite.condition_access,
-                    'nb_semestre': specialite.nb_semestre,
-                    'branche': specialite.branche,
-                    'abr': specialite.abr,
-                    'nb_tranche': specialite.nb_tranche,
-                    'is_visible': new_visibility,
-                    'etat': 'last', # Marquer comme à jour
-                }
-            )
-            
-            # Si c'est une création, on peut initialiser les prix, 
-            # mais ensuite on n'y touche plus lors des synchronisations suivantes.
-            if created:
-                sync_specialite.prix = specialite.prix
-                sync_specialite.prix_double_diplomation = specialite.prix_double_diplomation
-                sync_specialite.save()
-
-            return sync_specialite
-    except Exception as e:
-        raise ValueError(f"Erreur lors de la mise à jour de la spécialité {specialite.label}: {str(e)}")
-    
-def update_or_create_module_in_tenant(module, sync_specialite, institut_schema):
-    try:
-        with schema_context(institut_schema):
-            # Use case-insensitive matching and strip whitespace
-            label_clean = module.label.strip()
-            
-            if module.code_interne:
-                q_lookup = Q(code_interne=module.code_interne)
-            else:
-                q_lookup = Q(label__iexact=label_clean)
-
-            # Try to find existing module for this speciality
-            sync_module = Modules.objects.filter(q_lookup, specialite=sync_specialite).first()
-            
-            if sync_module:
-                # Update existing
-                sync_module.label = label_clean
-                sync_module.coef = module.coef
-                sync_module.duree = module.duree
-                sync_module.n_elimate = module.n_elimate
-                sync_module.systeme_eval = module.systeme_eval
-                sync_module.code_interne = module.code_interne
-                sync_module.save()
-            else:
-                # Create new
-                # We use a try/except to handle potential race conditions or stray codes
-                try:
-                    sync_module = Modules.objects.create(
-                        specialite=sync_specialite,
-                        label=label_clean,
-                        coef=module.coef,
-                        duree=module.duree,
-                        n_elimate=module.n_elimate,
-                        systeme_eval=module.systeme_eval,
-                        code_interne=module.code_interne
-                    )
-                except Exception as e:
-                    # If it fails (e.g. IntegrityError on code), try one more time by finding by code if possible
-                    # or just re-raise with more context
-                    raise ValueError(f"Erreur lors de la synchronisation du module {label_clean}: {str(e)}")
-            
-            return sync_module
-    except Exception as e:
-        raise ValueError(str(e))
-
-def update_or_create_dossier_in_tenant(dossier, sync_formation, institut_schema):
-    try:
-        with schema_context(institut_schema):
-            sync_dossier, created = DossierInscription.objects.update_or_create(
-                formation=sync_formation,
-                label=dossier.label,
-                defaults={
-                    'is_required': dossier.is_required,
-                    'include_in_tracking': dossier.include_in_tracking,
-                }
-            )
-            return sync_dossier
-    except IntegrityError:
-        raise ValueError("Une erreur d'intégrité s'est produite lors de la mise à jour du dossier d'inscription.")
 
 
 @login_required(login_url="institut_app:login")
@@ -714,29 +588,20 @@ def ApiSyncFormation(request):
     code_formation = request.POST.get('code_formation')
     schema_name = request.POST.get('schema_name')
 
-    formation = Formation.objects.get(code=code_formation)
-    institut = Institut.objects.get(schema_name=schema_name)
+    try:
+        formation = Formation.objects.get(code=code_formation)
+        institut = Institut.objects.get(schema_name=schema_name)
+        master_tenant = Institut.objects.filter(tenant_type='master').exclude(schema_name='public').first()
 
-    with schema_context(institut.schema_name):
-        sync_formation = update_or_create_formation_in_tenant(formation, institut.schema_name)
+        sync_formation_to_tenant(formation, institut, master_tenant)
 
-    # Sync Dossier d'inscription
-    dossiers = DossierInscription.objects.filter(formation=formation)
-    for dossier in dossiers:
-        update_or_create_dossier_in_tenant(dossier, sync_formation, institut.schema_name)
-
-    # Sync Specialites and their Modules
-    specialites = Specialites.objects.filter(formation=formation)
-    for specialite in specialites:
-        with schema_context(institut.schema_name):
-            sync_specialite = update_or_create_specialite_in_tenant(specialite, sync_formation, institut.schema_name)
-        
-        # Sync Modules for THIS speciality
-        modules = Modules.objects.filter(specialite=specialite)
-        for module in modules:
-            update_or_create_module_in_tenant(module, sync_specialite, institut.schema_name)
-
-    return JsonResponse({'status': True, 'message': 'Formation, dossier, spécialités et modules synchronisés avec succès'})
+        return JsonResponse({'status': True, 'message': 'Formation, dossier, spécialités et modules synchronisés avec succès'})
+    except Formation.DoesNotExist:
+        return JsonResponse({'status': False, 'message': 'Formation introuvable'})
+    except Institut.DoesNotExist:
+        return JsonResponse({'status': False, 'message': 'Institut introuvable'})
+    except Exception as e:
+        return JsonResponse({'status': False, 'message': str(e)})
 ##### Synchronisation des formations et spécialités dans un tenant spécifique ##################
 
 @login_required(login_url="institut_app:login")
@@ -745,6 +610,7 @@ def ApiSyncUpdateFormation(request):
     
     try:
         formation = Formation.objects.get(code=code_formation)
+        master_tenant = Institut.objects.filter(tenant_type='master').exclude(schema_name='public').first()
     except Formation.DoesNotExist:
         return JsonResponse({'status': False, 'message': 'Formation introuvable.'})
 
@@ -767,29 +633,8 @@ def ApiSyncUpdateFormation(request):
                 if formation.type_formation != 'etrangere' and not Formation.objects.filter(code=formation.code).exists():
                     continue
                     
-                sync_formation = update_or_create_formation_in_tenant(formation, institut.schema_name)
-
-                # Sync Dossier d'inscription
-                dossiers = DossierInscription.objects.filter(formation=formation)
-                for dossier in dossiers:
-                    update_or_create_dossier_in_tenant(dossier, sync_formation, institut.schema_name)
-
-                # Sync Specialites and their Modules
-                specialites = Specialites.objects.filter(formation=formation)
-                for specialite in specialites:
-                    # Same logic for specialities: create for foreign, only update for national
-                    with schema_context(institut.schema_name):
-                        if formation.type_formation != 'etrangere' and not Specialites.objects.filter(code=specialite.code).exists():
-                            continue
-                    
-                    sync_specialite = update_or_create_specialite_in_tenant(specialite, sync_formation, institut.schema_name)
-                    
-                    # Sync Modules for THIS speciality
-                    modules = Modules.objects.filter(specialite=specialite)
-                    for module in modules:
-                        update_or_create_module_in_tenant(module, sync_specialite, institut.schema_name)
-                
-                updated_count += 1
+            sync_formation_to_tenant(formation, institut, master_tenant)
+            updated_count += 1
 
         return JsonResponse({
             'status': True, 

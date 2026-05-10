@@ -296,13 +296,17 @@ def ApiStoreEcheancierSpecial(request):
             else:
                 montant_tranche = Decimal('0')
 
+            entite_line_id = line.get('entite')
+            if not entite_line_id or entite_line_id == "" or entite_line_id == "None":
+                entite_line_id = None
+
             EcheancierPaiementSpecialLine.objects.create(
                 echeancier=echeancier_special,
                 taux=line.get('taux', ''),
                 value=line.get('value', ''),
                 montant_tranche=montant_tranche,
                 date_echeancier=line.get('date_echeancier'),
-                entite_id = line.get('entite','')
+                entite_id = entite_line_id
             )
         
         return JsonResponse({

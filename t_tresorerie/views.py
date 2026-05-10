@@ -304,6 +304,7 @@ def ApiGetDetailsDemandePaiement(request):
                     'montant_restant' : i.montant_restant,
                     'label' : i.label,
                     'date_echeance' : i.date_echeance,
+                    'entite_nom' : i.entite.designation if i.entite else (i.ref_echeancier.entite.designation if i.ref_echeancier and i.ref_echeancier.entite else "Non définie"),
                 })
         else:
             has_due_paiement = False
@@ -605,6 +606,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
                     'montant_restant' : i.montant_restant,
                     'label' : i.label,
                     'date_echeance' : i.date_echeance,
+                    'entite_nom' : i.entite.designation if i.entite else (i.ref_echeancier.entite.designation if i.ref_echeancier and i.ref_echeancier.entite else "Non définie"),
                 })
         else:
             has_due_paiement = False

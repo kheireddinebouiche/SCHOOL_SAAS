@@ -204,7 +204,7 @@ def ApiGetClientEcheancier(request):
         voeux = FicheDeVoeux.objects.filter(prospect=obj, is_confirmed=True).select_related("specialite").first()
         
 
-        echeancierId = EcheancierPaiement.objects.get(formation_id = voeux.specialite.formation.id, model__promo = voeux.promo)
+        echeancierId = EcheancierPaiement.objects.filter(formation_id = voeux.specialite.formation.id, model__promo = voeux.promo).first()
 
         try:
             groupe = GroupeLine.objects.filter(student_id = id_client).first()
@@ -283,7 +283,7 @@ def ApiGetClientEcheancier(request):
                     'montant_tranche' : i.montant_tranche,
                 })
 
-        echeancier = EcheancierPaiement.objects.get(formation = voeux.specialite.formation, is_default=True, model__promo = voeux.promo)
+        echeancier = EcheancierPaiement.objects.filter(formation = voeux.specialite.formation, is_default=True, model__promo = voeux.promo).first()
         liste_echeancier = EcheancierPaiementLine.objects.filter(echeancier = echeancier)
         
         remiseObj = RemiseAppliquerLine.objects.filter(prospect = obj).last()
@@ -423,7 +423,7 @@ def ApiGetClientEcheancierDouble(request):
         voeux = FicheVoeuxDouble.objects.filter(prospect=obj, is_confirmed=True).select_related("specialite").first()
         
 
-        echeancierId = EcheancierPaiement.objects.get(formation_double_id = voeux.specialite.id, model__promo = voeux.promo)
+        echeancierId = EcheancierPaiement.objects.filter(formation_double_id = voeux.specialite.id, model__promo = voeux.promo).first()
 
         groupe = GroupeLine.objects.filter(student_id = id_client).first()
 
@@ -499,7 +499,7 @@ def ApiGetClientEcheancierDouble(request):
                     'montant_tranche' : i.montant_tranche,
                 })
 
-        echeancier = EcheancierPaiement.objects.get(formation_double = voeux.specialite, is_default=True, model__promo = voeux.promo)
+        echeancier = EcheancierPaiement.objects.filter(formation_double = voeux.specialite, is_default=True, model__promo = voeux.promo).first()
         liste_echeancier = EcheancierPaiementLine.objects.filter(echeancier = echeancier)
         
         remiseObj = RemiseAppliquerLine.objects.filter(prospect = obj).last()

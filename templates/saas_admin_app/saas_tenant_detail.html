@@ -399,6 +399,86 @@
                     </div>
                 </div>
             </div>
+
+            <div class="col-12">
+                <!-- Sync & Management Section -->
+                <div class="glass-card h-100 border-0 shadow-lg overflow-hidden">
+                    <div class="p-4 bg-gradient-primary-to-secondary text-white position-relative overflow-hidden">
+                        <div class="position-relative z-index-1">
+                            <h5 class="mb-1 fw-bold d-flex align-items-center">
+                                <i class="ri-sync-line me-2 fs-4"></i> Synchronisation & Gestion
+                            </h5>
+                            <p class="mb-0 opacity-75 small">Contrôlez les données pédagogiques et leur intégrité.</p>
+                        </div>
+                        <i class="ri-book-open-line position-absolute bottom-0 end-0 opacity-10" style="font-size: 8rem; transform: translate(20%, 20%);"></i>
+                    </div>
+                    
+                    <div class="card-body p-4">
+                        <!-- Sync Section -->
+                        <div class="mb-4 pb-4 border-bottom">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h6 class="fw-bold mb-0 d-flex align-items-center">
+                                    <span class="badge-dot bg-primary me-2"></span> Données Pédagogiques
+                                </h6>
+                                <span class="badge bg-soft-primary text-primary rounded-pill small px-3">Source: Master</span>
+                            </div>
+                            
+                            <div id="formationSyncContainer" class="mb-3 border-0 rounded-4 bg-light bg-opacity-50 p-3 d-none shadow-inner" style="max-height: 200px; overflow-y: auto;">
+                                <div class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                    <span class="text-muted small">Chargement des formations master...</span>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="button" 
+                                        id="btnLoadFormations"
+                                        class="btn btn-modern-light btn-sm rounded-pill px-4"
+                                        onclick="loadFormationsForSync()">
+                                    <i class="ri-list-check me-1"></i> Sélectionner des formations
+                                </button>
+                                <button type="button" 
+                                        id="btnSyncPedagogical"
+                                        class="btn btn-modern-primary btn-sm rounded-pill px-4"
+                                        onclick="syncPedagogicalData('{{ tenant_data.institut.id }}')">
+                                    <i class="ri-refresh-line me-1"></i> Tout synchroniser
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Management Section -->
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h6 class="fw-bold mb-0 d-flex align-items-center">
+                                    <span class="badge-dot bg-danger me-2"></span> État du Tenant
+                                </h6>
+                                <button class="btn btn-sm btn-link p-0 text-decoration-none small text-muted" onclick="loadTenantFormationsList()">
+                                    <i class="ri-refresh-line me-1"></i> Actualiser
+                                </button>
+                            </div>
+                            
+                            <div class="table-responsive rounded-4 overflow-hidden border">
+                                <table class="table table-sm table-nowrap align-middle mb-0">
+                                    <thead class="bg-light bg-opacity-75">
+                                        <tr>
+                                            <th class="small fw-bold px-3 py-2">Formation</th>
+                                            <th class="small fw-bold px-3 py-2">Spécialités</th>
+                                            <th class="small fw-bold px-3 py-2 text-end">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tenantFormationsListBody">
+                                        <tr>
+                                            <td colspan="3" class="text-center py-4">
+                                                <div class="spinner-border spinner-border-sm text-silver mb-2" role="status"></div>
+                                                <div class="text-muted small">Analyse du tenant en cours...</div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -488,6 +568,51 @@
     .bg-soft-primary { background: rgba(67, 97, 238, 0.1) !important; color: #4361ee !important; }
     .bg-soft-warning { background: rgba(245, 158, 11, 0.1) !important; color: #f59e0b !important; }
 
+    .bg-gradient-primary-to-secondary {
+        background: linear-gradient(135deg, #4361ee 0%, #7209b7 100%) !important;
+    }
+
+    .badge-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .btn-modern-primary {
+        background: #4361ee;
+        color: white;
+        border: none;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+    }
+    
+    .btn-modern-primary:hover {
+        background: #3f37c9;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+    }
+
+    .btn-modern-light {
+        background: rgba(67, 97, 238, 0.08);
+        color: #4361ee;
+        border: 1px solid rgba(67, 97, 238, 0.1);
+        transition: all 0.3s;
+    }
+    
+    .btn-modern-light:hover {
+        background: rgba(67, 97, 238, 0.15);
+        color: #4361ee;
+        transform: translateY(-2px);
+    }
+
+    .shadow-inner {
+        box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06) !important;
+    }
+
+    .z-index-1 { z-index: 1; }
+
     .dropdown-menu {
         backdrop-filter: blur(15px);
         background: rgba(255, 255, 255, 0.98) !important;
@@ -537,6 +662,189 @@
 </style>
 
 <script>
+    function loadFormationsForSync() {
+        const container = document.getElementById('formationSyncContainer');
+        const btnLoad = document.getElementById('btnLoadFormations');
+        const btnSync = document.getElementById('btnSyncPedagogical');
+        
+        container.classList.remove('d-none');
+        btnLoad.classList.add('d-none');
+        btnSync.innerText = 'Synchroniser la sélection';
+        
+        fetch('/saas-admin/api/master/formations/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    container.innerHTML = '';
+                    if (data.formations.length === 0) {
+                        container.innerHTML = '<div class="text-muted small">Aucune formation trouvée.</div>';
+                        return;
+                    }
+                    data.formations.forEach(f => {
+                        container.innerHTML += `
+                            <div class="form-check mb-1">
+                                <input class="form-check-input formation-sync-check" type="checkbox" value="${f.id}" id="f-sync-${f.id}">
+                                <label class="form-check-label small" for="f-sync-${f.id}">${f.nom}</label>
+                            </div>
+                        `;
+                    });
+                }
+            });
+    }
+
+    /**
+     * Charge les formations et spécialités ACTUELLES du tenant.
+     */
+    function loadTenantFormationsList() {
+        const body = document.getElementById('tenantFormationsListBody');
+        const tenantId = '{{ tenant_data.institut.id }}';
+        
+        fetch(`/saas-admin/api/tenant/${tenantId}/formations/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    body.innerHTML = '';
+                    if (data.formations.length === 0) {
+                        body.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-2 small">Aucune formation dans ce tenant.</td></tr>';
+                        return;
+                    }
+                    
+                    data.formations.forEach(f => {
+                        const escapedNom = f.nom.replace(/'/g, "\\'");
+                        let specsHtml = f.specialites.map(s => {
+                            const escapedLabel = s.label.replace(/'/g, "\\'");
+                            return `
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small">${s.label} (${s.code})</span>
+                                    <button class="btn btn-sm btn-link text-danger p-0" onclick="deleteSpecialite(${s.id}, '${escapedLabel}')">
+                                        <i class="ri-delete-bin-line"></i>
+                                    </button>
+                                </div>
+                            `;
+                        }).join('');
+                        
+                        body.innerHTML += `
+                            <tr>
+                                <td>
+                                    <div class="fw-bold small">${f.nom}</div>
+                                    <div class="text-muted" style="font-size: 10px;">CODE: ${f.code}</div>
+                                </td>
+                                <td>${specsHtml || '<span class="text-muted small">Aucune</span>'}</td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-soft-danger rounded-pill" onclick="deleteFormation(${f.id}, '${escapedNom}')">
+                                        <i class="ri-delete-bin-line me-1"></i> Supprimer
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading formations:', error);
+                body.innerHTML = '<tr><td colspan="3" class="text-center text-danger py-2 small">Erreur lors du chargement des données.</td></tr>';
+            });
+    }
+
+    function deleteFormation(formationId, nom) {
+        alertify.confirm('Confirmation', `Voulez-vous vraiment supprimer la formation "${nom}" et TOUTES ses spécialités/modules ?`, 
+        function() {
+            const tenantId = '{{ tenant_data.institut.id }}';
+            const formData = new FormData();
+            formData.append('formation_id', formationId);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            
+            fetch(`/saas-admin/api/tenant/${tenantId}/formation/delete/`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alertify.success(data.message);
+                    loadTenantFormationsList();
+                } else {
+                    alertify.error(data.error);
+                }
+            });
+        }, null);
+    }
+
+    function deleteSpecialite(specId, label) {
+        alertify.confirm('Confirmation', `Voulez-vous vraiment supprimer la spécialité "${label}" ?`, 
+        function() {
+            const tenantId = '{{ tenant_data.institut.id }}';
+            const formData = new FormData();
+            formData.append('specialite_id', specId);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            
+            fetch(`/saas-admin/api/tenant/${tenantId}/specialite/delete/`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alertify.success(data.message);
+                    loadTenantFormationsList();
+                } else {
+                    alertify.error(data.error);
+                }
+            });
+        }, null);
+    }
+
+    // Charger la liste au chargement de la page
+    document.addEventListener('DOMContentLoaded', function() {
+        loadTenantFormationsList();
+    });
+
+    function syncPedagogicalData(tenantId) {
+        const btn = document.getElementById('btnSyncPedagogical');
+        
+        // Get selected formations
+        const selected = Array.from(document.querySelectorAll('.formation-sync-check:checked')).map(cb => cb.value);
+        const confirmMsg = selected.length > 0 
+            ? `Voulez-vous synchroniser les ${selected.length} formations sélectionnées ?`
+            : "Voulez-vous synchroniser TOUTES les formations depuis le MASTER ?";
+
+        alertify.confirm(
+            'Synchronisation',
+            confirmMsg,
+            function() {
+                btn.innerHTML = '<i class="ri-loader-4-line spin me-1"></i> Synchronisation...';
+                btn.disabled = true;
+                
+                const formData = new FormData();
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                selected.forEach(id => formData.append('formation_ids[]', id));
+
+                fetch(`/saas-admin/api/tenant/${tenantId}/sync-pedagogical-data/`, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alertify.success(data.message);
+                        if (data.errors && data.errors.length > 0) {
+                            console.error('Errors during sync:', data.errors);
+                        }
+                    } else {
+                        alertify.error('Erreur: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alertify.error('Erreur réseau ou serveur');
+                })
+                .finally(() => {
+                    btn.innerHTML = selected.length > 0 ? '<i class="ri-refresh-line me-1"></i> Synchroniser la sélection' : '<i class="ri-refresh-line me-1"></i> Tout synchroniser';
+                    btn.disabled = false;
+                });
+            }
+        );
+    }
+
     function showTab(tabId, btn) {
         // Hide all tabs
         document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('d-none'));
@@ -547,6 +855,11 @@
         document.getElementById('tab-' + tabId).classList.remove('d-none');
         // Activate button
         btn.classList.add('active');
+
+        // Refresh formation list if config tab is opened
+        if (tabId === 'config') {
+            loadTenantFormationsList();
+        }
     }
 
     // User Search
@@ -670,6 +983,7 @@
                 .then(data => {
                     if (data.success) {
                         alertify.success(data.message);
+                        loadTenantFormationsList(); // Refresh the list of existing formations
                     } else {
                         alertify.error(data.error);
                     }

@@ -531,3 +531,19 @@ def supprimerArticleContrat(request):
 def ApiGetEntite(request):
     liste = Entreprise.objects.all().values('id','designation')
     return JsonResponse(list(liste),safe=False)
+
+def listeDesContrats(request):
+    contrats = Contrats.objects.select_related('employee', 'type_contrat', 'poste').all().order_by('-created_at')
+    context = {
+        'liste': contrats,
+        'tenant': request.tenant,
+    }
+    return render(request, 'tenant_folder/rh/contrats/liste_des_contrats.html', context)
+
+def nouveauContrat(request):
+    employes = Employees.objects.all().order_by('nom', 'prenom')
+    context = {
+        'employes': employes,
+        'tenant': request.tenant,
+    }
+    return render(request, 'tenant_folder/rh/contrats/nouveau_contrat.html', context)

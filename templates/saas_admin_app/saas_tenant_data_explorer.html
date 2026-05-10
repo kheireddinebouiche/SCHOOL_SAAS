@@ -152,6 +152,25 @@
         border-radius: 50px !important;
         padding: 0.75rem 2rem !important;
     }
+    .bulk-action-bar {
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: #1e293b;
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 50px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        z-index: 1050;
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .bulk-action-bar.show {
+        transform: translateX(-50%) translateY(0);
+    }
 </style>
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -159,6 +178,21 @@
 
 {% block content %}
 <div class="container-fluid py-4">
+    
+    <!-- Bulk Action Bar -->
+    <div id="bulkActionBar" class="bulk-action-bar">
+        <div class="d-flex align-items-center">
+            <span class="badge bg-primary rounded-circle me-2" id="selectedCount">0</span>
+            <span class="fw-medium">Éléments sélectionnés</span>
+        </div>
+        <div class="vr bg-white opacity-20" style="height: 20px;"></div>
+        <button class="btn btn-danger btn-sm rounded-pill px-4" id="bulkDeleteBtn">
+            <i class="ri-delete-bin-line me-1"></i> Supprimer la sélection
+        </button>
+        <button class="btn btn-link btn-sm text-white text-decoration-none" id="cancelSelection">
+            Annuler
+        </button>
+    </div>
     
     <!-- Hero Header -->
     <div class="explorer-hero">
@@ -190,14 +224,14 @@
                 <div class="stat-pill-icon"><i class="ri-user-follow-line"></i></div>
                 <div>
                     <div class="small text-white text-opacity-75">Prospects</div>
-                    <div class="h4 fw-bold mb-0 text-white">{{ prospects|length }}</div>
+                    <div class="h4 fw-bold mb-0 text-white">{{ stats.prospects }}</div>
                 </div>
             </div>
             <div class="stat-pill">
                 <div class="stat-pill-icon"><i class="ri-file-list-3-line"></i></div>
                 <div>
                     <div class="small text-white text-opacity-75">Vœux</div>
-                    <div class="h4 fw-bold mb-0 text-white">{{ voeux|length }}</div>
+                    <div class="h4 fw-bold mb-0 text-white">{{ stats.voeux }}</div>
                 </div>
             </div>
             <div class="stat-pill">
@@ -211,14 +245,28 @@
                 <div class="stat-pill-icon"><i class="ri-book-open-line"></i></div>
                 <div>
                     <div class="small text-white text-opacity-75">Formations</div>
-                    <div class="h4 fw-bold mb-0 text-white">{{ formations|length }}</div>
+                    <div class="h4 fw-bold mb-0 text-white">{{ stats.formations }}</div>
                 </div>
             </div>
             <div class="stat-pill">
                 <div class="stat-pill-icon"><i class="ri-stack-line"></i></div>
                 <div>
                     <div class="small text-white text-opacity-75">Spécialités</div>
-                    <div class="h4 fw-bold mb-0 text-white">{{ specialites|length }}</div>
+                    <div class="h4 fw-bold mb-0 text-white">{{ stats.specialites }}</div>
+                </div>
+            </div>
+            <div class="stat-pill">
+                <div class="stat-pill-icon"><i class="ri-money-dollar-circle-line"></i></div>
+                <div>
+                    <div class="small text-white text-opacity-75">Montants Dus</div>
+                    <div class="h4 fw-bold mb-0 text-white">{{ stats.due_paiements }}</div>
+                </div>
+            </div>
+            <div class="stat-pill">
+                <div class="stat-pill-icon"><i class="ri-bank-card-line"></i></div>
+                <div>
+                    <div class="small text-white text-opacity-75">Paiements</div>
+                    <div class="h4 fw-bold mb-0 text-white">{{ stats.paiements }}</div>
                 </div>
             </div>
         </div>
@@ -252,6 +300,16 @@
                     <li class="nav-item">
                         <a class="nav-link" data-bs-toggle="tab" href="#specialites" role="tab">
                             Spécialités
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#due_paiements" role="tab">
+                            Montants Dus
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#paiements" role="tab">
+                            Paiements
                         </a>
                     </li>
                 </ul>
@@ -331,6 +389,11 @@
                                                             onclick="openEditProspectModal('{{ p.id }}', '{{ p.nom }} {{ p.prenom }}', '{{ p.etat }}', '{{ p.statut }}')"
                                                             title="Modifier état/statut">
                                                         <i class="ri-edit-2-line"></i>
+                                                    </button>
+                                                    <button class="btn btn-soft-warning btn-sm rounded-circle p-0 avatar-xs" 
+                                                            onclick="confirmResetProspect('{{ p.id }}', '{{ p.nom }} {{ p.prenom }}')"
+                                                            title="Réinitialiser (Finances & Statut)">
+                                                        <i class="ri-refresh-line"></i>
                                                     </button>
                                                     <button class="btn btn-soft-danger btn-sm rounded-circle p-0 avatar-xs" 
                                                             onclick="confirmDeleteProspect('{{ p.id }}')"
@@ -716,6 +779,182 @@
                     </div>
                 </div>
 
+                <!-- Due Paiements Tab -->
+                <div class="tab-pane fade" id="due_paiements" role="tabpanel">
+                    <div class="glass-tab-content">
+                        <div class="px-4 py-3 border-bottom border-white border-opacity-10 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                            <div class="search-group">
+                                <span class="ps-3 text-muted"><i class="ri-search-line"></i></span>
+                                <input type="text" class="form-control explorer-search" data-target="duePaiementsTable" placeholder="Rechercher par client ou label...">
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-modern align-middle mb-0" id="duePaiementsTable">
+                                    <thead>
+                                        <tr>
+                                            <th class="ps-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="selectAllDuePaiements">
+                                                </div>
+                                            </th>
+                                            <th>Client</th>
+                                            <th>Label / Type</th>
+                                            <th>Montant Due</th>
+                                            <th>Montant Restant</th>
+                                            <th>Échéance</th>
+                                            <th>Statut</th>
+                                            <th class="pe-4 text-end">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for dp in due_paiements %}
+                                        <tr id="dp-{{ dp.id }}">
+                                            <td class="ps-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input select-due-paiement" type="checkbox" value="{{ dp.id }}">
+                                                </div>
+                                            </td>
+                                            <td class="fw-medium">{{ dp.client.nom }} {{ dp.client.prenom }}</td>
+                                            <td>
+                                                <div class="fw-bold">{{ dp.label }}</div>
+                                                <small class="text-muted">{{ dp.get_type_display }}</small>
+                                            </td>
+                                            <td class="fw-bold">{{ dp.montant_due }} DA</td>
+                                            <td class="text-danger fw-bold">{{ dp.montant_restant }} DA</td>
+                                            <td>{{ dp.date_echeance|date:"d/m/Y" }}</td>
+                                            <td>
+                                                {% if dp.is_done %}
+                                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">Payé</span>
+                                                {% elif dp.is_annulated %}
+                                                <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3">Annulé</span>
+                                                {% else %}
+                                                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">À payer</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="pe-4 text-end">
+                                                <div class="d-flex justify-content-end gap-2">
+                                                    <button class="btn btn-soft-primary btn-sm rounded-circle p-0 avatar-xs" 
+                                                            onclick="openEditDuePaiementModal('{{ dp.id }}', '{{ dp.label }}', '{{ dp.montant_due }}', '{{ dp.montant_restant }}', '{{ dp.date_echeance|date:'Y-m-d' }}')"
+                                                                title="Modifier">
+                                                        <i class="ri-pencil-line"></i>
+                                                    </button>
+                                                    <button class="btn btn-soft-danger btn-sm rounded-circle p-0 avatar-xs" 
+                                                            onclick="confirmDeleteDuePaiement('{{ dp.id }}')"
+                                                            title="Supprimer">
+                                                        <i class="ri-delete-bin-line"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr><td colspan="7"><div class="empty-state-container"><i class="ri-money-dollar-circle-line"></i><p>Aucun montant dû trouvé.</p></div></td></tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% if due_paiements.has_other_pages %}
+                            <div class="px-4 py-3 border-top border-white border-opacity-10 d-flex justify-content-between align-items-center">
+                                <div class="text-muted small">Page {{ due_paiements.number }} sur {{ due_paiements.paginator.num_pages }}</div>
+                                <nav>
+                                    <ul class="pagination pagination-sm mb-0">
+                                        {% if due_paiements.has_previous %}
+                                        <li class="page-item"><a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?dp_page={{ due_paiements.previous_page_number }}">Précédent</a></li>
+                                        {% endif %}
+                                        {% if due_paiements.has_next %}
+                                        <li class="page-item"><a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?dp_page={{ due_paiements.next_page_number }}">Suivant</a></li>
+                                        {% endif %}
+                                    </ul>
+                                </nav>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paiements Tab -->
+                <div class="tab-pane fade" id="paiements" role="tabpanel">
+                    <div class="glass-tab-content">
+                        <div class="px-4 py-3 border-bottom border-white border-opacity-10 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                            <div class="search-group">
+                                <span class="ps-3 text-muted"><i class="ri-search-line"></i></span>
+                                <input type="text" class="form-control explorer-search" data-target="paiementsTable" placeholder="Rechercher par prospect, num ou label...">
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-modern align-middle mb-0" id="paiementsTable">
+                                    <thead>
+                                        <tr>
+                                            <th class="ps-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="selectAllPaiements">
+                                                </div>
+                                            </th>
+                                            <th>Numéro / Label</th>
+                                            <th>Prospect</th>
+                                            <th>Montant Payé</th>
+                                            <th>Date Paiement</th>
+                                            <th>Mode</th>
+                                            <th class="pe-4 text-end">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for p in paiements %}
+                                        <tr id="paiement-{{ p.id }}">
+                                            <td class="ps-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input select-paiement" type="checkbox" value="{{ p.id }}">
+                                                </div>
+                                            </td>
+                                            <td class="fw-medium">
+                                                <div class="fw-bold">{{ p.num|default:"-" }}</div>
+                                                <small class="text-muted">{{ p.paiement_label }}</small>
+                                            </td>
+                                            <td>{{ p.prospect.nom }} {{ p.prospect.prenom }}</td>
+                                            <td class="fw-bold text-success">{{ p.montant_paye }} DA</td>
+                                            <td>{{ p.date_paiement|date:"d/m/Y" }}</td>
+                                            <td><span class="badge bg-soft-info text-info rounded-pill px-3">{{ p.get_mode_paiement_display }}</span></td>
+                                            <td class="pe-4 text-end">
+                                                <div class="d-flex justify-content-end gap-2">
+                                                    <button class="btn btn-soft-primary btn-sm rounded-circle p-0 avatar-xs" 
+                                                            onclick="openEditPaiementModal('{{ p.id }}', '{{ p.montant_paye }}', '{{ p.date_paiement|date:'Y-m-d' }}', '{{ p.observation|escapejs }}')"
+                                                            title="Modifier">
+                                                        <i class="ri-pencil-line"></i>
+                                                    </button>
+                                                    <button class="btn btn-soft-danger btn-sm rounded-circle p-0 avatar-xs" 
+                                                            onclick="confirmDeletePaiement('{{ p.id }}')"
+                                                            title="Supprimer">
+                                                        <i class="ri-delete-bin-line"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr><td colspan="6"><div class="empty-state-container"><i class="ri-bank-card-line"></i><p>Aucun paiement trouvé.</p></div></td></tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% if paiements.has_other_pages %}
+                            <div class="px-4 py-3 border-top border-white border-opacity-10 d-flex justify-content-between align-items-center">
+                                <div class="text-muted small">Page {{ paiements.number }} sur {{ paiements.paginator.num_pages }}</div>
+                                <nav>
+                                    <ul class="pagination pagination-sm mb-0">
+                                        {% if paiements.has_previous %}
+                                        <li class="page-item"><a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?pa_page={{ paiements.previous_page_number }}">Précédent</a></li>
+                                        {% endif %}
+                                        {% if paiements.has_next %}
+                                        <li class="page-item"><a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?pa_page={{ paiements.next_page_number }}">Suivant</a></li>
+                                        {% endif %}
+                                    </ul>
+                                </nav>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
             </div>
         </div>
     </div>
@@ -817,203 +1056,181 @@
         </div>
     </div>
 </div>
+<!-- Modal Modification Due Paiement -->
+<div class="modal fade" id="editDuePaiementModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="modal-title fw-bold">Modifier Montant Dû</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="editDuePaiementForm">
+                    <input type="hidden" id="editDpId">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Libellé</label>
+                        <input type="text" class="form-control rounded-pill" id="editDpLabel" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Montant Dû (DA)</label>
+                        <input type="number" step="0.01" class="form-control rounded-pill" id="editDpMontantDue" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Montant Restant (DA)</label>
+                        <input type="number" step="0.01" class="form-control rounded-pill" id="editDpMontantRestant" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Date Échéance</label>
+                        <input type="date" class="form-control rounded-pill" id="editDpDate" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4" id="saveDuePaiementBtn" onclick="saveDuePaiementChange()">
+                    <i class="ri-save-line me-1"></i> Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Modification Paiement -->
+<div class="modal fade" id="editPaiementModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="modal-title fw-bold">Modifier Paiement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="editPaiementForm">
+                    <input type="hidden" id="editPId">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Montant Payé (DA)</label>
+                        <input type="number" step="0.01" class="form-control rounded-pill" id="editPMontant" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Date Paiement</label>
+                        <input type="date" class="form-control rounded-pill" id="editPDate" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Observation</label>
+                        <textarea class="form-control" id="editPObservation" rows="3" style="border-radius: 15px;"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4" id="savePaiementBtn" onclick="savePaiementChange()">
+                    <i class="ri-save-line me-1"></i> Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock content %}
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        let activeTabId = 'prospects'; // Default
+    // === Logic for Bulk Selection and Actions ===
+    let selectedIds = [];
+    let currentModel = ''; // 'due_paiement' or 'paiement'
 
-        if (urlParams.has('v_page')) activeTabId = 'voeux';
-        else if (urlParams.has('vd_page')) activeTabId = 'voeux_double';
-        else if (urlParams.has('f_page')) activeTabId = 'formations';
-        else if (urlParams.has('s_page')) activeTabId = 'specialites';
-
-        const tabEl = document.querySelector(`button[data-bs-target="#${activeTabId}"]`);
-        if (tabEl) {
-            const tab = new bootstrap.Tab(tabEl);
-            tab.show();
-        }
-    });
-
-    document.addEventListener('DOMContentLoaded', function() {
-        // Search Filter
-        const searchInputs = document.querySelectorAll('.explorer-search');
-        searchInputs.forEach(input => {
-            input.addEventListener('input', function() {
-                filterTable(this.dataset.target);
-            });
-        });
-
-        // Dropdown Filter
-        const selectFilters = document.querySelectorAll('.explorer-filter');
-        selectFilters.forEach(select => {
-            select.addEventListener('change', function() {
-                filterTable(this.dataset.target);
-            });
-        });
-
-        function filterTable(tableId) {
-            const table = document.getElementById(tableId);
-            if (!table) return;
-
-            const searchInput = document.querySelector(`.explorer-search[data-target="${tableId}"]`);
-            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-            
-            const selectFilter = document.querySelector(`.explorer-filter[data-target="${tableId}"]`);
-            const filterTerm = selectFilter ? selectFilter.value.toLowerCase() : '';
-            const filterColumn = selectFilter ? parseInt(selectFilter.dataset.column) : -1;
-
-            const rows = table.querySelectorAll('tbody tr');
-            rows.forEach(row => {
-                // Check if it's an empty state row
-                if (row.querySelector('.empty-state-container')) return;
-
-                const text = row.innerText.toLowerCase();
-                const matchesSearch = text.includes(searchTerm);
-                
-                let matchesFilter = true;
-                if (filterTerm && filterColumn !== -1) {
-                    if (filterTerm === 'doublon') {
-                        matchesFilter = row.dataset.isDuplicate === 'true';
-                    } else {
-                        const cellText = row.cells[filterColumn].innerText.toLowerCase();
-                        matchesFilter = cellText.includes(filterTerm);
-                    }
-                }
-
-                if (matchesSearch && matchesFilter) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
-    });
-
-    const editModal = new bootstrap.Modal(document.getElementById('editVoeuModal'));
-
-    function openEditVoeuModal(id, type, currentSpecId, prospectName, currentPromoId, isConfirmed) {
-        document.getElementById('editVoeuId').value = id;
-        document.getElementById('editVoeuType').value = type;
-        document.getElementById('editVoeuProspectName').innerText = prospectName;
-        document.getElementById('editVoeuSpecialiteSelect').value = currentSpecId;
-        document.getElementById('editVoeuPromoSelect').value = currentPromoId || "";
-        document.getElementById('editVoeuConfirmedSelect').value = isConfirmed === 'true' || isConfirmed === true ? 'true' : 'false';
-        editModal.show();
-    }
-
-    function saveVoeuChange() {
-        const id = document.getElementById('editVoeuId').value;
-        const type = document.getElementById('editVoeuType').value;
-        const specId = document.getElementById('editVoeuSpecialiteSelect').value;
-        const promoId = document.getElementById('editVoeuPromoSelect').value;
-        const isConfirmed = document.getElementById('editVoeuConfirmedSelect').value;
-        const btn = document.getElementById('saveVoeuBtn');
-
-        if (!specId) {
-            alert('Veuillez sélectionner une spécialité.');
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enregistrement...';
-
-        const formData = new FormData();
-        formData.append('action', 'update_specialite');
-        formData.append('voeu_type', type);
-        formData.append('specialite_id', specId);
-        formData.append('promo_id', promoId);
-        formData.append('is_confirmed', isConfirmed);
-        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-
-        fetch(`/saas-admin/api/tenant/{{ institut.id }}/voeu/${id}/update/`, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                // Update UI
-                const rowId = type === 'standard' ? `voeu-standard-${id}` : `voeu-double-${id}`;
-                const row = document.getElementById(rowId);
-                if (row) {
-                    row.querySelector('.spec-label').innerText = data.new_label;
-                    row.querySelector('.promo-label').innerText = data.new_promo;
-                    if (type === 'standard') {
-                        row.querySelector('.spec-formation').innerText = data.new_formation;
-                    }
-                    
-                    // Update confirmation badge
-                    const badgeCell = row.cells[3]; // Confirmation column
-                    if (data.new_is_confirmed) {
-                        badgeCell.innerHTML = '<span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">Confirmé</span>';
-                    } else {
-                        badgeCell.innerHTML = '<span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">En attente</span>';
-                    }
-                    
-                    // Update the onclick of the edit button to reflect new values
-                    const editBtn = row.querySelector('button[onclick^="openEditVoeuModal"]');
-                    const prospectName = document.getElementById('editVoeuProspectName').innerText;
-                    editBtn.setAttribute('onclick', `openEditVoeuModal('${id}', '${type}', '${specId}', '${prospectName}', '${promoId}', '${data.new_is_confirmed}')`);
-                }
-                editModal.hide();
-                Swal.fire('Succès', data.message, 'success');
+    function updateBulkBar() {
+        const bar = document.getElementById('bulkActionBar');
+        const countSpan = document.getElementById('selectedCount');
+        if (bar && countSpan) {
+            if (selectedIds.length > 0) {
+                countSpan.innerText = selectedIds.length;
+                bar.classList.add('show');
             } else {
-                Swal.fire('Erreur', data.message, 'error');
+                bar.classList.remove('show');
             }
-        })
-        .catch(err => {
-            console.error(err);
-            Swal.fire('Erreur', 'Une erreur est survenue lors de la mise à jour.', 'error');
-        })
-        .finally(() => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="ri-save-line me-1"></i> Enregistrer';
-        });
+        }
     }
 
-    function confirmDeleteVoeu(id, type) {
-        Swal.fire({
-            title: 'Êtes-vous sûr ?',
-            text: "Cette action est irréversible et supprimera définitivement cette fiche de vœux.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'Oui, supprimer !',
-            cancelButtonText: 'Annuler'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const formData = new FormData();
-                formData.append('action', 'delete');
-                formData.append('voeu_type', type);
-                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-
-                fetch(`/saas-admin/api/tenant/{{ institut.id }}/voeu/${id}/update/`, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        const rowId = type === 'standard' ? `voeu-standard-${id}` : `voeu-double-${id}`;
-                        document.getElementById(rowId)?.remove();
-                        Swal.fire('Supprimé !', data.message, 'success');
-                    } else {
-                        Swal.fire('Erreur', data.message, 'error');
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    Swal.fire('Erreur', 'Une erreur est survenue lors de la suppression.', 'error');
-                });
-            }
+    function syncSelectedIds(selector) {
+        selectedIds = [];
+        $(selector + ':checked').each(function() {
+            selectedIds.push($(this).val());
         });
+        updateBulkBar();
     }
+
+    $(document).ready(function() {
+        $('#selectAllDuePaiements').on('change', function() {
+            const isChecked = $(this).is(':checked');
+            $('.select-due-paiement').prop('checked', isChecked);
+            currentModel = 'due_paiement';
+            syncSelectedIds('.select-due-paiement');
+        });
+
+        $(document).on('change', '.select-due-paiement', function() {
+            currentModel = 'due_paiement';
+            $('.select-paiement').prop('checked', false);
+            syncSelectedIds('.select-due-paiement');
+        });
+
+        $('#selectAllPaiements').on('change', function() {
+            const isChecked = $(this).is(':checked');
+            $('.select-paiement').prop('checked', isChecked);
+            currentModel = 'paiement';
+            syncSelectedIds('.select-paiement');
+        });
+
+        $(document).on('change', '.select-paiement', function() {
+            currentModel = 'paiement';
+            $('.select-due-paiement').prop('checked', false);
+            syncSelectedIds('.select-paiement');
+        });
+
+        $('#cancelSelection').on('click', function() {
+            $('.select-due-paiement, .select-paiement, #selectAllDuePaiements, #selectAllPaiements').prop('checked', false);
+            selectedIds = [];
+            updateBulkBar();
+        });
+
+        $('#bulkDeleteBtn').on('click', function() {
+            if (selectedIds.length === 0) return;
+            Swal.fire({
+                title: 'Êtes-vous sûr ?',
+                text: `Vous allez supprimer ${selectedIds.length} éléments. Cette action est irréversible !`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Oui, supprimer tout',
+                cancelButtonText: 'Annuler',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "{% url 'saas_admin_app:saas_bulk_delete_action' institut.id %}",
+                        type: "POST",
+                        data: {
+                            'model': currentModel,
+                            'ids': JSON.stringify(selectedIds),
+                            'csrfmiddlewaretoken': '{{ csrf_token }}'
+                        },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                Swal.fire('Supprimé !', response.message, 'success').then(() => location.reload());
+                            } else {
+                                Swal.fire('Erreur', response.message, 'error');
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Erreur', 'Une erreur est survenue lors de la suppression.', 'error');
+                        }
+                    });
+                }
+            });
+        });
+    });
+
+    // === Prospect Actions ===
     const prospectModal = new bootstrap.Modal(document.getElementById('editProspectModal'));
-
     function openEditProspectModal(id, name, etat, statut) {
         document.getElementById('editProspectId').value = id;
         document.getElementById('editProspectName').innerText = name;
@@ -1027,99 +1244,214 @@
         const etat = document.getElementById('editProspectEtat').value;
         const statut = document.getElementById('editProspectStatut').value;
         const btn = document.getElementById('saveProspectBtn');
-
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enregistrement...';
+        const fd = new FormData();
+        fd.append('etat', etat);
+        fd.append('statut', statut);
+        fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
 
-        const formData = new FormData();
-        formData.append('etat', etat);
-        formData.append('statut', statut);
-        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-
-        fetch(`/saas-admin/api/tenant/{{ institut.id }}/prospect/${id}/update/`, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                const row = document.getElementById(`prospect-${id}`);
-                if (row) {
-                    // Update badges
-                    const etatBadge = row.querySelector('.etat-badge');
-                    etatBadge.innerText = data.new_etat_display;
-                    
-                    // Update classes for etat
-                    etatBadge.className = 'badge rounded-pill px-3 etat-badge';
-                    if (etat === 'accepte') etatBadge.classList.add('bg-success', 'bg-opacity-10', 'text-success');
-                    else if (etat === 'rejete') etatBadge.classList.add('bg-danger', 'bg-opacity-10', 'text-danger');
-                    else etatBadge.classList.add('bg-warning', 'bg-opacity-10', 'text-warning');
-
-                    const statutBadge = row.querySelector('.statut-badge');
-                    statutBadge.innerHTML = `<i class="ri-checkbox-blank-circle-fill me-1 small"></i>${data.new_statut_display}`;
-                    
-                    // Update classes for statut
-                    statutBadge.className = 'badge rounded-pill px-3 statut-badge';
-                    if (statut === 'convertit') statutBadge.classList.add('bg-success', 'bg-opacity-10', 'text-success');
-                    else if (statut === 'visiteur') statutBadge.classList.add('bg-info', 'bg-opacity-10', 'text-info');
-                    else statutBadge.classList.add('bg-warning', 'bg-opacity-10', 'text-warning');
-
-                    // Update the onclick of the edit button
-                    const editBtn = row.querySelector('button[onclick^="openEditProspectModal"]');
-                    const prospectName = document.getElementById('editProspectName').innerText;
-                    editBtn.setAttribute('onclick', `openEditProspectModal('${id}', '${prospectName}', '${etat}', '${statut}')`);
-                }
-                prospectModal.hide();
-                Swal.fire('Succès', data.message, 'success');
-            } else {
-                Swal.fire('Erreur', data.message, 'error');
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            Swal.fire('Erreur', 'Une erreur est survenue lors de la mise à jour.', 'error');
-        })
-        .finally(() => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="ri-save-line me-1"></i> Enregistrer';
-        });
+        fetch(`/saas-admin/api/tenant/{{ institut.id }}/prospect/${id}/update/`, { method: 'POST', body: fd })
+            .then(r => r.json()).then(data => {
+                if (data.status === 'success') location.reload();
+                else Swal.fire('Erreur', data.message, 'error');
+            }).finally(() => btn.disabled = false);
     }
 
     function confirmDeleteProspect(id) {
         Swal.fire({
             title: 'Supprimer le prospect ?',
-            text: "Toutes les données associées (vœux, documents, etc.) seront également supprimées.",
+            text: "Toutes les données associées seront supprimées.",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'Oui, supprimer !',
+            confirmButtonText: 'Oui, supprimer !'
+        }).then((res) => {
+            if (res.isConfirmed) {
+                const fd = new FormData();
+                fd.append('action', 'delete');
+                fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                fetch(`/saas-admin/api/tenant/{{ institut.id }}/prospect/${id}/update/`, { method: 'POST', body: fd })
+                    .then(r => r.json()).then(() => location.reload());
+            }
+        });
+    }
+
+    function confirmResetProspect(id, name) {
+        Swal.fire({
+            title: `Réinitialiser ${name} ?`,
+            text: "Cela supprimera tous les paiements et montants dus, et remettra le statut à 'Pré-inscrit'.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#f59e0b',
+            confirmButtonText: 'Oui, réinitialiser !',
             cancelButtonText: 'Annuler'
         }).then((result) => {
             if (result.isConfirmed) {
-                const formData = new FormData();
-                formData.append('action', 'delete');
-                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-
-                fetch(`/saas-admin/api/tenant/{{ institut.id }}/prospect/${id}/update/`, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        document.getElementById(`prospect-${id}`)?.remove();
-                        Swal.fire('Supprimé !', data.message, 'success');
-                    } else {
-                        Swal.fire('Erreur', data.message, 'error');
+                Swal.fire({ title: 'Réinitialisation en cours...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                $.ajax({
+                    url: `/saas-admin/api/tenant/{{ institut.id }}/prospect/${id}/reset/`,
+                    type: "POST",
+                    data: { 'csrfmiddlewaretoken': '{{ csrf_token }}' },
+                    success: function(response) {
+                        if (response.status === 'success') Swal.fire('Réinitialisé !', response.message, 'success').then(() => location.reload());
+                        else Swal.fire('Erreur', response.message, 'error');
+                    },
+                    error: function() {
+                        Swal.fire('Erreur', 'Une erreur est survenue lors de la réinitialisation.', 'error');
                     }
-                })
-                .catch(err => {
-                    console.error(err);
-                    Swal.fire('Erreur', 'Une erreur est survenue lors de la suppression.', 'error');
                 });
             }
         });
     }
+
+    // === Voeux Actions ===
+    const voeuModal = new bootstrap.Modal(document.getElementById('editVoeuModal'));
+    function openEditVoeuModal(id, type, currentSpecId, prospectName, currentPromoId, isConfirmed) {
+        document.getElementById('editVoeuId').value = id;
+        document.getElementById('editVoeuType').value = type;
+        document.getElementById('editVoeuProspectName').innerText = prospectName;
+        document.getElementById('editVoeuSpecialiteSelect').value = currentSpecId;
+        document.getElementById('editVoeuPromoSelect').value = currentPromoId || "";
+        document.getElementById('editVoeuConfirmedSelect').value = (isConfirmed === 'true' || isConfirmed === true) ? 'true' : 'false';
+        voeuModal.show();
+    }
+
+    function saveVoeuChange() {
+        const id = document.getElementById('editVoeuId').value;
+        const type = document.getElementById('editVoeuType').value;
+        const btn = document.getElementById('saveVoeuBtn');
+        btn.disabled = true;
+        const fd = new FormData();
+        fd.append('action', 'update_specialite');
+        fd.append('voeu_type', type);
+        fd.append('specialite_id', document.getElementById('editVoeuSpecialiteSelect').value);
+        fd.append('promo_id', document.getElementById('editVoeuPromoSelect').value);
+        fd.append('is_confirmed', document.getElementById('editVoeuConfirmedSelect').value);
+        fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch(`/saas-admin/api/tenant/{{ institut.id }}/voeu/${id}/update/`, { method: 'POST', body: fd })
+            .then(r => r.json()).then(data => {
+                if (data.status === 'success') location.reload();
+                else Swal.fire('Erreur', data.message, 'error');
+            }).finally(() => btn.disabled = false);
+    }
+
+    function confirmDeleteVoeu(id, type) {
+        Swal.fire({ title: 'Supprimer ce vœu ?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' }).then(res => {
+            if (res.isConfirmed) {
+                const fd = new FormData(); fd.append('action', 'delete'); fd.append('voeu_type', type); fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                fetch(`/saas-admin/api/tenant/{{ institut.id }}/voeu/${id}/update/`, { method: 'POST', body: fd })
+                    .then(r => r.json()).then(() => location.reload());
+            }
+        });
+    }
+
+    // === Due Paiements Actions ===
+    const dpModal = new bootstrap.Modal(document.getElementById('editDuePaiementModal'));
+    function openEditDuePaiementModal(id, label, montant, restant, date) {
+        document.getElementById('editDpId').value = id;
+        document.getElementById('editDpLabel').value = label;
+        document.getElementById('editDpMontantDue').value = montant;
+        document.getElementById('editDpMontantRestant').value = restant;
+        document.getElementById('editDpDate').value = date;
+        dpModal.show();
+    }
+
+    function saveDuePaiementChange() {
+        const id = document.getElementById('editDpId').value;
+        const btn = document.getElementById('saveDuePaiementBtn');
+        btn.disabled = true;
+        const fd = new FormData(document.getElementById('editDuePaiementForm'));
+        fd.append('action', 'update');
+        fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        fetch(`/saas-admin/api/tenant/{{ institut.id }}/due-paiement/${id}/update/`, { method: 'POST', body: fd })
+            .then(r => r.json()).then(data => location.reload()).finally(() => btn.disabled = false);
+    }
+
+    function confirmDeleteDuePaiement(id) {
+        Swal.fire({ title: 'Supprimer ce montant dû ?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' }).then(res => {
+            if (res.isConfirmed) {
+                const fd = new FormData(); fd.append('action', 'delete'); fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                fetch(`/saas-admin/api/tenant/{{ institut.id }}/due-paiement/${id}/update/`, { method: 'POST', body: fd })
+                    .then(r => r.json()).then(data => Swal.fire('Succès', data.message, 'success').then(() => location.reload()));
+            }
+        });
+    }
+
+    // === Paiements Actions ===
+    const pModal = new bootstrap.Modal(document.getElementById('editPaiementModal'));
+    function openEditPaiementModal(id, montant, date, obs) {
+        document.getElementById('editPId').value = id;
+        document.getElementById('editPMontant').value = montant;
+        document.getElementById('editPDate').value = date;
+        document.getElementById('editPObservation').value = obs;
+        pModal.show();
+    }
+
+    function savePaiementChange() {
+        const id = document.getElementById('editPId').value;
+        const btn = document.getElementById('savePaiementBtn');
+        btn.disabled = true;
+        const fd = new FormData();
+        fd.append('action', 'update');
+        fd.append('montant_paye', document.getElementById('editPMontant').value);
+        fd.append('date_paiement', document.getElementById('editPDate').value);
+        fd.append('observation', document.getElementById('editPObservation').value);
+        fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        fetch(`/saas-admin/api/tenant/{{ institut.id }}/paiement/${id}/update/`, { method: 'POST', body: fd })
+            .then(r => r.json()).then(data => location.reload()).finally(() => btn.disabled = false);
+    }
+
+    function confirmDeletePaiement(id) {
+        Swal.fire({ title: 'Supprimer ce paiement ?', text: "Le montant dû sera rétabli.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' }).then(res => {
+            if (res.isConfirmed) {
+                const fd = new FormData(); fd.append('action', 'delete'); fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                fetch(`/saas-admin/api/tenant/{{ institut.id }}/paiement/${id}/update/`, { method: 'POST', body: fd })
+                    .then(r => r.json()).then(data => Swal.fire('Succès', data.message, 'success').then(() => location.reload()));
+            }
+        });
+    }
+
+    // === Global Search & Filters ===
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let activeTabId = 'prospects';
+        if (urlParams.has('v_page')) activeTabId = 'voeux';
+        else if (urlParams.has('vd_page')) activeTabId = 'voeux_double';
+        else if (urlParams.has('f_page')) activeTabId = 'formations';
+        else if (urlParams.has('s_page')) activeTabId = 'specialites';
+        else if (urlParams.has('dp_page')) activeTabId = 'due_paiements';
+        else if (urlParams.has('pa_page')) activeTabId = 'paiements';
+        const tabEl = document.querySelector(`a[href="#${activeTabId}"]`);
+        if (tabEl) (new bootstrap.Tab(tabEl)).show();
+
+        const filterTable = (tableId) => {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            const searchInput = document.querySelector(`.explorer-search[data-target="${tableId}"]`);
+            const searchTerm = (searchInput ? searchInput.value : '').toLowerCase();
+            const selectFilter = document.querySelector(`.explorer-filter[data-target="${tableId}"]`);
+            const filterTerm = (selectFilter ? selectFilter.value : '').toLowerCase();
+            const filterColumn = parseInt(selectFilter ? selectFilter.dataset.column : -1);
+
+            table.querySelectorAll('tbody tr').forEach(row => {
+                if (row.querySelector('.empty-state-container')) return;
+                const text = row.innerText.toLowerCase();
+                const matchesSearch = text.includes(searchTerm);
+                let matchesFilter = true;
+                if (filterTerm && filterColumn !== -1) {
+                    if (filterTerm === 'doublon') matchesFilter = row.dataset.isDuplicate === 'true';
+                    else matchesFilter = row.cells[filterColumn].innerText.toLowerCase().includes(filterTerm);
+                }
+                row.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
+            });
+        };
+
+        document.querySelectorAll('.explorer-search, .explorer-filter').forEach(el => {
+            el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', function() {
+                filterTable(this.dataset.target);
+            });
+        });
+    });
 </script>
 {% endblock extra_js %}

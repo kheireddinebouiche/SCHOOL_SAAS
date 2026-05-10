@@ -233,6 +233,9 @@ class EcheancierPaiement(models.Model):
     majoration = models.DecimalField(decimal_places=2, max_digits=20, default=0, null=True, blank=True)
     type_majoration = models.CharField(max_length=20, default='fixe', choices=[('fixe', 'Montant Fixe'), ('pourcentage', 'Pourcentage')])
     
+    has_remise = models.BooleanField(default=False)
+    has_majoration = models.BooleanField(default=False)
+    tarif_formation = models.DecimalField(decimal_places=2, max_digits=20, default=0, null=True, blank=True)
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=False)
     is_archived = models.BooleanField(default=False)
@@ -268,6 +271,13 @@ class EcheancierSpecial(models.Model):
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     
     frais_inscription = models.DecimalField(decimal_places=2, max_digits=200, null=True, blank=True)
+    remise = models.DecimalField(decimal_places=2, max_digits=20, default=0, null=True, blank=True)
+    type_remise = models.CharField(max_length=20, default='fixe', choices=[('fixe', 'Montant Fixe'), ('pourcentage', 'Pourcentage')])
+    majoration = models.DecimalField(decimal_places=2, max_digits=20, default=0, null=True, blank=True)
+    type_majoration = models.CharField(max_length=20, default='fixe', choices=[('fixe', 'Montant Fixe'), ('pourcentage', 'Pourcentage')])
+    has_remise = models.BooleanField(default=False)
+    has_majoration = models.BooleanField(default=False)
+    tarif_formation = models.DecimalField(decimal_places=2, max_digits=20, default=0, null=True, blank=True)
     entite = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)
 
     is_validate = models.BooleanField(default=False)

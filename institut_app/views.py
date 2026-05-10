@@ -19,11 +19,12 @@ from t_tresorerie.models import DuePaiements
 from t_formations.models import Promos
 from t_groupe.models import Groupe, GroupeLine
 from t_timetable.models import Timetable, TimetableEntry, Salle
+from t_rh.models import Employees, Contrats, Services, Posts
+from t_ressource_humaine.models import FichePaie
 from .models import UserSession, Profile
 from django.contrib.sessions.models import Session
 from django.utils import timezone
 import datetime
-from django_otp.decorators import otp_required
 from datetime import datetime, timedelta
 from django.db.models import Count, Sum
 from t_tresorerie.models import DuePaiements, Paiements, Depenses, ClientPaiementsRequest
@@ -226,8 +227,57 @@ def crm_dashboard(request):
     
     return render(request, 'tenant_folder/dashboard/crm_dashboard.html', context)
 
+@login_required(login_url='institut_app:login')
 def rh_dashboard(request):
-    pass
+    # KPIs de base
+    total_employees = Employees.objects.count()
+    active_employees = Employees.objects.filter(etat='en cours').count()
+    total_contracts = Contrats.objects.count()
+    total_services = Services.objects.count()
+
+    # Répartition par genre
+    gender_stats = Employees.objects.values('genre').annotate(count=Count('genre'))
+    gender_labels = []
+    gender_counts = []
+    gender_map = {'M': 'Masculin', 'F': 'Féminin'}
+    for stat in gender_stats:
+        if stat['genre']:
+            gender_labels.append(gender_map.get(stat['genre'], stat['genre']))
+            gender_counts.append(stat['count'])
+
+    # Répartition par situation familiale
+    family_stats = Employees.objects.values('situation_familiale').annotate(count=Count('situation_familiale'))
+    family_labels = []
+    family_counts = []
+    family_map = {'C': 'Célibataire', 'M': 'Marié(e)', 'D': 'Divorcé(e)', 'V': 'Veuf(ve)'}
+    for stat in family_stats:
+        if stat['situation_familiale']:
+            family_labels.append(family_map.get(stat['situation_familiale'], stat['situation_familiale']))
+            family_counts.append(stat['count'])
+
+    # Recrutements récents (30 derniers jours)
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    recent_hires = Employees.objects.filter(created_at__gte=thirty_days_ago).order_by('-created_at')[:5]
+
+    # Contrats arrivant à échéance (dans les 30 prochains jours)
+    next_month = timezone.now().date() + timedelta(days=30)
+    expiring_contracts = Contrats.objects.filter(date_fin__gte=timezone.now().date(), date_fin__lte=next_month).select_related('employee')
+
+    context = {
+        'tenant': request.tenant,
+        'total_employees': total_employees,
+        'active_employees': active_employees,
+        'total_contracts': total_contracts,
+        'total_services': total_services,
+        'gender_labels': json.dumps(gender_labels),
+        'gender_counts': json.dumps(gender_counts),
+        'family_labels': json.dumps(family_labels),
+        'family_counts': json.dumps(family_counts),
+        'recent_hires': recent_hires,
+        'expiring_contracts': expiring_contracts,
+    }
+    
+    return render(request, 'tenant_folder/dashboard/rh_dashboard.html', context)
 
 def default_dashboard(request):
     pass

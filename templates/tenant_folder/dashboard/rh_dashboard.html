@@ -1,0 +1,320 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Tableau de bord RH {% endblock title %}
+{% block content %}
+<style>
+    :root {
+        --primary-color: #4361ee;
+        --secondary-color: #3f37c9;
+        --accent-color: #4895ef;
+        --success-color: #4cc9f0;
+        --warning-color: #f72585;
+        --info-color: #480ca8;
+        --danger-color: #ef233c;
+    }
+
+    .modern-card {
+        border-radius: 16px;
+        border: none;
+        background: white;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.01);
+        margin-bottom: 1.5rem;
+    }
+    
+    .modern-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .card-header-modern {
+        background: transparent;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 1.25rem 1.5rem;
+    }
+
+    .icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .icon-box.primary { background: rgba(67, 97, 238, 0.1); color: var(--primary-color); }
+    .icon-box.success { background: rgba(76, 201, 240, 0.1); color: var(--success-color); }
+    .icon-box.warning { background: rgba(247, 37, 133, 0.1); color: var(--warning-color); }
+    .icon-box.info { background: rgba(72, 149, 239, 0.1); color: var(--accent-color); }
+    .icon-box.danger { background: rgba(239, 35, 60, 0.1); color: var(--danger-color); }
+
+    .table-modern {
+        border-collapse: separate;
+        border-spacing: 0 8px;
+    }
+    
+    .table-modern tbody tr {
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        transition: transform 0.2s;
+        border-radius: 8px;
+    }
+    
+    .table-modern tbody tr:hover {
+        transform: scale(1.002);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    }
+    
+    .table-modern td {
+        border: none;
+        padding: 12px 16px;
+        vertical-align: middle;
+    }
+    
+    .stat-tile-title {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #878a99;
+        font-weight: 600;
+    }
+    .stat-tile-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #212529;
+        margin-top: 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            <!-- Page Title -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
+                         <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                <i class="ri-team-line text-primary"></i>
+                            </div>
+                            <h4 class="mb-0 text-primary">Tableau de Bord RH</h4>
+                        </div>
+                        <div class="page-title-right">
+                            <ol class="breadcrumb m-0 bg-transparent">
+                                <li class="breadcrumb-item"><a href="javascript: void(0);">RH</a></li>
+                                <li class="breadcrumb-item active">Dashboard</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Content -->
+            <div class="row g-4">
+                
+                <!-- KPI Column -->
+                <div class="col-xl-3">
+                    <h6 class="text-uppercase fw-semibold text-muted mb-3 fs-13">Monitoring</h6>
+                    
+                    <!-- Total Employees -->
+                    <div class="card modern-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="stat-tile-title mb-0">Total Employés</h5>
+                                <div class="icon-box primary" style="width: 36px; height: 36px; font-size: 1.1rem;">
+                                    <i class="ri-user-heart-line"></i>
+                                </div>
+                            </div>
+                            <h2 class="stat-tile-value fs-22">{{ total_employees }}</h2>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 fs-11">
+                                <i class="ri-check-line me-1"></i> {{ active_employees }} Actifs
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Total Contracts -->
+                    <div class="card modern-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="stat-tile-title mb-0">Contrats Totaux</h5>
+                                <div class="icon-box warning" style="width: 36px; height: 36px; font-size: 1.1rem;">
+                                    <i class="ri-file-text-line"></i>
+                                </div>
+                            </div>
+                            <h2 class="stat-tile-value fs-22">{{ total_contracts }}</h2>
+                        </div>
+                    </div>
+
+                    <!-- Total Services -->
+                    <div class="card modern-card">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="stat-tile-title mb-0">Services</h5>
+                                <div class="icon-box info" style="width: 36px; height: 36px; font-size: 1.1rem;">
+                                    <i class="ri-building-line"></i>
+                                </div>
+                            </div>
+                            <h2 class="stat-tile-value fs-22">{{ total_services }}</h2>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="card modern-card">
+                        <div class="card-header card-header-modern">
+                            <h6 class="card-title mb-0 fs-14">Actions Rapides</h6>
+                        </div>
+                        <div class="card-body p-3">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 't_rh:nouveau_employe' %}" class="btn btn-soft-primary text-start d-flex align-items-center justify-content-between">
+                                    <span><i class="ri-user-add-line me-2"></i>Nouvel Employé</span>
+                                    <i class="ri-arrow-right-s-line"></i>
+                                </a>
+                                <a href="{% url 't_rh:nouveau_contrat' %}" class="btn btn-soft-warning text-start d-flex align-items-center justify-content-between">
+                                    <span><i class="ri-file-add-line me-2"></i>Nouveau Contrat</span>
+                                    <i class="ri-arrow-right-s-line"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis Column -->
+                <div class="col-xl-6">
+                    <h6 class="text-uppercase fw-semibold text-muted mb-3 fs-13">Analyse & Listes</h6>
+                    
+                    <div class="row">
+                        <!-- Gender Chart -->
+                        <div class="col-md-6">
+                            <div class="card modern-card">
+                                <div class="card-header card-header-modern">
+                                    <h6 class="card-title mb-0 fs-14">Répartition par Genre</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="genderChart" class="apex-charts"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Family Situation Chart -->
+                        <div class="col-md-6">
+                            <div class="card modern-card">
+                                <div class="card-header card-header-modern">
+                                    <h6 class="card-title mb-0 fs-14">Situation Familiale</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="familyChart" class="apex-charts"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Expiring Contracts -->
+                    <div class="card modern-card">
+                        <div class="card-header card-header-modern d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0 fs-15">
+                                <i class="ri-alarm-warning-line me-2 text-danger"></i>Contrats arrivant à échéance (30j)
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-modern mb-0">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>Employé</th>
+                                            <th>Type</th>
+                                            <th>Date Fin</th>
+                                            <th class="text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for contrat in expiring_contracts %}
+                                        <tr>
+                                            <td class="fw-medium">{{ contrat.employee.nom }} {{ contrat.employee.prenom }}</td>
+                                            <td><span class="badge bg-light text-dark">{{ contrat.type_contrat.label }}</span></td>
+                                            <td><span class="text-danger fw-bold">{{ contrat.date_fin|date:"d/m/Y" }}</span></td>
+                                            <td class="text-center">
+                                                <a href="{% url 't_rh:detailsEmploye' contrat.employee.pk %}" class="btn btn-soft-primary btn-sm rounded-circle"><i class="ri-eye-line"></i></a>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr><td colspan="4" class="text-center py-4 text-muted">Aucun contrat n'arrive à échéance prochainement.</td></tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Column -->
+                <div class="col-xl-3">
+                    <h6 class="text-uppercase fw-semibold text-muted mb-3 fs-13">Activité Récente</h6>
+                    
+                    <!-- Recent Hires -->
+                    <div class="card modern-card">
+                        <div class="card-header card-header-modern">
+                            <h6 class="card-title mb-0 fs-14">Derniers Recrutements</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="p-3">
+                                {% for hire in recent_hires %}
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="avatar-sm flex-shrink-0">
+                                        <span class="avatar-title bg-info-subtle text-info rounded-circle fs-13">
+                                            {{ hire.nom|slice:":1" }}{{ hire.prenom|slice:":1" }}
+                                        </span>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="fs-13 mb-0">{{ hire.nom }} {{ hire.prenom }}</h6>
+                                        <p class="text-muted fs-12 mb-0">Inscrit le {{ hire.created_at|date:"d M Y" }}</p>
+                                    </div>
+                                    <a href="{% url 't_rh:detailsEmploye' hire.pk %}" class="btn btn-ghost-primary btn-sm p-0"><i class="ri-arrow-right-line"></i></a>
+                                </div>
+                                {% empty %}
+                                <p class="text-center text-muted py-3">Aucun recrutement récent.</p>
+                                {% endfor %}
+                            </div>
+                            <div class="p-3 border-top">
+                                <a href="{% url 't_rh:liste_employes' %}" class="btn btn-link link-primary p-0 fs-13 w-100 text-center">Voir tous les employés</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gender Chart
+        var genderOptions = {
+            chart: { height: 220, type: 'donut', fontFamily: 'inherit' },
+            series: {{ gender_counts|safe }},
+            labels: {{ gender_labels|safe }},
+            colors: ['#4361ee', '#f72585', '#4cc9f0'],
+            legend: { position: 'bottom', fontSize: '11px' },
+            dataLabels: { enabled: false },
+            plotOptions: { pie: { donut: { size: '65%' } } }
+        };
+        new ApexCharts(document.querySelector("#genderChart"), genderOptions).render();
+
+        // Family Situation Chart
+        var familyOptions = {
+            chart: { height: 220, type: 'donut', fontFamily: 'inherit' },
+            series: {{ family_counts|safe }},
+            labels: {{ family_labels|safe }},
+            colors: ['#4361ee', '#3f37c9', '#4895ef', '#4cc9f0', '#7209b7'],
+            legend: { position: 'bottom', fontSize: '11px' },
+            dataLabels: { enabled: false },
+            plotOptions: { pie: { donut: { size: '65%' } } }
+        };
+        new ApexCharts(document.querySelector("#familyChart"), familyOptions).render();
+    });
+</script>
+{% endblock content %}

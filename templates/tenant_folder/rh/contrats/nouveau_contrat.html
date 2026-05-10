@@ -1,0 +1,506 @@
+{% extends 'tenant_folder/base.html' %}
+{% block title %}RH - Nouveau contrat{% endblock title %}
+{% block content %}
+
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --primary-gradient: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+        --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
+        border-radius: 1.5rem;
+    }
+
+    /* Stepper Styles */
+    .stepper-wrapper {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 3rem;
+        position: relative;
+    }
+
+    .stepper-wrapper::before {
+        content: "";
+        position: absolute;
+        top: 25px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e2e8f0;
+        z-index: 0;
+    }
+
+    .step-item {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+    }
+
+    .step-counter {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: white;
+        border: 2px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #64748b;
+        margin-bottom: 0.75rem;
+        transition: all 0.4s ease;
+    }
+
+    .step-item.active .step-counter {
+        border-color: #6366f1;
+        background: #6366f1;
+        color: white;
+        box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.1);
+    }
+
+    .step-item.completed .step-counter {
+        border-color: #10b981;
+        background: #10b981;
+        color: white;
+    }
+
+    .step-label {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #64748b;
+        text-align: center;
+    }
+
+    .step-item.active .step-label {
+        color: #4338ca;
+    }
+
+    /* Form Transitions */
+    .step-content {
+        display: none;
+        animation: fadeIn 0.4s ease-in-out;
+    }
+
+    .step-content.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-control, .form-select {
+        border-radius: 0.85rem;
+        padding: 0.75rem 1rem;
+        border: 1.5px solid #e2e8f0;
+        background-color: #f8fafc;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        background-color: white;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    .btn-step {
+        padding: 0.7rem 2rem;
+        border-radius: 50rem !important;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-next {
+        background-color: #6366f1;
+        color: white;
+        border: none;
+    }
+
+    .btn-next:hover {
+        transform: translateX(3px);
+        box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+        background-color: #4f46e5;
+    }
+
+    .btn-prev {
+        background-color: #f1f5f9;
+        color: #475569;
+        border: none;
+    }
+
+    .btn-prev:hover {
+        background-color: #e2e8f0;
+    }
+
+    .btn-finish {
+        background-color: #10b981;
+        color: white;
+        border: none;
+    }
+
+    .btn-finish:hover {
+        background-color: #059669;
+        box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
+    }
+
+    .section-title {
+        color: #1e293b;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .section-title i {
+        width: 32px;
+        height: 32px;
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+        font-size: 1.1rem;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            
+            <!-- Header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-4 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                                <i class="ri-file-add-fill text-primary fs-3"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-1 fw-bold">Nouveau Contrat</h4>
+                                <p class="text-muted mb-0">Assistant de création de dossier contractuel</p>
+                            </div>
+                        </div>
+                        <a href="{% url 't_rh:liste_des_contrats' %}" class="btn btn-light rounded-pill px-4">
+                            <i class="ri-close-line me-1"></i>Annuler
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-lg-9">
+                    <div class="glass-card p-5">
+                        
+                        <!-- Stepper Progress -->
+                        <div class="stepper-wrapper">
+                            <div class="step-item active" id="step-1-indicator">
+                                <div class="step-counter">1</div>
+                                <div class="step-label">Collaborateur</div>
+                            </div>
+                            <div class="step-item" id="step-2-indicator">
+                                <div class="step-counter">2</div>
+                                <div class="step-label">Détails</div>
+                            </div>
+                            <div class="step-item" id="step-3-indicator">
+                                <div class="step-counter">3</div>
+                                <div class="step-label">Affectation</div>
+                            </div>
+                            <div class="step-item" id="step-4-indicator">
+                                <div class="step-counter">4</div>
+                                <div class="step-label">Conditions</div>
+                            </div>
+                        </div>
+
+                        <form id="newContratForm">
+                            {% csrf_token %}
+                            
+                            <!-- Step 1: Employee & Employer -->
+                            <div class="step-content active" id="step-1">
+                                <h5 class="section-title"><i class="ri-user-follow-line"></i> Identification du collaborateur</h5>
+                                <div class="row g-4">
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold">Employé à recruter</label>
+                                        <select class="form-select" id="id_employe" name="id_employe" required>
+                                            <option value="">Sélectionner un employé</option>
+                                            {% for emp in employes %}
+                                            <option value="{{ emp.id }}">{{ emp.nom }} {{ emp.prenom }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Employeur (Entité légale)</label>
+                                        <select class="form-select" id="entite_select" required>
+                                            <option value="">Sélectionner l'entreprise</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Catégorie de contrat</label>
+                                        <select class="form-select" id="categorie_select" required disabled>
+                                            <option value="">Sélectionner la catégorie</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Contract Details -->
+                            <div class="step-content" id="step-2">
+                                <h5 class="section-title"><i class="ri-calendar-event-line"></i> Type & Période du contrat</h5>
+                                <div class="row g-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Type de contrat</label>
+                                        <select class="form-select" id="type_contrat" name="type_contrat" required disabled>
+                                            <option value="">Sélectionner un type</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Date d'embauche effective</label>
+                                        <input type="date" class="form-control" id="date_embauche" name="date_embauche" required>
+                                    </div>
+                                    <div class="col-md-6" id="duree_contrat_container" style="display:none;">
+                                        <label class="form-label fw-bold">Durée du contrat (Mois)</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="duree_contrat" name="duree_contrat" min="1">
+                                            <span class="input-group-text">Mois</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Assignment -->
+                            <div class="step-content" id="step-3">
+                                <h5 class="section-title"><i class="ri-briefcase-line"></i> Affectation Professionnelle</h5>
+                                <div class="row g-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Service de rattachement</label>
+                                        <select class="form-select" id="service" name="service" required>
+                                            <option value="">Sélectionner le service</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Poste occupé</label>
+                                        <select class="form-select" id="posts" name="posts" required>
+                                            <option value="">Sélectionner le poste</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 4: Conditions -->
+                            <div class="step-content" id="step-4">
+                                <h5 class="section-title"><i class="ri-shield-check-line"></i> Conditions & Période d'essai</h5>
+                                <div class="row g-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Période d'essai applicable ?</label>
+                                        <select class="form-select" id="periode_essaie" name="periode_essaie" required>
+                                            <option value="0">Non, pas de période d'essai</option>
+                                            <option value="1">Oui, période d'essai requise</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6" id="duree_essaie_container" style="display:none;">
+                                        <label class="form-label fw-bold">Durée de l'essai (Mois)</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="duree_essaie" name="duree_essaie" min="1">
+                                            <span class="input-group-text">Mois</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Navigation Controls -->
+                            <div class="d-flex justify-content-between mt-5 pt-4 border-top">
+                                <button type="button" class="btn btn-step btn-prev d-none" id="prevBtn">
+                                    <i class="ri-arrow-left-s-line me-2"></i>Précédent
+                                </button>
+                                <div class="ms-auto">
+                                    <button type="button" class="btn btn-step btn-next" id="nextBtn">
+                                        Suivant<i class="ri-arrow-right-s-line ms-2"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-step btn-finish d-none" id="submitContrat">
+                                        <i class="ri-check-double-line me-2"></i>Finaliser & Créer
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        let currentStep = 1;
+        const totalSteps = 4;
+
+        function updateStepper() {
+            $('.step-content').removeClass('active');
+            $(`#step-${currentStep}`).addClass('active');
+
+            $('.step-item').removeClass('active completed');
+            for(let i=1; i<=totalSteps; i++) {
+                if(i < currentStep) {
+                    $(`#step-${i}-indicator`).addClass('completed');
+                } else if(i === currentStep) {
+                    $(`#step-${i}-indicator`).addClass('active');
+                }
+            }
+
+            // Buttons visibility
+            if(currentStep === 1) {
+                $('#prevBtn').addClass('d-none');
+            } else {
+                $('#prevBtn').removeClass('d-none');
+            }
+
+            if(currentStep === totalSteps) {
+                $('#nextBtn').addClass('d-none');
+                $('#submitContrat').removeClass('d-none');
+            } else {
+                $('#nextBtn').removeClass('d-none');
+                $('#submitContrat').addClass('d-none');
+            }
+        }
+
+        $('#nextBtn').click(function() {
+            // Basic validation for current step
+            let isValid = true;
+            $(`#step-${currentStep} [required]`).each(function() {
+                if(!$(this).val()) {
+                    $(this).addClass('is-invalid');
+                    isValid = false;
+                } else {
+                    $(this).removeClass('is-invalid');
+                }
+            });
+
+            if(isValid) {
+                currentStep++;
+                updateStepper();
+            } else {
+                alertify.warning("Veuillez remplir tous les champs obligatoires.");
+            }
+        });
+
+        $('#prevBtn').click(function() {
+            currentStep--;
+            updateStepper();
+        });
+
+        // Load default values (Entités, Services, Postes)
+        $.ajax({
+            url: "{% url 't_rh:ApiGetDefaultValueForContrat' %}",
+            type: "GET",
+            success: function(response) {
+                response.entreprises.forEach(entite => {
+                    $('#entite_select').append(`<option value="${entite.id}">${entite.designation}</option>`);
+                });
+                response.services.forEach(service => {
+                    $('#service').append(`<option value="${service.id}">${service.label}</option>`);
+                });
+                response.postes.forEach(poste => {
+                    $('#posts').append(`<option value="${poste.id}">${poste.label}</option>`);
+                });
+            }
+        });
+
+        // Cascading selects logic (same as before)
+        $('#entite_select').change(function() {
+            let entiteId = $(this).val();
+            $('#categorie_select').empty().append('<option value="">Sélectionner la catégorie</option>').prop('disabled', true);
+            $('#type_contrat').empty().append('<option value="">Sélectionner un type</option>').prop('disabled', true);
+            
+            if(entiteId) {
+                $.ajax({
+                    url: "{% url 't_rh:ApiGetCategorieContrat' %}",
+                    type: "GET",
+                    data: { 'id_entite': entiteId },
+                    success: function(response) {
+                        response.forEach(cat => {
+                            $('#categorie_select').append(`<option value="${cat.id}">${cat.label}</option>`);
+                        });
+                        $('#categorie_select').prop('disabled', false);
+                    }
+                });
+            }
+        });
+
+        $('#categorie_select').change(function() {
+            let catId = $(this).val();
+            $('#type_contrat').empty().append('<option value="">Sélectionner un type</option>').prop('disabled', true);
+            
+            if(catId) {
+                $.ajax({
+                    url: "{% url 't_rh:ApiGetTypeContrat' %}",
+                    type: "GET",
+                    data: { 'id_categorie': catId },
+                    success: function(response) {
+                        response.forEach(type => {
+                            $('#type_contrat').append(`<option value="${type.id}">${type.label}</option>`);
+                        });
+                        $('#type_contrat').prop('disabled', false);
+                    }
+                });
+            }
+        });
+
+        $('#type_contrat').change(function() {
+            let typeLabel = $(this).find("option:selected").text().toLowerCase();
+            if(typeLabel.includes('cdd')) {
+                $('#duree_contrat_container').slideDown();
+                $('#duree_contrat').prop('required', true);
+            } else {
+                $('#duree_contrat_container').slideUp();
+                $('#duree_contrat').prop('required', false).val('');
+            }
+        });
+
+        $('#periode_essaie').change(function() {
+            if($(this).val() == '1') {
+                $('#duree_essaie_container').slideDown();
+                $('#duree_essaie').prop('required', true);
+            } else {
+                $('#duree_essaie_container').slideUp();
+                $('#duree_essaie').prop('required', false).val('');
+            }
+        });
+
+        // Submit form
+        $('#submitContrat').click(function() {
+            let form = document.getElementById('newContratForm');
+            let formData = new FormData(form);
+            
+            $.ajax({
+                url: "{% url 't_rh:ApiCreateContrat' %}",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if(response.status === 'success') {
+                        alertify.success(response.message);
+                        setTimeout(() => {
+                            window.location.href = "{% url 't_rh:liste_des_contrats' %}";
+                        }, 1500);
+                    } else {
+                        alertify.error(response.message || "Une erreur est survenue.");
+                    }
+                }
+            });
+        });
+    });
+</script>
+{% endblock content %}

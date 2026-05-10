@@ -1,49 +1,307 @@
 {% extends 'tenant_folder/base.html' %}
-{% block title %} Formation - Nouvelle spécialitée {% endblock title %}
+{% block title %}RH - Modifier l'employé{% endblock title %}
 {% block content %}
 
-<!-- ============================================================== -->
-        <!-- Start right Content here -->
-        <!-- ============================================================== -->
-        <div class="main-content">
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --glass-border: rgba(255, 255, 255, 0.18);
+        --primary-gradient: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+    }
 
-            <div class="page-content">
-                <div class="container-fluid">
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid var(--glass-border);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
 
-                    <!-- start page title -->
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                                <h4 class="mb-sm-0">Nouveau Employe(e)</h4>
+    /* Vertical Navigation Styles */
+    .edit-nav-pills .nav-link {
+        color: #64748b;
+        padding: 1rem 1.25rem;
+        border-radius: 0.75rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        border: 1px solid transparent;
+    }
 
-                                <div class="page-title-right">
-                                    <ol class="breadcrumb m-0">
-                                        <li class="breadcrumb-item"><a href="javascript: void(0);">Ressource Humaines</a></li>
-                                        <li class="breadcrumb-item active">Nouveau Employe(e)</li>
-                                    </ol>
+    .edit-nav-pills .nav-link i {
+        font-size: 1.25rem;
+        margin-right: 0.75rem;
+    }
+
+    .edit-nav-pills .nav-link:hover {
+        background: #f1f5f9;
+        color: #4338ca;
+    }
+
+    .edit-nav-pills .nav-link.active {
+        background: rgba(99, 102, 241, 0.1);
+        color: #4338ca;
+        border-color: rgba(99, 102, 241, 0.2);
+        font-weight: 600;
+    }
+
+    .form-section-header {
+        padding-bottom: 1.5rem;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .btn-modern-primary {
+        background-color: #6366f1;
+        border: none;
+        color: white;
+        padding: 0.6rem 1.75rem;
+        border-radius: 50rem !important;
+        font-weight: 600;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .btn-modern-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+        background-color: #4f46e5;
+        color: white;
+    }
+
+    .form-control, .form-select {
+        border-radius: 0.75rem;
+        padding: 0.6rem 1rem;
+        border: 1px solid #e2e8f0;
+        background-color: #f8fafc;
+        transition: all 0.2s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        background-color: #fff;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: #475569;
+        margin-bottom: 0.5rem;
+    }
+
+    .sticky-actions {
+        position: sticky;
+        top: 2rem;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            
+            <form method="POST" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                <!-- Header -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="glass-card p-4 d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                                    <i class="ri-user-settings-fill text-primary fs-3"></i>
+                                </div>
+                                <div>
+                                    <h4 class="mb-1 fw-bold">Modifier le Dossier</h4>
+                                    <p class="text-muted mb-0">Édition des informations de <strong>{{form.instance.nom}} {{form.instance.prenom}}</strong></p>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="{% url 't_rh:detailsEmploye' pk=form.instance.id %}" class="btn btn-outline-secondary rounded-pill px-4">
+                                    <i class="ri-close-line me-1"></i>Annuler
+                                </a>
+                                <button type="submit" class="btn btn-modern-primary">
+                                    <i class="ri-save-3-line me-2"></i>Enregistrer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Left Sidebar Navigation -->
+                    <div class="col-lg-3">
+                        <div class="glass-card p-3 sticky-actions">
+                            <div class="nav flex-column nav-pills edit-nav-pills" role="tablist">
+                                <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#v-personal" type="button" role="tab">
+                                    <i class="ri-user-line"></i> Informations Personnelles
+                                </button>
+                                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-identity" type="button" role="tab">
+                                    <i class="ri-id-card-line"></i> Identité & État Civil
+                                </button>
+                                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-family" type="button" role="tab">
+                                    <i class="ri-parent-line"></i> Filiation & Famille
+                                </button>
+                                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-bank" type="button" role="tab">
+                                    <i class="ri-bank-line"></i> Coordonnées Bancaires
+                                </button>
+                            </div>
+
+                            <div class="mt-4 p-3 bg-light rounded-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="ri-information-line text-primary me-2"></i>
+                                    <span class="fw-bold small">Astuce</span>
+                                </div>
+                                <p class="text-muted small mb-0">N'oubliez pas d'enregistrer vos modifications avant de quitter la page.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Content Area -->
+                    <div class="col-lg-9">
+                        <div class="glass-card p-5">
+                            <div class="tab-content">
+                                
+                                <!-- Tab: Personal Info -->
+                                <div class="tab-pane fade show active" id="v-personal" role="tabpanel">
+                                    <div class="form-section-header">
+                                        <h5 class="fw-bold mb-1">Informations Personnelles</h5>
+                                        <p class="text-muted small mb-0">Données de contact et informations de base de l'employé.</p>
+                                    </div>
+                                    <div class="row g-4">
+                                        <div class="col-md-4">
+                                            <label class="form-label">{{ form.civilite.label }}</label>
+                                            {{ form.civilite }}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">{{ form.nom.label }}</label>
+                                            {{ form.nom }}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">{{ form.prenom.label }}</label>
+                                            {{ form.prenom }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">{{ form.email.label }}</label>
+                                            {{ form.email }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">{{ form.telephone.label }}</label>
+                                            {{ form.telephone }}
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">{{ form.adresse.label }}</label>
+                                            {{ form.adresse }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tab: Identity -->
+                                <div class="tab-pane fade" id="v-identity" role="tabpanel">
+                                    <div class="form-section-header">
+                                        <h5 class="fw-bold mb-1">Identité & État Civil</h5>
+                                        <p class="text-muted small mb-0">Numéros d'identification officiels et situation civile.</p>
+                                    </div>
+                                    <div class="row g-4">
+                                        <div class="col-md-4">
+                                            <label class="form-label">{{ form.cin.label }}</label>
+                                            {{ form.cin }}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">{{ form.nin.label }}</label>
+                                            {{ form.nin }}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">{{ form.secu.label }}</label>
+                                            {{ form.secu }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">{{ form.situation_familiale.label }}</label>
+                                            {{ form.situation_familiale }}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">{{ form.genre.label }}</label>
+                                            {{ form.genre }}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">{{ form.groupe_sanguin.label }}</label>
+                                            {{ form.groupe_sanguin }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">{{ form.date_naissance.label }}</label>
+                                            {{ form.date_naissance }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">{{ form.lieu_naissance.label }}</label>
+                                            {{ form.lieu_naissance }}
+                                        </div>
+                                        <div class="col-md-12">
+                                            <label class="form-label">{{ form.etat.label }}</label>
+                                            {{ form.etat }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tab: Family -->
+                                <div class="tab-pane fade" id="v-family" role="tabpanel">
+                                    <div class="form-section-header">
+                                        <h5 class="fw-bold mb-1">Filiation & Famille</h5>
+                                        <p class="text-muted small mb-0">Informations sur les parents et la lignée familiale.</p>
+                                    </div>
+                                    <div class="row g-4">
+                                        <div class="col-md-6">
+                                            <label class="form-label">{{ form.prenom_pere.label }}</label>
+                                            {{ form.prenom_pere }}
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="row g-4">
+                                                <div class="col-md-6">
+                                                    <label class="form-label">{{ form.nom_mere.label }}</label>
+                                                    {{ form.nom_mere }}
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">{{ form.prenom_mere.label }}</label>
+                                                    {{ form.prenom_mere }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tab: Banking -->
+                                <div class="tab-pane fade" id="v-bank" role="tabpanel">
+                                    <div class="form-section-header">
+                                        <h5 class="fw-bold mb-1">Coordonnées Bancaires</h5>
+                                        <p class="text-muted small mb-0">Informations de paiement et coordonnées bancaires.</p>
+                                    </div>
+                                    <div class="row g-4">
+                                        <div class="col-12">
+                                            <label class="form-label">{{ form.bank.label }}</label>
+                                            {{ form.bank }}
+                                        </div>
+                                    </div>
                                 </div>
 
                             </div>
                         </div>
                     </div>
-                    <!-- end page title -->
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-                    <div class="row">
-                        <div class="col-lg-12">
-                            <div class="card">
-                                <div class="card-body">
-                                    <form method='POST'>
-                                        {% csrf_token %}
-                                        {{form.as_p}}
-                                        <input type="submit" class="btn btn-warning" value="Enregistrer les modifications">
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                        <!--end col-->
-                    </div>
-                    <!--end row-->    
-                </div> <!-- container-fluid -->
-            </div><!-- End Page-content -->
-
+<script>
+    $(document).ready(function(){
+        // Ensure all form controls have Bootstrap classes
+        $('input, select, textarea').each(function() {
+            $(this).addClass('form-control');
+            if (this.tagName === 'SELECT') {
+                $(this).addClass('form-select');
+            }
+        });
+    });
+</script>
 {% endblock content %}

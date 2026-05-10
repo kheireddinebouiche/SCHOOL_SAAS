@@ -1,18 +1,23 @@
 import os
 import math
+from decimal import Decimal
 import psutil
 import platform
 import time
 import glob
 from datetime import datetime
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.db import connection
+from django.db.models.deletion import ProtectedError
 from django.conf import settings
 from django.http import JsonResponse
 from django.core.mail import send_mail, EmailMessage
+from django.views.decorators.http import require_POST
 from app.models import Institut
-from django_tenants.utils import tenant_context
+from django_tenants.utils import tenant_context, schema_context
+from t_formations.models import Formation, Specialites, DossierInscription
+from t_formations.sync_utils import sync_formation_to_tenant
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth import get_user_model
 from .models import DatabaseBackup, SaaSEmailConfiguration, SaaSMaintenanceConfiguration, SaaSGlobalConfiguration
@@ -300,6 +305,9 @@ def saas_tenant_data_explorer_view(request, tenant_id):
         'formations': [],
         'specialites': [],
         'promos': [],
+        'due_paiements': [],
+        'paiements': [],
+        'stats': {},
     }
     
     from django.core.paginator import Paginator
@@ -310,6 +318,8 @@ def saas_tenant_data_explorer_view(request, tenant_id):
     vd_page_num = request.GET.get('vd_page', 1)
     f_page_num = request.GET.get('f_page', 1)
     s_page_num = request.GET.get('s_page', 1)
+    dp_page_num = request.GET.get('dp_page', 1)
+    pa_page_num = request.GET.get('pa_page', 1)
     
     items_per_page = 50
 
@@ -319,10 +329,12 @@ def saas_tenant_data_explorer_view(request, tenant_id):
             try:
                 from t_crm.models import Prospets
                 prospects_qs = Prospets.objects.all().order_by('-created_at')
+                context['stats']['prospects'] = prospects_qs.count()
                 p_paginator = Paginator(prospects_qs, items_per_page)
                 context['prospects'] = p_paginator.get_page(p_page_num)
             except:
                 context['prospects'] = []
+                context['stats']['prospects'] = 0
             
             # Vœux
             try:
@@ -342,9 +354,11 @@ def saas_tenant_data_explorer_view(request, tenant_id):
                 context['duplicate_voeux_prospect_ids'] = [item['prospect_id'] for item in duplicate_ids_qs if item['prospect_id']]
                 
                 v_paginator = Paginator(voeux_qs, items_per_page)
+                context['stats']['voeux'] = voeux_qs.count()
                 context['voeux'] = v_paginator.get_page(v_page_num)
             except:
                 context['voeux'] = []
+                context['stats']['voeux'] = 0
             
             # Vœux Doubles
             try:
@@ -356,27 +370,33 @@ def saas_tenant_data_explorer_view(request, tenant_id):
                 context['duplicate_double_prospect_ids'] = [item['prospect_id'] for item in duplicate_double_ids_qs if item['prospect_id']]
                 
                 vd_paginator = Paginator(vd_qs, items_per_page)
+                context['stats']['voeux_double'] = vd_qs.count()
                 context['voeux_double'] = vd_paginator.get_page(vd_page_num)
             except:
                 context['voeux_double'] = []
+                context['stats']['voeux_double'] = 0
             
             # Formations
             try:
                 from t_formations.models import Formation
                 f_qs = Formation.objects.all().order_by('nom')
+                context['stats']['formations'] = f_qs.count()
                 f_paginator = Paginator(f_qs, items_per_page)
                 context['formations'] = f_paginator.get_page(f_page_num)
             except:
                 context['formations'] = []
+                context['stats']['formations'] = 0
             
             # Spécialités
             try:
                 from t_formations.models import Specialites
                 s_qs = Specialites.objects.all().select_related('formation').order_by('label')
+                context['stats']['specialites'] = s_qs.count()
                 s_paginator = Paginator(s_qs, items_per_page)
                 context['specialites'] = s_paginator.get_page(s_page_num)
             except:
                 context['specialites'] = []
+                context['stats']['specialites'] = 0
                 
             # Promos (not paginated as they are usually few)
             try:
@@ -384,6 +404,28 @@ def saas_tenant_data_explorer_view(request, tenant_id):
                 context['promos'] = list(Promos.objects.all().order_by('-created_at'))
             except:
                 context['promos'] = []
+
+            # Due Paiements
+            try:
+                from t_tresorerie.models import DuePaiements
+                dp_qs = DuePaiements.objects.all().select_related('client', 'ref_echeancier', 'promo').order_by('-date_echeance')
+                context['stats']['due_paiements'] = dp_qs.count()
+                dp_paginator = Paginator(dp_qs, items_per_page)
+                context['due_paiements'] = dp_paginator.get_page(dp_page_num)
+            except:
+                context['due_paiements'] = []
+                context['stats']['due_paiements'] = 0
+
+            # Paiements
+            try:
+                from t_tresorerie.models import Paiements
+                pa_qs = Paiements.objects.all().select_related('due_paiements', 'prospect', 'promo').order_by('-date_paiement')
+                context['stats']['paiements'] = pa_qs.count()
+                pa_paginator = Paginator(pa_qs, items_per_page)
+                context['paiements'] = pa_paginator.get_page(pa_page_num)
+            except:
+                context['paiements'] = []
+                context['stats']['paiements'] = 0
             
     except Exception as e:
         context['error'] = str(e)
@@ -445,6 +487,168 @@ def saas_update_voeu_action_view(request, tenant_id, voeu_id):
     return JsonResponse({'status': 'error', 'message': 'Action non reconnue.'}, status=400)
 
 @user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_update_due_paiement_action_view(request, tenant_id, dp_id):
+    """Permet de modifier ou supprimer un montant dû."""
+    from django.http import JsonResponse
+    from app.models import Institut
+    
+    institut = get_object_or_404(Institut, id=tenant_id)
+    action = request.POST.get('action') # 'delete' ou 'update'
+    
+    try:
+        with tenant_context(institut):
+            from t_tresorerie.models import DuePaiements
+            dp = get_object_or_404(DuePaiements, id=dp_id)
+            
+            if action == 'delete':
+                client = dp.client
+                dp.delete()
+                
+                # Check if any other due payments exist for this client
+                if not DuePaiements.objects.filter(client=client).exists():
+                    from t_tresorerie.models import EcheancierSpecial, ClientPaiementsRequest
+                    EcheancierSpecial.objects.filter(prospect=client).update(is_validate=False, is_approuved=False)
+                    ClientPaiementsRequest.objects.filter(client=client).delete()
+                    
+                    # Reset special echeancier flag on prospect
+                    if client:
+                        client.has_special_echeancier = False
+                        client.save()
+                    
+                return JsonResponse({'status': 'success', 'message': 'Montant dû supprimé avec succès. L\'échéancier est marqué comme non confirmé si c\'était le dernier.'})
+            
+            elif action == 'update':
+                dp.montant_due = request.POST.get('montant_due')
+                dp.montant_restant = request.POST.get('montant_restant')
+                dp.date_echeance = request.POST.get('date_echeance')
+                dp.label = request.POST.get('label')
+                dp.save()
+                return JsonResponse({'status': 'success', 'message': 'Montant dû mis à jour.'})
+                
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+    return JsonResponse({'status': 'error', 'message': 'Action non reconnue.'}, status=400)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_update_paiement_action_view(request, tenant_id, p_id):
+    """Permet de modifier ou supprimer un paiement."""
+    from django.http import JsonResponse
+    from app.models import Institut
+    
+    institut = get_object_or_404(Institut, id=tenant_id)
+    action = request.POST.get('action') # 'delete' ou 'update'
+    
+    try:
+        with tenant_context(institut):
+            from t_tresorerie.models import Paiements
+            p = get_object_or_404(Paiements, id=p_id)
+            
+            if action == 'delete':
+                # Restaurer le montant restant dans le DuePaiements associé
+                if p.due_paiements:
+                    dp = p.due_paiements
+                    if dp.montant_restant is not None:
+                        dp.montant_restant += Decimal(str(p.montant_paye or 0))
+                    else:
+                        dp.montant_restant = Decimal(str(p.montant_paye or 0))
+                    
+                    # Si le montant restant est > 0, l'échéance n'est plus payée
+                    if dp.montant_restant > 0:
+                        dp.is_done = False
+                    
+                    dp.save()
+
+                p.delete()
+                return JsonResponse({'status': 'success', 'message': 'Paiement supprimé et montant dû rétabli.'})
+            
+            elif action == 'update':
+                p.montant_paye = request.POST.get('montant_paye')
+                p.date_paiement = request.POST.get('date_paiement')
+                p.observation = request.POST.get('observation')
+                p.save()
+                return JsonResponse({'status': 'success', 'message': 'Paiement mis à jour.'})
+                
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+    return JsonResponse({'status': 'error', 'message': 'Action non reconnue.'}, status=400)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_bulk_delete_action_view(request, tenant_id):
+    """Permet de supprimer plusieurs enregistrements (DuePaiements ou Paiements) en une seule fois."""
+    from django.http import JsonResponse
+    from app.models import Institut
+    from decimal import Decimal
+    import json
+    
+    institut = get_object_or_404(Institut, id=tenant_id)
+    model_name = request.POST.get('model') # 'due_paiement' ou 'paiement'
+    ids_json = request.POST.get('ids', '[]')
+    
+    try:
+        ids = json.loads(ids_json)
+        if not ids:
+            return JsonResponse({'status': 'error', 'message': 'Aucun élément sélectionné.'}, status=400)
+            
+        with tenant_context(institut):
+            from t_tresorerie.models import DuePaiements, Paiements, EcheancierSpecial
+            from t_crm.models import FicheDeVoeux, FicheVoeuxDouble
+            
+            deleted_count = 0
+            affected_prospects = set()
+            
+            if model_name == 'due_paiement':
+                for dp_id in ids:
+                    try:
+                        dp = DuePaiements.objects.get(id=dp_id)
+                        affected_prospects.add(dp.client)
+                        dp.delete()
+                        deleted_count += 1
+                    except DuePaiements.DoesNotExist:
+                        continue
+                
+                # Update financial status for affected prospects
+                for prospect in affected_prospects:
+                    if prospect and not DuePaiements.objects.filter(client=prospect).exists():
+                        from t_tresorerie.models import ClientPaiementsRequest
+                        EcheancierSpecial.objects.filter(prospect=prospect).update(is_validate=False, is_approuved=False)
+                        ClientPaiementsRequest.objects.filter(client=prospect).delete()
+                        
+                        # Reset special echeancier flag on prospect
+                        prospect.has_special_echeancier = False
+                        prospect.save()
+                        
+            elif model_name == 'paiement':
+                for p_id in ids:
+                    try:
+                        p = Paiements.objects.get(id=p_id)
+                        if p.due_paiements:
+                            dp = p.due_paiements
+                            amount_to_restore = Decimal(str(p.montant_paye or 0))
+                            if dp.montant_restant is not None:
+                                dp.montant_restant += amount_to_restore
+                            else:
+                                dp.montant_restant = amount_to_restore
+                            
+                            if dp.montant_restant > 0:
+                                dp.is_done = False
+                            dp.save()
+                        
+                        p.delete()
+                        deleted_count += 1
+                    except Paiements.DoesNotExist:
+                        continue
+            
+            return JsonResponse({
+                'status': 'success', 
+                'message': f'{deleted_count} éléments supprimés avec succès.'
+            })
+            
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
 def saas_update_prospect_action_view(request, tenant_id, prospect_id):
     """Permet de modifier l'état et le statut d'un prospect."""
     from django.http import JsonResponse
@@ -476,6 +680,56 @@ def saas_update_prospect_action_view(request, tenant_id, prospect_id):
                 'message': 'Prospect mis à jour avec succès.',
                 'new_etat_display': prospect.get_etat_display(),
                 'new_statut_display': prospect.get_statut_display()
+            })
+                
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_reset_prospect_action_view(request, tenant_id, prospect_id):
+    """
+    Réinitialise complètement l'état financier et le statut d'un prospect.
+    Supprime les montants dus, les paiements, la demande de paiement,
+    et repasse le prospect en statut 'prinscrit'.
+    """
+    from django.http import JsonResponse
+    from app.models import Institut
+    from django.shortcuts import get_object_or_404
+    
+    institut = get_object_or_404(Institut, id=tenant_id)
+    
+    try:
+        with tenant_context(institut):
+            from t_crm.models import Prospets
+            from t_tresorerie.models import DuePaiements, Paiements, ClientPaiementsRequest, clientPaiementsRequestLine, EcheancierSpecial
+            
+            prospect = get_object_or_404(Prospets, id=prospect_id)
+            
+            # 1. Supprimer les paiements associés
+            Paiements.objects.filter(prospect=prospect).delete()
+            
+            # 2. Supprimer les montants dus
+            DuePaiements.objects.filter(client=prospect).delete()
+            
+            # 3. Supprimer la demande de paiement et ses lignes
+            cpr_qs = ClientPaiementsRequest.objects.filter(client=prospect)
+            for cpr in cpr_qs:
+                clientPaiementsRequestLine.objects.filter(paiement_request=cpr).delete()
+            cpr_qs.delete()
+            
+            # 4. Réinitialiser l'échéancier spécial
+            EcheancierSpecial.objects.filter(prospect=prospect).update(is_validate=False, is_approuved=False)
+            
+            # 5. Réinitialiser le prospect
+            prospect.statut = 'prinscrit'
+            prospect.has_special_echeancier = False
+            prospect.instance_date = None
+            prospect.convertit_date = None
+            prospect.save()
+            
+            return JsonResponse({
+                'status': 'success', 
+                'message': f'Le prospect {prospect.nom} {prospect.prenom} a été réinitialisé avec succès.'
             })
                 
     except Exception as e:
@@ -1437,6 +1691,141 @@ def saas_tenant_detail_view(request, tenant_id):
     return render(request, 'saas_admin_app/saas_tenant_detail.html', context)
 
 @user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_tenant_sync_pedagogical_data_view(request, tenant_id):
+    """API endpoint pour synchroniser des données pédagogiques du MASTER vers un tenant."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+    
+    try:
+        # 1. Identifier le tenant cible
+        target_tenant = Institut.objects.get(id=tenant_id)
+        
+        # 2. Identifier le tenant MASTER (exclure le schéma public)
+        master_tenant = Institut.objects.filter(tenant_type='master').exclude(schema_name='public').first()
+        if not master_tenant:
+            return JsonResponse({'success': False, 'error': 'Tenant MASTER introuvable'})
+            
+        # 3. Récupérer les formations à synchroniser
+        formation_ids = request.POST.getlist('formation_ids[]')
+        
+        with schema_context(master_tenant.schema_name):
+            query = Formation.objects.all()
+            if formation_ids:
+                query = query.filter(id__in=formation_ids)
+            formations_master = list(query)
+        
+        if not formations_master:
+            return JsonResponse({'success': False, 'error': 'Aucune formation à synchroniser'})
+            
+        # 4. Synchroniser chaque formation
+        sync_count = 0
+        errors = []
+        
+        for formation in formations_master:
+            try:
+                sync_formation_to_tenant(formation, target_tenant, master_tenant)
+                sync_count += 1
+            except Exception as e:
+                import traceback
+                print(f"Error syncing formation {formation.nom}: {str(e)}")
+                print(traceback.format_exc())
+                errors.append(f"{formation.nom}: {str(e)}")
+        
+        message = f"Synchronisation terminée : {sync_count} formations synchronisées."
+        if errors:
+            message += f" {len(errors)} erreurs rencontrées."
+            
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'sync_count': sync_count,
+            'errors': errors
+        })
+        
+    except Institut.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Tenant introuvable'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def api_master_formations_list_view(request):
+    """API endpoint pour lister les formations du tenant MASTER."""
+    from django.http import JsonResponse
+    
+    master_tenant = Institut.objects.filter(tenant_type='master').exclude(schema_name='public').first()
+    if not master_tenant:
+        return JsonResponse({'success': False, 'error': 'Tenant MASTER introuvable'})
+        
+    with schema_context(master_tenant.schema_name):
+        formations = list(Formation.objects.all().values('id', 'nom'))
+        
+    return JsonResponse({'success': True, 'formations': formations})
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def api_tenant_formations_list_view(request, tenant_id):
+    """API endpoint pour lister les formations d'un tenant spécifique."""
+    target_tenant = get_object_or_404(Institut, id=tenant_id)
+    
+    with schema_context(target_tenant.schema_name):
+        formations = []
+        for f in Formation.objects.all():
+            specs = list(Specialites.objects.filter(formation=f).values('id', 'label', 'code'))
+            formations.append({
+                'id': f.id,
+                'nom': f.nom,
+                'code': f.code,
+                'specialites': specs
+            })
+            
+    return JsonResponse({'success': True, 'formations': formations})
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+@require_POST
+def api_tenant_delete_formation_view(request, tenant_id):
+    """API endpoint pour supprimer une formation d'un tenant."""
+    target_tenant = get_object_or_404(Institut, id=tenant_id)
+    formation_id = request.POST.get('formation_id')
+    
+    try:
+        with schema_context(target_tenant.schema_name):
+            formation = Formation.objects.get(id=formation_id)
+            formation_nom = formation.nom
+            
+            # Supprimer les dossiers d'inscription associés (car ils sont en DO_NOTHING dans le modèle)
+            DossierInscription.objects.filter(formation=formation).delete()
+            
+            try:
+                formation.delete()
+                return JsonResponse({'success': True, 'message': f"Formation '{formation_nom}' supprimée avec succès."})
+            except ProtectedError:
+                 return JsonResponse({'success': False, 'error': "Cette formation ne peut pas être supprimée car elle est liée à d'autres données (ex: inscriptions)."})
+    except Formation.DoesNotExist:
+        return JsonResponse({'success': False, 'error': "Formation introuvable."})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+@require_POST
+def api_tenant_delete_specialite_view(request, tenant_id):
+    """API endpoint pour supprimer une spécialité d'un tenant."""
+    target_tenant = get_object_or_404(Institut, id=tenant_id)
+    specialite_id = request.POST.get('specialite_id')
+    
+    try:
+        with schema_context(target_tenant.schema_name):
+            specialite = Specialites.objects.get(id=specialite_id)
+            label = specialite.label
+            try:
+                specialite.delete()
+                return JsonResponse({'success': True, 'message': f"Spécialité '{label}' supprimée avec succès."})
+            except ProtectedError:
+                 return JsonResponse({'success': False, 'error': "Cette spécialité ne peut pas être supprimée car elle est liée à d'autres données."})
+    except Specialites.DoesNotExist:
+        return JsonResponse({'success': False, 'error': "Spécialité introuvable."})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
 def saas_global_config_view(request):
     """Page de configuration globale du SaaS."""
     from django.contrib import messages
@@ -1456,6 +1845,25 @@ def saas_global_config_view(request):
     }
     
     return render(request, 'saas_admin_app/saas_global_config.html', context)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def api_tenants_pedagogical_sync_list_view(request):
+    """API endpoint pour lister les tenants secondaires avec leur statut de base."""
+    from django.http import JsonResponse
+    
+    # Récupérer les tenants de type 'second'
+    tenants = Institut.objects.filter(tenant_type='second').order_by('nom')
+    
+    data = []
+    for t in tenants:
+        data.append({
+            'id': t.id,
+            'nom': t.nom,
+            'schema_name': t.schema_name,
+            'is_active': t.is_active,
+        })
+        
+    return JsonResponse({'success': True, 'tenants': data})
 
 @user_passes_test(superadmin_only, login_url='/saas-admin/login/')
 def saas_update_user_view(request, tenant_id, user_id):

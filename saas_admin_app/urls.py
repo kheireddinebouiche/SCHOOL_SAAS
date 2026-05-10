@@ -15,8 +15,12 @@ from .views import (
     saas_knowledge_center_view, saas_knowledge_category_action_view, saas_knowledge_resource_action_view,
     saas_create_tenant_view, saas_tenants_manage_view, saas_toggle_tenant_visibility_view,
     saas_toggle_tenant_active_view, saas_tenant_data_summary_view, saas_tenant_data_explorer_view,
-    saas_update_voeu_action_view, saas_update_prospect_action_view,
-    saas_audit_logs_view, saas_clear_tenant_logs_view
+    saas_update_voeu_action_view, saas_update_prospect_action_view, saas_reset_prospect_action_view,
+    saas_update_due_paiement_action_view, saas_update_paiement_action_view, saas_bulk_delete_action_view,
+    saas_audit_logs_view, saas_clear_tenant_logs_view, saas_tenant_sync_pedagogical_data_view,
+    api_tenants_pedagogical_sync_list_view, api_master_formations_list_view,
+    api_tenant_formations_list_view, api_tenant_delete_formation_view,
+    api_tenant_delete_specialite_view
 )
 
 app_name = 'saas_admin_app'
@@ -68,6 +72,15 @@ urlpatterns = [
     path('api/tenant/<int:tenant_id>/toggle-active/', saas_toggle_tenant_active_view, name='saas_toggle_tenant_active'),
     path('api/tenant/<int:tenant_id>/voeu/<int:voeu_id>/update/', saas_update_voeu_action_view, name='saas_update_voeu_action'),
     path('api/tenant/<int:tenant_id>/prospect/<int:prospect_id>/update/', saas_update_prospect_action_view, name='saas_update_prospect_action'),
+    path('api/tenant/<int:tenant_id>/prospect/<int:prospect_id>/reset/', saas_reset_prospect_action_view, name='saas_reset_prospect_action'),
+    path('api/tenant/<int:tenant_id>/due-paiement/<int:dp_id>/update/', saas_update_due_paiement_action_view, name='saas_update_due_paiement_action'),
+    path('api/tenant/<int:tenant_id>/paiement/<int:p_id>/update/', saas_update_paiement_action_view, name='saas_update_paiement_action'),
+    path('api/tenant/<int:tenant_id>/bulk-delete/', saas_bulk_delete_action_view, name='saas_bulk_delete_action'),
     path('audit-logs/', saas_audit_logs_view, name='saas_audit_logs'),
-    path('audit-logs/clear/', saas_clear_tenant_logs_view, name='saas_clear_tenant_logs'),
+    path('api/tenant/<int:tenant_id>/sync-pedagogical-data/', saas_tenant_sync_pedagogical_data_view, name='saas_tenant_sync_pedagogical_data'),
+    path('api/tenants/pedagogical-sync-list/', api_tenants_pedagogical_sync_list_view, name='api_tenants_pedagogical_sync_list'),
+    path('api/master/formations/', api_master_formations_list_view, name='api_master_formations_list'),
+    path('api/tenant/<int:tenant_id>/formations/', api_tenant_formations_list_view, name='api_tenant_formations_list'),
+    path('api/tenant/<int:tenant_id>/formation/delete/', api_tenant_delete_formation_view, name='api_tenant_delete_formation'),
+    path('api/tenant/<int:tenant_id>/specialite/delete/', api_tenant_delete_specialite_view, name='api_tenant_delete_specialite'),
 ]

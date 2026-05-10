@@ -144,18 +144,25 @@ def ApiStorePaiements(client,label,date_echeance,montant,promo,echeancier, entit
         last = DuePaiements.objects.filter(client=client).order_by('-ordre').first()
         ordre = (last.ordre + 1) if last else 1
 
+        # Get the entity from the echeancier if not provided explicitly
+        if not entite_id or entite_id == "" or entite_id == "None":
+            try:
+                echeancier_obj = EcheancierPaiement.objects.get(id=echeancier)
+                entite_id = echeancier_obj.entite.id if echeancier_obj.entite else None
+            except EcheancierPaiement.DoesNotExist:
+                entite_id = None
+
         DuePaiements.objects.create(
             client=client,
             label=label,
             ordre=ordre,
             montant_due=montant,
             montant_restant=montant,
-            ## Faire pivot par rapport aux date (Si la date est pareille) id 1 -> 2
             date_echeance=date_echeance,
-            promo_id = promo,
-            type = "frais_f",
-            ref_echeancier_id = echeancier,
-            entite_id = entite_id if entite_id else (EcheancierPaiement.objects.get(id=echeancier).entite.id if echeancier and EcheancierPaiement.objects.get(id=echeancier).entite else None),
+            promo_id=promo,
+            type="frais_f",
+            ref_echeancier_id=echeancier,
+            entite_id=entite_id,
         )
         return JsonResponse({"status": "success"})
     except Exception as e:
@@ -174,18 +181,28 @@ def ApiStorePaiementsDouble(client,label,date_echeance,montant,promo,echeancier,
             except ValueError:
                 pass
 
-    paiement = DuePaiements.objects.create(
-        client=client,
-        label=label,
-        ordre=9999,
-        montant_due=montant,
-        montant_restant=montant,
-        date_echeance=date_echeance,
-        promo_id=promo if promo else None,
-        type="frais_f",
-        ref_echeancier_id=echeancier,
-        entite_id=entite if entite else None,
-    )
+        # Get the entity from the echeancier if not provided explicitly
+        if not entite or entite == "" or entite == "None":
+            try:
+                echeancier_obj = EcheancierPaiement.objects.get(id=echeancier)
+                entite_id = echeancier_obj.entite.id if echeancier_obj.entite else None
+            except EcheancierPaiement.DoesNotExist:
+                entite_id = None
+        else:
+            entite_id = entite
+
+        paiement = DuePaiements.objects.create(
+            client=client,
+            label=label,
+            ordre=9999,
+            montant_due=montant,
+            montant_restant=montant,
+            date_echeance=date_echeance,
+            promo_id=promo if promo else None,
+            type="frais_f",
+            ref_echeancier_id=echeancier,
+            entite_id=entite_id,
+        )
     all_paiements = DuePaiements.objects.filter(client=client).order_by('date_echeance', 'id')
     
     current_ordre = 0

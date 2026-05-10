@@ -545,17 +545,16 @@ $(document).ready(function () {
               row += "<td>" + statusBadge + "</td>";
               row += "<td>" + formattedDate + "</td>";
               row += '<td class="text-end">';
-              row += '<div class="dropdown d-inline-block">';
-              row += '<button class="btn btn-soft-info btn-sm dropdown shadow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
-              row += '<i class="ri-more-2-fill"></i>';
+              row += '<div class="d-flex justify-content-end gap-2">';
+              row += '<button class="btn btn-soft-info btn-sm btn-detail-echeancier" data-id="'+item.id+'" title="Voir détails">';
+              row += '<i class="ri-eye-line"></i>';
               row += '</button>';
-              row += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">';
-              row += '<li><button class="btn-edit-echeancier dropdown-item d-flex align-items-center px-3 py-2"  data-id="'+item.id+'">';
-              row += '<i class="ri-edit-line text-primary me-2"></i>Modifier</button></li>';
-              row += '<li><hr class="dropdown-divider my-1"></li>';
-              row += '<li><button class="btn-delete-echeancier dropdown-item d-flex align-items-center px-3 py-2 text-danger" data-id="'+item.id+'">';
-              row += '<i class="ri-delete-bin-line me-2"></i>Supprimer</button></li>';
-              row += '</ul>';
+              row += '<button class="btn btn-soft-primary btn-sm btn-edit-echeancier" data-id="'+item.id+'" title="Modifier">';
+              row += '<i class="ri-edit-line"></i>';
+              row += '</button>';
+              row += '<button class="btn btn-soft-danger btn-sm btn-delete-echeancier" data-id="'+item.id+'" title="Supprimer">';
+              row += '<i class="ri-delete-bin-line"></i>';
+              row += '</button>';
               row += '</div>';
               row += '</td>';
               row += '</tr>';
@@ -935,6 +934,39 @@ $(document).ready(function () {
 
       $(document).on('change', '#promo-filter', function(){
         loadEcheanciers();
+      });
+
+      // Supprimer un modèle d'échéancier
+      $(document).on('click', '.btn-delete-echeancier', function() {
+        var echeancierId = $(this).data('id');
+        
+        alertify.confirm("Confirmation de suppression", "Êtes-vous sûr de vouloir supprimer ce modèle d'échéancier ? Cette action est irréversible.", 
+          function() {
+            $.ajax({
+              url: "{% url 't_tresorerie:ApiDeleteEcheancier' %}",
+              type: 'POST',
+              data: {
+                'echeancierId': echeancierId,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+              },
+              dataType: 'JSON',
+              success: function(response) {
+                if(response.status === 'success') {
+                  alertify.success("Modèle d'échéancier supprimé avec succès");
+                  loadEcheanciers(); // Recharger la liste
+                } else {
+                  alertify.error(response.message || "Erreur lors de la suppression du modèle d'échéancier");
+                }
+              },
+              error: function() {
+                alertify.error("Erreur lors de la communication avec le serveur");
+              }
+            });
+          },
+          function() {
+            // Annulation
+          }
+        );
       });
 });
 </script>

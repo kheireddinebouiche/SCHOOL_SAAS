@@ -10,8 +10,16 @@ def log_prospect_save(sender, instance, created, **kwargs):
     action = 'CREATE' if created else 'UPDATE'
     details = f"Formation {instance.nom} {'créée' if created else 'modifiée'}."
     
+    from django.contrib.auth.models import User as AuthUser
+    
+    # Vérifier si l'utilisateur existe dans le schéma actuel pour éviter IntegrityError (FK violation)
+    valid_user = None
+    if user and user.is_authenticated:
+        if AuthUser.objects.filter(id=user.id).exists():
+            valid_user = user
+
     UserActionLog.objects.create(
-        user=user if user and user.is_authenticated else None,
+        user=valid_user,
         action_type=action,
         target_model='Formation',
         target_id=str(instance.id),
@@ -23,8 +31,16 @@ def log_prospect_delete(sender, instance, **kwargs):
     user = get_current_user()
     details = f"Formation {instance.nom} supprimée."
     
+    from django.contrib.auth.models import User as AuthUser
+    
+    # Vérifier si l'utilisateur existe dans le schéma actuel pour éviter IntegrityError
+    valid_user = None
+    if user and user.is_authenticated:
+        if AuthUser.objects.filter(id=user.id).exists():
+            valid_user = user
+
     UserActionLog.objects.create(
-        user=user if user and user.is_authenticated else None,
+        user=valid_user,
         action_type='DELETE',
         target_model='Formation',
         target_id=str(instance.id),

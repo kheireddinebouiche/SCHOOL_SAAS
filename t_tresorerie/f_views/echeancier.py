@@ -57,36 +57,40 @@ def ApiLoadEcheancierDetails(request):
         
         # Récupérer les tranches associées
         tranches = EcheancierPaiementLine.objects.filter(echeancier=echeancier).values(
-            'id', 'taux', 'value', 'date_echeancier','montant_tranche'
+            'id', 'taux', 'value', 'date_echeancier','montant_tranche', 'entite_id'
         )
         
-        # Calculer le tarif de la formation
-        tarif_formation = 0
-        remise_val = echeancier.remise or 0
-        type_remise = echeancier.type_remise or 'fixe'
+        # Priority to stored tarif_formation
+        tarif_formation = echeancier.tarif_formation or 0
         
-        try:
-            if echeancier.formation_double:
-                tarif_formation = (echeancier.formation_double.prix_spec1 or 0) + (echeancier.formation_double.prix_spec2 or 0)
-            elif echeancier.specialite:
-                tarif_formation = echeancier.specialite.prix_double_diplomation if echeancier.model.is_double_diplomation else echeancier.specialite.prix
-            elif echeancier.formation:
-                tarif_formation = echeancier.formation.prix_formation
-        except Exception as e:
-            print(f"Error calculating tarif: {e}")
-            tarif_formation = 0
+        if not tarif_formation:
+            try:
+                if echeancier.formation_double:
+                    tarif_formation = (echeancier.formation_double.prix_spec1 or 0) + (echeancier.formation_double.prix_spec2 or 0)
+                elif echeancier.specialite:
+                    tarif_formation = echeancier.specialite.prix_double_diplomation if echeancier.model.is_double_diplomation else echeancier.specialite.prix
+                elif echeancier.formation:
+                    tarif_formation = echeancier.formation.prix_formation
+            except Exception as e:
+                print(f"Error calculating tarif: {e}")
+                tarif_formation = 0
 
         # Calculate actual discount amount
+        tarif_formation_float = float(tarif_formation)
+        remise_val = float(echeancier.remise or 0)
+        type_remise = echeancier.type_remise or 'fixe'
         actual_discount = remise_val
         if type_remise == 'pourcentage':
-            actual_discount = (tarif_formation * remise_val / 100)
+            actual_discount = (tarif_formation_float * remise_val / 100)
 
         # Calculate actual majoration amount
-        majoration_val = echeancier.majoration or 0
+        majoration_val = float(echeancier.majoration or 0)
         type_majoration = echeancier.type_majoration or 'fixe'
         actual_majoration = majoration_val
         if type_majoration == 'pourcentage':
-            actual_majoration = (tarif_formation * majoration_val / 100)
+            actual_majoration = (tarif_formation_float * majoration_val / 100)
+            
+        total_after_adjustments = max(0, tarif_formation_float - actual_discount + actual_majoration)
             
         data = {
             'id': echeancier.id,
@@ -103,8 +107,8 @@ def ApiLoadEcheancierDetails(request):
             'type_remise': type_remise,
             'majoration': str(majoration_val),
             'type_majoration': type_majoration,
-            'tarif_formation': tarif_formation,
-            'total_after_adjustments': str(tarif_formation - actual_discount + actual_majoration),
+            'tarif_formation': tarif_formation_float,
+            'total_after_adjustments': str(total_after_adjustments),
         }
         
         return JsonResponse({'status': 'success', 'data': data}, safe=False)
@@ -179,6 +183,9 @@ def ApiSaveEcheancier(request):
                     
                     if not spec_obj: continue
 
+                    # Calculate base price for this specialty
+                    current_tarif = spec_obj.prix_double_diplomation if modele.is_double_diplomation else spec_obj.prix
+                    
                     label_suffix = f" - {spec_obj.label}"
                     
                     # Check if already exists for this specialty AND model
@@ -195,6 +202,9 @@ def ApiSaveEcheancier(request):
                         type_remise=type_remise,
                         majoration=majoration,
                         type_majoration=type_majoration,
+                        has_remise=float(remise or 0) > 0,
+                        has_majoration=float(majoration or 0) > 0,
+                        tarif_formation=current_tarif,
                         entite_id=entite_id,
                     )
                     
@@ -208,6 +218,7 @@ def ApiSaveEcheancier(request):
                                 value=tranche['libelle'],
                                 montant_tranche=tranche['montant_echeance'],
                                 date_echeancier=tranche['date'] if tranche['date'] else None,
+                                entite_id=tranche.get('entite_id'),
                             )
                 return JsonResponse({"status": "success", "message": f"Échéanciers créés pour {len(all_spec_ids)} spécialités"})
 
@@ -236,6 +247,21 @@ def ApiSaveEcheancier(request):
             if has_already:
                 return JsonResponse({"status": "error-head-already"})
 
+            # Calculate base price for normal mode
+            tarif_formation = 0
+            if is_double_diplomation:
+                if double_obj:
+                    tarif_formation = (double_obj.prix_spec1 or 0) + (double_obj.prix_spec2 or 0)
+            elif spec_obj:
+                tarif_formation = spec_obj.prix_double_diplomation if modele.is_double_diplomation else spec_obj.prix
+            elif formation_obj:
+                # Prioritize specialty price if specialties exist
+                first_spec = Specialites.objects.filter(formation=formation_obj).first()
+                if first_spec:
+                    tarif_formation = first_spec.prix_double_diplomation if modele.is_double_diplomation else first_spec.prix
+                else:
+                    tarif_formation = formation_obj.prix_formation
+
             echeancier = EcheancierPaiement.objects.create(
                 model=modele,
                 formation=formation_obj,
@@ -247,6 +273,9 @@ def ApiSaveEcheancier(request):
                 type_remise=type_remise,
                 majoration=majoration,
                 type_majoration=type_majoration,
+                has_remise=float(remise or 0) > 0,
+                has_majoration=float(majoration or 0) > 0,
+                tarif_formation=tarif_formation,
                 entite_id=entite_id,
             )
 
@@ -257,6 +286,7 @@ def ApiSaveEcheancier(request):
                     value=tranche['libelle'],
                     montant_tranche=tranche['montant_echeance'],
                     date_echeancier=tranche['date'] if tranche['date'] else None,
+                    entite_id=tranche.get('entite_id'),
                 )
 
             return JsonResponse({"status": "success", "message": "Échéancier créé avec succès"})
@@ -373,7 +403,7 @@ def ListeEcheanciersConfigures(request):
 def ApiLoadEcheanciersConfigures(request):
     try:
         echeanciers = EcheancierPaiement.objects.all().values(
-            'id', 'model__label', 'formation__nom', 'formation__prix_formation', 'specialite__label', 'specialite__prix', 'specialite__prix_double_diplomation', 'is_active', 'is_archived', 'created_at','is_default','formation_double__label','formation_double__prix','formation_double__prix_spec1','formation_double__prix_spec2','model__is_double_diplomation', 'frais_inscription', 'remise', 'type_remise', 'majoration', 'type_majoration',
+            'id', 'model__label', 'formation__nom', 'formation__prix_formation', 'specialite__label', 'specialite__prix', 'specialite__prix_double_diplomation', 'is_active', 'is_archived', 'created_at','is_default','formation_double__label','formation_double__prix','formation_double__prix_spec1','formation_double__prix_spec2','model__is_double_diplomation', 'frais_inscription', 'remise', 'type_remise', 'majoration', 'type_majoration', 'tarif_formation',
             'model__promo_id', 'model__promo__label', 'formation_double__specialite1__label', 'formation_double__specialite2__label'
         )
         
@@ -382,23 +412,28 @@ def ApiLoadEcheanciersConfigures(request):
         
         for echeancier in echeanciers:
             # Determine base price first for grouping
-            prix = 0
+            prix = echeancier.get('tarif_formation') or 0
             base_label = ""
+            
+            if not prix:
+                if echeancier.get('specialite__label'):
+                    if echeancier['model__is_double_diplomation']:
+                        prix = echeancier.get('specialite__prix_double_diplomation') or 0
+                    else:
+                        prix = echeancier.get('specialite__prix') or 0
+                elif echeancier.get('formation__nom'):
+                    prix = echeancier.get('formation__prix_formation') or 0
+                elif echeancier.get('formation_double__label'):
+                    prix = (echeancier.get('formation_double__prix_spec1') or 0) + (echeancier.get('formation_double__prix_spec2') or 0)
             
             if echeancier.get('specialite__label'):
                 base_label = echeancier['specialite__label']
-                if echeancier['model__is_double_diplomation']:
-                    prix = echeancier.get('specialite__prix_double_diplomation') or 0
-                else:
-                    prix = echeancier.get('specialite__prix') or 0
             elif echeancier.get('formation__nom'):
                 base_label = echeancier['formation__nom']
-                prix = echeancier.get('formation__prix_formation') or 0
             elif echeancier.get('formation_double__label'):
                 spec1 = echeancier.get('formation_double__specialite1__label') or "Spécialité 1"
                 spec2 = echeancier.get('formation_double__specialite2__label') or "Spécialité 2"
                 base_label = f"{spec1} / {spec2}"
-                prix = (echeancier.get('formation_double__prix_spec1') or 0) + (echeancier.get('formation_double__prix_spec2') or 0)
             
             # Create a signature for the tranches
             lines = EcheancierPaiementLine.objects.filter(echeancier_id=echeancier['id']).order_by('id')
@@ -418,6 +453,16 @@ def ApiLoadEcheanciersConfigures(request):
             )
             
             spec_label = f"{base_label}" if base_label else ""
+            
+            # Compute final price
+            prix_float = float(prix)
+            remise_val = float(echeancier['remise'] or 0)
+            actual_remise = (prix_float * remise_val / 100) if echeancier['type_remise'] == 'pourcentage' else remise_val
+            
+            majoration_val = float(echeancier['majoration'] or 0)
+            actual_majoration = (prix_float * majoration_val / 100) if echeancier['type_majoration'] == 'pourcentage' else majoration_val
+            
+            tarif_final = max(0, prix_float - actual_remise + actual_majoration)
             
             if key not in grouped_data:
                 grouped_data[key] = {
@@ -439,6 +484,7 @@ def ApiLoadEcheanciersConfigures(request):
                     'majoration': echeancier['majoration'],
                     'type_majoration': echeancier['type_majoration'],
                     'tarif_formation': prix,
+                    'tarif_final': tarif_final,
                     'spec1': echeancier.get('formation_double__specialite1__label'),
                     'spec2': echeancier.get('formation_double__specialite2__label')
                 }
@@ -630,25 +676,53 @@ def ApiUpdateEcheancier(request):
                     echeancier.frais_inscription = frais_inscription
                 if remise is not None:
                     echeancier.remise = remise
+                    echeancier.has_remise = float(remise or 0) > 0
                 if type_remise:
                     echeancier.type_remise = type_remise
                 if majoration is not None:
                     echeancier.majoration = majoration
+                    echeancier.has_majoration = float(majoration or 0) > 0
                 if type_majoration:
                     echeancier.type_majoration = type_majoration
                 echeancier.save()
                 
+                # Recalculate tranches amounts if needed
+                tarif = float(echeancier.tarif_formation or 0)
+                remise_val = float(echeancier.remise or 0)
+                maj_val = float(echeancier.majoration or 0)
+                
+                actual_discount = (tarif * remise_val / 100) if echeancier.type_remise == 'pourcentage' else remise_val
+                actual_majoration = (tarif * maj_val / 100) if echeancier.type_majoration == 'pourcentage' else maj_val
+                net_total = tarif - actual_discount + actual_majoration
+                
                 # Update tranches
                 for update in tranche_updates:
-                    # Update by label within this echeancier
-                    tranche_obj = EcheancierPaiementLine.objects.filter(
-                        echeancier=echeancier, 
-                        value=update.get('old_value', update.get('value'))
-                    ).first()
+                    # Update by ID if possible, otherwise by label
+                    tranche_id = update.get('id')
+                    if tranche_id:
+                        tranche_obj = EcheancierPaiementLine.objects.filter(id=tranche_id, echeancier=echeancier).first()
+                    else:
+                        tranche_obj = EcheancierPaiementLine.objects.filter(
+                            echeancier=echeancier, 
+                            value=update.get('old_value', update.get('value'))
+                        ).first()
+                        
                     if tranche_obj:
                         tranche_obj.value = update.get('value')
                         if update.get('date'):
                             tranche_obj.date_echeancier = update.get('date')
+                        
+                        # Recalculate montant_tranche
+                        taux = float(tranche_obj.taux or 0)
+                        tranche_obj.montant_tranche = (net_total * taux / 100)
+                        
+                        # Update tranche entity
+                        t_entite_id = update.get('entite_id')
+                        if t_entite_id and t_entite_id != "0":
+                            tranche_obj.entite_id = t_entite_id
+                        else:
+                            tranche_obj.entite = None
+                            
                         tranche_obj.save()
 
             return JsonResponse({"status": "success", "message": f"{len(ids)} échéancier(s) mis à jour avec succès"})
