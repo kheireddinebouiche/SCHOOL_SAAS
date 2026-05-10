@@ -181,52 +181,90 @@
 <!-- Réutilisation de la modale de création -->
 {% include 'saas_admin_app/saas_modal_create_tenant.html' %}
 
-<!-- Modal de Synchronisation Pédagogique -->
+<!-- Modal de Synchronisation Pédagogique (Design Premium) -->
 <div class="modal fade" id="syncPedagogicalModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content glass-modal border-0">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold text-primary">
-                    <i class="ri-sync-line me-2"></i>Synchronisation Pédagogique Globale
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content glass-card border-0 shadow-lg overflow-hidden">
+            <!-- Modal Header with Gradient -->
+            <div class="modal-header p-4 bg-gradient-primary-to-secondary text-white border-0 position-relative">
+                <div class="position-relative z-index-1">
+                    <h4 class="modal-title fw-bold d-flex align-items-center mb-1">
+                        <i class="ri-sync-cloud-line me-2 fs-3"></i> Synchronisation Pédagogique Globale
+                    </h4>
+                    <p class="mb-0 opacity-75 small">Diffusez les formations du MASTER vers l'ensemble du réseau SaaS.</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="modal" aria-label="Close"></button>
+                <i class="ri-book-3-line position-absolute bottom-0 end-0 opacity-10" style="font-size: 10rem; transform: translate(20%, 30%);"></i>
             </div>
-            <div class="modal-body p-4">
-                <div class="alert alert-soft-info d-flex align-items-center gap-3 mb-4 rounded-4 border-0">
-                    <i class="ri-information-line fs-3 text-info"></i>
-                    <div>
-                        <strong>Note :</strong> Cette action synchronise les formations, spécialités et modules depuis le tenant MASTER vers les tenants sélectionnés.
+
+            <div class="modal-body p-0">
+                <div class="row g-0">
+                    <!-- Left Column: Master Formations Selection -->
+                    <div class="col-lg-5 bg-light bg-opacity-50 border-end p-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h6 class="fw-bold mb-0 d-flex align-items-center">
+                                <span class="badge-dot bg-primary me-2"></span> 1. Formations Master
+                            </h6>
+                            <span class="badge bg-soft-primary text-primary rounded-pill small px-3">Sélection Multiple</span>
+                        </div>
+                        
+                        <p class="text-muted small mb-3">Sélectionnez les programmes à propager. Si rien n'est coché, tout sera synchronisé.</p>
+                        
+                        <div id="masterFormationsList" class="custom-scrollbar pe-2" style="height: 450px; overflow-y: auto;">
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-primary mb-3" role="status"></div>
+                                <div class="text-muted small">Récupération du catalogue...</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 pt-3 border-top">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-soft-secondary rounded-pill flex-grow-1" onclick="toggleAllMasterFormations(true)">
+                                    Tout cocher
+                                </button>
+                                <button class="btn btn-sm btn-soft-secondary rounded-pill flex-grow-1" onclick="toggleAllMasterFormations(false)">
+                                    Décocher tout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Tenants Targets -->
+                    <div class="col-lg-7 p-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h6 class="fw-bold mb-0 d-flex align-items-center">
+                                <span class="badge-dot bg-success me-2"></span> 2. Destinations (Tenants)
+                            </h6>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-soft-primary rounded-pill small px-3" onclick="loadSyncList()">
+                                    <i class="ri-refresh-line"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive custom-scrollbar" style="height: 450px;">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-white position-sticky top-0 z-index-1">
+                                    <tr class="text-muted small">
+                                        <th class="border-0 px-3">Établissement</th>
+                                        <th class="border-0">Progression / État</th>
+                                        <th class="border-0 text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="syncTenantsList">
+                                    <!-- Rempli en JS -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-
-                <div class="mb-4">
-                    <label class="fw-bold mb-2"><i class="ri-book-open-line me-1"></i>1. Sélectionner les formations à synchroniser</label>
-                    <div id="masterFormationsList" class="border rounded-4 p-3 bg-light bg-opacity-50" style="max-height: 200px; overflow-y: auto;">
-                        <div class="text-center py-2"><i class="ri-loader-4-line spin"></i> Chargement des formations...</div>
-                    </div>
-                    <div class="form-text mt-1 text-info"><i class="ri-question-line me-1"></i>Laissez tout décoché pour synchroniser toutes les formations.</div>
-                </div>
-
-                <label class="fw-bold mb-2"><i class="ri-building-line me-1"></i>2. Sélectionner les tenants cibles</label>
-                <div class="table-responsive" style="max-height: 300px;">
-                    <table class="table table-modern align-middle" id="syncTenantsTable">
-                        <thead>
-                            <tr>
-                                <th>Tenant</th>
-                                <th>Statut</th>
-                                <th class="text-end">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="syncTenantsList">
-                            <!-- Rempli en JS -->
-                        </tbody>
-                    </table>
-                </div>
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-soft-secondary rounded-pill px-4" data-bs-dismiss="modal">Fermer</button>
-                <button type="button" class="btn btn-primary rounded-pill px-4" onclick="syncAllVisible()">
-                    <i class="ri-refresh-line me-1"></i> Tout synchroniser
+
+            <!-- Modal Footer -->
+            <div class="modal-footer bg-light bg-opacity-75 p-3 border-0">
+                <button type="button" class="btn btn-soft-secondary rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-modern-primary rounded-pill px-4" onclick="syncAllVisible()">
+                    <i class="ri-rocket-2-line me-1"></i> Lancer la synchronisation massive
                 </button>
             </div>
         </div>
@@ -234,6 +272,55 @@
 </div>
 
 {% endblock content %}
+
+{% block extra_css %}
+<style>
+    .bg-gradient-primary-to-secondary {
+        background: linear-gradient(135deg, #4361ee 0%, #7209b7 100%) !important;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(67, 97, 238, 0.2);
+        border-radius: 10px;
+    }
+    .formation-sync-item {
+        transition: all 0.2s ease-in-out;
+        border-color: rgba(0,0,0,0.05) !important;
+    }
+    .formation-sync-item:hover {
+        border-color: #4361ee !important;
+        transform: translateX(5px);
+        background: rgba(67, 97, 238, 0.02) !important;
+    }
+    .hover-shadow:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08) !important;
+    }
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    .btn-modern-primary {
+        background: #4361ee;
+        color: white;
+        border: none;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+    }
+    .btn-modern-primary:hover {
+        background: #3f37c9;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+    }
+    .badge-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+</style>
+{% endblock extra_css %}
 
 {% block extra_js %}
 <script>
@@ -312,7 +399,7 @@
     // Pedagogical Sync Logic
     function loadSyncList() {
         const list = document.getElementById('syncTenantsList');
-        list.innerHTML = '<tr><td colspan="3" class="text-center py-4"><i class="ri-loader-4-line spin fs-3"></i></td></tr>';
+        list.innerHTML = '<tr><td colspan="3" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></td></tr>';
         
         // Load formations too
         loadMasterFormations();
@@ -327,15 +414,23 @@
                         return;
                     }
                     data.tenants.forEach(t => {
+                        const avatarChar = t.nom ? t.nom.charAt(0).toUpperCase() : 'T';
                         const row = `
                             <tr>
-                                <td>
-                                    <div class="fw-bold">${t.nom}</div>
-                                    <small class="text-muted">${t.schema_name}</small>
+                                <td class="px-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="tenant-avatar-small me-3 bg-soft-primary text-primary d-flex align-items-center justify-content-center fw-bold rounded-3" style="width: 32px; height: 32px; font-size: 14px;">
+                                            ${avatarChar}
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold small">${t.nom}</div>
+                                            <div class="text-muted" style="font-size: 10px;">${t.schema_name}</div>
+                                        </div>
+                                    </div>
                                 </td>
-                                <td><span class="badge bg-soft-secondary text-secondary" id="status-${t.id}">En attente</span></td>
+                                <td><span class="badge bg-soft-secondary text-secondary rounded-pill px-3" id="status-${t.id}">En attente</span></td>
                                 <td class="text-end">
-                                    <button class="btn btn-sm btn-icon btn-soft-primary rounded-circle" onclick="syncOne(${t.id})" id="btn-${t.id}">
+                                    <button class="btn btn-sm btn-icon btn-soft-primary rounded-circle" onclick="syncOne(${t.id})" id="btn-${t.id}" title="Synchroniser ce tenant">
                                         <i class="ri-refresh-line"></i>
                                     </button>
                                 </td>
@@ -355,19 +450,28 @@
                 if (data.success) {
                     container.innerHTML = '';
                     if (data.formations.length === 0) {
-                        container.innerHTML = '<div class="text-muted">Aucune formation trouvée dans le Master</div>';
+                        container.innerHTML = '<div class="text-center py-5 text-muted">Aucune formation trouvée dans le Master</div>';
                         return;
                     }
                     data.formations.forEach(f => {
                         container.innerHTML += `
-                            <div class="form-check mb-1">
-                                <input class="form-check-input formation-checkbox" type="checkbox" value="${f.id}" id="form-sync-${f.id}">
-                                <label class="form-check-label small" for="form-sync-${f.id}">${f.nom}</label>
+                            <div class="formation-sync-item p-3 mb-2 rounded-4 border bg-white shadow-sm transition-all hover-shadow">
+                                <div class="form-check d-flex align-items-center mb-0">
+                                    <input class="form-check-input formation-checkbox me-3" type="checkbox" value="${f.id}" id="form-sync-${f.id}" style="width: 1.3rem; height: 1.3rem; cursor: pointer;">
+                                    <label class="form-check-label d-flex flex-column cursor-pointer" for="form-sync-${f.id}" style="cursor: pointer;">
+                                        <span class="fw-bold small text-dark">${f.nom}</span>
+                                        <span class="text-muted" style="font-size: 10px;">CODE: ${f.code}</span>
+                                    </label>
+                                </div>
                             </div>
                         `;
                     });
                 }
             });
+    }
+
+    function toggleAllMasterFormations(checked) {
+        document.querySelectorAll('.formation-checkbox').forEach(cb => cb.checked = checked);
     }
 
     function syncOne(tenantId) {
