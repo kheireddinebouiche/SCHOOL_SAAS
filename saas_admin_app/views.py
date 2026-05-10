@@ -1757,7 +1757,7 @@ def api_master_formations_list_view(request):
         return JsonResponse({'success': False, 'error': 'Tenant MASTER introuvable'})
         
     with schema_context(master_tenant.schema_name):
-        formations = list(Formation.objects.all().values('id', 'nom'))
+        formations = list(Formation.objects.all().values('id', 'nom', 'code'))
         
     return JsonResponse({'success': True, 'formations': formations})
 
