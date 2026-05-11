@@ -556,11 +556,12 @@ def ApiGetRolePermissions(request):
         permissions_data = []
         for rp in role_permissions:
             permissions_data.append({
-                'id': rp.id,  # Use RolePermission ID for editing/deleting
-                'module_permission_id': rp.module_permission.id,  # Include the ModulePermission ID
-                'module_name': rp.module_permission.module.get_name_display(),
+                'id': rp.id,
+                'module_permission_id': rp.module_permission.id,
+                'module_code': rp.module_permission.module.name,  # Raw code (e.g. 'crm')
+                'module_name': rp.module_permission.module.get_name_display(), # Display name
                 'permission_name': rp.module_permission.get_permission_type_display(),
-                'permission_type': rp.module_permission.permission_type,  # Include permission type for editing
+                'permission_type': rp.module_permission.permission_type,
                 'is_granted': True
             })
 
@@ -925,6 +926,68 @@ def ApiAddAttribution(request):
                 'status': 'error',
                 'message': str(e)
             })
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiBulkAddAttribution(request):
+    """
+    API pour créer plusieurs attributions à la fois (1 rôle pour plusieurs modules)
+    """
+    if request.method == "POST":
+        user_id = request.POST.get('user_id')
+        role_id = request.POST.get('role_id')
+        module_ids = request.POST.get('module_ids')  # Devrait être une liste JSON
+        
+        if not user_id or not role_id or not module_ids:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Utilisateur, rôle et modules sont requis'
+            })
+        
+        try:
+            import json
+            module_ids = json.loads(module_ids)
+            
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            
+            user = User.objects.get(id=user_id)
+            role = Role.objects.get(id=role_id)
+            
+            created_count = 0
+            errors = []
+            
+            for m_id in module_ids:
+                try:
+                    module = Module.objects.get(id=m_id)
+                    
+                    # Vérifier si une attribution existe déjà
+                    if UserModuleRole.objects.filter(user=user, module=module).exists():
+                        errors.append(f"Module {module.get_name_display()} : Déjà attribué")
+                        continue
+                    
+                    UserModuleRole.objects.create(
+                        user=user,
+                        module=module,
+                        role=role,
+                        assigned_by=request.user
+                    )
+                    created_count += 1
+                except Module.DoesNotExist:
+                    errors.append(f"ID Module {m_id} non trouvé")
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': f'{created_count} attribution(s) créée(s) avec succès',
+                'errors': errors
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
 
 @login_required(login_url="institut_app:login")

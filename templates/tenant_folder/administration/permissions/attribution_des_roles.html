@@ -194,6 +194,49 @@
     align-items: center;
     gap: 0.75rem;
   }
+
+  /* Interactive Cards */
+  .user-item, .role-card, .module-card {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .user-item:hover, .role-card:hover, .module-card:hover {
+    border-color: var(--primary-teal) !important;
+    transform: translateY(-3px);
+  }
+  .user-item.active {
+    background: #eef2ff !important;
+    border-color: #4f46e5 !important;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+  }
+  .scale-105 { transform: scale(1.05); }
+  .cursor-pointer { cursor: pointer; }
+  .transition-all { transition: all 0.3s ease; }
+  .x-small { font-size: 0.75rem; }
+  .fs-11 { font-size: 0.7rem; }
+  .letter-spacing-1 { letter-spacing: 1px; }
+
+  .glass-modal-content {
+    border: 1px solid rgba(255,255,255,0.4) !important;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+  }
+  .delete-badge-btn:hover {
+    color: #ef4444 !important;
+    transform: scale(1.2);
+    transition: all 0.2s ease;
+  }
 </style>
 
 <div class="main-content">
@@ -544,70 +587,130 @@
   </div>
 </div>
 
-<!-- Modal pour ajout d'attribution -->
+<!-- Modal pour ajout d'attribution (Version Ultra-Moderne) -->
 <div id="addAttributionModal" class="modal fade" tabindex="-1" aria-labelledby="addAttributionModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content rounded-4 shadow-lg border-0">
-      <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0 overflow-hidden glass-modal-content" style="height: 85vh; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px);">
+      <div class="modal-header border-bottom bg-transparent py-4 px-4 d-flex align-items-center justify-content-between">
         <div class="d-flex align-items-center">
-          <div class="modal-icon bg-success bg-opacity-10 rounded-3 p-3 me-3">
-            <i class="ri-add-circle-line text-success fs-4"></i>
+          <div class="modal-icon bg-primary bg-opacity-10 rounded-4 p-3 me-3 shadow-sm" style="width: 56px; height: 56px; display: flex; align-items: center; justify-content: center;">
+            <i class="ri-shield-flash-line text-primary fs-3"></i>
           </div>
           <div>
-            <h5 class="modal-title fw-semibold text-success mb-1" id="addAttributionModalLabel">
-              Nouvelle attribution
-            </h5>
-            <p class="text-muted small mb-0">Attribuer un rôle à un utilisateur pour un module</p>
+            <h4 class="modal-title fw-bold text-dark mb-0" id="addAttributionModalLabel">Configuration des Accès</h4>
+            <p class="text-muted small mb-0">Gestion centralisée des rôles multi-modules</p>
           </div>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body p-4">
-        <form id="addAttributionForm">
-          <div class="row g-4">
-            <div class="col-12">
-              <div class="card border-0 shadow-sm bg-light-subtle">
-                <div class="card-body p-4">
-                  <div class="row g-3">
-                    <div class="col-md-4">
-                      <label class="form-label fw-semibold text-muted" for="addAttributionUser">
-                        <i class="ri-user-line text-primary me-1"></i>Utilisateur
-                      </label>
-                      <select class="form-select border-0 bg-white py-3 shadow-none" id="addAttributionUser" name="user" required>
-                        <option value="">Sélectionner un utilisateur</option>
-                      </select>
-                    </div>
-                    <div class="col-md-4">
-                      <label class="form-label fw-semibold text-muted" for="addAttributionModule">
-                        <i class="ri-apps-line text-info me-1"></i>Module
-                      </label>
-                      <select class="form-select border-0 bg-white py-3 shadow-none" id="addAttributionModule" name="module" required>
-                        <option value="">Sélectionner un module</option>
-                        <!-- Les options seront chargées dynamiquement -->
-                      </select>
-                    </div>
-                    <div class="col-md-4">
-                      <label class="form-label fw-semibold text-muted" for="addAttributionRole">
-                        <i class="ri-shield-user-line text-success me-1"></i>Rôle
-                      </label>
-                      <select class="form-select border-0 bg-white py-3 shadow-none" id="addAttributionRole" name="role" required>
-                        <option value="">Sélectionner un rôle</option>
-                      </select>
+      
+      <div class="modal-body p-0 d-flex overflow-hidden">
+        <!-- Sidebar: Utilisateurs -->
+        <div class="border-end bg-light bg-opacity-30" style="width: 350px; display: flex; flex-direction: column;">
+          <div class="p-4 bg-white bg-opacity-50">
+            <h6 class="fw-bold text-uppercase fs-11 text-muted mb-3 letter-spacing-1">Utilisateurs</h6>
+            <div class="search-box position-relative">
+              <i class="ri-search-2-line position-absolute top-50 start-0 translate-middle-y ms-3 text-muted fs-5"></i>
+              <input type="text" id="userSearchInput" class="form-control rounded-pill ps-5 py-2 border-light shadow-sm bg-white" placeholder="Nom, email ou matricule...">
+            </div>
+          </div>
+          <div class="flex-grow-1 overflow-auto px-3 pb-4" id="userSelectionList">
+            <div class="text-center py-5" id="userListLoader">
+              <div class="spinner-grow text-primary" role="status"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="flex-grow-1 d-flex flex-column overflow-hidden bg-white">
+          <div class="flex-grow-1 overflow-auto custom-scrollbar p-4">
+            
+            <!-- Empty State -->
+            <div id="noUserSelected" class="h-100 d-flex flex-column align-items-center justify-content-center py-5 animate__animated animate__fadeIn">
+              <div class="mb-4">
+                <svg width="200" height="150" viewBox="0 0 200 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="40" y="30" width="120" height="90" rx="12" fill="#F1F5F9"/>
+                  <circle cx="100" cy="65" r="25" fill="#E2E8F0"/>
+                  <rect x="70" y="95" width="60" height="8" rx="4" fill="#E2E8F0"/>
+                  <rect x="80" y="108" width="40" height="6" rx="3" fill="#E2E8F0"/>
+                </svg>
+              </div>
+              <h5 class="fw-bold text-dark">Prêt pour l'attribution</h5>
+              <p class="text-muted text-center px-5">Veuillez sélectionner un collaborateur dans la liste latérale pour configurer ses nouveaux droits d'accès.</p>
+            </div>
+
+            <!-- Configuration Form -->
+            <div id="attributionConfigArea" class="d-none animate__animated animate__fadeIn">
+              <!-- Header Profile -->
+              <div class="glass-card p-4 mb-4 border-0 shadow-sm d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
+                <div class="d-flex align-items-center">
+                  <div class="avatar-lg bg-primary rounded-4 d-flex align-items-center justify-content-center me-3 text-white fw-bold fs-2 shadow-lg" id="selectedUserInitial" style="width: 64px; height: 64px;">?</div>
+                  <div>
+                    <h5 class="fw-bold text-dark mb-1" id="selectedUserName">Nom de l'utilisateur</h5>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="badge bg-soft-primary text-primary rounded-pill px-3" id="selectedUserEmail">email@exemple.com</span>
+                      <span class="text-muted small">ID: <span id="selectedUserIdDisplay">#0</span></span>
                     </div>
                   </div>
                 </div>
+                <div class="text-end">
+                  <p class="text-muted small mb-1">Accès existants</p>
+                  <div id="existingModulesBadge" class="d-flex gap-1 justify-content-end flex-wrap">
+                    <!-- Badges of existing modules -->
+                  </div>
+                </div>
               </div>
+
+              <!-- Step 1: Role Selection -->
+              <div class="mb-5">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                  <span class="badge bg-primary rounded-circle p-0 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">1</span>
+                  <h6 class="fw-bold text-dark mb-0">Définir le Rôle de l'attribution</h6>
+                </div>
+                <div class="row g-3" id="roleGridContainer">
+                  <!-- Roles cards -->
+                </div>
+              </div>
+
+              <!-- Step 2: Module Selection -->
+              <div class="mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary rounded-circle p-0 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">2</span>
+                    <h6 class="fw-bold text-dark mb-0">Périmètre d'application (Modules)</h6>
+                  </div>
+                  <div class="d-flex gap-3 align-items-center">
+                    <div class="search-box position-relative" style="width: 200px;">
+                      <i class="ri-filter-3-line position-absolute top-50 start-0 translate-middle-y ms-2 text-muted"></i>
+                      <input type="text" id="moduleSearchInput" class="form-control form-control-sm rounded-pill ps-4 border-light" placeholder="Filtrer modules...">
+                    </div>
+                    <div class="form-check form-switch m-0">
+                      <input class="form-check-input" type="checkbox" id="selectAllModules">
+                      <label class="form-check-label small fw-medium text-muted" for="selectAllModules">Tout sélectionner</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="row g-3" id="moduleGridContainer">
+                  <!-- Module cards -->
+                </div>
+              </div>
+
             </div>
           </div>
-        </form>
-      </div>
-      <div class="modal-footer border-0 bg-light px-4 py-3">
-        <button type="button" class="btn btn-outline-secondary px-4 py-2" data-bs-dismiss="modal">
-          <i class="ri-close-line me-2"></i>Annuler
-        </button>
-        <button type="button" class="btn btn-success px-4 py-2" id="saveNewAttributionBtn">
-          <i class="ri-add-circle-line me-2"></i>Attribuer le rôle
-        </button>
+
+          <!-- Bottom Action Bar -->
+          <div class="p-4 bg-light bg-opacity-50 border-top d-flex align-items-center justify-content-between">
+            <div id="selectionSummary" class="small text-muted d-none">
+              <span class="fw-bold text-primary" id="summaryRoleName">Aucun rôle</span> pour <span class="fw-bold text-primary" id="summaryModuleCount">0 modules</span>
+            </div>
+            <div class="d-flex gap-2 ms-auto">
+              <button type="button" class="btn btn-soft-dark rounded-pill px-4" data-bs-dismiss="modal">Abandonner</button>
+              <button type="button" class="btn btn-primary rounded-pill px-5 fw-bold shadow-lg" id="saveBulkAttributionBtn" disabled>
+                <i class="ri-shield-check-line me-2 fs-5"></i> Valider l'attribution
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -866,42 +969,264 @@
 
     // Handle add attribution button click
     $('#addAttributionBtn, #addAttributionEmptyStateBtn').on('click', function() {
-      $('#addAttributionForm')[0].reset();
+      resetAddModal();
       $('#addAttributionModal').modal('show');
+      loadAddModalData();
     });
 
-    // Handle edit attribution
+    var modalUsers = [], modalRoles = [], modalModules = [];
+    var selectedUserId = null, selectedRoleId = null;
+
+    function resetAddModal() {
+      selectedUserId = null; selectedRoleId = null;
+      $('#attributionConfigArea').addClass('d-none');
+      $('#noUserSelected').removeClass('d-none');
+      $('#saveBulkAttributionBtn').prop('disabled', true);
+      $('#userSearchInput').val('');
+      $('#selectAllModules').prop('checked', false);
+      $('#userSelectionList').html('<div class="text-center py-5"><div class="spinner-border spinner-border-sm text-primary"></div></div>');
+    }
+
+    function loadAddModalData() {
+      $.when(
+        $.get("{% url 'institut_app:ApiListeDesUtilisateurs' %}"),
+        $.get("{% url 'institut_app:ApiListeRoles' %}"),
+        $.get("{% url 'institut_app:ApiListeModules' %}")
+      ).then(function(users, roles, modules) {
+        modalUsers = users[0]; modalRoles = roles[0]; modalModules = modules[0];
+        renderUserList();
+        renderRoleGrid();
+        renderModuleGrid();
+      });
+    }
+
+    function renderUserList(filter = '') {
+      const list = $('#userSelectionList').empty();
+      const filtered = modalUsers.filter(u => 
+        (u.first_name + ' ' + u.last_name + ' ' + u.username).toLowerCase().includes(filter.toLowerCase())
+      );
+      
+      if (filtered.length === 0) {
+        list.append('<div class="text-center py-4 text-muted small">Aucun utilisateur trouvé</div>');
+        return;
+      }
+
+      filtered.forEach(u => {
+        const active = selectedUserId == u.id ? 'active shadow-sm border-primary' : 'border-transparent';
+        const item = $(`
+          <div class="user-item p-3 mb-2 rounded-3 cursor-pointer border transition-all ${active}" data-id="${u.id}" style="background: white;">
+            <div class="d-flex align-items-center">
+              <div class="avatar-sm bg-soft-primary rounded-circle d-flex align-items-center justify-content-center me-3 fw-bold text-primary">${u.first_name[0]}${u.last_name[0]}</div>
+              <div class="overflow-hidden">
+                <div class="fw-bold text-dark text-truncate">${u.first_name} ${u.last_name}</div>
+                <div class="text-muted small text-truncate">@${u.username}</div>
+              </div>
+            </div>
+          </div>
+        `);
+        item.on('click', () => selectUser(u));
+        list.append(item);
+      });
+    }
+
+    $('#userSearchInput').on('input', function() { renderUserList($(this).val()); });
+
+    function selectUser(user) {
+      selectedUserId = user.id;
+      $('.user-item').removeClass('active shadow-sm border-primary').addClass('border-transparent');
+      $(`.user-item[data-id="${user.id}"]`).addClass('active shadow-sm border-primary').removeClass('border-transparent');
+      
+      $('#noUserSelected').addClass('d-none');
+      $('#attributionConfigArea').removeClass('d-none');
+      $('#selectionSummary').removeClass('d-none');
+      
+      $('#selectedUserName').text(`${user.first_name} ${user.last_name}`);
+      $('#selectedUserEmail').text(user.email || `@${user.username}`);
+      $('#selectedUserInitial').text(`${user.first_name[0]}${user.last_name[0]}`);
+      $('#selectedUserIdDisplay').text(`#${user.id}`);
+      
+      // Load existing attributions for this user
+      refreshExistingBadges(user.id);
+
+      renderModuleGrid(); 
+      validateBulkForm();
+    }
+
+    function refreshExistingBadges(userId) {
+      const existing = allAttributionsData.filter(a => a.user.id == userId);
+      const badgeContainer = $('#existingModulesBadge').empty();
+      existing.forEach(a => {
+        const badge = $(`
+          <span class="badge bg-soft-info text-info rounded-pill px-2 py-1 border border-info border-opacity-10 d-flex align-items-center gap-1" style="font-size:0.65rem;">
+            ${a.module.name}
+            <i class="ri-close-line cursor-pointer delete-badge-btn" data-id="${a.id}" title="Supprimer l'accès"></i>
+          </span>
+        `);
+        badge.find('.delete-badge-btn').on('click', function() {
+          confirmQuickDelete(a.id, a.module.name, userId);
+        });
+        badgeContainer.append(badge);
+      });
+    }
+
+    function confirmQuickDelete(attrId, modName, userId) {
+      alertify.confirm("Suppression d'accès", `Voulez-vous vraiment retirer l'accès au module <b>${modName}</b> pour cet utilisateur ?`, 
+        function() {
+          $.ajax({
+            url: "{% url 'institut_app:ApiDeleteAttribution' %}",
+            type: "POST",
+            data: { id: attrId, csrfmiddlewaretoken: '{{ csrf_token }}' },
+            success: function(res) {
+              if (res.status === 'success') {
+                alertify.success("Accès supprimé");
+                // Update local data and UI
+                allAttributionsData = allAttributionsData.filter(a => a.id != attrId);
+                refreshExistingBadges(userId);
+                loadAttributions(); // Sync main table
+              } else {
+                alertify.error(res.message);
+              }
+            }
+          });
+        }, null
+      ).set('labels', {ok:'Oui, supprimer', cancel:'Annuler'});
+    }
+
+    function renderRoleGrid() {
+      const container = $('#roleGridContainer').empty();
+      modalRoles.sort((a,b) => a.level - b.level).forEach(r => {
+        const item = $(`
+          <div class="col-md-6 col-lg-3">
+            <div class="role-card p-4 border rounded-4 text-center cursor-pointer transition-all h-100 d-flex flex-column align-items-center justify-content-center ${selectedRoleId == r.id ? 'bg-primary border-primary shadow-lg scale-105' : 'bg-white border-light'}" data-id="${r.id}">
+              <div class="role-icon mb-3 bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:50px; height:50px; background:${selectedRoleId == r.id ? 'rgba(255,255,255,0.2)' : 'rgba(79, 70, 229, 0.1)'}">
+                <i class="ri-shield-star-line fs-3 ${selectedRoleId == r.id ? 'text-white' : 'text-primary'}"></i>
+              </div>
+              <div class="fw-bold mb-1 ${selectedRoleId == r.id ? 'text-white' : 'text-dark'}">${r.name}</div>
+              <div class="small ${selectedRoleId == r.id ? 'text-white-50' : 'text-muted'}">Niveau de sécurité ${r.level}</div>
+            </div>
+          </div>
+        `);
+        item.on('click', () => {
+          selectedRoleId = r.id;
+          $('#summaryRoleName').text(r.name);
+          renderRoleGrid();
+          validateBulkForm();
+        });
+        container.append(item);
+      });
+    }
+
+    function renderModuleGrid(filter = '') {
+      const container = $('#moduleGridContainer').empty();
+      const filtered = modalModules.filter(m => m.name_display.toLowerCase().includes(filter.toLowerCase()));
+      
+      filtered.forEach(m => {
+        const isChecked = $(`#modCheck${m.id}`).is(':checked');
+        const item = $(`
+          <div class="col-md-6 col-lg-4 module-item-col" data-name="${m.name_display.toLowerCase()}">
+            <div class="module-card p-3 border rounded-4 cursor-pointer transition-all h-100 ${isChecked ? 'bg-primary bg-opacity-5 border-primary shadow-sm' : 'bg-white border-light'}" data-id="${m.id}">
+              <div class="d-flex align-items-center">
+                <div class="form-check m-0 me-3">
+                  <input class="form-check-input module-check" type="checkbox" value="${m.id}" id="modCheck${m.id}" ${isChecked ? 'checked' : ''}>
+                </div>
+                <div>
+                  <div class="fw-bold small text-dark">${m.name_display}</div>
+                  <div class="text-muted" style="font-size:0.7rem;">Accès complet aux ressources</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `);
+        item.on('click', function(e) {
+          if (e.target.type !== 'checkbox') {
+            const cb = $(this).find('.module-check');
+            cb.prop('checked', !cb.prop('checked'));
+          }
+          const active = $(this).find('.module-check').is(':checked');
+          $(this).find('.module-card').toggleClass('bg-primary bg-opacity-5 border-primary shadow-sm', active).toggleClass('bg-white border-light', !active);
+          updateSummary();
+          validateBulkForm();
+        });
+        container.append(item);
+      });
+    }
+
+    $('#moduleSearchInput').on('input', function() {
+      const val = $(this).val().toLowerCase();
+      $('.module-item-col').each(function() {
+        $(this).toggle($(this).data('name').includes(val));
+      });
+    });
+
+    function updateSummary() {
+      const count = $('.module-check:checked').length;
+      $('#summaryModuleCount').text(`${count} module${count > 1 ? 's' : ''}`);
+    }
+
+    $('#selectAllModules').on('change', function() {
+      const checked = $(this).is(':checked');
+      $('.module-check').prop('checked', checked);
+      $('.module-card').toggleClass('bg-primary bg-opacity-5 border-primary shadow-sm', checked).toggleClass('bg-white border-light', !checked);
+      updateSummary();
+      validateBulkForm();
+    });
+
+    function validateBulkForm() {
+      const hasUser = !!selectedUserId;
+      const hasRole = !!selectedRoleId;
+      const hasModules = $('.module-check:checked').length > 0;
+      $('#saveBulkAttributionBtn').prop('disabled', !(hasUser && hasRole && hasModules));
+    }
+
+    $('#saveBulkAttributionBtn').on('click', function() {
+      const user_id = selectedUserId;
+      const role_id = selectedRoleId;
+      const module_ids = [];
+      $('.module-check:checked').each(function() { module_ids.push($(this).val()); });
+
+      const $btn = $(this);
+      $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Attribution...');
+
+      $.ajax({
+        url: "{% url 'institut_app:ApiBulkAddAttribution' %}",
+        type: "POST",
+        data: {
+          user_id: user_id,
+          role_id: role_id,
+          module_ids: JSON.stringify(module_ids),
+          csrfmiddlewaretoken: '{{ csrf_token }}'
+        },
+        success: function(res) {
+          if (res.status === 'success') {
+            alertify.success(res.message);
+            $('#addAttributionModal').modal('hide');
+            loadAttributions();
+          } else {
+            alertify.error(res.message);
+          }
+        },
+        complete: () => $btn.prop('disabled', false).html('<i class="ri-check-line me-1"></i> Confirmer l\'attribution')
+      });
+    });
+
+    // Handle edit attribution (Keep original logic)
     $(document).on('click', '.edit-attribution', function(e) {
       e.preventDefault();
       var attributionId = $(this).data('attribution-id');
-
-      // Fetch the attribution details from the server
       $.ajax({
         url: "{% url 'institut_app:ApiGetAttributionDetails' %}",
         type: "GET",
         dataType: "JSON",
-        data: {
-          'id': attributionId
-        },
+        data: { 'id': attributionId },
         success: function(response) {
           if (response.status === 'success' && response.data) {
             var attribution = response.data;
-
-            // Fill the modal form with the attribution details
             $('#attributionId').val(attribution.id);
             $('#updateAttributionUser').val(attribution.user_id);
             $('#updateAttributionModule').val(attribution.module_id);
             $('#updateAttributionRole').val(attribution.role_id);
-
-            // Show the modal
             $('#updateAttributionModal').modal('show');
-          } else {
-            alertify.error(response.message || "Erreur lors de la récupération des détails de l'attribution");
           }
-        },
-        error: function(xhr, status, error) {
-          console.error("Error loading attribution details:", error);
-          alertify.error("Erreur lors du chargement des détails de l'attribution");
         }
       });
     });
