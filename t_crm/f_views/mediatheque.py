@@ -186,7 +186,7 @@ def ApiAssignDocument(request):
             UserActionLog.objects.create(
                 user=request.user, action_type='UPDATE', target_model='Document', target_id=str(doc.id),
                 details=f"Document affecté au prospect {prospect.nom} {prospect.prenom}. Type: {dossier_type.label}",
-                ip_address=request.META.get('REMOTE_ADDR')
+                ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
             )
             return JsonResponse({'status': 'success'})
         except Exception as e:
@@ -229,7 +229,7 @@ def ApiImportPhysicalFile(request):
             UserActionLog.objects.create(
                 user=request.user, action_type='CREATE', target_model='Document', target_id=str(doc.id),
                 details=f"Importation et affectation du fichier physique {db_path} au prospect {prospect.nom}.",
-                ip_address=request.META.get('REMOTE_ADDR')
+                ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
             )
             return JsonResponse({'status': 'success'})
         except Exception as e:

@@ -1,0 +1,149 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} RH - Nouvelle Demande de Congé {% endblock title %}
+
+{% block content %}
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 1.5rem;
+        box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            
+            <div class="row justify-content-center mt-5">
+                <div class="col-lg-6">
+                    <div class="glass-card p-4 p-lg-5">
+                        <div class="text-center mb-4">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-3 d-inline-block mb-3">
+                                <i class="ri-send-plane-2-line text-primary fs-1"></i>
+                            </div>
+                            <h3 class="fw-bold">Nouvelle Demande</h3>
+                            <p class="text-muted">Remplissez les détails de votre demande de congé.</p>
+                        </div>
+
+                        <form method="POST">
+                            {% csrf_token %}
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Employé</label>
+                                    <select name="employee" id="employee-select" class="form-select rounded-pill border-0 shadow-sm px-4" required onchange="updateEmployeeInfo()">
+                                        <option value="">Sélectionnez un employé</option>
+                                        {% for emp in employees %}
+                                        <option value="{{ emp.id }}" data-solde="{{ emp.solde_conge }}" data-embauche="{{ emp.date_recrutement|date:'d/m/Y' }}">
+                                            {{ emp.nom }} {{ emp.prenom }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div id="employee-info-card" class="col-12" style="display: none;">
+                                    <div class="bg-light bg-opacity-50 rounded-4 p-3 border border-white">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <small class="text-muted d-block">Solde autorisé</small>
+                                                <span class="fw-bold text-primary fs-5"><span id="info-solde">0</span> jours</span>
+                                            </div>
+                                            <div class="text-end">
+                                                <small class="text-muted d-block">Date de recrutement</small>
+                                                <span class="fw-semibold text-dark"><i class="ri-calendar-line me-1"></i><span id="info-embauche">--/--/----</span></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Type de congé</label>
+                                    <select name="type_conge" class="form-select rounded-pill border-0 shadow-sm px-4" required>
+                                        {% for val, label in types_conge %}
+                                        <option value="{{ val }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Date de début</label>
+                                    <input type="date" name="date_debut" id="date_debut" class="form-control rounded-pill border-0 shadow-sm px-4" required onchange="calculateDuration()">
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Date de fin</label>
+                                    <input type="date" name="date_fin" id="date_fin" class="form-control rounded-pill border-0 shadow-sm px-4" required onchange="calculateDuration()">
+                                </div>
+
+                                <div class="col-12 text-center my-2">
+                                    <span id="duration-badge" class="badge bg-soft-primary text-primary rounded-pill px-3 py-2" style="display: none;">
+                                        Durée calculée : <span id="duration-val">0</span> jours
+                                    </span>
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Motif / Justification</label>
+                                    <textarea name="motif" class="form-control rounded-4 border-0 shadow-sm px-4 py-3" rows="3" placeholder="Facultatif..."></textarea>
+                                </div>
+
+                                <div class="col-12 mt-4">
+                                    <button type="submit" class="btn btn-primary w-100 rounded-pill py-3 shadow-lg">
+                                        <i class="ri-check-line me-1"></i> Soumettre la demande
+                                    </button>
+                                    <a href="{% url 't_rh:liste_conges' %}" class="btn btn-light w-100 rounded-pill py-3 mt-2 border-0">
+                                        Annuler
+                                    </a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateEmployeeInfo() {
+        const select = document.getElementById('employee-select');
+        const selectedOption = select.options[select.selectedIndex];
+        const infoCard = document.getElementById('employee-info-card');
+        
+        if (selectedOption.value) {
+            const solde = selectedOption.getAttribute('data-solde');
+            const embauche = selectedOption.getAttribute('data-embauche');
+            
+            document.getElementById('info-solde').innerText = solde || '0';
+            document.getElementById('info-embauche').innerText = embauche || 'N/A';
+            infoCard.style.display = 'block';
+        } else {
+            infoCard.style.display = 'none';
+        }
+    }
+
+    function calculateDuration() {
+
+        const start = document.getElementById('date_debut').value;
+        const end = document.getElementById('date_fin').value;
+        
+        if (start && end) {
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+            
+            if (endDate >= startDate) {
+                const diffTime = Math.abs(endDate - startDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                
+                document.getElementById('duration-val').innerText = diffDays;
+                document.getElementById('duration-badge').style.display = 'inline-block';
+            } else {
+                document.getElementById('duration-badge').style.display = 'none';
+            }
+        }
+    }
+</script>
+{% endblock content %}

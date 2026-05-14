@@ -171,10 +171,10 @@ class BudgetLineDetail(models.Model):
     montant = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     # Quarterly Dispatch Percentages (0-100)
-    t1_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0) # Aug-Oct
-    t2_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0) # Nov-Jan
-    t3_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0) # Feb-Apr
-    t4_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0) # May-Jul
+    t1_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0) # Jul-Sep
+    t2_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0) # Oct-Dec
+    t3_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0) # Jan-Mar
+    t4_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0) # Apr-Jun
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

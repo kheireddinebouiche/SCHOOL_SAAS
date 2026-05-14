@@ -21,7 +21,7 @@ urlpatterns = [
    path('details-session/<int:pk>/', DetailsSession, name="DetailsSession"),
    path('ApiGetSessionDetails', ApiGetSessionDetails, name="ApiGetSessionDetails"),
    path('ApiUpdateSession', ApiUpdateSession, name="ApiUpdateSession"),
-   path('ApiCheckLabelDisponibility', ApiCheckLabelDisponibility, name="ApiCheckLabelDisponibility"),
+   path('ApiCheckAvailability', ApiCheckAvailability, name="ApiCheckAvailability"),
 
    path('ApiPlaneExam', ApiPlaneExam, name="ApiPlaneExam"),
    path('plannification-examens/<int:pk>/', ExamConfiguration, name="ExamConfiguration"),

@@ -379,7 +379,7 @@ def InscriptionParticulier(request):
 
             type_select = form.cleaned_data.get('select_type')
             
-            if type_select == "10":
+            if type_select == "":
                 messages.error(request,"Veuillez sélectionner le type de formation")
                 return redirect('t_crm:inscription_particulier')
             
@@ -397,7 +397,7 @@ def InscriptionParticulier(request):
                 messages.success(request, "Prospect ajouté avec succès")
                 return redirect('t_crm:ListeDesProspects')
             
-            else:
+            elif type_select == "1":
 
                 donnee.is_double = True
                 donnee.context = "acc"
@@ -412,6 +412,12 @@ def InscriptionParticulier(request):
 
 
                 messages.success(request, "L'inscription du prospect est réussie")
+                return redirect('t_crm:ListeDesProspects')
+            
+            elif type_select == "2":
+                donnee.context = "acc"
+                donnee.save()
+                messages.success(request, "Prospect ajouté avec succès (Sans voeux formulés)")
                 return redirect('t_crm:ListeDesProspects')
         else:
             for field, errors in form.errors.items():
@@ -543,6 +549,16 @@ def ApiLoadSpecialite(request):
 @module_permission_required('crm','view')
 def DetailsProspect(request, slug):
     prospect = Prospets.objects.get(slug=slug)
+
+    # Log consultation action
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='OTHER',
+        target_model='Prospets',
+        target_id=str(prospect.id),
+        details=f"Consultation du dossier du prospect {prospect.nom} {prospect.prenom}",
+        ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+    )
 
     if prospect.statut in ['prinscrit', 'instance', 'convertit']:
         return redirect('t_crm:DetailsPrinscrit', pk=prospect.id)

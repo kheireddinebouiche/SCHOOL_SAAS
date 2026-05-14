@@ -335,7 +335,48 @@
 .form-select-sm, .form-control-sm, .input-group-sm {
     font-size: 0.825rem;
 }
+
+.avatar-xxs {
+    height: 1.5rem;
+    width: 1.5rem;
+}
+
+.table-modern-modal thead th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.025em;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.table-modern-modal tbody td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.bg-soft-primary { background-color: rgba(67, 97, 238, 0.1) !important; }
+.bg-soft-success { background-color: rgba(5, 150, 105, 0.1) !important; }
+.bg-soft-danger { background-color: rgba(220, 38, 38, 0.1) !important; }
+.bg-soft-warning { background-color: rgba(217, 119, 6, 0.1) !important; }
+.bg-soft-info { background-color: rgba(8, 145, 178, 0.1) !important; }
+
+.fs-10 { font-size: 10px !important; }
+.fs-11 { font-size: 11px !important; }
+
+/* Fix z-index for nested modals */
+#filePreviewModal {
+    z-index: 1090 !important;
+}
+/* Ensure the second backdrop is also above the first modal */
+#filePreviewModal.show ~ .modal-backdrop {
+    z-index: 1085 !important;
+}
 </style>
+
+
 
 <script>
 let currentPath = '';
@@ -650,6 +691,18 @@ async function previewFile(path, name, extension, size) {
     `;
     
     modal.show();
+    
+    // Fix z-index for nested modals (ensure preview is above the document status list)
+    setTimeout(() => {
+        const modalEl = document.getElementById('filePreviewModal');
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        if (backdrops.length > 1) {
+            const lastBackdrop = backdrops[backdrops.length - 1];
+            lastBackdrop.style.zIndex = '1085';
+            modalEl.style.zIndex = '1090';
+        }
+    }, 10);
+
     
     try {
         console.log('Starting preview for:', name, extension);
@@ -1028,20 +1081,26 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <!-- File Status Detailed Modal -->
 <div class="modal fade" id="tenantFileStatusModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+
+
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="tenantFileStatusTitle">Détails des fichiers</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="input-group mb-3">
-                    <span class="input-group-text"><i class="ri-search-line text-muted"></i></span>
-                    <input type="text" id="tenantFileStatusSearch" class="form-control" placeholder="Rechercher...">
+            <div class="modal-header d-block">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="modal-title" id="tenantFileStatusTitle">Détails des fichiers</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="table-responsive" style="max-height: 50vh;">
-                    <table class="table table-sm table-modern table-hover align-middle mb-0">
-                        <thead class="bg-light sticky-top">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="ri-search-line text-muted"></i></span>
+                    <input type="text" id="tenantFileStatusSearch" class="form-control bg-light border-start-0" placeholder="Rechercher dans la liste...">
+                </div>
+            </div>
+            <div class="modal-body p-0">
+
+                <div class="table-responsive">
+
+                    <table class="table table-sm table-modern-modal table-hover align-middle mb-0">
+                        <thead class="sticky-top">
                             <tr id="tenantFileStatusTableHeader">
                                 <!-- Headers dynamic -->
                             </tr>
@@ -1051,6 +1110,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </tbody>
                     </table>
                 </div>
+
             </div>
         </div>
     </div>
@@ -1078,40 +1138,92 @@ function viewTenantFileStatus(type) {
                     : `<i class="ri-file-warning-line text-danger me-2"></i>Fichiers Inconnus (Orphelins)`;
                 
                 header.innerHTML = type === 'known'
-                    ? '<th>Fichier</th><th>Propriétaire</th><th>Catégorie</th>'
-                    : '<th>Chemin</th><th>Taille</th><th>Modifié</th>';
+                    ? '<th style="width: 40px;"></th><th>Document / Fichier</th><th>Propriétaire</th><th>Usage CRM</th><th class="text-end">Action</th>'
+                    : '<th style="width: 40px;"></th><th>Fichier / Chemin</th><th>Taille</th><th>Modifié</th><th class="text-end">Action</th>';
                 
                 const files = type === 'known' ? data.known_files : data.unknown_files;
                 
                 if (files.length === 0) {
-                    body.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted">Aucun fichier trouvé.</td></tr>';
+                    body.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted">Aucun fichier trouvé.</td></tr>';
                     return;
                 }
                 
                 const renderList = (filtered) => {
                     if (filtered.length === 0) {
-                        body.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted">Aucun résultat.</td></tr>';
+                        body.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted">Aucun résultat.</td></tr>';
                         return;
                     }
                     body.innerHTML = filtered.map(f => {
+                        const ext = '.' + f.name.split('.').pop().toLowerCase();
+                        const config = getFileConfig(ext);
+                        const escapedPath = f.rel_path.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        const escapedName = f.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        const escapedExt = ext.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        
                         if (type === 'known') {
                             return `<tr>
-                                <td class="text-truncate" style="max-width: 320px;" title="${f.rel_path}">
-                                    <div class="fw-medium text-dark">${f.name}</div>
-                                    <small class="text-muted font-monospace fs-10">${f.rel_path}</small>
+                                <td class="text-center">
+                                    <div class="avatar-xxs">
+                                        <div class="avatar-title bg-soft-${config.color} text-${config.color} rounded fs-13">
+                                            <i class="${config.icon}"></i>
+                                        </div>
+                                    </div>
                                 </td>
-                                <td><span class="badge bg-primary-subtle text-primary border-primary border-opacity-10">${f.owner}</span></td>
-                                <td><small class="text-muted fw-semibold">${f.type}</small></td>
+                                <td class="text-truncate" style="max-width: 350px;" title="${f.rel_path}">
+                                    <div class="fw-semibold text-dark fs-13">${f.name}</div>
+                                    <div class="text-muted font-monospace fs-10" style="opacity: 0.7;">${f.rel_path}</div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-xxs flex-shrink-0 me-2">
+                                            <div class="avatar-title bg-soft-primary text-primary rounded-circle fs-10">
+                                                <i class="ri-user-line"></i>
+                                            </div>
+                                        </div>
+                                        <span class="fs-12 fw-medium">${f.owner}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-soft-info text-info border border-info border-opacity-10 fs-11">
+                                        ${f.type}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-icon btn-soft-primary" 
+                                            onclick="previewFile('${escapedPath}', '${escapedName}', '${escapedExt}', 0)" 
+                                            title="Aperçu">
+                                        <i class="ri-eye-line"></i>
+                                    </button>
+                                </td>
                             </tr>`;
                         } else {
                             return `<tr>
-                                <td class="text-truncate font-monospace fs-11" style="max-width: 350px;" title="${f.rel_path}">${f.rel_path}</td>
-                                <td><span class="badge bg-light text-dark">${f.size}</span></td>
-                                <td><small class="text-muted">${f.mtime}</small></td>
+                                <td class="text-center">
+                                    <div class="avatar-xxs">
+                                        <div class="avatar-title bg-soft-danger text-danger rounded fs-13">
+                                            <i class="ri-file-warning-line"></i>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-truncate" style="max-width: 400px;" title="${f.rel_path}">
+                                    <div class="fw-semibold text-dark fs-13">${f.name}</div>
+                                    <div class="text-muted font-monospace fs-10" style="opacity: 0.7;">${f.rel_path}</div>
+                                </td>
+                                <td><span class="badge bg-light text-dark border fs-11">${f.size}</span></td>
+                                <td><small class="text-muted fs-12">${f.mtime}</small></td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-icon btn-soft-primary" 
+                                            onclick="previewFile('${escapedPath}', '${escapedName}', '${escapedExt}', 0)" 
+                                            title="Aperçu">
+                                        <i class="ri-eye-line"></i>
+                                    </button>
+                                </td>
                             </tr>`;
+
                         }
                     }).join('');
                 };
+
 
                 renderList(files);
                 
@@ -1120,8 +1232,10 @@ function viewTenantFileStatus(type) {
                     const filtered = files.filter(f => 
                         f.rel_path.toLowerCase().includes(q) || 
                         (f.owner && f.owner.toLowerCase().includes(q)) ||
-                        (f.name && f.name.toLowerCase().includes(q))
+                        (f.name && f.name.toLowerCase().includes(q)) ||
+                        (f.type && f.type.toLowerCase().includes(q))
                     );
+
                     renderList(filtered);
                 };
             }

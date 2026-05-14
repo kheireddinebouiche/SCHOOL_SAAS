@@ -20,7 +20,8 @@ from .views import (
     saas_audit_logs_view, saas_clear_tenant_logs_view, saas_tenant_sync_pedagogical_data_view,
     api_tenants_pedagogical_sync_list_view, api_master_formations_list_view,
     api_tenant_formations_list_view, api_tenant_delete_formation_view,
-    api_tenant_delete_specialite_view
+    api_tenant_delete_specialite_view,
+    saas_export_prospects_view
 )
 
 app_name = 'saas_admin_app'
@@ -83,4 +84,5 @@ urlpatterns = [
     path('api/tenant/<int:tenant_id>/formations/', api_tenant_formations_list_view, name='api_tenant_formations_list'),
     path('api/tenant/<int:tenant_id>/formation/delete/', api_tenant_delete_formation_view, name='api_tenant_delete_formation'),
     path('api/tenant/<int:tenant_id>/specialite/delete/', api_tenant_delete_specialite_view, name='api_tenant_delete_specialite'),
+    path('tenant/<int:tenant_id>/prospects/export/', saas_export_prospects_view, name='saas_export_prospects'),
 ]

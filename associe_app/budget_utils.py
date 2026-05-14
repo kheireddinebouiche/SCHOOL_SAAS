@@ -19,14 +19,14 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
     """
     # 1. Prepare Ratios
     c_year = campaign.date_debut.year
-    t1_start = datetime.date(c_year, 8, 1)
-    t1_end = datetime.date(c_year, 10, 31)
-    t2_start = datetime.date(c_year, 11, 1)
-    t2_end = datetime.date(c_year + 1, 1, 31)
-    t3_start = datetime.date(c_year + 1, 2, 1)
-    t3_end = datetime.date(c_year + 1, 4, 30)
-    t4_start = datetime.date(c_year + 1, 5, 1)
-    t4_end = datetime.date(c_year + 1, 7, 31)
+    t1_start = datetime.date(c_year, 7, 1)
+    t1_end = datetime.date(c_year, 9, 30)
+    t2_start = datetime.date(c_year, 10, 1)
+    t2_end = datetime.date(c_year, 12, 31)
+    t3_start = datetime.date(c_year + 1, 1, 1)
+    t3_end = datetime.date(c_year + 1, 3, 31)
+    t4_start = datetime.date(c_year + 1, 4, 1)
+    t4_end = datetime.date(c_year + 1, 6, 30)
     
     today_date = as_of_date if as_of_date else timezone.now().date()
     
@@ -44,10 +44,10 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
 
     # 2. Identify Current Quarter for current_q_months filter
     month = today_date.month
-    if month in [8, 9, 10]: current_q_months = [8, 9, 10]
-    elif month in [11, 12, 1]: current_q_months = [11, 12, 1]
-    elif month in [2, 3, 4]: current_q_months = [2, 3, 4]
-    else: current_q_months = [5, 6, 7]
+    if month in [7, 8, 9]: current_q_months = [7, 8, 9]
+    elif month in [10, 11, 12]: current_q_months = [10, 11, 12]
+    elif month in [1, 2, 3]: current_q_months = [1, 2, 3]
+    else: current_q_months = [4, 5, 6]
 
     # 3. Initialize Accumulators
     all_allocations = {} # Key: poste_id -> {montant, t1_montant, ...}
@@ -103,10 +103,10 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                 real = all_realisations[p_id]
                 if date_pay:
                     m = date_pay.month
-                    if m in [8, 9, 10]: real['t1_montant'] += val
-                    elif m in [11, 12, 1]: real['t2_montant'] += val
-                    elif m in [2, 3, 4]: real['t3_montant'] += val
-                    elif m in [5, 6, 7]: real['t4_montant'] += val
+                    if m in [7, 8, 9]: real['t1_montant'] += val
+                    elif m in [10, 11, 12]: real['t2_montant'] += val
+                    elif m in [1, 2, 3]: real['t3_montant'] += val
+                    elif m in [4, 5, 6]: real['t4_montant'] += val
                     
                     real['months'][m] += val
                     real['montant'] += val
@@ -367,10 +367,10 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                 'pro_r': sum(dp[t_key]['full_prevu']/3 * Decimal(str(month_ratio(m, today_date))) for g in combined_postes for dp in g['display_postes'] if dp['poste'].type == 'recette'),
                 'pro_d': sum(dp[t_key]['full_prevu']/3 * Decimal(str(month_ratio(m, today_date))) for g in combined_postes for dp in g['display_postes'] if dp['poste'].type == 'depense'),
             } for m, t_key in {
-                **{m: 't1' for m in [8, 9, 10]},
-                **{m: 't2' for m in [11, 12, 1]},
-                **{m: 't3' for m in [2, 3, 4]},
-                **{m: 't4' for m in [5, 6, 7]}
+                **{m: 't1' for m in [7, 8, 9]},
+                **{m: 't2' for m in [10, 11, 12]},
+                **{m: 't3' for m in [1, 2, 3]},
+                **{m: 't4' for m in [4, 5, 6]}
             }.items()
         }
     }
@@ -383,8 +383,8 @@ def month_ratio(m, current_date):
         pass
     
     # Simple check for fiscal year context (Aug start)
-    target_date_val = m if m >= 8 else m + 12
-    current_date_val = current_date.month if current_date.month >= 8 else current_date.month + 12
+    target_date_val = m if m >= 7 else m + 12
+    current_date_val = current_date.month if current_date.month >= 7 else current_date.month + 12
     
     if current_date_val > target_date_val: return 1.0
     if current_date_val < target_date_val: return 0.0

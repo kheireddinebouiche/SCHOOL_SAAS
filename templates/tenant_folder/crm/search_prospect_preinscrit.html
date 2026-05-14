@@ -1,0 +1,557 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+
+{% block title %} Retrouver un Prospect/Preinscrit | {{ tenant.name }} {% endblock title %}
+
+{% block content %}
+<style>
+    /* Premium Glassmorphism & UI Design */
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --glass-border: rgba(255, 255, 255, 0.4);
+        --primary-gradient: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+        --accent-soft: rgba(14, 165, 233, 0.08);
+        --shadow-premium: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+        --transition-fast: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .page-content {
+        background: #f8fafc !important;
+        min-height: 100vh;
+    }
+
+    .breadcrumb-area {
+        background: white;
+        border-radius: 1.25rem;
+        padding: 1.25rem 1.75rem;
+        box-shadow: var(--shadow-premium);
+        border: 1px solid #f1f5f9;
+        margin-bottom: 2rem;
+    }
+
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 2rem;
+        box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        transition: var(--transition-fast);
+    }
+
+    .card-header-premium {
+        background: var(--primary-gradient);
+        padding: 1.5rem 2rem;
+        border: none;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .card-header-premium::before {
+        content: '';
+        position: absolute;
+        width: 150px;
+        height: 150px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        top: -75px;
+        right: -30px;
+    }
+
+    .form-section {
+        background: #ffffff;
+        border: 1px solid #f1f5f9;
+        border-radius: 1.5rem;
+        padding: 1.75rem;
+        transition: var(--transition-fast);
+    }
+
+    .form-section:hover {
+        border-color: #3b82f640;
+        box-shadow: 0 12px 30px -10px rgba(59, 130, 246, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .section-icon-box {
+        width: 42px;
+        height: 42px;
+        background: var(--accent-soft);
+        color: #0ea5e9;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        margin-right: 1rem;
+    }
+
+    .section-title {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 1.1rem;
+        margin-bottom: 0;
+    }
+
+    .form-control, .form-select {
+        border-radius: 12px;
+        border: 1.5px solid #e2e8f0;
+        padding: 0.65rem 1rem;
+        font-size: 0.95rem;
+        transition: var(--transition-fast);
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        background: white;
+    }
+
+    /* Input group alignment fix */
+    .input-group {
+        display: flex;
+        flex-wrap: nowrap;
+        background: #f8fafc;
+        border-radius: 14px;
+        padding: 4px;
+        border: 1.5px solid #e2e8f0;
+        transition: var(--transition-fast);
+        align-items: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .input-group:hover {
+        background: white;
+        border-color: #cbd5e1;
+    }
+
+
+
+    .input-group:focus-within {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        background: white;
+    }
+
+    .input-group .form-control {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        height: auto !important;
+        padding: 0.6rem 1.25rem !important;
+    }
+
+    .input-group .btn-premium {
+        border-radius: 10px !important;
+        padding: 0.6rem 2rem !important;
+        margin: 0 !important;
+        height: 100% !important;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+
+
+    .btn-premium {
+        background: var(--primary-gradient);
+        border: none;
+        border-radius: 12px;
+        padding: 0.65rem 1.5rem;
+        color: white;
+        font-weight: 600;
+        transition: var(--transition-fast);
+        box-shadow: 0 8px 20px -6px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-premium:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 25px -5px rgba(37, 99, 235, 0.4);
+        color: white;
+    }
+
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-up {
+        animation: slideUp 0.6s ease-out forwards;
+    }
+
+    .table thead th {
+        background: #f8fafc;
+        color: #64748b;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 2px solid #f1f5f9 !important;
+    }
+
+    .badge-soft-success { background-color: #dcfce7; color: #16a34a; }
+    .badge-soft-primary { background-color: #e0e7ff; color: #4338ca; }
+    .badge-soft-warning { background-color: #fef3c7; color: #d97706; }
+    .badge-soft-info { background-color: #e0f2fe; color: #0284c7; }
+    .badge-soft-secondary { background-color: #f1f5f9; color: #475569; }
+
+    .avatar-title {
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
+
+
+    .table-responsive {
+        border-radius: 1rem;
+        overflow: hidden;
+    }
+</style>
+
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid py-4">
+
+            <!-- Header Section -->
+            <div class="breadcrumb-area animate-up">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 p-3 rounded-circle me-3">
+                                <i class="ri-search-eye-line text-primary fs-3 mb-0"></i>
+                            </div>
+                            <div>
+                                <h3 class="fw-bold text-dark mb-1">Recherche de Dossiers</h3>
+                                <p class="text-muted mb-0">Retrouver rapidement un prospect ou un pré-inscrit</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                        <nav aria-label="breadcrumb" class="d-inline-block">
+                            <ol class="breadcrumb mb-0">
+                                <li class="breadcrumb-item"><a href="#" class="text-muted">Relation Client</a></li>
+                                <li class="breadcrumb-item active text-primary fw-semibold" aria-current="page">Recherche</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Card -->
+            <div class="row justify-content-center animate-up" style="animation-delay: 0.1s;">
+                <div class="col-12">
+                    <div class="glass-card mb-4">
+                        <div class="card-header-premium d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <i class="ri-equalizer-line text-white fs-3 mb-0 me-3"></i>
+                                <h4 class="text-white mb-0 fw-bold">Paramètres de recherche</h4>
+                            </div>
+                            <button class="btn btn-white btn-sm px-3 rounded-pill fw-bold" onclick="resetSearch()">
+                                <i class="ri-refresh-line me-1"></i> Réinitialiser
+                            </button>
+                        </div>
+
+                        <div class="card-body p-4">
+                            <form id="searchForm" class="row g-4">
+                                <div class="col-md-4">
+                                    <div class="form-section h-100">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="section-icon-box" style="width: 32px; height: 32px; font-size: 1rem;">
+                                                <i class="ri-filter-3-line"></i>
+                                            </div>
+                                            <h6 class="section-title">Critère</h6>
+                                        </div>
+                                        <select class="form-select" id="searchType">
+                                            <option value="all">Tout (Recherche globale)</option>
+                                            <option value="name">Nom de famille</option>
+                                            <option value="prenom">Prénom</option>
+                                            <option value="nin">N° Identification National</option>
+                                            <option value="dob">Date de Naissance</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="form-section h-100">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="section-icon-box" style="width: 32px; height: 32px; font-size: 1rem;">
+                                                <i class="ri-key-2-line"></i>
+                                            </div>
+                                            <h6 class="section-title">Valeur à rechercher</h6>
+                                        </div>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="searchQuery" placeholder="Commencez à saisir pour rechercher...">
+                                            <button type="submit" class="btn btn-premium px-4" id="btnSearch">
+                                                <i class="ri-search-line me-2"></i>Rechercher
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="row animate-up" style="animation-delay: 0.2s;">
+                <div class="col-lg-12">
+                    <div class="glass-card">
+                        <div class="card-header bg-transparent border-0 p-4 pb-0">
+                            <div class="d-flex align-items-center">
+                                <div class="section-icon-box" style="width: 38px; height: 38px; font-size: 1.1rem;">
+                                    <i class="ri-list-unordered text-primary"></i>
+                                </div>
+                                <h5 class="fw-bold text-dark mb-0">Résultats de la recherche</h5>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle table-nowrap mb-0" id="resultsTable">
+                                    <thead>
+                                        <tr>
+                                            <th class="ps-4">INSCRIPTION / FORMATION</th>
+                                            <th>GROUPE</th>
+                                            <th>SYNTHÈSE FINANCIÈRE</th>
+                                            <th>STATUT</th>
+                                            <th class="text-end pe-4">ACTION</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="resultsBody">
+                                        <tr>
+                                            <td colspan="5" class="text-center py-5">
+
+                                                <div class="text-muted animate-up">
+                                                    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                                                        <i class="ri-search-2-line fs-1 text-primary opacity-50"></i>
+                                                    </div>
+                                                    <h5 class="fw-bold text-dark">Prêt à rechercher</h5>
+                                                    <p class="mb-0">Utilisez les filtres ci-dessus pour trouver un dossier.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        $('#searchForm').on('submit', function(e) {
+            e.preventDefault();
+            performSearch();
+        });
+
+        $('#searchType').on('change', function() {
+            const type = $(this).val();
+            const input = $('#searchQuery');
+            if (type === 'dob') {
+                input.attr('type', 'date');
+            } else {
+                input.attr('type', 'text');
+            }
+            input.focus();
+        });
+    });
+
+    function performSearch() {
+        const query = $('#searchQuery').val().trim();
+        const type = $('#searchType').val();
+
+        if (!query) {
+            alertify.warning('Veuillez entrer un terme de recherche.');
+            return;
+        }
+
+        $('#btnSearch').html('<span class="spinner-border spinner-border-sm me-2"></span>Recherche...').prop('disabled', true);
+        $('#resultsBody').html(`
+            <tr>
+                <td colspan="5" class="text-center py-5">
+                    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+                    <div class="fw-semibold">Interrogation de la base de données...</div>
+                </td>
+            </tr>
+        `);
+
+        $.ajax({
+            url: "{% url 't_crm:SearchProspectPreinscrit' %}",
+            type: "GET",
+            data: {
+                'query': query,
+                'type': type
+            },
+            success: function(response) {
+                renderResults(response.results);
+                $('#btnSearch').html('<i class="ri-search-line me-2"></i>Rechercher').prop('disabled', false);
+            },
+            error: function() {
+                alertify.error('Une erreur est survenue lors de la recherche.');
+                $('#btnSearch').html('<i class="ri-search-line me-2"></i>Rechercher').prop('disabled', false);
+                $('#resultsBody').html('<tr><td colspan="5" class="text-center py-5 text-danger">Erreur serveur. Veuillez réessayer.</td></tr>');
+            }
+        });
+    }
+
+    function renderResults(results) {
+        const body = $('#resultsBody');
+        body.empty();
+
+        if (results.length === 0) {
+            body.html(`
+                <tr>
+                    <td colspan="5" class="text-center py-5">
+                        <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                            <i class="ri-ghost-line fs-1 text-muted"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark">Aucun résultat trouvé</h5>
+                        <p class="text-muted">Nous n'avons trouvé aucun dossier correspondant à votre recherche.</p>
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+
+        results.forEach((person, idx) => {
+            // Header for each unique person (NIN grouped)
+            let personHeader = `
+                <tr class="animate-up" style="background: rgba(var(--primary-rgb), 0.04); border-left: 4px solid var(--primary-color);">
+                    <td colspan="5" class="py-3 px-4">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm me-3">
+                                    <div class="avatar-title rounded-circle bg-primary-gradient text-white fw-bold shadow-sm">
+                                        ${person.nom.charAt(0)}${person.prenom.charAt(0)}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1 fw-bold text-dark fs-15">${person.nom} ${person.prenom}</h6>
+                                    <div class="d-flex flex-wrap gap-3">
+
+                                        <span class="small text-muted me-3"><i class="ri-fingerprint-line me-1"></i> NIN: <span class="fw-medium text-dark">${person.nin}</span></span>
+                                        <span class="small text-muted me-3"><i class="ri-cake-line me-1"></i> Né(e) le: <span class="fw-medium text-dark">${person.date_naissance}</span></span>
+                                        <span class="small text-muted"><i class="ri-phone-line me-1"></i> ${person.telephone}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary rounded-pill px-3 py-1 shadow-sm">
+                                    <i class="ri-folder-user-line me-1"></i> ${person.inscriptions.length} Dossier(s)
+                                </span>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            body.append(personHeader);
+
+            // Sub-rows for each enrollment
+            person.inscriptions.forEach(ins => {
+                let statusBadge = '';
+                const sk = ins.statut_key;
+                
+                if (sk === 'prinscrit') statusBadge = '<span class="badge badge-soft-success px-3 py-1 rounded-pill">Pré-inscrit</span>';
+                else if (sk === 'instance') statusBadge = '<span class="badge badge-soft-warning px-3 py-1 rounded-pill">Instance paiement</span>';
+                else if (sk === 'convertit') statusBadge = '<span class="badge badge-soft-info px-3 py-1 rounded-pill">Convertit</span>';
+                else if (sk === 'annuler') statusBadge = '<span class="badge badge-soft-danger px-3 py-1 rounded-pill">Annulé</span>';
+                else if (sk === 'visiteur') statusBadge = '<span class="badge badge-soft-primary px-3 py-1 rounded-pill">Visiteur</span>';
+                else statusBadge = `<span class="badge badge-soft-secondary px-3 py-1 rounded-pill">${ins.statut}</span>`;
+
+                const typeBadge = ins.is_double ? 
+                    '<span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-0">DOUBLE</span>' : 
+                    '<span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0">STD</span>';
+
+                let detailUrl = '';
+                if (sk === 'prinscrit' || sk === 'instance' || sk === 'convertit') {
+                    detailUrl = `/t_crm/DetailsPrinscrit/${ins.id}`;
+                } else {
+                    detailUrl = `/t_crm/DetailsProspect/${ins.slug}`;
+                }
+
+                // Calculate progress if possible
+                let progress = 0;
+                if (ins.details.paiement_status.includes('/')) {
+                    const parts = ins.details.paiement_status.split(' ')[0].split('/');
+                    progress = (parseInt(parts[0]) / parseInt(parts[1])) * 100;
+                }
+
+                let row = `
+                    <tr class="animate-up align-middle">
+                        <td class="ps-5">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">${typeBadge}</div>
+                                <div>
+                                    <div class="fw-bold text-dark mb-0">${ins.details.specialite}</div>
+                                    <div class="text-muted small"><i class="ri-calendar-event-line me-1"></i>${ins.details.promo}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light p-1 rounded me-2" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="ri-group-line text-primary" style="font-size: 0.85rem;"></i>
+                                </div>
+                                <span class="fw-medium">${ins.details.groupe}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column" style="min-width: 150px;">
+                                <div class="d-flex align-items-center text-dark small fw-medium mb-1">
+                                    <i class="ri-bank-card-line me-2 text-primary"></i>
+                                    <span>${ins.details.paiement_status}</span>
+                                </div>
+                                <div class="progress progress-sm" style="height: 4px; width: 100%;">
+                                    <div class="progress-bar bg-primary" style="width: ${progress}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td class="text-end pe-4">
+                            <a href="${detailUrl}" class="btn btn-sm btn-premium shadow-sm">
+                                <i class="ri-external-link-line me-1"></i> Gérer
+                            </a>
+                        </td>
+                    </tr>
+                `;
+                body.append(row);
+            });
+            
+            // Spacer row
+            body.append(`<tr style="height: 10px;"><td colspan="5" class="border-0"></td></tr>`);
+        });
+    }
+
+    function resetSearch() {
+        $('#searchQuery').val('').focus();
+        $('#searchType').val('all').trigger('change');
+        $('#resultsBody').html(`
+            <tr>
+                <td colspan="5" class="text-center py-5">
+                    <div class="text-muted animate-up">
+                        <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                            <i class="ri-search-2-line fs-1 text-primary opacity-50"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark">Prêt à rechercher</h5>
+                        <p class="mb-0">Utilisez les filtres ci-dessus pour trouver un dossier.</p>
+                    </div>
+                </td>
+            </tr>
+        `);
+    }
+</script>
+{% endblock extra_js %}
+

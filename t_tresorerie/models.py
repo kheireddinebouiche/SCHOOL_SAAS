@@ -545,6 +545,36 @@ class ParametreFinancier(models.Model):
         ),
     )
 
+    # Droits de Timbre (Stamp Duty) - Algerian Legislation
+    activer_timbre = models.BooleanField(
+        default=False,
+        verbose_name="Activer les droits de timbre",
+        help_text="Activer le calcul automatique du droit de timbre (1% pour les paiements en espèces)."
+    )
+    taux_timbre = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        default=1.00, 
+        verbose_name="Taux du timbre (%)"
+    )
+    timbre_min = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=5.00, 
+        verbose_name="Montant minimum (DA)"
+    )
+    timbre_max = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=2500.00, 
+        verbose_name="Montant maximum (DA)"
+    )
+    timbre_cash_only = models.BooleanField(
+        default=True,
+        verbose_name="Uniquement pour les espèces",
+        help_text="Si activé, le timbre ne s'applique qu'aux paiements marqués comme 'Espèce'."
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

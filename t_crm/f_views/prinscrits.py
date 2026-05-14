@@ -8,7 +8,9 @@ from django.contrib import messages
 from t_tresorerie.models import *
 from t_formations.models import *
 from django.db import transaction
+from t_groupe.models import AffectationGroupe
 from django.db.models import Count, Q
+
 from django.core.exceptions import PermissionDenied
 from functools import wraps
 from decimal import Decimal
@@ -164,6 +166,7 @@ def ApiLoadPrinscrits(request):
             'missing_docs': missing_docs,
             'is_double': obj.is_double,
             'has_due_payments': has_due_payments,
+            'observation': obj.observation or "",
         })
     
     return JsonResponse({
@@ -183,6 +186,16 @@ def DetailsPrinscrit(request, pk):
         'max_upload_size': request.tenant.effective_max_upload_size,
     }
     preinscrit = Prospets.objects.get(id = pk)
+
+    # Log consultation action
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='OTHER',
+        target_model='Prospets',
+        target_id=str(pk),
+        details=f"Consultation du dossier du pré-inscrit {preinscrit.nom} {preinscrit.prenom}",
+        ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+    )
 
     if preinscrit.is_double:
         return render(request, 'tenant_folder/crm/preinscrits/details_preinscript_double.html', context)
@@ -208,6 +221,7 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'prenom': prospect.prenom,
         'email': prospect.email,
         'telephone': prospect.telephone,
+        'indic': prospect.indic,
         'canal': prospect.get_canal_display() if hasattr(prospect, "get_canal_display") else prospect.canal,
         'motif_annulation': prospect.motif_annulation,
         'adresse': prospect.adresse,
@@ -252,6 +266,11 @@ def ApiLoadPreinscrisPerosnalInfos(request):
         'lieu_naissance' : prospect.lieu_naissance,
         'secu' : prospect.num_secu,
         'filiere' : prospect.filiere,
+        'observation' : prospect.observation,
+        'canal_de_contact' : prospect.contact_situation,
+        'canal_de_contact_label' : prospect.get_contact_situation_display() if prospect.contact_situation else '-',
+        'source_de_lead' : prospect.canal,
+        'source_de_lead_label' : prospect.get_canal_display() if prospect.canal else '-',
     }
 
     # History / Timeline logic
@@ -417,6 +436,9 @@ def ApiUpdatePreinscritInfos(request):
     tuteur_legal = request.POST.get('tuteur_legal')
     indicatif_tuteur = request.POST.get('indicatif_tuteur')
     tel_tuteur = request.POST.get('tel_tuteur')
+    observation = request.POST.get('observation')
+    canal_de_contact = request.POST.get('canal_de_contact')
+    source_de_lead = request.POST.get('source_de_lead')
 
     preinscrit = Prospets.objects.get(id = id_preinscrit)
 
@@ -455,6 +477,9 @@ def ApiUpdatePreinscritInfos(request):
     preinscrit.tuteur_legal = tuteur_legal
     preinscrit.indic3 = indicatif_tuteur
     preinscrit.tel_tuteur = tel_tuteur
+    preinscrit.observation = observation
+    preinscrit.contact_situation = canal_de_contact
+    preinscrit.canal = source_de_lead
 
     # Vérification complète du profil
     is_complete = True
@@ -556,7 +581,8 @@ def add_document(request):
                     action_type='CREATE',
                     target_model='DocumentsDemandeInscription',
                     target_id=str(document.id),
-                    details=f"Upload du document {name} pour le pré-inscrit {prospect_obj.nom} {prospect_obj.prenom} (Standard)"
+                    details=f"Upload du document {name} pour le pré-inscrit {prospect_obj.nom} {prospect_obj.prenom} (Standard)",
+                    ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
                 )
 
                 return JsonResponse({"success": True, "id": document.id})
@@ -606,7 +632,8 @@ def add_document_double(request):
                     action_type='CREATE',
                     target_model='DocumentsDemandeInscription',
                     target_id=str(document.id),
-                    details=f"Upload du document {name} pour le pré-inscrit {prospect_obj.nom} {prospect_obj.prenom} (Double Diplomation)"
+                    details=f"Upload du document {name} pour le pré-inscrit {prospect_obj.nom} {prospect_obj.prenom} (Double Diplomation)",
+                    ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
                 )
 
                 return JsonResponse({"success": True, "id": document.id})
@@ -670,7 +697,8 @@ def DeleteDocumentPreinscrit(request):
         action_type='DELETE',
         target_model='DocumentsDemandeInscription',
         target_id=str(id_document),
-        details=f"Suppression du document {doc_label} pour le pré-inscrit {prospect_nom} {prospect_prenom}"
+        details=f"Suppression du document {doc_label} pour le pré-inscrit {prospect_nom} {prospect_prenom}",
+        ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
     )
 
     obj.delete()
@@ -1069,7 +1097,7 @@ def ApiCancelPreinscrit(request):
             target_model='Prospect',
             target_id=str(preinscrit.id),
             details=f"Annulation de la préinscription pour {preinscrit.nom} {preinscrit.prenom}. Motif: {motif}",
-            ip_address=request.META.get('REMOTE_ADDR')
+            ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
         )
 
         # Handle associated payment requests
@@ -1153,7 +1181,7 @@ def ApiReactivatePreinscrit(request):
                 target_model='Prospect',
                 target_id=str(preinscrit.id),
                 details=f"Réactivation de la préinscription pour {preinscrit.nom} {preinscrit.prenom}.",
-                ip_address=request.META.get('REMOTE_ADDR')
+                ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
             )
 
             return JsonResponse({
@@ -1242,6 +1270,7 @@ def ApiLoadPrinscritsDataUpdate(request):
                 'telephone' : prospect.telephone or "",
                 'observations' : prospect.observation or "",
                 'canal': prospect.canal or "",
+                'nin': prospect.nin or "",
                 'type_prospect': prospect.type_prospect,
                 'entreprise': prospect.entreprise or "",
                 'rc': prospect.rc or "",
@@ -1272,6 +1301,7 @@ def ApiUpdatePreinscritPersonalData(request):
             prospect.indic = request.POST.get('indic')
             prospect.canal = request.POST.get('canal')
             prospect.observation = request.POST.get('observation')
+            prospect.nin = request.POST.get('nin')
             
             if prospect.type_prospect == 'entreprise':
                 prospect.entreprise = request.POST.get('entreprise_name')
@@ -1292,4 +1322,106 @@ def ApiUpdatePreinscritPersonalData(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     else:
-        return JsonResponse({"status" : "error", "message" : "Méthode non autorisée"}, status=405)
+        return JsonResponse({"status" : "error", "message" : "Méthode non autorisée"}, status=405)
+
+
+@login_required(login_url='institut_app:login')
+def SearchProspectPreinscrit(request):
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        query = request.GET.get('query', '').strip()
+        search_type = request.GET.get('type', 'all')
+        
+        results = Prospets.objects.all()
+        
+        if query:
+            if search_type == 'name':
+                results = results.filter(nom__icontains=query)
+            elif search_type == 'prenom':
+                results = results.filter(prenom__icontains=query)
+            elif search_type == 'nin':
+                results = results.filter(nin__icontains=query)
+            elif search_type == 'dob':
+                try:
+                    results = results.filter(date_naissance=query)
+                except Exception:
+                    results = results.none()
+            else:
+                results = results.filter(
+                    Q(nom__icontains=query) | 
+                    Q(prenom__icontains=query) | 
+                    Q(nin__icontains=query) | 
+                    Q(telephone__icontains=query) |
+                    Q(email__icontains=query)
+                )
+        
+        # Increased limit to allow for proper grouping across more potential matches
+        results = results.order_by('-created_at')[:100]
+        
+        grouped_data = {}
+        
+        for p in results:
+            nin_val = p.nin.strip() if p.nin else None
+            # Use NIN as key if available, otherwise fallback to ID
+            key = f"nin_{nin_val}" if nin_val else f"id_{p.id}"
+            
+            if key not in grouped_data:
+                grouped_data[key] = {
+                    'nom': p.nom,
+                    'prenom': p.prenom,
+                    'nin': p.nin or '-',
+                    'date_naissance': p.date_naissance.strftime('%d/%m/%Y') if p.date_naissance else '-',
+                    'telephone': f"{p.indic or ''} {p.telephone or ''}",
+                    'email': p.email or '-',
+                    'inscriptions': []
+                }
+            
+            # Synthesis for this specific enrollment record
+            enrollment = {
+                'id': p.id,
+                'statut': p.get_statut_display(),
+                'statut_key': p.statut,
+                'is_double': p.is_double,
+                'slug': p.slug,
+                'created_at': p.created_at.strftime('%d/%m/%Y'),
+                'details': {
+                    'specialite': '-',
+                    'promo': '-',
+                    'type': '-',
+                    'groupe': '-',
+                    'paiement_status': 'Aucun échéancier'
+                }
+            }
+            
+            # Fetch Wishes (Voeux) - Check Standard or Double
+            if p.is_double:
+                fiche_double = FicheVoeuxDouble.objects.filter(prospect=p).first()
+                if fiche_double:
+                    enrollment['details']['specialite'] = fiche_double.specialite.label if fiche_double.specialite else '-'
+                    enrollment['details']['promo'] = fiche_double.promo.label if fiche_double.promo else '-'
+                    enrollment['details']['type'] = "Double Diplomation"
+            else:
+                fiche_std = FicheDeVoeux.objects.filter(prospect=p).first()
+                if fiche_std:
+                    enrollment['details']['specialite'] = fiche_std.specialite.label if fiche_std.specialite else '-'
+                    enrollment['details']['promo'] = fiche_std.promo.label if fiche_std.promo else '-'
+                    enrollment['details']['type'] = "Standard"
+            
+            # Fetch Group Assignment
+            affectation = AffectationGroupe.objects.filter(etudiant=p).first()
+            if affectation and affectation.groupe:
+                enrollment['details']['groupe'] = affectation.groupe.nom
+            
+            # Fetch Payment Synthesis
+            dues = DuePaiements.objects.filter(client=p)
+            total_tranches = dues.count()
+            if total_tranches > 0:
+                paid_tranches = dues.filter(is_done=True).count()
+                enrollment['details']['paiement_status'] = f"{paid_tranches}/{total_tranches} tranches payées"
+            
+            grouped_data[key]['inscriptions'].append(enrollment)
+            
+        return JsonResponse({'results': list(grouped_data.values())})
+
+    return render(request, 'tenant_folder/crm/search_prospect_preinscrit.html', {'tenant': request.tenant})
+
+

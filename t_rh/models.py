@@ -33,6 +33,9 @@ class Employees(models.Model):
     lieu_naissance = models.CharField(max_length=255, null=True, blank=True)
 
     bank = models.CharField(max_length=255, null=True, blank=True)
+    rib = models.CharField(max_length=25, null=True, blank=True, help_text="RIB Bancaire (20 chiffres)")
+    ccp = models.CharField(max_length=20, null=True, blank=True, help_text="Compte CCP")
+
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -41,16 +44,95 @@ class Employees(models.Model):
     is_teacher = models.BooleanField(default=False)
     
     etat = models.CharField(max_length=100, null=True, blank=True, choices=[('en cours', "En cours d'activité"),('demission',"Démissionnaire")])
+    
+    # Probation (Période d'essai)
+    date_debut_probation = models.DateField(null=True, blank=True)
+    date_fin_probation = models.DateField(null=True, blank=True)
+    
+    # Congés
+    solde_conge = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Solde de congé actuel (jours)")
+    solde_conge_annee_prec = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Reliquat année précédente")
+
 
     class Meta:
         verbose_name="Employe"
         verbose_name_plural="Employes"
 
+    @property
+    def date_recrutement(self):
+        # Récupère la date d'embauche du dernier contrat en date
+        last_contract = self.contrats.order_by('-date_embauche').first()
+        return last_contract.date_embauche if last_contract else None
+
     def __str__(self):
         return f"{self.nom} {self.prenom}"
 
+class HRConfig(models.Model):
+    # Horaires de travail
+    heure_debut_standard = models.TimeField(default="08:00")
+    heure_fin_standard = models.TimeField(default="16:30")
+    
+    # Paramètres congés
+    quota_annuel_conge = models.IntegerField(default=30)
+    cloture_conge_mois = models.IntegerField(default=6) # Juin
+    cloture_conge_jour = models.IntegerField(default=30)
+    
+    # Paramètres Heures Sup
+    taux_heure_sup_standard = models.DecimalField(max_digits=5, decimal_places=2, default=1.5) # +50%
+    taux_heure_sup_nuit = models.DecimalField(max_digits=5, decimal_places=2, default=2.0) # +100%
+    
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuration RH"
+        verbose_name_plural = "Configurations RH"
+
+    def __str__(self):
+        return "Paramètres Généraux RH"
+
+
+class Presence(models.Model):
+    STATUS_CHOICES = [
+        ('present', 'Présent'),
+        ('absent', 'Absent'),
+        ('late', 'En retard'),
+        ('half_day', 'Demi-journée'),
+    ]
+
+    employee = models.ForeignKey(Employees, on_delete=models.CASCADE, related_name='presences')
+    date = models.DateField()
+    check_in = models.TimeField(null=True, blank=True)
+    check_out = models.TimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='present')
+    note = models.TextField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['employee', 'date']
+        verbose_name = "Présence"
+        verbose_name_plural = "Présences"
+
+    def __str__(self):
+        return f"{self.employee} - {self.date} - {self.status}"
+
 class Absences(models.Model):
-    pass
+    employee = models.ForeignKey(Employees, on_delete=models.CASCADE, related_name='absences_rh')
+    date_debut = models.DateField()
+    date_fin = models.DateField()
+    motif = models.TextField(null=True, blank=True)
+    justifie = models.BooleanField(default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Absence"
+        verbose_name_plural = "Absences"
+
+    def __str__(self):
+        return f"{self.employee} - {self.date_debut} au {self.date_fin}"
+
 
 class Services(models.Model):
     label = models.CharField(max_length=255, null=True, blank=True)
@@ -94,23 +176,46 @@ class TachesPoste(models.Model):
         return self.label
 
 class Conges(models.Model):
-    
-    employee = models.ForeignKey(Employees, on_delete=models.CASCADE, null=True, blank=True)
+    class TypeConge(models.TextChoices):
+        ANNUEL = 'ANNUEL', 'Congé Annuel'
+        MALADIE = 'MALADIE', 'Congé Maladie'
+        MATERNITE = 'MATERNITE', 'Congé Maternité'
+        EXCEPTIONNEL = 'EXCEPTIONNEL', 'Congé Exceptionnel (Mariage, Décès, etc.)'
+        SANS_SOLDE = 'SANS_SOLDE', 'Congé Sans Solde'
+        RECUPERATION = 'RECUPERATION', 'Récupération'
 
+    class StatusConge(models.TextChoices):
+        BROUILLON = 'BROUILLON', 'Brouillon'
+        EN_ATTENTE = 'EN_ATTENTE', 'En attente de validation'
+        VALIDE = 'VALIDE', 'Validé'
+        REFUSE = 'REFUSE', 'Refusé'
+        ANNULE = 'ANNULE', 'Annulé'
+
+    employee = models.ForeignKey(Employees, on_delete=models.CASCADE, related_name='demandes_conge', null=True, blank=True)
+
+    type_conge = models.CharField(max_length=20, choices=TypeConge.choices, default=TypeConge.ANNUEL)
+    status = models.CharField(max_length=20, choices=StatusConge.choices, default=StatusConge.EN_ATTENTE)
+    
     date_debut = models.DateField()
     date_fin = models.DateField()
-
+    duree = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Nombre de jours ouvrables")
+    
     motif = models.TextField(null=True, blank=True)
+    justificatif = models.FileField(upload_to='conges/justificatifs/', null=True, blank=True)
+    
+    commentaire_rh = models.TextField(null=True, blank=True)
+    valide_par = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='conges_valides')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name="Conge"
-        verbose_name_plural="Conges"
+        verbose_name="Congé"
+        verbose_name_plural="Congés"
+        ordering = ['-date_debut']
 
     def __str__(self):
-        return f"{self.employee.nom} {self.employee.prenom}"
+        return f"{self.employee} - {self.type_conge} ({self.date_debut})"
     
 class Paie(models.Model):
     employee = models.ForeignKey(Employees, on_delete=models.CASCADE, null=True, blank=True)
@@ -189,7 +294,10 @@ class Contrats(models.Model):
     service = models.ForeignKey('Services', on_delete=models.SET_NULL, null=True, blank=True)
 
     salaire_base = models.DecimalField(max_digits=200, decimal_places=2, null=True, blank=True)
+    prime_panier = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    prime_transport = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     date_embauche = models.DateField(null=True, blank=True)
+
     date_depart = models.DateField(null=True, blank=True)
     duree = models.CharField(max_length=100, null=True, blank=True)
 

@@ -41,6 +41,7 @@ urlpatterns = [
 
     path('ApiGetCategorieContrat', ApiGetCategorieContrat, name="ApiGetCategorieContrat"),
     path('ApiGetTypeContrat', ApiGetTypeContrat, name="ApiGetTypeContrat"),
+    path('ApiGetRubriquesOfType', ApiGetRubriquesOfType, name="ApiGetRubriquesOfType"),
 
     path('ApiCreateContrat', ApiCreateContrat, name="ApiCreateContrat"),
 
@@ -61,4 +62,32 @@ urlpatterns = [
 
     path('contrat_temp/<int:pk>/',view_contrat, name="view_contrat"),
     path('ApiGetDetailsOfContract', ApiGetDetailsOfContract, name="ApiGetDetailsOfContract"),
+
+    # Présences
+    path('presences/', listePresences, name="liste_presences"),
+    path('presences/fiches-mensuelles/', fichesMensuelles, name="presence_fiches_mensuelles"),
+    path('ApiMarkPresence', ApiMarkPresence, name="ApiMarkPresence"),
+
+    # Congés
+    path('conges/', listeConges, name="liste_conges"),
+    path('conges/demande/', demandeConge, name="demande_conge"),
+    path('conges/valider/<int:pk>/', validerConge, name="valider_conge"),
+
+    # Configuration
+    path('config-hub/', hubConfigRH, name="hub_config_rh"),
+    path('config/params/', configRH, name="config_rh"),
+    path('paie/assistant/', assistantPaie, name="assistant_paie"),
+    path('paie/config-fiscalite/', configFiscalite, name="config_fiscalite"),
+    path('paie/fiches/', listeFichesPaie, name="liste_fiches_paie"),
+    path('paie/fiches/<int:pk>/', detailFichePaie, name="detail_fiche_paie"),
+
+    # Dashboard
+    path('dashboard/', dashboardRH, name="dashboard_rh"),
 ]
+
+
+
+
+
+
+

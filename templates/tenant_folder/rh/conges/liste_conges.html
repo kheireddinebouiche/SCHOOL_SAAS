@@ -1,0 +1,152 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} RH - Gestion des Congés {% endblock title %}
+
+{% block content %}
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 1.5rem;
+        box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
+    }
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 50rem;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+    .badge-en_attente { background-color: #fffbeb; color: #d97706; }
+    .badge-valide { background-color: #f0fdf4; color: #16a34a; }
+    .badge-refuse { background-color: #fef2f2; color: #dc2626; }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            
+            <!-- Header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-success bg-opacity-10 rounded-3 p-3 me-3">
+                                <i class="ri-plane-line text-success fs-2"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-1 fw-bold">Gestion des Congés</h4>
+                                <p class="text-muted mb-0">Réglementation Algérienne : 30 jours/an (2.5 j/mois).</p>
+                            </div>
+                        </div>
+                        <a href="{% url 't_rh:demande_conge' %}" class="btn btn-primary rounded-pill px-4 shadow-sm mt-3 mt-sm-0">
+                            <i class="ri-add-line me-1"></i> Nouvelle Demande
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="glass-card border-0 overflow-hidden">
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="ps-4">Employé</th>
+                                        <th>Type</th>
+                                        <th>Dates</th>
+                                        <th>Durée</th>
+                                        <th class="text-center">Statut</th>
+                                        <th class="text-end pe-4">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for c in conges %}
+                                    <tr>
+                                        <td class="ps-4">
+                                            <div class="fw-bold">{{ c.employee.nom }} {{ c.employee.prenom }}</div>
+                                            <small class="text-muted">Solde actuel: {{ c.employee.solde_conge }} j</small>
+                                        </td>
+                                        <td>
+                                            <span class="text-dark fw-medium">{{ c.get_type_conge_display }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="small">Du {{ c.date_debut }}</div>
+                                            <div class="small text-muted">Au {{ c.date_fin }}</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-soft-info text-info rounded-pill px-2">{{ c.duree }} jours</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="status-badge badge-{{ c.status|lower }}">
+                                                {{ c.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td class="pe-4 text-end">
+                                            {% if c.status == 'EN_ATTENTE' %}
+                                            <div class="d-flex justify-content-end gap-2">
+                                                <form action="{% url 't_rh:valider_conge' c.id %}" method="POST" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="valider">
+                                                    <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">Valider</button>
+                                                </form>
+                                                <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="refuseConge({{ c.id }})">Refuser</button>
+                                            </div>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center py-5">
+                                            <div class="text-muted">Aucune demande de congé trouvée.</div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Refusal Modal -->
+<div class="modal fade" id="refusalModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-0">
+            <form id="refusalForm" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="refuser">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold">Refuser la demande</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Motif du refus</label>
+                        <textarea name="commentaire" class="form-control rounded-3" rows="3" required placeholder="Expliquez pourquoi la demande est refusée..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4">Confirmer le refus</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function refuseConge(id) {
+        const form = document.getElementById('refusalForm');
+        form.action = `/rh/conges/valider/${id}/`;
+        const modal = new bootstrap.Modal(document.getElementById('refusalModal'));
+        modal.show();
+    }
+</script>
+{% endblock content %}

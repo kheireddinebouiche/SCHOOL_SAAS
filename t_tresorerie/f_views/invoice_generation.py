@@ -21,7 +21,7 @@ def generate_invoice_from_payment(request):
              return JsonResponse({'status': 'error', 'message': 'TVA manquante'})
 
         try:
-            paiement = Paiements.objects.get(num=paiement_id) # The frontend uses 'num' as ID in data-id attribute
+            paiement = Paiements.objects.get(id=paiement_id)
         except Paiements.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Paiement introuvable'})
 
@@ -71,13 +71,53 @@ def generate_invoice_from_payment(request):
         paiement.save()
 
         # 4. Create LigneFacture
-        # ... (rest of the code)
         description = paiement.paiement_label or "Paiement"
         if paiement.observation:
             description += f" - {paiement.observation}"
         
-        montant_ttc = paiement.montant_paye
-        montant_ht = montant_ttc / (1 + (tva_decimal / 100))
+        montant_paye = Decimal(str(paiement.montant_paye))
+        
+        # Reverse calculate HT and TVA, accounting for potential Stamp Duty
+        from t_tresorerie.models import ParametreFinancier
+        config_fin = ParametreFinancier.get_instance()
+        
+        apply_timbre = False
+        if config_fin.activer_timbre:
+            # We use the same condition as Facture.get_timbre()
+            if not config_fin.timbre_cash_only or paiement.mode_paiement == 'esp':
+                apply_timbre = True
+        
+        if apply_timbre:
+            # Total paid = Base_TTC + Timbre
+            # Timbre = round(Base_TTC * 0.01, 0)
+            
+            # First guess
+            base_ttc = montant_paye / (Decimal('1') + (config_fin.taux_timbre / Decimal('100')))
+            timbre = Decimal('0')
+            
+            # Refinement loop to handle rounding/thresholds of timbre
+            for _ in range(3):
+                # Calculate timbre based on current base_ttc guess
+                t_val = base_ttc * (config_fin.taux_timbre / Decimal('100'))
+                if t_val < config_fin.timbre_min: t_val = config_fin.timbre_min
+                elif t_val > config_fin.timbre_max: t_val = config_fin.timbre_max
+                timbre = t_val.quantize(Decimal('1'))
+                
+                base_ttc = montant_paye - timbre
+            
+            # Now we have base_ttc = HT + TVA
+            # HT = base_ttc / (1 + TVA_percent / 100)
+            montant_ht = base_ttc / (Decimal('1') + (tva_decimal / Decimal('100')))
+        else:
+            # No timbre, just standard reverse TVA
+            montant_ht = montant_paye / (Decimal('1') + (tva_decimal / Decimal('100')))
+        
+        # Round HT to 2 decimal places as it's stored in DecimalField(10, 2)
+        montant_ht = montant_ht.quantize(Decimal('0.01'))
+        
+        if apply_timbre:
+            facture.montant_timbre = timbre
+            facture.save()
         
         ligne = LignesFacture(
             facture=facture,

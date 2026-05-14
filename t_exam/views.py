@@ -248,14 +248,19 @@ def ApiUpdateExamPlanification(request):
     else:
         return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
-def ApiCheckLabelDisponibility(request):
-    label = request.GET.get('newLabel')
-
-    obj = SessionExam.objects.filter(label = label)
-    if obj:
-        return JsonResponse({'status' : "success"})
-    else:
-        return JsonResponse({'status' : "error"})
+def ApiCheckAvailability(request):
+    label = request.GET.get('label')
+    code = request.GET.get('code')
+    
+    if label:
+        exists = SessionExam.objects.filter(label__iexact=label).exists()
+        return JsonResponse({'exists': exists, 'type': 'label'})
+    
+    if code:
+        exists = SessionExam.objects.filter(code__iexact=code).exists()
+        return JsonResponse({'exists': exists, 'type': 'code'})
+    
+    return JsonResponse({'error': 'No parameters provided'}, status=400)
 
 def ApiPlaneExam(request):
     groupe = request.POST.get('groupe')

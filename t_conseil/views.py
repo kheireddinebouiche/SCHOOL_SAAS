@@ -828,7 +828,8 @@ def ApiAddPaiement(request):
                 date_paiement=date_p,
                 mode_paiement=mode,
                 reference=ref,
-                note=note
+                note=note,
+                is_done=(mode == 'esp' or mode == 'espece')
             )
 
             if mode in ['virement', 'cheque']:
@@ -1287,7 +1288,11 @@ def DetailsFacture(request, pk):
             tva_breakdown[rate] = tva_breakdown.get(rate, 0) + amt
             
     total_tva = sum(tva_breakdown.values())
-    total_ttc = total_ht + total_tva
+    
+    # Calculate Timbre
+    timbre = float(facture.get_timbre())
+    total_ttc = total_ht + total_tva + timbre
+    
     sorted_tva = sorted([{'rate': r, 'amount': a} for r, a in tva_breakdown.items()], key=lambda x: x['rate'], reverse=True)
     
     # Amount in words
@@ -1303,6 +1308,7 @@ def DetailsFacture(request, pk):
         "lignes_facture": lignes_facture,
         "total_ht": total_ht,
         "total_tva": total_tva,
+        "timbre": timbre,
         "total_ttc": total_ttc,
         "tva_breakdown": sorted_tva,
         "total_in_words": total_in_words,
@@ -1592,7 +1598,8 @@ def DownloadFacturePDF(request, pk):
         # Calculate totals
         total_ht = sum(ligne.montant_ht for ligne in lignes)
         total_tva = sum(ligne.montant_ht * (ligne.tva_percent / 100) for ligne in lignes)
-        total_ttc = total_ht + total_tva
+        timbre = float(facture.get_timbre())
+        total_ttc = float(total_ht) + float(total_tva) + timbre
         
         # Convert total to words
         amount_in_words = num_to_words_fr(float(total_ttc))
@@ -1606,6 +1613,7 @@ def DownloadFacturePDF(request, pk):
             'facture': facture,
             'total_ht': total_ht,
             'total_tva': total_tva,
+            'timbre': timbre,
             'total_ttc': total_ttc,
             'amount_in_words': amount_in_words,
             'logo_url': logo_url,

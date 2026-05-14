@@ -3,11 +3,13 @@ from django.views.generic import ListView, CreateView, UpdateView, DetailView, F
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .models import Contrat, FichePaie, ParametresPaie, TypeContrat
+from django.contrib.auth.decorators import login_required
+from .models import Contrat, FichePaie, ParametresPaie, TypeContrat, Rubrique, RubriqueContrat, LignePaie
 from .logic import PaieEngine
 from django import forms
 from decimal import Decimal
 from t_formations.models import Formateurs
+from t_rh.models import Employees, Presence
 from institut_app.models import Entreprise
 from django.http import JsonResponse, HttpResponse
 from django.template.loader import render_to_string
@@ -43,6 +45,7 @@ class ContratForm(forms.ModelForm):
         fields = '__all__'
         widgets = {
             'formateur': forms.Select(attrs={'class': 'form-select'}),
+            'employee': forms.Select(attrs={'class': 'form-select'}),
             'type_contrat': forms.Select(attrs={'class': 'form-select'}),
             'date_debut': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'date_fin': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
@@ -52,9 +55,6 @@ class ContratForm(forms.ModelForm):
             'prime_panier': forms.NumberInput(attrs={'class': 'form-control'}),
             'actif': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
-
-from django.http import JsonResponse
-from django.template.loader import render_to_string
 
 class ContratCreateView(LoginRequiredMixin, CreateView):
     model = Contrat
@@ -72,7 +72,6 @@ class ContratCreateView(LoginRequiredMixin, CreateView):
         if not active_id:
              return JsonResponse({'status': 'error', 'message': 'Veuillez sélectionner une entreprise avant de créer un contrat'})
         
-        # Convert 'none' string to None for the database
         form.instance.entreprise_id = active_id if active_id != 'none' else None
         
         self.object = form.save()
@@ -121,8 +120,6 @@ class ContratDetailView(LoginRequiredMixin, DetailView):
     model = Contrat
     template_name = 't_ressource_humaine/contrat_print.html'
 
-# -- Paie --
-
 class FichePaieGenerationForm(forms.Form):
     mois = forms.ChoiceField(choices=FichePaie.MOIS_CHOICES, widget=forms.Select(attrs={'class': 'form-select'}))
     annee = forms.IntegerField(initial=2024, widget=forms.NumberInput(attrs={'class': 'form-control'}))
@@ -132,34 +129,40 @@ class FichePaieGenerationForm(forms.Form):
     primes_exceptionnelles = forms.DecimalField(initial=0, required=False, widget=forms.NumberInput(attrs={'class': 'form-control'}))
     avance_sur_salaire = forms.DecimalField(initial=0, required=False, widget=forms.NumberInput(attrs={'class': 'form-control'}))
 
-
 def generer_paie(request, contrat_id):
     contrat = get_object_or_404(Contrat, pk=contrat_id)
     
-    # Get Contract Configuration (Defaults & exclusions)
+    initial_jours = 22
+    initial_heures_absence = 0
+    mois_select = int(request.GET.get('mois', datetime.now().month))
+    annee_select = int(request.GET.get('annee', datetime.now().year))
+
+    if contrat.employee:
+        presences = Presence.objects.filter(
+            employee=contrat.employee,
+            date__month=mois_select,
+            date__year=annee_select
+        )
+        days_present = presences.filter(status='present').count()
+        days_late = presences.filter(status='late').count()
+        days_half = presences.filter(status='half_day').count()
+        initial_jours = days_present + days_late + (days_half * 0.5)
+        initial_heures_absence = presences.filter(status='absent').count() * 8
+    
     contract_rubrics_config = {rc.rubrique_id: rc for rc in RubriqueContrat.objects.filter(contrat=contrat)}
     contract_defaults = {}
-    
-    # Filter rubrics: 
-    # 1. Must be globally active
-    # 2. Must match contract type (or no restriction)
-    # 3. MUST NOT be explicitly deactivated in RubriqueContrat
     
     all_rubriques = Rubrique.objects.filter(actif=True)
     rubriques_actives = []
     
     for r in all_rubriques:
-        # Check type eligibility
         if r.types_contrat and contrat.type_contrat not in r.types_contrat:
             continue
-            
-        # Check contract specific config
         rc = contract_rubrics_config.get(r.id)
         if rc:
             if not rc.actif:
-                continue # Skip if explicitly deactivated for this contract
+                continue
             contract_defaults[r.id] = rc.valeur
-            
         rubriques_actives.append(r)
     
     if request.method == 'POST':
@@ -248,12 +251,13 @@ def generer_paie(request, contrat_id):
                 )
                 return JsonResponse({'status': 'invalid', 'html': html})
     else:
-        # Load config to get default working days
-        config = ParametresPaie.get_config(entreprise=contrat.entreprise)
         form = FichePaieGenerationForm(initial={
-            'jours_travailles': config.jours_travailles_standard,
-            'annee': 2024 # Or use current year
+            'mois': mois_select,
+            'annee': annee_select,
+            'jours_travailles': initial_jours,
+            'heures_absence': initial_heures_absence
         })
+
     
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return render(request, 't_ressource_humaine/_generate_paie_form.html', 
@@ -501,15 +505,25 @@ from .models import Rubrique, LignePaie, RubriqueContrat
 def manage_rubriques_contrat(request, contrat_id):
     contrat = get_object_or_404(Contrat, pk=contrat_id)
     
-    # Filter rubrics: Keep if types_contrat is empty or contains contrat.type_contrat
+    # Filter rubrics: Keep if eligible_types is empty or contains the contract's type
     all_rubriques = Rubrique.objects.filter(actif=True)
     rubriques_eligibles = []
+    
+    # We need to map the contract type (string or object) to the eligible_types
+    # Since we are using t_rh.models.Contrats usually, let's see which model 'contrat' is.
+    # The view uses 'Contrat' (from t_ressource_humaine).
+    
     for r in all_rubriques:
-        # Check if types_contrat is empty list or None
-        if not r.types_contrat:
+        # If no specific types assigned, it's global
+        if not r.eligible_types.exists():
             rubriques_eligibles.append(r)
-        elif contrat.type_contrat in r.types_contrat:
-            rubriques_eligibles.append(r)
+        else:
+            # Check if any of the eligible types match the contract's type
+            # Note: t_ressource_humaine.Contrat.type_contrat is a string (CDI, CDD)
+            # Rubrique.eligible_types are t_rh.TypesContrat objects.
+            # We need to match by label.
+            if r.eligible_types.filter(label__icontains=contrat.type_contrat).exists():
+                rubriques_eligibles.append(r)
             
     existing_rc = {rc.rubrique_id: rc for rc in RubriqueContrat.objects.filter(contrat=contrat)}
 
@@ -542,7 +556,7 @@ def manage_rubriques_contrat(request, contrat_id):
         rc = existing_rc.get(r.id)
         rubrique_data.append({
             'rubrique': r,
-            'valeur': rc.valeur if rc else 0,
+            'valeur': rc.valeur if rc else r.valeur_defaut,
             'actif': rc.actif if rc else True
         })
     
@@ -555,21 +569,25 @@ def manage_rubriques_contrat(request, contrat_id):
 
 
 
+from t_rh.models import TypesContrat
+
 class RubriqueForm(forms.ModelForm):
-    types_contrat = forms.MultipleChoiceField(
-        choices=TypeContrat.choices,
+    eligible_types = forms.ModelMultipleChoiceField(
+        queryset=TypesContrat.objects.all(),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
         required=False,
+        label="Types de contrats éligibles",
         help_text="Sélectionnez les types de contrats auxquels cette rubrique s'applique."
     )
 
     class Meta:
         model = Rubrique
-        fields = ['libelle', 'type_rubrique', 'mode_calcul', 'types_contrat', 'est_cotisable', 'est_imposable', 'actif']
+        fields = ['libelle', 'type_rubrique', 'mode_calcul', 'valeur_defaut', 'eligible_types', 'est_cotisable', 'est_imposable', 'actif']
         widgets = {
             'libelle': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ex: Prime de Panier'}),
             'type_rubrique': forms.Select(attrs={'class': 'form-select'}),
             'mode_calcul': forms.Select(attrs={'class': 'form-select'}),
+            'valeur_defaut': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'est_cotisable': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'est_imposable': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'actif': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -646,6 +664,42 @@ class RubriqueDeleteView(LoginRequiredMixin, DeleteView):
             return JsonResponse({'status': 'success', 'message': 'Rubrique supprimée avec succès', 'reload_table': True})
         return redirect(success_url)
 
+@login_required
+def init_conventional_primes(request):
+    """
+    Initialise les primes conventionnelles standards si elles n'existent pas.
+    """
+    primes = [
+        {'libelle': 'Prime d\'Expérience Professionnelle (PEP)', 'type': 'GAIN', 'calcul': 'PERCENT', 'cotisable': True, 'imposable': True},
+        {'libelle': 'Indemnité de Nuisance', 'type': 'GAIN', 'calcul': 'FIXE', 'cotisable': True, 'imposable': True},
+        {'libelle': 'Prime de Rendement Individuel (PRI)', 'type': 'GAIN', 'calcul': 'PERCENT', 'cotisable': True, 'imposable': True},
+        {'libelle': 'Prime de Rendement Collectif (PRC)', 'type': 'GAIN', 'calcul': 'PERCENT', 'cotisable': True, 'imposable': True},
+        {'libelle': 'Indemnité de Panier', 'type': 'GAIN', 'calcul': 'FIXE', 'cotisable': False, 'imposable': False},
+        {'libelle': 'Indemnité de Transport', 'type': 'GAIN', 'calcul': 'FIXE', 'cotisable': False, 'imposable': False},
+        {'libelle': 'Heures Supplémentaires 50%', 'type': 'GAIN', 'calcul': 'HOURS', 'cotisable': True, 'imposable': True},
+        {'libelle': 'Absence non justifiée', 'type': 'RETENUE', 'calcul': 'FIXE', 'cotisable': True, 'imposable': True},
+    ]
+
+    count = 0
+    for p in primes:
+        obj, created = Rubrique.objects.get_or_create(
+            libelle=p['libelle'],
+            defaults={
+                'type_rubrique': p['type'],
+                'mode_calcul': p['calcul'],
+                'est_cotisable': p['cotisable'],
+                'est_imposable': p['imposable'],
+                'actif': True
+            }
+        )
+        if created:
+            count += 1
+
+    return JsonResponse({
+        'status': 'success',
+        'message': f'{count} primes conventionnelles ont été initialisées.'
+    })
+
 # -- Config Paie (Existing) --
 
 def select_entreprise_paie(request):
@@ -685,7 +739,7 @@ def export_rubriques(request):
             'Oui' if r.est_cotisable else 'Non',
             'Oui' if r.est_imposable else 'Non',
             'Oui' if r.actif else 'Non',
-            ", ".join(r.types_contrat) if r.types_contrat else ""
+            ", ".join([t.label for t in r.eligible_types.all()])
         ])
 
     # Styling headers
@@ -736,7 +790,6 @@ def import_rubriques(request):
                     'est_cotisable': cotisable,
                     'est_imposable': imposable,
                     'actif': actif,
-                    'types_contrat': types_contrat
                 }
                 
                 if rubrique_id and str(rubrique_id).isdigit():
@@ -744,8 +797,14 @@ def import_rubriques(request):
                     if created: count_created += 1
                     else: count_updated += 1
                 else:
-                    Rubrique.objects.create(**defaults)
+                    obj = Rubrique.objects.create(**defaults)
                     count_created += 1
+                
+                # Update ManyToMany relationships
+                if types_contrat:
+                    from t_rh.models import TypesContrat
+                    type_objs = TypesContrat.objects.filter(label__in=types_contrat)
+                    obj.eligible_types.set(type_objs)
                     
             return JsonResponse({
                 'status': 'success', 

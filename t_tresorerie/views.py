@@ -322,10 +322,13 @@ def ApiGetDetailsDemandePaiement(request):
                     'label_paiements' : i.due_paiements.label if i.due_paiements and i.due_paiements.label else i.paiement_label,
                     'num' : i.num,
                     'mode_paiement' : i.get_mode_paiement_display(),
+                    'mode_paiement_code' : i.mode_paiement,
                     'reference_paiement' : i.reference_paiement,
                     'is_refund' : i.is_refund,
                     'logo_header': i.due_paiements.entite.entete_logo.url if i.due_paiements and i.due_paiements.entite and i.due_paiements.entite.entete_logo else (echeancierId.entite.entete_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.entete_logo else None),
                     'logo_footer': i.due_paiements.entite.pied_page_logo.url if i.due_paiements and i.due_paiements.entite and i.due_paiements.entite.pied_page_logo else (echeancierId.entite.pied_page_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.pied_page_logo else None),
+                    'facture_id': i.facture.id if i.facture else None,
+                    'facture_num': i.facture.num_facture if i.facture else None,
                 })
 
         else:
@@ -628,6 +631,8 @@ def ApiGetDetailsDemandePaiementDouble(request):
                     'is_refund' : i.is_refund,
                     'logo_header': i.due_paiements.entite.entete_logo.url if i.due_paiements and i.due_paiements.entite and i.due_paiements.entite.entete_logo else (echeancierId.entite.entete_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.entete_logo else None),
                     'logo_footer': i.due_paiements.entite.pied_page_logo.url if i.due_paiements and i.due_paiements.entite and i.due_paiements.entite.pied_page_logo else (echeancierId.entite.pied_page_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.pied_page_logo else None),
+                    'facture_id': i.facture.id if i.facture else None,
+                    'facture_num': i.facture.num_facture if i.facture else None,
                 })
 
         else:
@@ -1007,6 +1012,7 @@ def ApiStorePaiement(request):
                 mode_paiement = mode_paiement,
                 reference_paiement = paiement_ref,
                 payment_type_id = paymentType if paymentType else None,
+                is_done = (mode_paiement == 'esp' or mode_paiement == 'espece'),
             )
 
             new_paiement.save()
@@ -1277,16 +1283,47 @@ def ApiGetParametreFinancier(request):
     params = ParametreFinancier.get_instance()
     return JsonResponse({
         'bloquer_date_paiement': params.bloquer_date_paiement,
+        'activer_timbre': params.activer_timbre,
+        'taux_timbre': str(params.taux_timbre),
+        'timbre_min': str(params.timbre_min),
+        'timbre_max': str(params.timbre_max),
+        'timbre_cash_only': params.timbre_cash_only,
     })
 
 @login_required(login_url="institut_app:login")
 def ApiUpdateParametreFinancier(request):
-    """Toggles or updates the financial parameter settings."""
+    """Updates the financial parameter settings."""
     if request.method == 'POST':
         params = ParametreFinancier.get_instance()
+        
         bloquer = request.POST.get('bloquer_date_paiement')
         if bloquer is not None:
             params.bloquer_date_paiement = bloquer.lower() in ('true', '1', 'on')
-            params.save()
-        return JsonResponse({'status': 'success', 'bloquer_date_paiement': params.bloquer_date_paiement})
+            
+        activer_timbre = request.POST.get('activer_timbre')
+        if activer_timbre is not None:
+            params.activer_timbre = activer_timbre.lower() in ('true', '1', 'on')
+            
+        taux = request.POST.get('taux_timbre')
+        if taux is not None:
+            params.taux_timbre = taux
+            
+        t_min = request.POST.get('timbre_min')
+        if t_min is not None:
+            params.timbre_min = t_min
+            
+        t_max = request.POST.get('timbre_max')
+        if t_max is not None:
+            params.timbre_max = t_max
+            
+        cash_only = request.POST.get('timbre_cash_only')
+        if cash_only is not None:
+            params.timbre_cash_only = cash_only.lower() in ('true', '1', 'on')
+            
+        params.save()
+        return JsonResponse({
+            'status': 'success', 
+            'bloquer_date_paiement': params.bloquer_date_paiement,
+            'activer_timbre': params.activer_timbre
+        })
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)

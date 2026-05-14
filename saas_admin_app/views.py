@@ -1,4 +1,6 @@
 import os
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill
 import math
 from decimal import Decimal
 import psutil
@@ -11,7 +13,7 @@ from django.urls import reverse
 from django.db import connection
 from django.db.models.deletion import ProtectedError
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.core.mail import send_mail, EmailMessage
 from django.views.decorators.http import require_POST
 from app.models import Institut
@@ -312,7 +314,7 @@ def saas_tenant_data_explorer_view(request, tenant_id):
     
     from django.core.paginator import Paginator
     
-    # Page numbers from GET params
+    # Page numbers and active tab from GET params
     p_page_num = request.GET.get('p_page', 1)
     v_page_num = request.GET.get('v_page', 1)
     vd_page_num = request.GET.get('vd_page', 1)
@@ -321,18 +323,24 @@ def saas_tenant_data_explorer_view(request, tenant_id):
     dp_page_num = request.GET.get('dp_page', 1)
     pa_page_num = request.GET.get('pa_page', 1)
     
+    context['active_tab'] = request.GET.get('tab', 'prospects')
+    
     items_per_page = 50
 
     try:
         with tenant_context(institut):
             # Prospects
             try:
-                from t_crm.models import Prospets
-                prospects_qs = Prospets.objects.all().order_by('-created_at')
+                from t_crm.models import Prospets, DocumentsDemandeInscription
+                from django.db.models import Count
+                prospects_qs = Prospets.objects.all().annotate(
+                    doc_count=Count('documentsdemandeinscription')
+                ).order_by('-created_at')
                 context['stats']['prospects'] = prospects_qs.count()
                 p_paginator = Paginator(prospects_qs, items_per_page)
                 context['prospects'] = p_paginator.get_page(p_page_num)
-            except:
+            except Exception as e:
+                print(f"Error in prospects: {e}")
                 context['prospects'] = []
                 context['stats']['prospects'] = 0
             
@@ -432,6 +440,77 @@ def saas_tenant_data_explorer_view(request, tenant_id):
         
     with tenant_context(institut):
         return render(request, 'saas_admin_app/saas_tenant_data_explorer.html', context)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_export_prospects_view(request, tenant_id):
+    """Génère un fichier Excel contenant la liste des prospects pour un tenant spécifique."""
+    institut = get_object_or_404(Institut, id=tenant_id)
+    
+    with tenant_context(institut):
+        from t_crm.models import Prospets, DocumentsDemandeInscription
+        from django.db.models import Count
+        
+        # Récupération de tous les prospects avec le compte de documents
+        prospects = Prospets.objects.all().annotate(
+            doc_count=Count('documentsdemandeinscription')
+        ).order_by('-created_at')
+        
+        # Création du classeur Excel
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Prospects"
+        
+        # En-têtes
+        headers = ["ID", "Nom", "Prénom", "Email", "Téléphone", "État", "Statut", "Documents", "Date de Création"]
+        ws.append(headers)
+        
+        # Style pour les en-têtes
+        header_fill = PatternFill(start_color="4361EE", end_color="4361EE", fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True)
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center")
+            
+        # Remplissage des données
+        for p in prospects:
+            # Nettoyage de la date pour Excel (naïve)
+            created_at_naive = p.created_at.replace(tzinfo=None) if p.created_at else ""
+            
+            ws.append([
+                p.id,
+                p.nom,
+                p.prenom,
+                p.email,
+                p.telephone,
+                p.get_etat_display() if hasattr(p, 'get_etat_display') else p.etat,
+                p.get_statut_display() if hasattr(p, 'get_statut_display') else p.statut,
+                p.doc_count,
+                created_at_naive
+            ])
+            
+        # Ajustement automatique de la largeur des colonnes
+        for col in ws.columns:
+            max_length = 0
+            column = col[0].column_letter
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            ws.column_dimensions[column].width = adjusted_width
+            
+        # Préparation de la réponse HTTP
+        filename = f"prospects_{institut.schema_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = f'attachment; filename={filename}'
+        
+        wb.save(response)
+        return response
 
 @user_passes_test(superadmin_only, login_url='/saas-admin/login/')
 def saas_update_voeu_action_view(request, tenant_id, voeu_id):

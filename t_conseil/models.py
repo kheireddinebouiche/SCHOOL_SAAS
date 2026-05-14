@@ -156,6 +156,7 @@ class Facture(models.Model):
     ], default='brouillon')
     
     conditions_commerciales = models.TextField(null=True, blank=True, help_text="Conditions spécifiques à cette facture")
+    montant_timbre = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Droit de timbre (fixé à la création)")
     
     module_source = models.CharField(max_length=50, choices=[
         ('conseil', 'Executive Education'),
@@ -199,14 +200,55 @@ class Facture(models.Model):
 
         super().save(*args, **kwargs)
 
+    def get_timbre(self):
+        """Calculates Algerian Stamp Duty based on global ParametreFinancier or returns stored value."""
+        from t_tresorerie.models import ParametreFinancier
+        from decimal import Decimal
+        
+        # Priority 1: Stored value
+        if self.montant_timbre > 0:
+            return self.montant_timbre
+
+        # Priority 2: Dynamic calculation based on settings
+        config = ParametreFinancier.get_instance()
+        if not config.activer_timbre:
+            return Decimal('0')
+            
+        if config.timbre_cash_only and self.mode_paiement != 'espece':
+            return Decimal('0')
+            
+        # Calculate TTC without timbre first
+        total_ttc_raw = Decimal('0')
+        for ligne in self.lignes_facture.all():
+            total_ttc_raw += ligne.montant_ht * (Decimal('1') + (ligne.tva_percent / Decimal('100')))
+            
+        if total_ttc_raw <= 0:
+            return Decimal('0')
+            
+        timbre = total_ttc_raw * (config.taux_timbre / Decimal('100'))
+        
+        # Apply min/max
+        if timbre < config.timbre_min:
+            timbre = config.timbre_min
+        elif timbre > config.timbre_max:
+            timbre = config.timbre_max
+            
+        # Rounding (Algerian custom is often to the next integer or just standard rounding)
+        return timbre.quantize(Decimal('1'))
+
     def total_ttc(self):
-        total_ttc = 0
+        from decimal import Decimal
+        total_ttc = Decimal('0')
         for ligne in self.lignes_facture.all():
             ligne_ht = ligne.montant_ht
-            ligne_tva = ligne_ht * (ligne.tva_percent / 100)
+            ligne_tva = ligne_ht * (ligne.tva_percent / Decimal('100'))
             total_ttc += (ligne_ht + ligne_tva)
+        
+        # Add stamp duty
+        total_ttc += self.get_timbre()
+        
         return total_ttc
-    total_ttc.short_description = "Total TTC"
+    total_ttc.short_description = "Total TTC (avec timbre)"
 
 class TvaConseil(models.Model):
     label = models.CharField(max_length=50, help_text="Ex: TVA 19%")

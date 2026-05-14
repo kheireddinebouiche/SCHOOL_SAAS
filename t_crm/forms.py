@@ -68,7 +68,7 @@ class NewProspecFormParticulier(forms.ModelForm):
     )
     
     select_type = forms.ChoiceField(
-        choices=[('10','Veuillez sélectionner un type de cursus'),('0','Cursus standard (Une seule formation)'),('1','Cursus double diplômation (Deux spécialités en même temps)')],
+        choices=[('','Veuillez sélectionner un type de cursus'),('0','Cursus standard (Une seule formation)'),('1','Cursus double diplômation (Deux spécialités en même temps)'),('2','Pas de voeux formulés pour le moment')],
         widget=forms.Select(attrs={'class': 'form-control','id':"selectTypeCursusID"}),
         required=True,
     )
@@ -83,12 +83,12 @@ class NewProspecFormParticulier(forms.ModelForm):
             "canal" : "Source du lead (Comment avez-vous connu l'INSIM) :"
         }
         widgets = {
-            "prenom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_first_name'}),
-            "nom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_last_name'}),
-            "email" : forms.EmailInput(attrs={'class':'form-control'}),
-            "canal" : forms.Select(attrs={'class':'form-control'}),
-            "indic" : forms.Select(attrs={"class" : "form-control", "id": "id_indic_select"}),
-            "telephone" : forms.TextInput(attrs={"class" : "form-control telephoneID","maxlength": "14",}),
+            "prenom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_first_name', 'required': 'True'}),
+            "nom" : forms.TextInput(attrs={'class':'form-control', 'id' : 'id_last_name', 'required': 'True'}),
+            "email" : forms.EmailInput(attrs={'class':'form-control', 'required': 'True'}),
+            "canal" : forms.Select(attrs={'class':'form-control', 'required': 'True'}),
+            "indic" : forms.Select(attrs={"class" : "form-control", "id": "id_indic_select", 'required': 'True'}),
+            "telephone" : forms.TextInput(attrs={"class" : "form-control telephoneID","maxlength": "14", 'required': 'True'}),
             "observation" : forms.Textarea(attrs={'class':'form-control', "rows" : "3"}),
             'is_double' : forms.CheckboxInput(attrs={"class" : "form-control",'id':'IdSelectDoubleDiplomation'})
         }

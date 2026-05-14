@@ -238,7 +238,8 @@ def ApiStoreAutrePaiement(request):
         date_paiement=date_paiement if date_paiement else None,
         payment_type=payment_type,
         client=client,
-        entite=entite
+        entite=entite,
+        is_done=(mode_paiement == 'esp')
     )
 
     if mode_paiement == "che" or mode_paiement == "vir":

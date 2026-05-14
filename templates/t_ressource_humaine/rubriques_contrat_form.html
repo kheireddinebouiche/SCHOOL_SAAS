@@ -1,37 +1,64 @@
 {% load static %}
 
-<div class="modal-header">
-    <h5 class="modal-title" id="rubriqueContratModalLabel">Gérer les Primes & Retenues - {{ contrat }}</h5>
+<div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+    <div class="d-flex align-items-center">
+        <div class="bg-primary bg-opacity-20 rounded-circle p-2 me-3">
+            <i class="ri-money-dollar-circle-line text-primary fs-4"></i>
+        </div>
+        <div>
+            <h5 class="modal-title fw-bold text-primary mb-0" id="rubriqueContratModalLabel">Personnalisation des Primes</h5>
+            <p class="text-muted small mb-0">{{ contrat.employee.nom }} {{ contrat.employee.prenom }} — <span class="badge bg-soft-info text-info">{{ contrat.type_contrat }}</span></p>
+        </div>
+    </div>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
-<form method="post" action="{% url 't_ressource_humaine:manage_rubriques_contrat' contrat.id %}" class="ajax-form" data-modal="#rubriqueContratModal">
+<form method="post" action="{% url 't_ressource_humaine:manage_rubriques_contrat' contrat.id %}" class="ajax-form">
     {% csrf_token %}
-    <div class="modal-body">
+    <div class="modal-body p-4">
         
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped">
-                <thead class="table-light">
+        <div class="alert alert-soft-warning border-0 rounded-4 mb-4">
+            <div class="d-flex">
+                <i class="ri-lightbulb-line fs-4 me-3"></i>
+                <p class="mb-0 small">
+                    Désactivez les primes qui ne s'appliquent pas à cet employé spécifique ou ajustez les montants par défaut. Ces changements n'affecteront que ce contrat.
+                </p>
+            </div>
+        </div>
+
+        <div class="table-responsive rounded-4 border">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
                     <tr>
-                        <th style="width: 40%;">Rubrique</th>
-                        <th style="width: 30%;">Valeur</th>
-                        <th style="width: 20%;">Actif</th>
-                        <th style="width: 10%;">Type</th>
+                        <th class="border-0 px-4">Rubrique / Prime</th>
+                        <th class="border-0" style="width: 25%;">Valeur Perso.</th>
+                        <th class="border-0 text-center" style="width: 15%;">Actif</th>
+                        <th class="border-0 text-end px-4" style="width: 15%;">Nature</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in rubrique_data %}
                     <tr>
-                        <td>
-                            <strong>{{ item.rubrique.libelle }}</strong>
-                            {% if item.rubrique.est_cotisable %} <span class="badge bg-info text-dark" title="Cotisable">C</span>{% endif %}
-                            {% if item.rubrique.est_imposable %} <span class="badge bg-warning text-dark" title="Imposable">I</span>{% endif %}
-                            <div class="text-muted small">{{ item.rubrique.get_mode_calcul_display }}</div>
+                        <td class="px-4">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-0 fw-bold text-dark">{{ item.rubrique.libelle }}</h6>
+                                    <div class="d-flex gap-1 mt-1">
+                                        {% if item.rubrique.est_cotisable %} 
+                                            <span class="badge rounded-pill bg-soft-info text-info fs-10" title="Cotisable SS">SS</span>
+                                        {% endif %}
+                                        {% if item.rubrique.est_imposable %} 
+                                            <span class="badge rounded-pill bg-soft-warning text-warning fs-10" title="Imposable IRG">IRG</span>
+                                        {% endif %}
+                                        <span class="text-muted fs-11 ms-1">Mode: {{ item.rubrique.get_mode_calcul_display }}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </td>
                         <td>
-                            <div class="input-group input-group-sm">
-                                <input type="number" step="0.01" class="form-control" name="valeur_{{ item.rubrique.id }}" value="{{ item.valeur|stringformat:'f' }}">
-                                <span class="input-group-text bg-light">
+                            <div class="input-group input-group-sm custom-input-group">
+                                <input type="number" step="0.01" class="form-control border-0 bg-light fw-bold" name="valeur_{{ item.rubrique.id }}" value="{{ item.valeur|stringformat:'f' }}">
+                                <span class="input-group-text border-0 bg-light text-muted small">
                                     {% if item.rubrique.mode_calcul == 'PERCENT' %}%
                                     {% elif item.rubrique.mode_calcul == 'HOURS' %}h
                                     {% else %}DA{% endif %}
@@ -39,19 +66,22 @@
                             </div>
                         </td>
                         <td class="text-center">
-                            <div class="form-check form-switch d-flex justify-content-center">
-                                <input class="form-check-input" type="checkbox" name="actif_{{ item.rubrique.id }}" {% if item.actif %}checked{% endif %}>
+                            <div class="form-check form-switch d-flex justify-content-center ps-0">
+                                <input class="form-check-input" style="width: 2.2rem; height: 1.1rem; cursor: pointer;" type="checkbox" name="actif_{{ item.rubrique.id }}" {% if item.actif %}checked{% endif %}>
                             </div>
                         </td>
-                        <td>
-                            <span class="badge {% if item.rubrique.type_rubrique == 'GAIN' %}bg-success{% else %}bg-danger{% endif %}">
+                        <td class="text-end px-4">
+                            <span class="badge rounded-pill {% if item.rubrique.type_rubrique == 'GAIN' %}bg-soft-success text-success{% else %}bg-soft-danger text-danger{% endif %} fw-medium">
                                 {{ item.rubrique.get_type_rubrique_display }}
                             </span>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" class="text-center">Aucune rubrique éligible pour ce type de contrat.</td>
+                        <td colspan="4" class="text-center py-5 text-muted">
+                            <i class="ri-ghost-line display-4 d-block mb-2 op-30"></i>
+                            Aucune rubrique éligible pour ce contrat.
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -59,8 +89,26 @@
         </div>
 
     </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-        <button type="submit" class="btn btn-primary">Enregistrer</button>
+    <div class="modal-footer border-0 bg-light bg-opacity-50 px-4 py-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-link text-muted text-decoration-none fw-medium" data-bs-dismiss="modal">Annuler</button>
+        <button type="submit" class="btn btn-modern-primary px-4 shadow">
+            <i class="ri-save-3-line me-1"></i> Enregistrer les modifications
+        </button>
     </div>
 </form>
+
+<style>
+    .fs-10 { font-size: 10px; }
+    .fs-11 { font-size: 11px; }
+    .custom-input-group {
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        transition: all 0.2s;
+    }
+    .custom-input-group:focus-within {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+    .op-30 { opacity: 0.3; }
+</style>

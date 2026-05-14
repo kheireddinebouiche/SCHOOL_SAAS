@@ -1,5 +1,164 @@
 <form id="sessionModalForm" method="post">
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-success">Enregistrer</button>
+    <div class="row g-4">
+        <!-- Informations Générales -->
+        <div class="col-md-8">
+            <div class="form-group">
+                <label class="form-label fw-bold text-dark mb-2">Libellé de la session *</label>
+                <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                    <span class="input-group-text border-0 bg-primary bg-opacity-10 px-3">
+                        <i class="ri-tag-line text-primary"></i>
+                    </span>
+                    {{ form.label }}
+                </div>
+                <div id="label-feedback" class="mt-2 small fw-medium"></div>
+                <div class="form-text mt-1 text-muted italic">Donnez un nom explicite (ex: Session Normale S1 2024)</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="form-group">
+                <label class="form-label fw-bold text-dark mb-2">Code *</label>
+                <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                    <span class="input-group-text border-0 bg-primary bg-opacity-10 px-3">
+                        <i class="ri-qr-code-line text-primary"></i>
+                    </span>
+                    {{ form.code }}
+                </div>
+                <div id="code-feedback" class="mt-2 small fw-medium"></div>
+                <div class="form-text mt-1 text-muted italic">Ex: SESS-24-S1</div>
+            </div>
+        </div>
+
+        <!-- Type de Session -->
+        <div class="col-12">
+            <div class="form-group">
+                <label class="form-label fw-bold text-dark mb-2">Type de session *</label>
+                <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                    <span class="input-group-text border-0 bg-primary bg-opacity-10 px-3">
+                        <i class="ri-list-settings-line text-primary"></i>
+                    </span>
+                    {{ form.type_session }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Période -->
+        <div class="col-md-6">
+            <div class="form-group">
+                <label class="form-label fw-bold text-dark mb-2">Date de début *</label>
+                <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                    <span class="input-group-text border-0 bg-primary bg-opacity-10 px-3">
+                        <i class="ri-calendar-line text-primary"></i>
+                    </span>
+                    {{ form.date_debut }}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
+                <label class="form-label fw-bold text-dark mb-2">Date de fin *</label>
+                <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                    <span class="input-group-text border-0 bg-primary bg-opacity-10 px-3">
+                        <i class="ri-calendar-check-line text-primary"></i>
+                    </span>
+                    {{ form.date_fin }}
+                </div>
+            </div>
+        </div>
+    </div>
 </form>
+
+<style>
+    #sessionModalForm .form-control, 
+    #sessionModalForm .form-select {
+        border: 1px solid transparent !important;
+        background-color: #f8f9fa !important;
+        padding: 0.75rem 1rem !important;
+        transition: all 0.3s ease;
+    }
+    #sessionModalForm .form-control:focus, 
+    #sessionModalForm .form-select:focus {
+        background-color: #fff !important;
+        border-color: rgba(59, 125, 221, 0.3) !important;
+        box-shadow: none !important;
+    }
+    #sessionModalForm .input-group:focus-within {
+        box-shadow: 0 0 0 3px rgba(59, 125, 221, 0.15) !important;
+        border-color: #3b7ddd !important;
+    }
+    #id_label, #id_code {
+        text-transform: uppercase;
+    }
+    .italic { font-style: italic; font-size: 0.8rem; }
+
+    .animated.shake {
+        animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        transform: translate3d(0, 0, 0);
+    }
+    @keyframes shake {
+        10%, 90% { transform: translate3d(-1px, 0, 0); }
+        20%, 80% { transform: translate3d(2px, 0, 0); }
+        30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+        40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
+</style>
+
+<script>
+    (function() {
+        const labelInput = document.getElementById('id_label');
+        const codeInput = document.getElementById('id_code');
+        const labelFeedback = document.getElementById('label-feedback');
+        const codeFeedback = document.getElementById('code-feedback');
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        const checkAvailability = (field, value, feedbackElement) => {
+            if (!value || value.length < 2) {
+                feedbackElement.innerHTML = '';
+                return;
+            }
+
+            const params = new URLSearchParams();
+            params.append(field, value);
+
+            fetch(`{% url 't_exam:ApiCheckAvailability' %}?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        feedbackElement.innerHTML = `<i class="ri-error-warning-line me-1"></i> Ce ${field === 'label' ? 'libellé' : 'code'} est déjà utilisé.`;
+                        feedbackElement.className = 'mt-2 small fw-medium text-danger animated shake';
+                    } else {
+                        feedbackElement.innerHTML = `<i class="ri-checkbox-circle-line me-1"></i> ${field === 'label' ? 'Libellé' : 'Code'} disponible.`;
+                        feedbackElement.className = 'mt-2 small fw-medium text-success';
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        };
+
+        const debouncedCheck = debounce(checkAvailability, 500);
+
+        if (labelInput) {
+            labelInput.addEventListener('input', function() {
+                this.value = this.value.toUpperCase();
+                debouncedCheck('label', this.value, labelFeedback);
+            });
+        }
+
+        if (codeInput) {
+            codeInput.addEventListener('input', function() {
+                this.value = this.value.toUpperCase();
+                debouncedCheck('code', this.value, codeFeedback);
+            });
+        }
+    })();
+</script>

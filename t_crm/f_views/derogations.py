@@ -128,7 +128,7 @@ def ApiStoreDerogation(request):
         target_model='Dérogation',
         target_id=str(derogation.id),
         details=f"Demande de dérogation (validation) soumise pour le pré-inscrit {preinscrit.nom} {preinscrit.prenom}. Motif: Documents Incomplets",
-        ip_address=request.META.get('REMOTE_ADDR')
+        ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
     )
 
     # Send Notification to Supervisors (2) and Managers (3) of CRM module
@@ -196,7 +196,7 @@ def ApiTraiteDerogation(request):
         target_model='Dérogation',
         target_id=str(obj.id),
         details=f"{action} de la demande de dérogation pour {prospect.nom} {prospect.prenom}. Commentaire: {commentaire}",
-        ip_address=request.META.get('REMOTE_ADDR')
+        ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
     )
 
     return JsonResponse({"status" : "success"})
@@ -220,7 +220,7 @@ def ApiDeleteDerogation(request):
             target_model='Dérogation',
             target_id=str(id_derogation),
             details=f"Suppression de la demande de dérogation pour {prospect.nom} {prospect.prenom}.",
-            ip_address=request.META.get('REMOTE_ADDR')
+            ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
         )
         
         # Check if there are any other accepted derogations for this prospect

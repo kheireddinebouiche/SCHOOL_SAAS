@@ -1,0 +1,136 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} RH - Configuration Fiscale {% endblock title %}
+
+{% block content %}
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 1.5rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+    }
+    .form-control:focus {
+        background: #fff !important;
+        border: 1px solid #0ab39c !important;
+        box-shadow: 0 0 0 0.25rem rgba(10, 179, 156, 0.1) !important;
+    }
+</style>
+
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            
+            <div class="row mt-4">
+                <div class="col-12 mb-4">
+                    <h3 class="fw-bold text-dark mb-1">Configuration Fiscale & Sociale</h3>
+                    <p class="text-muted mb-0">Paramétrage des taux de Sécurité Sociale et du barème IRG (Réglementation Algérienne).</p>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Paramètres Globaux -->
+                <div class="col-md-4">
+                    <div class="glass-card p-4 h-100">
+                        <h5 class="fw-bold mb-4"><i class="ri-settings-4-line me-2 text-primary"></i>Paramètres Généraux</h5>
+                        <form method="POST">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label">Taux Sécurité Sociale (Employé)</label>
+                                <div class="input-group">
+                                    <input type="number" step="0.01" name="taux_ss" value="{% widthratio config.taux_ss 1 100 %}" class="form-control border-0 bg-light">
+                                    <span class="input-group-text bg-light border-0">%</span>
+                                </div>
+
+                                <small class="text-muted">Défaut: 0.09 (9%)</small>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label">Seuil d'Exonération IRG</label>
+                                <div class="input-group">
+                                    <input type="number" name="seuil_irg" value="{{ config.seuil_exoneration_irg|floatformat:0 }}" class="form-control border-0 bg-light">
+
+                                    <span class="input-group-text bg-light border-0">DA</span>
+                                </div>
+                                <small class="text-muted">Défaut: 30 000 DA</small>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 rounded-pill">
+                                <i class="ri-save-line me-1"></i> Sauvegarder
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Barème IRG -->
+                <div class="col-md-8">
+                    <div class="glass-card p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0"><i class="ri-table-line me-2 text-success"></i>Barème de l'IRG Dynamique</h5>
+                            <button class="btn btn-sm btn-soft-success rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#addTrancheModal">
+                                <i class="ri-add-line me-1"></i> Ajouter une Tranche
+                            </button>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Tranche (Min)</th>
+                                        <th>Tranche (Max)</th>
+                                        <th>Taux (%)</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for t in tranches %}
+                                    <tr>
+                                        <td>{{ t.min_montant|floatformat:0 }} DA</td>
+                                        <td>{% if t.max_montant %}{{ t.max_montant|floatformat:0 }} DA{% else %}+ infini{% endif %}</td>
+                                        <td><span class="badge bg-success bg-opacity-10 text-success fs-6 fw-bold">{% widthratio t.taux 1 100 %} %</span></td>
+
+
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-soft-danger rounded-pill"><i class="ri-delete-bin-line"></i></button>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4">
+                                            <div class="alert alert-info border-0 shadow-sm">
+                                                <i class="ri-information-line me-2"></i> Aucun barème personnalisé. Le système utilise le barème par défaut de la Loi de Finances 2022.
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal simulation (MVP placeholder) -->
+<div class="modal fade" id="addTrancheModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 glass-card">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">Ajouter une Tranche IRG</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Configurez une nouvelle tranche pour le barème progressif.</p>
+                <!-- Form omitted for brevity in MVP, would call a create view -->
+                <div class="alert alert-warning">Interface de gestion des tranches individuelles en cours de finalisation.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}

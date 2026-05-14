@@ -17,7 +17,7 @@ from django.utils.dateformat import format
 @login_required(login_url='institut_app:login')
 def ApiLoadProspectPerosnalInfos(request):
     id_prospect = request.GET.get('id_prospect')
-    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','indic','telephone','type_prospect','canal','statut','etat','entreprise','poste_dans_entreprise','observation','has_second_wish', 'motif_annulation', 'created_by__username', 'is_double').first()
+    prospect = Prospets.objects.filter(id=id_prospect).values('created_at','id','nin','nom','prenom','email','indic','telephone','type_prospect','canal','contact_situation','statut','etat','entreprise','poste_dans_entreprise','observation','has_second_wish', 'motif_annulation', 'created_by__username', 'is_double').first()
     
     if prospect:
         obj = Prospets.objects.get(id= prospect['id'])
@@ -26,6 +26,8 @@ def ApiLoadProspectPerosnalInfos(request):
         prospect['statut_label'] = obj.get_statut_display()
         prospect['statut'] = obj.get_statut_display() # Consistent with ApiLoadPreinscrisPerosnalInfos
         prospect['created_by'] = prospect['created_by__username'] if prospect['created_by__username'] else "Système"
+        prospect['canal_label'] = obj.get_canal_display()
+        prospect['contact_situation_label'] = obj.get_contact_situation_display()
 
     return JsonResponse(prospect, safe=False)
 
@@ -612,6 +614,9 @@ def ApiUpdateProspectData(request):
     observation = request.POST.get('observation')
     id_prospect = request.POST.get('id_prospect')
     indic = request.POST.get('indic')
+    contact_situation = request.POST.get('contact_situation')
+    canal = request.POST.get('canal')
+    nin = request.POST.get('nin')
 
     prospect = Prospets.objects.get(id = id_prospect)
 
@@ -621,6 +626,9 @@ def ApiUpdateProspectData(request):
     prospect.observation = observation
     prospect.telephone = telephone
     prospect.indic = indic
+    prospect.contact_situation = contact_situation
+    prospect.canal = canal
+    prospect.nin = nin
 
     prospect.save()
 

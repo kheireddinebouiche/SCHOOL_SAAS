@@ -25,5 +25,6 @@ urlpatterns = [
 
     path('config/', views.config_paie, name='config_paie'),
     path('select-entreprise/', views.select_entreprise_paie, name='select_entreprise_paie'),
+    path('rubriques/init-primes/', views.init_conventional_primes, name='init_conventional_primes'),
     path('fiches-mensuelles/', views.fiches_mensuelles, name='fiches_mensuelles'),
 ]

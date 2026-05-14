@@ -1,0 +1,102 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} RH - Historique de Paie {% endblock title %}
+
+{% block content %}
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 1.5rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+    }
+    .fiche-row:hover {
+        background: rgba(10, 179, 156, 0.03) !important;
+        cursor: pointer;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            
+            <div class="row mt-4">
+                <div class="col-12 d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">Historique des Bulletins de Paie</h3>
+                        <p class="text-muted mb-0">Consultez et imprimez les fiches de paie générées.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 't_rh:assistant_paie' %}" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                            <i class="ri-magic-line me-1"></i> Nouvel Assistant
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="glass-card p-4">
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Employé</th>
+                                        <th>Période</th>
+                                        <th>Salaire de Poste</th>
+                                        <th>Retenues (SS+IRG)</th>
+                                        <th>Net à Payer</th>
+                                        <th>Date Génération</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for f in fiches %}
+                                    <tr class="fiche-row" onclick="window.location='{% url 't_rh:detail_fiche_paie' f.pk %}'">
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-xs bg-soft-primary rounded-circle p-2 me-2 d-flex align-items-center justify-content-center">
+                                                    <i class="ri-user-star-line text-primary"></i>
+                                                </div>
+                                                <span class="fw-bold">{{ f.contrat.employee }}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border rounded-pill">
+                                                {{ f.get_mois_display }} {{ f.annee }}
+                                            </span>
+                                        </td>
+                                        <td>{{ f.salaire_base_calcule|floatformat:2 }} DA</td>
+                                        <td class="text-danger">
+                                            -{{ f.montant_ss|add:f.irg|floatformat:2 }} DA
+                                        </td>
+                                        <td class="fw-bold text-success">{{ f.net_a_payer|floatformat:2 }} DA</td>
+                                        <td><small class="text-muted">{{ f.generated_at|date:"d/m/Y H:i" }}</small></td>
+                                        <td class="text-end">
+                                            <a href="{% url 't_rh:detail_fiche_paie' f.pk %}" class="btn btn-sm btn-soft-info rounded-pill">
+                                                <i class="ri-eye-line"></i> Voir
+                                            </a>
+                                            <button class="btn btn-sm btn-soft-dark rounded-pill">
+                                                <i class="ri-printer-line"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center py-5 text-muted">
+                                            Aucun bulletin de paie généré pour le moment.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock content %}

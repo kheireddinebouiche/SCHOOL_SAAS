@@ -1,0 +1,211 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Bulletin de Paie - {{ fiche.contrat.employee }} {% endblock title %}
+
+{% block content %}
+<style>
+    .payslip-container {
+        max-width: 900px;
+        margin: 2rem auto;
+        background: #fff;
+        padding: 3rem;
+        border-radius: 1rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+        color: #333;
+        font-family: 'Inter', sans-serif;
+    }
+    .payslip-header {
+        border-bottom: 2px solid #f1f1f1;
+        padding-bottom: 2rem;
+        margin-bottom: 2rem;
+    }
+    .company-logo {
+        height: 60px;
+        margin-bottom: 1rem;
+    }
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+    .info-box {
+        background: #fcfcfc;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        border: 1px solid #f0f0f0;
+    }
+    .payslip-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 2rem;
+    }
+    .payslip-table th {
+        background: #f8f9fa;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        border-bottom: 2px solid #dee2e6;
+    }
+    .payslip-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #f1f1f1;
+    }
+    .total-section {
+        background: #2b3a4a;
+        color: #fff;
+        padding: 2rem;
+        border-radius: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    @media print {
+        .main-content { margin: 0; padding: 0; }
+        .payslip-container { box-shadow: none; margin: 0; max-width: 100%; }
+        .btn-print { display: none; }
+        .navbar-header, .app-menu { display: none; }
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid text-end mb-3">
+            <button onclick="window.print()" class="btn btn-dark rounded-pill px-4 btn-print shadow">
+                <i class="ri-printer-line me-1"></i> Imprimer le Bulletin
+            </button>
+        </div>
+
+        <div class="payslip-container shadow-lg">
+            <!-- Header -->
+            <div class="payslip-header d-flex justify-content-between align-items-start">
+                <div>
+                    {% if entreprise.logo %}
+                        <img src="{{ entreprise.logo.url }}" class="company-logo" alt="Logo">
+                    {% else %}
+                        <h4 class="fw-bold">{{ entreprise.designation }}</h4>
+                    {% endif %}
+                    <p class="mb-0 text-muted small">{{ entreprise.adresse }}</p>
+                    <p class="mb-0 text-muted small">NIF: {{ entreprise.nif }} | RC: {{ entreprise.rc }}</p>
+                </div>
+                <div class="text-end">
+                    <h2 class="fw-bold text-uppercase mb-0">Bulletin de Paie</h2>
+                    <h4 class="text-primary">{{ fiche.get_mois_display }} {{ fiche.annee }}</h4>
+                    <p class="text-muted small">Date d'édition: {{ fiche.generated_at|date:"d/m/Y" }}</p>
+                </div>
+            </div>
+
+            <!-- Employee Info -->
+            <div class="info-grid">
+                <div class="info-box">
+                    <p class="text-muted small text-uppercase fw-bold mb-2">Employeur</p>
+                    <h5 class="fw-bold mb-1">{{ entreprise.designation }}</h5>
+                    <p class="mb-0 small">Cotisation SS: {{ entreprise.nis|default:"-" }}</p>
+                </div>
+                <div class="info-box">
+                    <p class="text-muted small text-uppercase fw-bold mb-2">Salarié</p>
+                    <h5 class="fw-bold mb-1">{{ fiche.contrat.employee.nom }} {{ fiche.contrat.employee.prenom }}</h5>
+                    <p class="mb-0 small">Poste: {{ fiche.contrat.employee.poste|default:"-" }}</p>
+                    <p class="mb-0 small">CCP: {{ fiche.contrat.employee.ccp|default:"-" }}</p>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <table class="payslip-table">
+                <thead>
+                    <tr>
+                        <th>Désignation</th>
+                        <th>Nombre / Base</th>
+                        <th>Taux</th>
+                        <th>Gains (DA)</th>
+                        <th>Retenues (DA)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="fw-bold">Salaire de Base</td>
+                        <td>{{ fiche.jours_travailles }} jours</td>
+                        <td>-</td>
+                        <td>{{ fiche.salaire_base_calcule|floatformat:2 }}</td>
+                        <td>-</td>
+                    </tr>
+                    {% if fiche.prime_panier > 0 %}
+                    <tr>
+                        <td>Indemnité de Panier</td>
+                        <td>Forfait</td>
+                        <td>-</td>
+                        <td>{{ fiche.prime_panier|floatformat:2 }}</td>
+                        <td>-</td>
+                    </tr>
+                    {% endif %}
+                    {% if fiche.prime_transport > 0 %}
+                    <tr>
+                        <td>Indemnité de Transport</td>
+                        <td>Forfait</td>
+                        <td>-</td>
+                        <td>{{ fiche.prime_transport|floatformat:2 }}</td>
+                        <td>-</td>
+                    </tr>
+                    {% endif %}
+                    
+                    <!-- Cotisations -->
+                    <tr class="table-light">
+                        <td colspan="5" class="small fw-bold text-muted py-1">COTISATIONS ET IMPÔTS</td>
+                    </tr>
+                    <tr>
+                        <td>Assurance Sociale (CNAS)</td>
+                        <td>{{ fiche.base_ss|floatformat:2 }}</td>
+                        <td>9.00%</td>
+                        <td>-</td>
+                        <td class="text-danger">{{ fiche.montant_ss|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td>IRG (Barème LF 2022)</td>
+                        <td>{{ fiche.salaire_imposable|floatformat:2 }}</td>
+                        <td>Progressif</td>
+                        <td>-</td>
+                        <td class="text-danger">{{ fiche.irg|floatformat:2 }}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Summary -->
+            <div class="row mb-4">
+                <div class="col-6 offset-6">
+                    <div class="p-3 border rounded">
+                        <div class="d-flex justify-content-between mb-2 small">
+                            <span>Total Brut</span>
+                            <span class="fw-bold">{{ fiche.salaire_base_calcule|floatformat:2 }} DA</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 small">
+                            <span>Total Retenues</span>
+                            <span class="text-danger fw-bold">-{{ fiche.montant_ss|add:fiche.irg|floatformat:2 }} DA</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Net -->
+            <div class="total-section">
+                <div>
+                    <h6 class="mb-0 text-white-50 small text-uppercase fw-bold">Net à Payer</h6>
+                </div>
+                <div class="text-end">
+                    <h2 class="mb-0 fw-bold">{{ fiche.net_a_payer|floatformat:2 }} DA</h2>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-5 pt-4 border-top text-center">
+                <p class="text-muted small">Ce bulletin de paie est un document officiel généré par le système RH Saldae.</p>
+                <div class="d-flex justify-content-between mt-5">
+                    <div style="width: 200px; border-top: 1px dashed #ccc; padding-top: 10px;" class="small text-muted">Signature Salarié</div>
+                    <div style="width: 200px; border-top: 1px dashed #ccc; padding-top: 10px;" class="small text-muted">Signature Employeur</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

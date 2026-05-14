@@ -2,9 +2,11 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from .models import Prospets, UserActionLog
-from .middleware import get_current_user
+from .middleware import get_current_user, get_current_request
 
 def get_client_ip(request):
+    if not request:
+        return None
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
         ip = x_forwarded_for.split(',')[0]
@@ -44,6 +46,8 @@ def log_user_logout(sender, request, user, **kwargs):
 @receiver(post_save, sender=Prospets)
 def log_prospect_save(sender, instance, created, **kwargs):
     user = get_current_user()
+    request = get_current_request()
+    ip = get_client_ip(request)
     action = 'CREATE' if created else 'UPDATE'
     details = f"Prospect {instance.nom} {instance.prenom} {'créé' if created else 'modifié'}."
     
@@ -52,12 +56,15 @@ def log_prospect_save(sender, instance, created, **kwargs):
         action_type=action,
         target_model='Prospect',
         target_id=str(instance.id),
-        details=details
+        details=details,
+        ip_address=ip
     )
 
 @receiver(post_delete, sender=Prospets)
 def log_prospect_delete(sender, instance, **kwargs):
     user = get_current_user()
+    request = get_current_request()
+    ip = get_client_ip(request)
     details = f"Prospect {instance.nom} {instance.prenom} supprimé."
     
     UserActionLog.objects.create(
@@ -65,5 +72,6 @@ def log_prospect_delete(sender, instance, **kwargs):
         action_type='DELETE',
         target_model='Prospect',
         target_id=str(instance.id),
-        details=details
+        details=details,
+        ip_address=ip
     )

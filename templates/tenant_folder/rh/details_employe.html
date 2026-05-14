@@ -201,6 +201,11 @@
                                         <i class="ri-id-card-line me-1 align-bottom"></i> Identité & Documents
                                     </a>
                                 </li>
+                                <li class="nav-item">
+                                    <a class="nav-link fw-semibold py-3" data-bs-toggle="tab" href="#remunerationInfo" role="tab">
+                                        <i class="ri-money-dollar-circle-line me-1 align-bottom"></i> Rémunération & Primes
+                                    </a>
+                                </li>
                             </ul>
                         </div>
                         <div class="card-body p-4">
@@ -345,6 +350,87 @@
                                                             <span class="fw-bold text-dark">{{employe.created_at|date:"d/m/Y"}}</span>
                                                         </li>
                                                     </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tab 4: Remuneration & Primes -->
+                                <div class="tab-pane" id="remunerationInfo" role="tabpanel">
+                                    <div class="row g-4">
+                                        <!-- Salaire de base Card -->
+                                        <div class="col-md-4">
+                                            <div class="glass-card p-4 h-100 border-primary border-opacity-10" style="background: rgba(99, 102, 241, 0.03);">
+                                                <div class="d-flex align-items-center mb-3">
+                                                    <div class="bg-primary bg-opacity-10 rounded-3 p-2 me-3">
+                                                        <i class="ri-wallet-3-line text-primary fs-4"></i>
+                                                    </div>
+                                                    <h6 class="fw-bold mb-0">Salaire de Base</h6>
+                                                </div>
+                                                <h3 class="fw-bold text-primary mb-1">{{ active_contract.salaire_base|default:"0.00" }} DA</h3>
+                                                <p class="text-muted small mb-0">Selon le contrat du {{ active_contract.date_embauche|date:"d/m/Y" }}</p>
+                                            </div>
+                                        </div>
+
+                                        <!-- Primes Card -->
+                                        <div class="col-md-8">
+                                            <div class="glass-card p-4">
+                                                <div class="d-flex align-items-center justify-content-between mb-4">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="bg-success bg-opacity-10 rounded-3 p-2 me-3">
+                                                            <i class="ri-price-tag-3-line text-success fs-4"></i>
+                                                        </div>
+                                                        <h6 class="fw-bold mb-0">Primes & Rubriques Affectées</h6>
+                                                    </div>
+                                                    {% if payroll_id %}
+                                                    <button class="btn btn-sm btn-modern-light manage-rubrics-btn" data-payroll-id="{{ payroll_id }}">
+                                                        <i class="ri-settings-4-line me-1"></i>Gérer
+                                                    </button>
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover align-middle mb-0">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>Rubrique</th>
+                                                                <th>Type</th>
+                                                                <th>Mode</th>
+                                                                <th class="text-end">Valeur</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for p in primes %}
+                                                            <tr>
+                                                                <td>
+                                                                    <div class="d-flex align-items-center">
+                                                                        <i class="{% if p.rubrique.type_rubrique == 'GAIN' %}ri-add-circle-line text-success{% else %}ri-indeterminate-circle-line text-danger{% endif %} me-2"></i>
+                                                                        <span class="fw-semibold">{{ p.rubrique.libelle }}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td>
+                                                                    <span class="badge {% if p.rubrique.type_rubrique == 'GAIN' %}bg-success-subtle text-success{% else %}bg-danger-subtle text-danger{% endif %} rounded-pill">
+                                                                        {{ p.rubrique.get_type_rubrique_display }}
+                                                                    </span>
+                                                                </td>
+                                                                <td><small class="text-muted">{{ p.rubrique.get_mode_calcul_display }}</small></td>
+                                                                <td class="text-end fw-bold">
+                                                                    {{ p.valeur }} 
+                                                                    {% if p.rubrique.mode_calcul == 'PERCENT' %}%
+                                                                    {% elif p.rubrique.mode_calcul == 'HOURS' %}h
+                                                                    {% else %}DA{% endif %}
+                                                                </td>
+                                                            </tr>
+                                                            {% empty %}
+                                                            <tr>
+                                                                <td colspan="4" class="text-center py-4 text-muted italic">
+                                                                    <i class="ri-information-line me-1"></i>Aucune prime spécifique n'est actuellement affectée à cet employé.
+                                                                </td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
                                                 </div>
                                             </div>
                                         </div>
@@ -541,6 +627,20 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Remuneration & Primes -->
+                            <div class="col-12 mt-3">
+                                <div class="p-4 border border-dashed rounded-4 bg-primary bg-opacity-10 border-primary border-opacity-20">
+                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                        <h6 class="mb-0 fw-bold text-primary"><i class="ri-wallet-3-line me-2"></i>Détails de la Rémunération</h6>
+                                        <span class="badge bg-primary rounded-pill px-3 py-2" id="d_salaire_base">0.00 DA</span>
+                                    </div>
+                                    
+                                    <div class="row row-cols-1 row-cols-md-2 g-2" id="d_primes_container">
+                                        <!-- Primes populated via JS -->
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer border-0 p-4 pt-0">
@@ -717,6 +817,9 @@
                             row += '<td>';
                                 row += '<div class="d-flex gap-2">';
                                     row += '<button id="detailsContratBtn" data-id='+p.id+' class="btn btn-soft-primary btn-sm" title="Détails"><i class="ri-eye-line"></i></button>';
+                                    if (p.payroll_id) {
+                                        row += '<button class="btn btn-soft-success btn-sm manage-rubrics-btn" data-payroll-id="'+p.payroll_id+'" title="Gérer les Primes"><i class="ri-money-dollar-circle-line"></i></button>';
+                                    }
                                     row += '<a class="btn btn-soft-info btn-sm" href="#" title="Modifier"><i class="ri-pencil-line"></i></a>';
                                     row += '<a class="btn btn-soft-danger btn-sm text-danger" href="#" title="Supprimer"><i class="ri-delete-bin-line"></i></a>';
                                 row += '</div>';
@@ -735,23 +838,81 @@
 
         loadContrats();
 
+        // Rubric Management logic
+        $(document).on('click', '.manage-rubrics-btn', function(){
+            var payrollId = $(this).data('payroll-id');
+            var modal = $('#manageRubriqueModal');
+            
+            // Load form content
+            $.ajax({
+                url: "/rh/ressource-humaine/contrats/" + payrollId + "/rubriques/",
+                type: "GET",
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function(data) {
+                    $('#rubriqueModalContent').html(data);
+                    modal.modal('show');
+                }
+            });
+        });
+
+        $(document).on('submit', '#manageRubriqueModal form', function(e){
+            e.preventDefault();
+            var form = $(this);
+            $.ajax({
+                url: form.attr('action'),
+                type: "POST",
+                data: form.serialize(),
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function(response) {
+                    if(response.status === 'success') {
+                        alertify.success(response.message);
+                        $('#manageRubriqueModal').modal('hide');
+                    }
+                }
+            });
+        });
+
         $(document).on('click', '#detailsContratBtn', function(){
             var id_contrat = $(this).data('id');
             $.ajax({
-                url :"#",
+                url :"{% url 't_rh:ApiGetDetailsOfContract' %}",
                 dataType: 'JSON',
                 type : 'GET',
                 data: {
-                    'id_contrat' : id_contrat,
+                    'id' : id_contrat,
                 },
                 success : function(data){
-                    $('#d_entite_legal').text(data.entite_legal__designation);
-                    $('#d_categorie_contrat').text(data.type_contrat__categorie__label);
-                    $('#d_type_contrat').text(data.type_contrat__label);
-                    $('#d_duree_contrat').text(data.duree || 'Indéterminée');
-                    $('#d_services').text(data.service__label);
-                    $('#d_posts').text(data.poste__label);
+                    $('#d_entite_legal').text(data.employeur);
+                    $('#d_categorie_contrat').text(data.categorie_contrat);
+                    $('#d_type_contrat').text(data.type_contrat);
+                    $('#d_duree_contrat').text(data.duree);
+                    $('#d_services').text(data.service);
+                    $('#d_posts').text(data.poste);
                     $('#d_date_embauche').text(data.date_embauche);
+
+                    // Financial details
+                    $('#d_salaire_base').text(data.salaire_base.toLocaleString() + ' DA');
+                    
+                    var primesHtml = "";
+                    if (data.primes && data.primes.length > 0) {
+                        $.each(data.primes, function(index, p){
+                            var badgeClass = p.type === 'GAIN' ? 'bg-soft-success text-success' : 'bg-soft-danger text-danger';
+                            var icon = p.type === 'GAIN' ? 'ri-add-circle-line' : 'ri-indeterminate-circle-line';
+                            
+                            primesHtml += '<div class="col">';
+                            primesHtml += '  <div class="d-flex align-items-center justify-content-between p-2 rounded-3 bg-white border border-light-subtle">';
+                            primesHtml += '    <div class="d-flex align-items-center">';
+                            primesHtml += '      <i class="'+icon+' me-2 '+(p.type === 'GAIN' ? 'text-success' : 'text-danger')+'"></i>';
+                            primesHtml += '      <span class="small fw-semibold text-dark">'+p.libelle+'</span>';
+                            primesHtml += '    </div>';
+                            primesHtml += '    <span class="badge rounded-pill '+badgeClass+' fs-11">'+p.valeur.toLocaleString()+' '+(p.mode === 'Pourcentage' ? '%' : (p.mode === 'Heures' ? 'h' : 'DA'))+'</span>';
+                            primesHtml += '  </div>';
+                            primesHtml += '</div>';
+                        });
+                    } else {
+                        primesHtml = '<div class="col-12 text-center py-2"><small class="text-muted italic">Aucune prime spécifique activée</small></div>';
+                    }
+                    $('#d_primes_container').html(primesHtml);
                 }
             });
             $('#detailsContratModal').modal('show');
@@ -759,6 +920,15 @@
 
     });
 </script>
+
+<!-- Rubrique Management Modal -->
+<div id="manageRubriqueModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0" id="rubriqueModalContent">
+            <!-- Content loaded via AJAX -->
+        </div>
+    </div>
+</div>
 
 {% endblock content %}
            

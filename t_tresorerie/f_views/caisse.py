@@ -226,7 +226,7 @@ def brouillard_banck_json(request):
     initial_amount = float(solde_initial_obj.montant) if solde_initial_obj else 0.0
 
     # ---- 1. Paiements (Entrées en banque) ----
-    paiements = Paiements.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
+    paiements = Paiements.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).values(
         nom=F('paiement_label'),
         date=F('date_paiement'),
         mouvement_montant=Coalesce(F('montant_paye'), Value(0, output_field=models.DecimalField())),
@@ -243,7 +243,7 @@ def brouillard_banck_json(request):
     )
 
     # ---- 1b. AutreProduit (Entrées en banque) ----
-    autres_produits = AutreProduit.objects.filter(mode_paiement__in=['che', 'vir'], date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
+    autres_produits = AutreProduit.objects.filter(mode_paiement__in=['che', 'vir'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).values(
         nom=F('label'),
         date=F('date_paiement'),
         mouvement_montant=Coalesce(F('montant_paiement'), Value(0, output_field=models.DecimalField())),
@@ -262,7 +262,7 @@ def brouillard_banck_json(request):
     # ---- 1c. Consulting Paiement (Entrées en banque) ----
     consulting_paiements = []
     if ConseilPaiement:
-        consulting_paiements = ConseilPaiement.objects.filter(mode_paiement__in=['virement', 'cheque'], date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
+        consulting_paiements = ConseilPaiement.objects.filter(mode_paiement__in=['virement', 'cheque'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).values(
             nom=Value('Paiement Facture', output_field=CharField()),
             date=F('date_paiement'),
             mouvement_montant=Coalesce(F('montant'), Value(0, output_field=models.DecimalField())),

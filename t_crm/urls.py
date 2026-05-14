@@ -36,8 +36,9 @@ from .f_views.prinscrits import (
     ApiValidatePreinscrit, ApiCancelPreinscrit, ApiReactivatePreinscrit,
     ApiLoadFinancialData, ApiLoadPreinscritDoubleVoeux, prospects_incomplets_view,
     ApiGetDossierDetails, ApiGetDossierDetailsDouble,ApiLoadPrinscritsDataUpdate,
-    ApiUpdatePreinscritPersonalData
+    ApiUpdatePreinscritPersonalData, SearchProspectPreinscrit
 )
+
 from .f_views.derogations import (
     liste_derogations,
     LoadDerogations, ApiCheckDerogationStatus, ApiStoreDerogation,
@@ -253,6 +254,8 @@ urlpatterns = [
     path('ApiListPreinscritsJSON/', ApiListPreinscritsJSON, name='ApiListPreinscritsJSON'),
     path('ApiAssignDocument/', ApiAssignDocument, name='ApiAssignDocument'),
     path('ApiImportPhysicalFile/', ApiImportPhysicalFile, name='ApiImportPhysicalFile'),
+    path('retrouver-prospect-preinscrit/', SearchProspectPreinscrit, name="SearchProspectPreinscrit"),
     ########################################## !Médiatheque #################################################
+
 
 ]

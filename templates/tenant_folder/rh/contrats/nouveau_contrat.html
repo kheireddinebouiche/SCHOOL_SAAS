@@ -222,6 +222,10 @@
                                 <div class="step-counter">4</div>
                                 <div class="step-label">Conditions</div>
                             </div>
+                            <div class="step-item" id="step-5-indicator">
+                                <div class="step-counter">5</div>
+                                <div class="step-label">Rémunération</div>
+                            </div>
                         </div>
 
                         <form id="newContratForm">
@@ -319,6 +323,48 @@
                                 </div>
                             </div>
 
+                            <!-- Step 5: Remuneration & Primes -->
+                            <div class="step-content" id="step-5">
+                                <h5 class="section-title"><i class="ri-money-dollar-circle-line"></i> Rémunération & Primes</h5>
+                                <div class="row g-4">
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-bold text-primary">Salaire de Base Mensuel</label>
+                                        <div class="input-group input-group-lg">
+                                            <span class="input-group-text bg-primary text-white border-primary"><i class="ri-wallet-3-line"></i></span>
+                                            <input type="number" class="form-control border-primary" id="salaire_base" name="salaire_base" placeholder="0.00" value="0">
+                                            <span class="input-group-text bg-light">DA</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 mt-4">
+                                        <div class="p-3 bg-light rounded-3 mb-3 border border-dashed border-primary border-opacity-25">
+                                            <h6 class="fw-bold mb-1"><i class="ri-price-tag-3-line me-2"></i>Primes & Rubriques Applicables</h6>
+                                            <p class="text-muted small mb-0">Ces rubriques sont suggérées en fonction du type de contrat choisi. Vous pouvez ajuster les valeurs ou les désactiver.</p>
+                                        </div>
+                                        
+                                        <div class="table-responsive">
+                                            <table class="table align-middle mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Libellé de la rubrique</th>
+                                                        <th>Mode</th>
+                                                        <th style="width: 180px;">Valeur</th>
+                                                        <th class="text-center">Actif</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="rubriques_config_container">
+                                                    <tr>
+                                                        <td colspan="4" class="text-center py-4 text-muted small italic">
+                                                            Sélectionnez d'abord un type de contrat à l'étape 2.
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Navigation Controls -->
                             <div class="d-flex justify-content-between mt-5 pt-4 border-top">
                                 <button type="button" class="btn btn-step btn-prev d-none" id="prevBtn">
@@ -344,7 +390,7 @@
 <script>
     $(document).ready(function() {
         let currentStep = 1;
-        const totalSteps = 4;
+        const totalSteps = 5;
 
         function updateStepper() {
             $('.step-content').removeClass('active');
@@ -458,13 +504,57 @@
         });
 
         $('#type_contrat').change(function() {
+            let typeId = $(this).val();
             let typeLabel = $(this).find("option:selected").text().toLowerCase();
+            
             if(typeLabel.includes('cdd')) {
                 $('#duree_contrat_container').slideDown();
                 $('#duree_contrat').prop('required', true);
             } else {
                 $('#duree_contrat_container').slideUp();
                 $('#duree_contrat').prop('required', false).val('');
+            }
+
+            // Load rubriques for this type
+            if(typeId) {
+                $.ajax({
+                    url: "{% url 't_rh:ApiGetRubriquesOfType' %}",
+                    type: "GET",
+                    data: { 'id': typeId },
+                    success: function(response) {
+                        let html = "";
+                        let allRubriques = [...response.eligible, ...response.globals];
+                        
+                        if(allRubriques.length > 0) {
+                            allRubriques.forEach(r => {
+                                let modeLabel = r.mode_calcul === 'PERCENT' ? '%' : (r.mode_calcul === 'HOURS' ? 'h' : 'DA');
+                                html += `
+                                    <tr class="rubrique-row" data-id="${r.id}">
+                                        <td>
+                                            <div class="fw-semibold">${r.libelle}</div>
+                                            <small class="text-muted text-uppercase fs-10">${r.type_rubrique}</small>
+                                        </td>
+                                        <td><span class="badge bg-light text-dark">${r.mode_calcul}</span></td>
+                                        <td>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control rubrique-valeur" value="${r.valeur_defaut}">
+                                                <span class="input-group-text">${modeLabel}</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="form-check form-switch d-flex justify-content-center">
+                                                <input class="form-check-input rubrique-actif" type="checkbox" checked>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            });
+                        } else {
+                            html = '<tr><td colspan="4" class="text-center py-3 text-muted">Aucune rubrique par défaut pour ce type.</td></tr>';
+                        }
+                        $('#rubriques_config_container').html(html);
+                    }
+                });
             }
         });
 
@@ -482,6 +572,17 @@
         $('#submitContrat').click(function() {
             let form = document.getElementById('newContratForm');
             let formData = new FormData(form);
+            
+            // Gather rubriques data
+            let rubriquesData = [];
+            $('.rubrique-row').each(function() {
+                rubriquesData.push({
+                    id: $(this).data('id'),
+                    valeur: $(this).find('.rubrique-valeur').val(),
+                    actif: $(this).find('.rubrique-actif').is(':checked')
+                });
+            });
+            formData.append('rubriques_data', JSON.stringify(rubriquesData));
             
             $.ajax({
                 url: "{% url 't_rh:ApiCreateContrat' %}",

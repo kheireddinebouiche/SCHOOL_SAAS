@@ -238,7 +238,7 @@
                 <div class="stat-pill-icon"><i class="ri-file-copy-2-line"></i></div>
                 <div>
                     <div class="small text-white text-opacity-75">Vœux Doubles</div>
-                    <div class="h4 fw-bold mb-0 text-white">{{ voeux_double|length }}</div>
+                    <div class="h4 fw-bold mb-0 text-white">{{ stats.voeux_double }}</div>
                 </div>
             </div>
             <div class="stat-pill">
@@ -278,37 +278,37 @@
             <div class="d-flex justify-content-center mb-4">
                 <ul class="nav nav-pills nav-pills-custom shadow-sm" role="tablist">
                     <li class="nav-item">
-                        <a class="nav-link active" data-bs-toggle="tab" href="#prospects" role="tab">
+                        <a class="nav-link {% if active_tab == 'prospects' %}active{% endif %}" data-bs-toggle="tab" href="#prospects" role="tab">
                             Prospects
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#voeux" role="tab">
+                        <a class="nav-link {% if active_tab == 'voeux' %}active{% endif %}" data-bs-toggle="tab" href="#voeux" role="tab">
                             Vœux
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#voeux_double" role="tab">
+                        <a class="nav-link {% if active_tab == 'voeux_double' %}active{% endif %}" data-bs-toggle="tab" href="#voeux_double" role="tab">
                             Doubles
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#formations" role="tab">
+                        <a class="nav-link {% if active_tab == 'formations' %}active{% endif %}" data-bs-toggle="tab" href="#formations" role="tab">
                             Formations
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#specialites" role="tab">
+                        <a class="nav-link {% if active_tab == 'specialites' %}active{% endif %}" data-bs-toggle="tab" href="#specialites" role="tab">
                             Spécialités
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#due_paiements" role="tab">
+                        <a class="nav-link {% if active_tab == 'due_paiements' %}active{% endif %}" data-bs-toggle="tab" href="#due_paiements" role="tab">
                             Montants Dus
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#paiements" role="tab">
+                        <a class="nav-link {% if active_tab == 'paiements' %}active{% endif %}" data-bs-toggle="tab" href="#paiements" role="tab">
                             Paiements
                         </a>
                     </li>
@@ -318,20 +318,23 @@
             <div class="tab-content">
                 
                 <!-- Prospects Tab -->
-                <div class="tab-pane fade show active" id="prospects" role="tabpanel">
+                <div class="tab-pane fade {% if active_tab == 'prospects' %}show active{% endif %}" id="prospects" role="tabpanel">
                     <div class="glass-tab-content">
                         <div class="px-4 py-3 border-bottom border-white border-opacity-10 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                             <div class="search-group">
                                 <span class="ps-3 text-muted"><i class="ri-search-line"></i></span>
                                 <input type="text" class="form-control explorer-search" data-target="prospectsTable" placeholder="Rechercher par nom, email, téléphone...">
                             </div>
-                            <div style="min-width: 200px;">
-                                <select class="form-select rounded-pill explorer-filter border-0 shadow-sm" data-target="prospectsTable" data-column="2">
+                            <div class="d-flex gap-2">
+                                <select class="form-select rounded-pill explorer-filter border-0 shadow-sm" data-target="prospectsTable" data-column="2" style="min-width: 200px;">
                                     <option value="">Tous les statuts</option>
                                     <option value="visiteur">Visiteur</option>
                                     <option value="inscrit">Inscrit</option>
                                     <option value="convertit">Convertit</option>
                                 </select>
+                                <a href="{% url 'saas_admin_app:saas_export_prospects' institut.id %}" class="btn btn-success rounded-pill px-4 shadow-sm">
+                                    <i class="ri-file-excel-2-line me-1"></i> Exporter Excel
+                                </a>
                             </div>
                         </div>
                         <div class="card-body p-0">
@@ -343,6 +346,7 @@
                                             <th>Coordonnées</th>
                                             <th>État</th>
                                             <th>Statut Actuel</th>
+                                            <th>Documents</th>
                                             <th>Date de Création</th>
                                             <th class="pe-4 text-end">Actions</th>
                                         </tr>
@@ -378,6 +382,13 @@
                                                 <span class="badge rounded-pill {% if p.statut == 'convertit' %}bg-success{% elif p.statut == 'visiteur' %}bg-info{% else %}bg-warning{% endif %} bg-opacity-10 {% if p.statut == 'convertit' %}text-success{% elif p.statut == 'visiteur' %}text-info{% else %}text-warning{% endif %} px-3 statut-badge">
                                                     <i class="ri-checkbox-blank-circle-fill me-1 small"></i>{{ p.get_statut_display|default:p.statut }}
                                                 </span>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <span class="badge {% if p.doc_count > 0 %}bg-primary{% else %}bg-secondary{% endif %} bg-opacity-10 {% if p.doc_count > 0 %}text-primary{% else %}text-secondary{% endif %} rounded-pill px-3">
+                                                        <i class="ri-file-line me-1"></i>{{ p.doc_count }} doc{{ p.doc_count|pluralize }}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td>
                                                 <div class="text-muted small">{{ p.created_at|date:"d M Y" }}</div>
@@ -419,12 +430,12 @@
                                     <ul class="pagination pagination-sm mb-0">
                                         {% if prospects.has_previous %}
                                         <li class="page-item">
-                                            <a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?p_page={{ prospects.previous_page_number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}">Précédent</a>
+                                            <a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?p_page={{ prospects.previous_page_number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}&dp_page={{ due_paiements.number }}&pa_page={{ paiements.number }}&tab=prospects">Précédent</a>
                                         </li>
                                         {% endif %}
                                         {% if prospects.has_next %}
                                         <li class="page-item">
-                                            <a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?p_page={{ prospects.next_page_number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}">Suivant</a>
+                                            <a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?p_page={{ prospects.next_page_number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}&dp_page={{ due_paiements.number }}&pa_page={{ paiements.number }}&tab=prospects">Suivant</a>
                                         </li>
                                         {% endif %}
                                     </ul>
@@ -436,7 +447,7 @@
                 </div>
 
                 <!-- Voeux Tab -->
-                <div class="tab-pane fade" id="voeux" role="tabpanel">
+                <div class="tab-pane fade {% if active_tab == 'voeux' %}show active{% endif %}" id="voeux" role="tabpanel">
                     <div class="glass-tab-content">
                         <div class="px-4 py-3 border-bottom border-white border-opacity-10 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                             <div class="search-group">
@@ -524,12 +535,12 @@
                                     <ul class="pagination pagination-sm mb-0">
                                         {% if voeux.has_previous %}
                                         <li class="page-item">
-                                            <a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.previous_page_number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}">Précédent</a>
+                                            <a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.previous_page_number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}&dp_page={{ due_paiements.number }}&pa_page={{ paiements.number }}&tab=voeux">Précédent</a>
                                         </li>
                                         {% endif %}
                                         {% if voeux.has_next %}
                                         <li class="page-item">
-                                            <a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.next_page_number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}">Suivant</a>
+                                            <a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.next_page_number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}&dp_page={{ due_paiements.number }}&pa_page={{ paiements.number }}&tab=voeux">Suivant</a>
                                         </li>
                                         {% endif %}
                                     </ul>
@@ -541,7 +552,7 @@
                 </div>
 
                 <!-- Double Tab -->
-                <div class="tab-pane fade" id="voeux_double" role="tabpanel">
+                <div class="tab-pane fade {% if active_tab == 'voeux_double' %}show active{% endif %}" id="voeux_double" role="tabpanel">
                     <div class="glass-tab-content">
                         <div class="px-4 py-3 border-bottom border-white border-opacity-10 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                             <div class="search-group">
@@ -628,12 +639,12 @@
                                     <ul class="pagination pagination-sm mb-0">
                                         {% if voeux_double.has_previous %}
                                         <li class="page-item">
-                                            <a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.previous_page_number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}">Précédent</a>
+                                            <a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.previous_page_number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}&dp_page={{ due_paiements.number }}&pa_page={{ paiements.number }}&tab=voeux_double">Précédent</a>
                                         </li>
                                         {% endif %}
                                         {% if voeux_double.has_next %}
                                         <li class="page-item">
-                                            <a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.next_page_number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}">Suivant</a>
+                                            <a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.next_page_number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}&dp_page={{ due_paiements.number }}&pa_page={{ paiements.number }}&tab=voeux_double">Suivant</a>
                                         </li>
                                         {% endif %}
                                     </ul>
@@ -645,7 +656,7 @@
                 </div>
 
                 <!-- Formations Tab -->
-                <div class="tab-pane fade" id="formations" role="tabpanel">
+                <div class="tab-pane fade {% if active_tab == 'formations' %}show active{% endif %}" id="formations" role="tabpanel">
                     <div class="glass-tab-content">
                         <div class="px-4 py-3 border-bottom border-white border-opacity-10">
                             <div class="search-group">
@@ -692,12 +703,12 @@
                                     <ul class="pagination pagination-sm mb-0">
                                         {% if formations.has_previous %}
                                         <li class="page-item">
-                                            <a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.previous_page_number }}&s_page={{ specialites.number }}">Précédent</a>
+                                            <a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.previous_page_number }}&s_page={{ specialites.number }}&dp_page={{ due_paiements.number }}&pa_page={{ paiements.number }}&tab=formations">Précédent</a>
                                         </li>
                                         {% endif %}
                                         {% if formations.has_next %}
                                         <li class="page-item">
-                                            <a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.next_page_number }}&s_page={{ specialites.number }}">Suivant</a>
+                                            <a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.next_page_number }}&s_page={{ specialites.number }}&dp_page={{ due_paiements.number }}&pa_page={{ paiements.number }}&tab=formations">Suivant</a>
                                         </li>
                                         {% endif %}
                                     </ul>
@@ -709,7 +720,7 @@
                 </div>
 
                 <!-- Specialites Tab -->
-                <div class="tab-pane fade" id="specialites" role="tabpanel">
+                <div class="tab-pane fade {% if active_tab == 'specialites' %}show active{% endif %}" id="specialites" role="tabpanel">
                     <div class="glass-tab-content">
                         <div class="px-4 py-3 border-bottom border-white border-opacity-10">
                             <div class="search-group">
@@ -763,12 +774,12 @@
                                     <ul class="pagination pagination-sm mb-0">
                                         {% if specialites.has_previous %}
                                         <li class="page-item">
-                                            <a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.previous_page_number }}">Précédent</a>
+                                            <a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.previous_page_number }}&dp_page={{ due_paiements.number }}&pa_page={{ paiements.number }}&tab=specialites">Précédent</a>
                                         </li>
                                         {% endif %}
                                         {% if specialites.has_next %}
                                         <li class="page-item">
-                                            <a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.next_page_number }}">Suivant</a>
+                                            <a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.next_page_number }}&dp_page={{ due_paiements.number }}&pa_page={{ paiements.number }}&tab=specialites">Suivant</a>
                                         </li>
                                         {% endif %}
                                     </ul>
@@ -780,7 +791,7 @@
                 </div>
 
                 <!-- Due Paiements Tab -->
-                <div class="tab-pane fade" id="due_paiements" role="tabpanel">
+                <div class="tab-pane fade {% if active_tab == 'due_paiements' %}show active{% endif %}" id="due_paiements" role="tabpanel">
                     <div class="glass-tab-content">
                         <div class="px-4 py-3 border-bottom border-white border-opacity-10 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                             <div class="search-group">
@@ -859,10 +870,10 @@
                                 <nav>
                                     <ul class="pagination pagination-sm mb-0">
                                         {% if due_paiements.has_previous %}
-                                        <li class="page-item"><a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?dp_page={{ due_paiements.previous_page_number }}">Précédent</a></li>
+                                        <li class="page-item"><a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}&dp_page={{ due_paiements.previous_page_number }}&pa_page={{ paiements.number }}&tab=due_paiements">Précédent</a></li>
                                         {% endif %}
                                         {% if due_paiements.has_next %}
-                                        <li class="page-item"><a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?dp_page={{ due_paiements.next_page_number }}">Suivant</a></li>
+                                        <li class="page-item"><a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}&dp_page={{ due_paiements.next_page_number }}&pa_page={{ paiements.number }}&tab=due_paiements">Suivant</a></li>
                                         {% endif %}
                                     </ul>
                                 </nav>
@@ -873,7 +884,7 @@
                 </div>
 
                 <!-- Paiements Tab -->
-                <div class="tab-pane fade" id="paiements" role="tabpanel">
+                <div class="tab-pane fade {% if active_tab == 'paiements' %}show active{% endif %}" id="paiements" role="tabpanel">
                     <div class="glass-tab-content">
                         <div class="px-4 py-3 border-bottom border-white border-opacity-10 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                             <div class="search-group">
@@ -942,10 +953,10 @@
                                 <nav>
                                     <ul class="pagination pagination-sm mb-0">
                                         {% if paiements.has_previous %}
-                                        <li class="page-item"><a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?pa_page={{ paiements.previous_page_number }}">Précédent</a></li>
+                                        <li class="page-item"><a class="page-link rounded-pill px-3 me-2 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}&dp_page={{ due_paiements.number }}&pa_page={{ paiements.previous_page_number }}&tab=paiements">Précédent</a></li>
                                         {% endif %}
                                         {% if paiements.has_next %}
-                                        <li class="page-item"><a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?pa_page={{ paiements.next_page_number }}">Suivant</a></li>
+                                        <li class="page-item"><a class="page-link rounded-pill px-3 border-0 shadow-sm" href="?p_page={{ prospects.number }}&v_page={{ voeux.number }}&vd_page={{ voeux_double.number }}&f_page={{ formations.number }}&s_page={{ specialites.number }}&dp_page={{ due_paiements.number }}&pa_page={{ paiements.next_page_number }}&tab=paiements">Suivant</a></li>
                                         {% endif %}
                                     </ul>
                                 </nav>
@@ -1415,13 +1426,18 @@
     // === Global Search & Filters ===
     document.addEventListener('DOMContentLoaded', function() {
         const urlParams = new URLSearchParams(window.location.search);
-        let activeTabId = 'prospects';
-        if (urlParams.has('v_page')) activeTabId = 'voeux';
-        else if (urlParams.has('vd_page')) activeTabId = 'voeux_double';
-        else if (urlParams.has('f_page')) activeTabId = 'formations';
-        else if (urlParams.has('s_page')) activeTabId = 'specialites';
-        else if (urlParams.has('dp_page')) activeTabId = 'due_paiements';
-        else if (urlParams.has('pa_page')) activeTabId = 'paiements';
+        let activeTabId = urlParams.get('tab') || 'prospects';
+        
+        // Fallback for backward compatibility if tab param is missing
+        if (!urlParams.has('tab')) {
+            if (urlParams.has('v_page')) activeTabId = 'voeux';
+            else if (urlParams.has('vd_page')) activeTabId = 'voeux_double';
+            else if (urlParams.has('f_page')) activeTabId = 'formations';
+            else if (urlParams.has('s_page')) activeTabId = 'specialites';
+            else if (urlParams.has('dp_page')) activeTabId = 'due_paiements';
+            else if (urlParams.has('pa_page')) activeTabId = 'paiements';
+        }
+        
         const tabEl = document.querySelector(`a[href="#${activeTabId}"]`);
         if (tabEl) (new bootstrap.Tab(tabEl)).show();
 

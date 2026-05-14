@@ -38,6 +38,7 @@ def ApiListeDesFactures(request):
                     'date': f.date_emission.strftime("%Y-%m-%d") if f.date_emission else "",
                     'echeance': f.date_echeance.strftime("%Y-%m-%d") if f.date_echeance else "",
                     'montant': float(f.total_ttc()) if hasattr(f, 'total_ttc') else 0.0,
+                    'timbre': float(f.get_timbre()),
                     'etat': f.etat,
                     'created_at': f.created_at.strftime("%Y-%m-%d") if hasattr(f, 'created_at') else "",
                     'entreprise_id': ent_id,
@@ -80,7 +81,8 @@ def DetailsFactureTresorerie(request, pk):
                 tva_breakdown[rate] = tva_breakdown.get(rate, 0) + amount
             
     total_tva = sum(tva_breakdown.values())
-    total_ttc = float(total_ht) + total_tva
+    timbre = facture.get_timbre()
+    total_ttc = facture.total_ttc()
     sorted_tva = sorted([{'rate': r, 'amount': a} for r, a in tva_breakdown.items()], key=lambda x: x['rate'], reverse=True)
 
     context = {
@@ -91,6 +93,7 @@ def DetailsFactureTresorerie(request, pk):
         "tvas": tvas,
         "total_ht": total_ht,
         "total_tva": total_tva,
+        "timbre": timbre,
         "total_ttc": total_ttc,
         "tva_breakdown": sorted_tva
     }

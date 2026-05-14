@@ -20,10 +20,11 @@ def ApiLoadEntrepriseProspectInfo(request):
     prospect = Prospets.objects.filter(id=id_prospect).values(
         'created_at','id','nin','nom','prenom','email',
         'telephone','type_prospect',
-        'canal','statut','etat',
+        'canal','contact_situation','statut','etat',
         'entreprise',
         'poste_dans_entreprise',
         'observation',
+
         'rc', 'nif', 'nis', 'art_imp',
         'adresse', 'wilaya', 'code_zip',
         'motif_annulation').first()
@@ -76,7 +77,10 @@ def ApiUpdateContactInfo(request):
     prospect_obj.prenom = prenomUpdate
     prospect_obj.telephone = telephoneUpdate
     prospect_obj.email = emailUpdate
+    prospect_obj.canal = request.POST.get('canal')
+    prospect_obj.contact_situation = request.POST.get('contact_situation')
 
     prospect_obj.save()
+
 
     return JsonResponse({"status" : "success"})

@@ -97,7 +97,7 @@ def index(request):
     as_of_date = date.today()
     if selected_month and selected_month != 'all':
         m = int(selected_month)
-        y = active_campaign.date_debut.year if m >= 8 else active_campaign.date_debut.year + 1
+        y = active_campaign.date_debut.year if m >= 7 else active_campaign.date_debut.year + 1
         import calendar
         last_day = calendar.monthrange(y, m)[1]
         as_of_date = date(y, m, last_day)
@@ -392,10 +392,10 @@ def index(request):
         trimestre_details_marge = [t for t in trimestre_details_marge if t['label'].lower() == selected_trimester]
 
     MONTHS = [
-        (8, 'Août'), (9, 'Septembre'), (10, 'Octobre'),
+        (7, 'Juillet'), (8, 'Août'), (9, 'Septembre'), (10, 'Octobre'),
         (11, 'Novembre'), (12, 'Décembre'), (1, 'Janvier'),
         (2, 'Février'), (3, 'Mars'), (4, 'Avril'),
-        (5, 'Mai'), (6, 'Juin'), (7, 'Juillet')
+        (5, 'Mai'), (6, 'Juin')
     ]
 
     return render(request, 'public_folder/configuration_index.html', {
@@ -1652,15 +1652,15 @@ def budget_campaign_create(request):
     if request.method == 'POST':
         name = request.POST.get('name')
         
-        # Automatic Date Logic: Fiscal Year starts Aug 1st
+        # Automatic Date Logic: Fiscal Year starts July 1st
         today = date.today()
-        if today.month < 8: # Jan - July
+        if today.month < 7: # Jan - June
             start_year = today.year - 1
-        else: # Aug - Dec
+        else: # July - Dec
             start_year = today.year
             
-        date_debut = date(start_year, 8, 1)
-        date_fin = date(start_year + 1, 7, 31)
+        date_debut = date(start_year, 7, 1)
+        date_fin = date(start_year + 1, 6, 30)
         
         default_name = f"Budget {start_year}-{start_year + 1}"
         

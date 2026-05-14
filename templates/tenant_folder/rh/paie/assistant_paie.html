@@ -1,0 +1,223 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} RH - Assistant de Paie {% endblock title %}
+
+{% block content %}
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.9);
+        --glass-border: rgba(255, 255, 255, 0.4);
+        --primary-modern: #0ab39c;
+    }
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(15px);
+        border: 1px solid var(--glass-border);
+        border-radius: 1.25rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+        transition: all 0.3s ease;
+    }
+    .table-modern thead th {
+        background: rgba(243, 246, 249, 0.6);
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        color: #495057;
+        border: none;
+        padding: 1rem;
+    }
+    .table-modern tbody td {
+        padding: 1.25rem 1rem;
+        border-bottom: 1px solid rgba(235, 239, 243, 0.6);
+    }
+    .row-hover:hover {
+        background: rgba(10, 179, 156, 0.02) !important;
+    }
+    .btn-modern {
+        border-radius: 0.75rem;
+        padding: 0.6rem 1.25rem;
+        font-weight: 600;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: none;
+    }
+    .btn-modern-primary {
+        background: var(--primary-modern);
+        color: white;
+        box-shadow: 0 4px 15px rgba(10, 179, 156, 0.25);
+    }
+    .btn-modern-primary:hover {
+        background: #099885;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(10, 179, 156, 0.35);
+        color: white;
+    }
+    .btn-modern-light {
+        background: #f3f6f9;
+        color: #495057;
+    }
+    .btn-modern-light:hover {
+        background: #e9ecef;
+        transform: translateY(-2px);
+    }
+    .badge-modern {
+        padding: 0.5em 1em;
+        border-radius: 50rem;
+        font-weight: 600;
+    }
+    .select-modern {
+        border: 1px solid #e9ecef;
+        background-color: #fff;
+        padding: 0.5rem 1rem;
+        border-radius: 0.75rem;
+        font-size: 0.875rem;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    .select-modern:focus {
+        border-color: var(--primary-modern);
+        box-shadow: 0 0 0 0.2rem rgba(10, 179, 156, 0.1);
+        outline: 0;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            
+            <!-- Page Header -->
+            <div class="row mt-4 mb-4">
+                <div class="col-12 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">Assistant de Paie</h3>
+                        <p class="text-muted mb-0">Pilotage centralisé de la rémunération mensuelle.</p>
+                    </div>
+                    <div class="d-flex gap-3 align-items-center">
+                        <a href="{% url 't_rh:liste_fiches_paie' %}" class="btn btn-modern btn-modern-light d-flex align-items-center">
+                            <i class="ri-history-line me-2 fs-5"></i> Historique
+                        </a>
+                        <form method="GET" class="d-flex gap-2 align-items-center bg-white p-2 rounded-4 shadow-sm border">
+                            <select name="month" class="select-modern border-0">
+                                {% for m_id, m_name in months_choices %}
+                                    <option value="{{ m_id }}" {% if m_id == month %}selected{% endif %}>{{ m_name }}</option>
+                                {% endfor %}
+                            </select>
+                            <input type="number" name="year" value="{{ year }}" class="form-control border-0 fw-bold" style="width: 85px;">
+                            <button type="submit" class="btn btn-modern btn-modern-primary py-2 px-3">
+                                <i class="ri-search-2-line"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Card -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="glass-card overflow-hidden">
+                        <div class="table-responsive">
+                            <table class="table table-modern align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 25%;">Employé</th>
+                                        <th class="text-center">Présence</th>
+                                        <th class="text-center">Heures Sup.</th>
+                                        <th class="text-center">Absences</th>
+                                        <th>Base Calculée</th>
+                                        <th>Détail Primes</th>
+                                        <th class="text-end" style="width: 20%;">Net à Payer</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for data in payroll_data %}
+                                    <tr class="row-hover">
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-sm bg-primary bg-opacity-10 rounded-3 p-2 me-3 d-flex align-items-center justify-content-center">
+                                                    <i class="ri-user-follow-line text-primary fs-4"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-bold text-dark">{{ data.employee }}</h6>
+                                                    <small class="text-muted d-block mt-1">{{ data.employee.contrats.first.poste|default:"Salarié" }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge badge-modern bg-info bg-opacity-10 text-info px-3">
+                                                {{ data.variables.jours_travailles }} jours
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if data.variables.heures_sup > 0 %}
+                                                <span class="text-success fw-bold">+{{ data.variables.heures_sup }}h</span>
+                                            {% else %}
+                                                <span class="text-muted small">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if data.variables.absences_jours > 0 %}
+                                                <span class="text-danger fw-bold">{{ data.variables.absences_jours }}j</span>
+                                            {% else %}
+                                                <span class="text-muted small">0j</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold text-dark">{{ data.result.salaire_base_calcule|floatformat:2 }}</div>
+                                            <small class="text-muted">SS: -{{ data.result.montant_ss|floatformat:2 }}</small>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-column gap-1">
+                                                <div class="small text-muted"><i class="ri-restaurant-line me-1"></i>Panier: <strong>{{ data.result.prime_panier|floatformat:0 }}</strong></div>
+                                                <div class="small text-muted"><i class="ri-bus-line me-1"></i>Transp: <strong>{{ data.result.prime_transport|floatformat:0 }}</strong></div>
+                                            </div>
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="d-inline-block text-end">
+                                                <div class="h5 fw-bold text-primary mb-0">{{ data.result.net_a_payer|floatformat:2 }} DA</div>
+                                                <small class="text-danger">IRG: {{ data.result.irg|floatformat:2 }}</small>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center py-5">
+                                            <div class="py-4">
+                                                <i class="ri-folder-warning-fill fs-1 text-warning opacity-50 mb-3"></i>
+                                                <h5 class="text-dark fw-bold">Aucune donnée disponible</h5>
+                                                <p class="text-muted mx-auto" style="max-width: 300px;">Assurez-vous que les employés ont des contrats actifs et des présences enregistrées.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Bar -->
+            {% if payroll_data %}
+            <div class="row mt-4 pb-5">
+                <div class="col-12">
+                    <div class="glass-card p-3 d-flex justify-content-between align-items-center bg-white">
+                        <div class="d-flex gap-2">
+                            <a href="?month={{ month }}&year={{ year }}&action=export_journal" class="btn btn-modern btn-modern-light">
+                                <i class="ri-file-excel-2-line me-2"></i> Journal CSV
+                            </a>
+                            <a href="?month={{ month }}&year={{ year }}&action=export_virement" class="btn btn-modern btn-modern-light">
+                                <i class="ri-bank-card-2-line me-2"></i> Virement Bancaire
+                            </a>
+                        </div>
+                        <a href="?month={{ month }}&year={{ year }}&action=valider" class="btn btn-modern btn-modern-primary px-5 py-3 fs-5">
+                            <i class="ri-checkbox-circle-line me-2"></i> Valider et Sceller la Paie
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock content %}
+

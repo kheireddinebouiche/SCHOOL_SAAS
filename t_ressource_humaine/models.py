@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from t_formations.models import Formateurs
+from t_rh.models import Employees
 from institut_app.models import Entreprise
 
 class TypeContrat(models.TextChoices):
@@ -10,8 +11,10 @@ class TypeContrat(models.TextChoices):
 
 class Contrat(models.Model):
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name='contrats_rh')
-    formateur = models.ForeignKey(Formateurs, on_delete=models.CASCADE, related_name='contrats')
+    formateur = models.ForeignKey(Formateurs, on_delete=models.CASCADE, related_name='contrats', null=True, blank=True)
+    employee = models.ForeignKey(Employees, on_delete=models.CASCADE, related_name='contrats_paie', null=True, blank=True)
     type_contrat = models.CharField(max_length=20, choices=TypeContrat.choices, default=TypeContrat.CDD)
+
     
     date_debut = models.DateField()
     date_fin = models.DateField(null=True, blank=True)
@@ -97,6 +100,20 @@ class ParametresPaie(models.Model):
         config, created = cls.objects.get_or_create(entreprise=entreprise)
         return config
 
+class TrancheIRG(models.Model):
+    min_montant = models.DecimalField(max_digits=12, decimal_places=2)
+    max_montant = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Laisser vide pour la dernière tranche")
+    taux = models.DecimalField(max_digits=5, decimal_places=4, help_text="Ex: 0.23 pour 23%")
+
+    class Meta:
+        ordering = ['min_montant']
+        verbose_name = "Tranche IRG"
+        verbose_name_plural = "Tranches IRG"
+
+    def __str__(self):
+        return f"De {self.min_montant} à {self.max_montant if self.max_montant else '+'} : {self.taux * 100}%"
+
+
 class Rubrique(models.Model):
     TYPE_CHOICES = [
         ('GAIN', 'Gain (+)'),
@@ -114,10 +131,11 @@ class Rubrique(models.Model):
     mode_calcul = models.CharField(max_length=10, choices=MODE_CALCUL_CHOICES, default='FIXE')
     est_cotisable = models.BooleanField(default=False, help_text="Soumis à la cotisation SS (9%) ?")
     est_imposable = models.BooleanField(default=False, help_text="Soumis à l'impôt IRG ?")
+    valeur_defaut = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Valeur par défaut (Montant, % ou Heures)")
     actif = models.BooleanField(default=True)
     
-    # Configuration des contrats éligibles (Stocké en JSON: ["CDI", "CDD"])
-    types_contrat = models.JSONField(default=list, blank=True, help_text="Types de contrats éligibles (ex: ['CDI', 'CDD'])")
+    # Configuration des contrats éligibles
+    eligible_types = models.ManyToManyField('t_rh.TypesContrat', related_name='rubriques', blank=True, help_text="Types de contrats auxquels cette rubrique s'applique.")
     
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     
@@ -139,7 +157,7 @@ class RubriqueContrat(models.Model):
         verbose_name_plural = "Rubriques par Contrat"
         
     def __str__(self):
-        return f"{self.rubrique.libelle} pour {self.contrat} : {self.montant}"
+        return f"{self.rubrique.libelle} pour {self.contrat} : {self.valeur}"
 
 class LignePaie(models.Model):
     fiche_paie = models.ForeignKey(FichePaie, on_delete=models.CASCADE, related_name='lignes_paie')
