@@ -442,44 +442,46 @@ def ApiUpdatePreinscritInfos(request):
 
     preinscrit = Prospets.objects.get(id = id_preinscrit)
 
-    preinscrit.indic1 = indic_pere
-    preinscrit.indic2 = indic_mere
+    if indic_pere is not None: preinscrit.indic1 = indic_pere
+    if indic_mere is not None: preinscrit.indic2 = indic_mere
     
-    preinscrit.annee_obtention = annee_diplome
-    preinscrit.nom_arabe = nom_arabe
-    preinscrit.prenom_arabe = prenom_arabe
+    if annee_diplome is not None: preinscrit.annee_obtention = annee_diplome
+    if nom_arabe is not None: preinscrit.nom_arabe = nom_arabe
+    if prenom_arabe is not None: preinscrit.prenom_arabe = prenom_arabe
+    
     # Nettoyer la date : si vide ou espaces insécables, mettre None
-    date_naissance_clean = date_naissance.strip().replace('\xa0', '').strip() if date_naissance else ''
-    preinscrit.date_naissance = date_naissance_clean if date_naissance_clean else None
-    preinscrit.prenom_pere = prenom_pere
-    preinscrit.tel_pere = tel_pere
-    preinscrit.nom_mere = nom_mere
-    preinscrit.prenom_mere = prenom_mere
-    preinscrit.tel_mere = tel_mere
-    preinscrit.has_endicap = has_handicap
-    preinscrit.type_handicap = type_handicap
-    preinscrit.groupe_sanguin = groupe_sanguin
-    preinscrit.adresse = adresse
-    preinscrit.niveau_scolaire = niveau_scolaire
-    preinscrit.diplome = diplome
-    preinscrit.specialite_obtenu = specialite_obtenu
-    preinscrit.filiere = filiere
-    preinscrit.etablissement = etablissement_diplome
-    preinscrit.nin = nin
-    preinscrit.nationnalite = nationnalite
-    #preinscrit.profile_completed= True
-    preinscrit.pays = pays
-    preinscrit.wilaya = wilaya
-    preinscrit.code_zip = code_zip
-    preinscrit.lieu_naissance = lieu_naissance
-    preinscrit.commune = commune
-    preinscrit.num_secu = num_secu
-    preinscrit.tuteur_legal = tuteur_legal
-    preinscrit.indic3 = indicatif_tuteur
-    preinscrit.tel_tuteur = tel_tuteur
-    preinscrit.observation = observation
-    preinscrit.contact_situation = canal_de_contact
-    preinscrit.canal = source_de_lead
+    if date_naissance is not None:
+        date_naissance_clean = date_naissance.strip().replace('\xa0', '').strip() if date_naissance else ''
+        preinscrit.date_naissance = date_naissance_clean if date_naissance_clean else None
+        
+    if prenom_pere is not None: preinscrit.prenom_pere = prenom_pere
+    if tel_pere is not None: preinscrit.tel_pere = tel_pere
+    if nom_mere is not None: preinscrit.nom_mere = nom_mere
+    if prenom_mere is not None: preinscrit.prenom_mere = prenom_mere
+    if tel_mere is not None: preinscrit.tel_mere = tel_mere
+    if has_handicap is not None: preinscrit.has_endicap = has_handicap
+    if type_handicap is not None: preinscrit.type_handicap = type_handicap
+    if groupe_sanguin is not None: preinscrit.groupe_sanguin = groupe_sanguin
+    if adresse is not None: preinscrit.adresse = adresse
+    if niveau_scolaire is not None: preinscrit.niveau_scolaire = niveau_scolaire
+    if diplome is not None: preinscrit.diplome = diplome
+    if specialite_obtenu is not None: preinscrit.specialite_obtenu = specialite_obtenu
+    if filiere is not None: preinscrit.filiere = filiere
+    if etablissement_diplome is not None: preinscrit.etablissement = etablissement_diplome
+    if nin is not None: preinscrit.nin = nin
+    if nationnalite is not None: preinscrit.nationnalite = nationnalite
+    if pays is not None: preinscrit.pays = pays
+    if wilaya is not None: preinscrit.wilaya = wilaya
+    if code_zip is not None: preinscrit.code_zip = code_zip
+    if lieu_naissance is not None: preinscrit.lieu_naissance = lieu_naissance
+    if commune is not None: preinscrit.commune = commune
+    if num_secu is not None: preinscrit.num_secu = num_secu
+    if tuteur_legal is not None: preinscrit.tuteur_legal = tuteur_legal
+    if indicatif_tuteur is not None: preinscrit.indic3 = indicatif_tuteur
+    if tel_tuteur is not None: preinscrit.tel_tuteur = tel_tuteur
+    if observation is not None: preinscrit.observation = observation
+    if canal_de_contact is not None: preinscrit.contact_situation = canal_de_contact
+    if source_de_lead is not None: preinscrit.canal = source_de_lead
 
     # Vérification complète du profil
     is_complete = True
@@ -1296,24 +1298,39 @@ def ApiUpdatePreinscritPersonalData(request):
             prospect = Prospets.objects.get(id=id_prospect)
             
             # Common fields
-            prospect.email = request.POST.get('email')
-            prospect.telephone = request.POST.get('telephone')
-            prospect.indic = request.POST.get('indic')
-            prospect.canal = request.POST.get('canal')
-            prospect.observation = request.POST.get('observation')
-            prospect.nin = request.POST.get('nin')
+            if 'email' in request.POST:
+                prospect.email = request.POST.get('email')
+            if 'telephone' in request.POST:
+                prospect.telephone = request.POST.get('telephone')
+            if 'indic' in request.POST:
+                prospect.indic = request.POST.get('indic')
+            if 'canal' in request.POST:
+                prospect.canal = request.POST.get('canal')
+            if 'observation' in request.POST:
+                prospect.observation = request.POST.get('observation')
+            if 'nin' in request.POST:
+                prospect.nin = request.POST.get('nin')
             
             if prospect.type_prospect == 'entreprise':
-                prospect.entreprise = request.POST.get('entreprise_name')
-                prospect.nom = request.POST.get('contact_nom')
-                prospect.prenom = request.POST.get('contact_prenom')
-                prospect.rc = request.POST.get('rc')
-                prospect.nif = request.POST.get('nif')
-                prospect.nis = request.POST.get('nis')
-                prospect.art_imp = request.POST.get('art_imp')
+                if 'entreprise_name' in request.POST:
+                    prospect.entreprise = request.POST.get('entreprise_name')
+                if 'contact_nom' in request.POST:
+                    prospect.nom = request.POST.get('contact_nom')
+                if 'contact_prenom' in request.POST:
+                    prospect.prenom = request.POST.get('contact_prenom')
+                if 'rc' in request.POST:
+                    prospect.rc = request.POST.get('rc')
+                if 'nif' in request.POST:
+                    prospect.nif = request.POST.get('nif')
+                if 'nis' in request.POST:
+                    prospect.nis = request.POST.get('nis')
+                if 'art_imp' in request.POST:
+                    prospect.art_imp = request.POST.get('art_imp')
             else:
-                prospect.nom = request.POST.get('nom')
-                prospect.prenom = request.POST.get('prenom')
+                if 'nom' in request.POST:
+                    prospect.nom = request.POST.get('nom')
+                if 'prenom' in request.POST:
+                    prospect.prenom = request.POST.get('prenom')
                 
             prospect.save()
             return JsonResponse({'status': 'success', 'message': 'Informations mises à jour avec succès'})
