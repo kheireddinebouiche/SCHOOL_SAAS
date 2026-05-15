@@ -95,7 +95,7 @@ def listFraisInscription(request):
     return render(request, 't_formations/frais.html', {'frais': frais})
 
 def ListeDesInstituts(request):
-    liste = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
+    liste = Institut.objects.filter(is_visible=True).exclude(Q(schema_name='public') | Q(tenant_type='master'))
     context = {
         'liste' : liste,
         'tenant' : request.tenant,
@@ -207,7 +207,7 @@ def detailsPartenaire(request, pk):
 
 def ApiGetPartenaireSync(request):
     code = request.GET.get('code_partenaire')
-    liste = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
+    liste = Institut.objects.filter(is_visible=True).exclude(Q(schema_name='public') | Q(tenant_type='master'))
     instituts = []
 
     for institut in liste:
@@ -223,7 +223,7 @@ def ApiGetPartenaireSync(request):
 
 def ApigetFormationSync(request):
     code = request.GET.get('code_formation')
-    liste = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
+    liste = Institut.objects.filter(is_visible=True).exclude(Q(schema_name='public') | Q(tenant_type='master'))
     formation = Formation.objects.get(code=code)
 
     instituts = []
@@ -368,9 +368,9 @@ def ApiCheckSpecialiteSyncState(request):
         modules_master = Modules.objects.filter(specialite=specialite_master)
         
         if formation_master.type_formation == 'etrangere':
-            liste = Institut.objects.filter(tenant_type='second').exclude(schema_name='public')
+            liste = Institut.objects.filter(is_visible=True, tenant_type='second').exclude(schema_name='public')
         else:
-            liste = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
+            liste = Institut.objects.filter(is_visible=True).exclude(Q(schema_name='public') | Q(tenant_type='master'))
 
         results = []
         for institut in liste:
@@ -449,9 +449,9 @@ def ApiSyncUpdateSpecialite(request):
         
         # Determine target tenants
         if formation_master.type_formation == 'etrangere':
-            liste = Institut.objects.filter(tenant_type='second').exclude(schema_name='public')
+            liste = Institut.objects.filter(is_visible=True, tenant_type='second').exclude(schema_name='public')
         else:
-            liste = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
+            liste = Institut.objects.filter(is_visible=True).exclude(Q(schema_name='public') | Q(tenant_type='master'))
 
         updated_count = 0
         errors = []
@@ -617,9 +617,9 @@ def ApiSyncUpdateFormation(request):
     # Filter: Foreign formations are only for 'second' tenants
     # National formations can be for both 'second' and 'associe'
     if formation.type_formation == 'etrangere':
-        liste = Institut.objects.filter(tenant_type='second').exclude(schema_name='public')
+        liste = Institut.objects.filter(is_visible=True, tenant_type='second').exclude(schema_name='public')
     else:
-        liste = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
+        liste = Institut.objects.filter(is_visible=True).exclude(Q(schema_name='public') | Q(tenant_type='master'))
 
     formation.updated = False
     formation.save()
@@ -727,7 +727,7 @@ def UpdatePartenaire(request, pk):
                 ip_address=request.META.get('REMOTE_ADDR')
             )
             if updated_partenaire.type_partenaire == 'etranger':
-                instituts = Institut.objects.exclude(Q(schema_name='public') | Q(tenant_type='master'))
+                instituts = Institut.objects.filter(is_visible=True).exclude(Q(schema_name='public') | Q(tenant_type='master'))
                 for tenant in instituts:
                     with schema_context(tenant.schema_name):
                         try:
@@ -949,7 +949,7 @@ def detailSpecialite(request, pk):
     }
 
     if request.tenant.tenant_type == 'master':
-        instituts = Institut.objects.filter(tenant_type='second').order_by('nom')
+        instituts = Institut.objects.filter(is_visible=True, tenant_type='second').order_by('nom')
         tenant_visibility = []
         master_module_count = Modules.objects.filter(specialite=object).count()
         for inst in instituts:
