@@ -803,9 +803,10 @@ def ApiStoreRappelPreinscrit(request):
     rappel.save()
     return JsonResponse({'status': 'success', 'message': 'Rappel enregistré avec succès.'})
 
-def get_prospects_incomplets():
-    
+def get_prospects_incomplets(promo_id=None):
     prospects = Prospets.objects.filter(type_prospect="particulier").filter(Q(statut = "prinscrit") | Q(statut= "instance") | Q(statut="convertit")).exclude(context='con')
+    if promo_id:
+        prospects = prospects.filter(prospect_fiche_voeux__promo_id=promo_id)
     results = []
 
     for prospect in prospects:
@@ -854,10 +855,10 @@ def get_prospects_incomplets():
 
     return results
 
-def get_prospects_incomplets_double():
-    
-    prospects_incomplets = Prospets.objects.filter(statut="prinscrit", is_double=True).exclude(context='con')
+def get_prospects_incomplets_double(promo_id=None):
     prospects = Prospets.objects.filter(type_prospect="particulier", is_double=True).filter(Q(statut = "prinscrit") | Q(statut= "instance") | Q(statut="convertit")).exclude(context='con')
+    if promo_id:
+        prospects = prospects.filter(prospect_fiche_voeux_double__promo_id=promo_id)
     results = []
 
     for prospect in prospects:
@@ -1051,8 +1052,9 @@ from django.core.paginator import Paginator
 
 @login_required(login_url="institut_app:login")
 def prospects_incomplets_view(request):
-    data_simples = get_prospects_incomplets()            # fiches simples
-    data_double = get_prospects_incomplets_double()      # fiches double
+    promo_id = request.GET.get('promo')
+    data_simples = get_prospects_incomplets(promo_id)            # fiches simples
+    data_double = get_prospects_incomplets_double(promo_id)      # fiches double
 
     # Fusionner les deux dans ta variable data
     all_data = data_simples + data_double
@@ -1066,9 +1068,12 @@ def prospects_incomplets_view(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
+    promos = Promos.objects.filter(is_archived=False).order_by('-begin_year')
     context = {
         'page_obj': page_obj,
-        'all_data': all_data, # On garde all_data pour les compteurs globaux si besoin
+        'all_data': all_data, 
+        'promos': promos,
+        'selected_promo': promo_id,
         'tenant': request.tenant
     }
     return render(request, "tenant_folder/crm/preinscrits/prospects_incomplets.html", context)

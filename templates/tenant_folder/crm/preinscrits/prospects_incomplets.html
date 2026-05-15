@@ -380,6 +380,13 @@
             <div class="col-md-8">
               <div class="d-flex flex-wrap justify-content-md-end gap-3">
                 <div class="d-flex gap-2">
+                  <select id="promo-filter" class="form-select premium-input w-auto">
+                    <option value="">Toutes les promotions</option>
+                    {% for promo in promos %}
+                      <option value="{{ promo.id }}" {% if selected_promo == promo.id|stringformat:"s" %}selected{% endif %}>{{ promo.label }}</option>
+                    {% endfor %}
+                  </select>
+
                   <select id="filter-type" class="form-select premium-input w-auto">
                     <option value="0">Type de client</option>
                     <option value="particulier">Particulier</option>
@@ -1035,6 +1042,17 @@
   });
   
   // Filter functionality
+  document.getElementById('promo-filter').addEventListener('change', function() {
+    const url = new URL(window.location.href);
+    if (this.value) {
+      url.searchParams.set('promo', this.value);
+    } else {
+      url.searchParams.delete('promo');
+    }
+    url.searchParams.delete('page'); // Reset to first page
+    window.location.href = url.toString();
+  });
+
   document.getElementById('filter-type').addEventListener('change', function() {
     // In a real implementation, this would filter the data
     alertify.success("Filtre appliqué: " + this.value);
