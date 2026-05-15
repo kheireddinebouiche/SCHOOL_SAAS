@@ -2,24 +2,74 @@
     alertify.set('notifier','position','top-right');
     alertify.set('notifier','delay', 5); // durée d’affichage en secondes
 
-    // Fonction personnalisée avec barre de progression
-    function showAlert(type, message) {
-        // Créer la notification Alertify
-        var notification = alertify[type](message);
+    // Override global alertify methods to use our modern showAlert
+    const originalAlertify = {
+        success: alertify.success,
+        error: alertify.error,
+        warning: alertify.warning,
+        message: alertify.message,
+        notify: alertify.notify
+    };
 
-        // Attendre que la notif soit rendue dans le DOM
+    alertify.success = function(msg) { return showAlert('success', msg); };
+    alertify.error = function(msg) { return showAlert('error', msg); };
+    alertify.warning = function(msg) { return showAlert('warning', msg); };
+    alertify.message = function(msg) { return showAlert('message', msg); };
+    alertify.notify = function(msg, type) { return showAlert(type || 'message', msg); };
+
+    /**
+     * Modernized Alertify Notification with Glassmorphism and Icons
+     * @param {string} type - 'success', 'error', 'warning', 'message'
+     * @param {string} message - The message to display
+     */
+    function showAlert(type, message) {
+        // Map types to icons and colors
+        const config = {
+            success: { icon: 'ri-checkbox-circle-fill', color: '#0ab39c' },
+            error: { icon: 'ri-error-warning-fill', color: '#f06548' },
+            warning: { icon: 'ri-alert-fill', color: '#f7b84b' },
+            message: { icon: 'ri-information-fill', color: '#299cdb' }
+        };
+
+        const typeConfig = config[type] || config.message;
+        
+        // Construct HTML content with icon
+        const content = `
+            <div class="modern-alert-content d-flex align-items-center">
+                <div class="modern-alert-icon me-3">
+                    <i class="${typeConfig.icon}"></i>
+                </div>
+                <div class="modern-alert-text">
+                    ${message}
+                </div>
+            </div>
+        `;
+
+        // Create the notification Alertify using original methods to avoid recursion
+        const originalMethod = originalAlertify[type] || originalAlertify.message;
+        var notification = originalMethod.call(alertify, content);
+
+        // Wait for render to apply specific styling and progress bar
         setTimeout(function() {
-            var el = document.querySelector('.alertify-notifier .ajs-message:last-child');
+            var allMessages = document.querySelectorAll('.alertify-notifier .ajs-message');
+            var el = allMessages[allMessages.length - 1];
+            
             if (el) {
-                // Ajouter la barre de progression
+                // Apply type-specific class for CSS styling
+                el.classList.add('modern-alert', 'modern-alert-' + type);
+                
+                // Add the progress bar
                 var progressBar = document.createElement('div');
                 progressBar.className = 'alertify-progress-bar';
+                progressBar.style.backgroundColor = typeConfig.color;
                 el.appendChild(progressBar);
 
-                // Lancer l'animation
+                // Start animation matching Alertify delay
                 progressBar.style.animation = 'progressbar 5s linear forwards';
             }
         }, 10);
+        
+        return notification;
     }
 
     {% for flashmeg in messages %}
@@ -29,26 +79,129 @@
             showAlert('error', '{{ flashmeg.message|escapejs }}');
         {% elif 'warning' in flashmeg.tags %}
             showAlert('warning', '{{ flashmeg.message|escapejs }}');
+        {% else %}
+            showAlert('message', '{{ flashmeg.message|escapejs }}');
         {% endif %}
     {% endfor %}
 </script>
 
 <style>
-/* === STYLE BARRE DE PROGRESSION === */
+/* === MODERN ALERTIFY THEME === */
+
 .alertify-notifier .ajs-message {
-    position: relative;
-    overflow: hidden;
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+    padding: 16px 20px !important;
+    color: #333 !important;
+    width: 350px !important;
+    font-weight: 500 !important;
+    overflow: hidden !important;
+    margin-bottom: 12px !important;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
 }
+
+/* Icon Styling */
+.modern-alert-icon {
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modern-alert-success .modern-alert-icon { color: #0ab39c; }
+.modern-alert-error .modern-alert-icon { color: #f06548; }
+.modern-alert-warning .modern-alert-icon { color: #f7b84b; }
+.modern-alert-message .modern-alert-icon { color: #299cdb; }
+
+.modern-alert-text {
+    line-height: 1.4;
+    font-size: 0.9rem;
+}
+
+/* === PROGRESS BAR === */
 .alertify-progress-bar {
     position: absolute;
     bottom: 0;
     left: 0;
-    height: 4px;
-    background: #43d400; /* couleur de la barre */
+    height: 3px;
     width: 100%;
+    opacity: 0.6;
 }
+
 @keyframes progressbar {
     from { width: 100%; }
     to { width: 0%; }
+}
+
+/* Hover effect to pause or just better feel */
+.alertify-notifier .ajs-message:hover {
+    transform: scale(1.02) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Dark mode support if header data-topbar is changed or if user prefers */
+[data-layout-mode="dark"] .alertify-notifier .ajs-message {
+    background: rgba(33, 37, 41, 0.85) !important;
+    color: #eee !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* === DIALOG MODERNIZATION === */
+.ajs-dialog {
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    border: none !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+.ajs-header {
+    background: #f8fafc !important;
+    font-weight: 700 !important;
+    padding: 1.25rem 1.5rem !important;
+    color: #333 !important;
+    border-bottom: 1px solid #eff2f7 !important;
+}
+
+.ajs-body {
+    padding: 2rem 1.5rem !important;
+    font-size: 0.95rem !important;
+    color: #495057 !important;
+}
+
+.ajs-footer {
+    background: #f8fafc !important;
+    border-top: 1px solid #eff2f7 !important;
+    padding: 1rem 1.5rem !important;
+}
+
+.ajs-button {
+    border-radius: 10px !important;
+    padding: 8px 20px !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    font-size: 0.85rem !important;
+    transition: all 0.2s ease !important;
+    border: none !important;
+}
+
+.ajs-btn.ajs-ok {
+    background-color: #0ab39c !important;
+    color: #fff !important;
+}
+
+.ajs-btn.ajs-cancel {
+    background-color: #f06548 !important;
+    color: #fff !important;
+}
+
+.ajs-button:hover {
+    opacity: 0.9 !important;
+    transform: translateY(-1px) !important;
 }
 </style>

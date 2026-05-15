@@ -117,8 +117,8 @@ MIDDLEWARE = [
     
 ]
 
-# Redis cache and sessions - only in production
-if not DEBUG:
+# Redis cache and sessions - only in production (non-Windows or specific env)
+if not DEBUG and os.name != 'nt':
     CACHES = {
         "default": {
             "BACKEND": "django_redis.cache.RedisCache",
@@ -133,8 +133,16 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 else:
-    # Development: use local memory cache (default, no config needed)
-    pass
+    # Development or Windows Local: use local memory cache
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-snowflake",
+        }
+    }
+    SESSION_ENGINE = "django.contrib.sessions.backends.db"
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
 
 ROOT_URLCONF = 'app.urls'
 PUBLIC_SCHEMA_URLCONF  = "app.urls_public"
