@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q, F
-from t_formations.models import Specialites, DoubleDiplomation, Promos
+from t_formations.models import Specialites, DoubleDiplomation, Promos, Formation
 from django.db.models.functions import TruncDate
 from ..models import Prospets
 from datetime import datetime, timedelta
@@ -11,15 +11,18 @@ from django.utils import timezone
 @login_required(login_url='institut_app:login')
 def crm_reporting(request):
     promos = Promos.objects.filter(etat='active')
+    formations = Formation.objects.all()
     context = {
         'tenant': request.tenant,
         'promos': promos,
+        'formations': formations,
     }
     return render(request, 'tenant_folder/crm/reporting.html', context)
 
 @login_required(login_url='institut_app:login')
 def ApiGetCrmReportingData(request):
     promo_id = request.GET.get('promo_id')
+    formation_id = request.GET.get('formation_id')
 
     # Base queryset for all academic reporting
     base_qs = Prospets.objects.filter(context='acc').exclude(is_ets_prospect=True).exclude(type_prospect='entreprise')\
@@ -83,6 +86,11 @@ def ApiGetCrmReportingData(request):
             Q(prospect_fiche_voeux__promo__id=promo_id) | 
             Q(prospect_fiche_voeux_double__promo__id=promo_id)
         ).distinct()
+    
+    if formation_id:
+        kpi_qs = kpi_qs.filter(
+            prospect_fiche_voeux__specialite__formation__code=formation_id
+        ).distinct()
 
     total_prospects = kpi_qs.count()
     total_converted = kpi_qs.filter(statut='convertit').count()
@@ -95,16 +103,30 @@ def ApiGetCrmReportingData(request):
     simple_filter = Q(specialite_fiche_voeux__promo_id=promo_id) if promo_id else Q()
     double_filter = Q(fichevoeuxdouble__promo_id=promo_id) if promo_id else Q()
 
-    matrix_simple_qs = Specialites.objects.annotate(
+    if formation_id:
+        # Exclude double diplomation from calculations when formation filter is active (as requested)
+        double_filter = Q(id__isnull=True)
+
+    matrix_simple_qs = Specialites.objects.all()
+    if formation_id:
+        matrix_simple_qs = matrix_simple_qs.filter(formation__code=formation_id)
+
+    matrix_simple_qs = matrix_simple_qs.annotate(
         visiteur=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='visiteur') & Q(specialite_fiche_voeux__prospect__context='acc') & Q(specialite_fiche_voeux__prospect__is_ets_prospect=False) & ~Q(specialite_fiche_voeux__prospect__type_prospect='entreprise') & Q(specialite_fiche_voeux__prospect__conseil_commercial__isnull=True) & Q(specialite_fiche_voeux__prospect__opportunites__isnull=True) & Q(specialite_fiche_voeux__prospect__client_devis__isnull=True) & simple_filter),
         prinscrit=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='prinscrit') & Q(specialite_fiche_voeux__prospect__context='acc') & Q(specialite_fiche_voeux__prospect__is_ets_prospect=False) & ~Q(specialite_fiche_voeux__prospect__type_prospect='entreprise') & Q(specialite_fiche_voeux__prospect__conseil_commercial__isnull=True) & Q(specialite_fiche_voeux__prospect__opportunites__isnull=True) & Q(specialite_fiche_voeux__prospect__client_devis__isnull=True) & simple_filter),
         instance=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='instance') & Q(specialite_fiche_voeux__prospect__context='acc') & Q(specialite_fiche_voeux__prospect__is_ets_prospect=False) & ~Q(specialite_fiche_voeux__prospect__type_prospect='entreprise') & Q(specialite_fiche_voeux__prospect__conseil_commercial__isnull=True) & Q(specialite_fiche_voeux__prospect__opportunites__isnull=True) & Q(specialite_fiche_voeux__prospect__client_devis__isnull=True) & simple_filter),
         convertit=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='convertit') & Q(specialite_fiche_voeux__prospect__context='acc') & Q(specialite_fiche_voeux__prospect__is_ets_prospect=False) & ~Q(specialite_fiche_voeux__prospect__type_prospect='entreprise') & Q(specialite_fiche_voeux__prospect__conseil_commercial__isnull=True) & Q(specialite_fiche_voeux__prospect__opportunites__isnull=True) & Q(specialite_fiche_voeux__prospect__client_devis__isnull=True) & simple_filter),
         annuler=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__statut='annuler') & Q(specialite_fiche_voeux__prospect__context='acc') & Q(specialite_fiche_voeux__prospect__is_ets_prospect=False) & ~Q(specialite_fiche_voeux__prospect__type_prospect='entreprise') & Q(specialite_fiche_voeux__prospect__conseil_commercial__isnull=True) & Q(specialite_fiche_voeux__prospect__opportunites__isnull=True) & Q(specialite_fiche_voeux__prospect__client_devis__isnull=True) & simple_filter),
         total=Count('specialite_fiche_voeux', filter=Q(specialite_fiche_voeux__prospect__context='acc') & Q(specialite_fiche_voeux__prospect__is_ets_prospect=False) & ~Q(specialite_fiche_voeux__prospect__type_prospect='entreprise') & Q(specialite_fiche_voeux__prospect__conseil_commercial__isnull=True) & Q(specialite_fiche_voeux__prospect__opportunites__isnull=True) & Q(specialite_fiche_voeux__prospect__client_devis__isnull=True) & simple_filter)
-    ).values('label', 'formation__nom', 'visiteur', 'prinscrit', 'instance', 'convertit', 'annuler', 'total').order_by('-total')
+    ).values('label', 'formation__nom', 'version', 'visiteur', 'prinscrit', 'instance', 'convertit', 'annuler', 'total').order_by('-total')
 
-    matrix_double_qs = DoubleDiplomation.objects.annotate(
+    matrix_double_qs = DoubleDiplomation.objects.all()
+    # If formation_id is set, the user wants to focus on a specific formation.
+    # We follow the instruction to "not take into consideration double diplomation" for this filter.
+    if formation_id:
+        matrix_double_qs = matrix_double_qs.none()
+
+    matrix_double_qs = matrix_double_qs.annotate(
         visiteur=Count('fichevoeuxdouble', filter=Q(fichevoeuxdouble__prospect__statut='visiteur') & Q(fichevoeuxdouble__prospect__context='acc') & Q(fichevoeuxdouble__prospect__is_ets_prospect=False) & ~Q(fichevoeuxdouble__prospect__type_prospect='entreprise') & Q(fichevoeuxdouble__prospect__conseil_commercial__isnull=True) & Q(fichevoeuxdouble__prospect__opportunites__isnull=True) & Q(fichevoeuxdouble__prospect__client_devis__isnull=True) & double_filter),
         prinscrit=Count('fichevoeuxdouble', filter=Q(fichevoeuxdouble__prospect__statut='prinscrit') & Q(fichevoeuxdouble__prospect__context='acc') & Q(fichevoeuxdouble__prospect__is_ets_prospect=False) & ~Q(fichevoeuxdouble__prospect__type_prospect='entreprise') & Q(fichevoeuxdouble__prospect__conseil_commercial__isnull=True) & Q(fichevoeuxdouble__prospect__opportunites__isnull=True) & Q(fichevoeuxdouble__prospect__client_devis__isnull=True) & double_filter),
         instance=Count('fichevoeuxdouble', filter=Q(fichevoeuxdouble__prospect__statut='instance') & Q(fichevoeuxdouble__prospect__context='acc') & Q(fichevoeuxdouble__prospect__is_ets_prospect=False) & ~Q(fichevoeuxdouble__prospect__type_prospect='entreprise') & Q(fichevoeuxdouble__prospect__conseil_commercial__isnull=True) & Q(fichevoeuxdouble__prospect__opportunites__isnull=True) & Q(fichevoeuxdouble__prospect__client_devis__isnull=True) & double_filter),

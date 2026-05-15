@@ -300,9 +300,17 @@
                                 <div class="d-flex flex-wrap align-items-center gap-3">
                                     <div class="position-relative">
                                         <select class="form-select form-select-premium w-auto pe-5" id="promoSelect" aria-label="Sélectionner une promotion">
-                                            <option value="" selected>Toutes les années académiques</option>
+                                            <option value="" selected>Toutes les promotions</option>
                                             {% for promo in promos %}
                                                 <option value="{{ promo.id }}">{{ promo.label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="position-relative">
+                                        <select class="form-select form-select-premium w-auto pe-5" id="formationSelect" aria-label="Sélectionner une formation">
+                                            <option value="" selected>Toutes les formations</option>
+                                            {% for formation in formations %}
+                                                <option value="{{ formation.code }}">{{ formation.nom }}</option>
                                             {% endfor %}
                                         </select>
                                     </div>
@@ -329,8 +337,7 @@
                                         <table class="table table-nowrap align-middle mb-0" id="table-simple">
                                             <thead class="table-light">
                                                 <tr>
-                                                    <th scope="col">Spécialité</th>
-                                                    <th scope="col">Formation</th>
+                                                    <th scope="col">Spécialité / Formation</th>
                                                     <th scope="col" class="text-center">Prospects</th>
                                                     <th scope="col" class="text-center">Pré-inscrit</th>
                                                     <th scope="col" class="text-center">Instance</th>
@@ -380,19 +387,29 @@
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const promoSelect = document.getElementById('promoSelect');
+        const formationSelect = document.getElementById('formationSelect');
         
         // Initial fetch
         fetchData();
 
         // Event listener for promo change
         promoSelect.addEventListener('change', function() {
-            fetchData(this.value);
+            fetchData(this.value, formationSelect.value);
         });
 
-        function fetchData(promoId = '') {
+        // Event listener for formation change
+        formationSelect.addEventListener('change', function() {
+            fetchData(promoSelect.value, this.value);
+        });
+
+        function fetchData(promoId = '', formationId = '') {
             let url = "{% url 't_crm:ApiGetCrmReportingData' %}";
-            if (promoId) {
-                url += `?promo_id=${promoId}`;
+            const params = new URLSearchParams();
+            if (promoId) params.append('promo_id', promoId);
+            if (formationId) params.append('formation_id', formationId);
+            
+            if (params.toString()) {
+                url += `?${params.toString()}`;
             }
 
             fetch(url)
@@ -420,7 +437,7 @@
             tbody.innerHTML = '';
             
             if (!data || data.length === 0) {
-                const colspan = tableId === 'table-simple' ? 8 : 7;
+                const colspan = tableId === 'table-simple' ? 7 : 7;
                 tbody.innerHTML = `<tr><td colspan="${colspan}" class="text-center text-muted py-3">Aucune donnée disponible</td></tr>`;
                 return;
             }
@@ -433,17 +450,15 @@
                                 <div class="bg-primary bg-opacity-10 rounded p-2 me-3 d-none d-sm-block">
                                     <i class="ri-book-3-line text-primary"></i>
                                 </div>
-                                <span class="text-truncate" title="${item.label}">${item.label || 'N/A'}</span>
+                                <div class="d-flex flex-column">
+                                    <span class="text-truncate fw-bold" title="${item.label}">${item.label || 'N/A'}</span>
+                                    <div class="d-flex align-items-center gap-2 mt-1">
+                                        ${item.formation__nom ? `<span class="text-muted small"><i class="ri-graduation-cap-line me-1"></i>${item.formation__nom}</span>` : ''}
+                                        ${item.version ? `<span class="text-muted small border-start ps-2"><i class="ri-git-branch-line me-1"></i>V${item.version}</span>` : ''}
+                                    </div>
+                                </div>
                             </div>
                         </td>`;
-
-                // Add formation column only for simple matrix
-                if (tableId === 'table-simple') {
-                    row += `
-                        <td class="text-muted small">
-                            ${item.formation__nom || '<span class="badge bg-soft-secondary">Non définie</span>'}
-                        </td>`;
-                }
 
                 row += `
                         <td class="text-center"><span class="badge bg-light text-dark py-2 px-3 rounded-pill border">${item.visiteur}</span></td>

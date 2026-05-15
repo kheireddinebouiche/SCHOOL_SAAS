@@ -11,7 +11,7 @@ from django.contrib import messages
 from t_tresorerie.models import ClientPaiementsRequest, clientPaiementsRequestLine, SeuilPaiements
 from t_formations.models import Formation, Specialites, Promos, DossierInscription, DoubleDiplomation
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Exists, OuterRef
 from django.core.exceptions import PermissionDenied
 from functools import wraps
 from decimal import Decimal
@@ -469,7 +469,16 @@ def ListeDesProspects(request):
 @login_required(login_url='institut_app:login')
 @ajax_required
 def ApiLoadProspects(request):
-    prospects = Prospets.objects.filter(context="acc", statut__in=["visiteur", "annuler"]).values('slug','id', 'nin', 'nom', 'prenom', 'type_prospect','email','indic','telephone','canal','created_at','etat','entreprise', 'motif_annulation', 'statut').order_by('-created_at')
+    fiche_exists = FicheDeVoeux.objects.filter(prospect=OuterRef('pk'))
+    fiche_double_exists = FicheVoeuxDouble.objects.filter(prospect=OuterRef('pk'))
+
+    prospects = Prospets.objects.filter(context="acc", statut__in=["visiteur", "annuler"]).annotate(
+        has_fiche_voeux=Exists(fiche_exists) | Exists(fiche_double_exists)
+    ).values(
+        'slug','id', 'nin', 'nom', 'prenom', 'type_prospect','email','indic','telephone','canal',
+        'created_at','etat','entreprise', 'motif_annulation', 'statut', 'has_fiche_voeux'
+    ).order_by('-created_at')
+    
     for l in prospects:
         l_obj = Prospets.objects.get(id=l['id'])
         l['type_prospect_label'] = l_obj.get_type_prospect_display()
