@@ -638,6 +638,77 @@ document.addEventListener('DOMContentLoaded', function() {
           return new bootstrap.Tooltip(tooltipTriggerEl)
         })
     }
+
+    // Global handler for real-time messages via WebSocket
+    window.handleNewIncomingMessage = function(data) {
+        console.log("New incoming message:", data);
+        
+        // 1. Update the sidebar "last message" and highlight
+        const contactType = data.group_id ? 'group' : 'user';
+        const contactId = data.group_id || data.sender_id;
+        const sidebarItem = document.querySelector(`.contact-item[data-type="${contactType}"][data-id="${contactId}"]`);
+        
+        if (sidebarItem) {
+            const lastMsgP = sidebarItem.querySelector('.contact-last-msg');
+            if (lastMsgP) {
+                lastMsgP.innerText = data.content || "Fichier joint";
+                lastMsgP.classList.add('fw-bold', 'text-primary');
+            }
+            // Move to top
+            const parent = sidebarItem.parentElement;
+            parent.prepend(sidebarItem);
+        }
+
+        // 2. If the conversation is currently open, append the bubble
+        const currentReceiverId = document.getElementById('receiverId') ? document.getElementById('receiverId').value : null;
+        const currentGroupId = document.getElementById('groupId') ? document.getElementById('groupId').value : null;
+        
+        let shouldAppend = false;
+        if (data.group_id && data.group_id == currentGroupId) {
+            shouldAppend = true;
+        } else if (!data.group_id && data.sender_id == currentReceiverId) {
+            shouldAppend = true;
+        }
+
+        if (shouldAppend) {
+            var container = document.getElementById('messagesContainer');
+            if (container) {
+                var fileHtml = '';
+                if (data.file_url) {
+                    var isImage = data.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                    if (isImage) {
+                        fileHtml = `<div class="mb-2"><a href="${data.file_url}" target="_blank"><img src="${data.file_url}" alt="Attachment" class="img-fluid rounded-3 mb-1" style="max-height: 200px; border-radius: 12px;"></a></div>`;
+                    } else {
+                        fileHtml = `<div class="mb-2"><a href="${data.file_url}" target="_blank" class="d-flex align-items-center p-3 bg-light rounded-3 text-dark border"><i class="ri-file-text-line fs-3 me-2 text-primary"></i><div class="text-truncate fw-medium" style="max-width: 150px;">${data.file_name}</div></a></div>`;
+                    }
+                }
+                
+                var html = `
+                    <div class="d-flex justify-content-start mb-4 slide-in-bottom">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="avatar-xs">
+                                <div class="avatar-title rounded-circle bg-light text-primary fw-bold fs-10">
+                                    ${data.sender_name.slice(0, 1).toUpperCase()}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="chat-bubble chat-bubble-received d-inline-block shadow-sm">
+                                ${data.group_id ? `<div class="small fw-bold text-primary mb-1">${data.sender_name}</div>` : ''}
+                                ${fileHtml}
+                                ${data.content || ''}
+                            </div>
+                            <div class="mt-1">
+                                <span class="small text-muted">${data.timestamp}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+                scrollToBottom();
+            }
+        }
+    };
 });
 </script>
 {% endblock content %}

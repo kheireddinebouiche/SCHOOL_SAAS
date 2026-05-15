@@ -4,7 +4,7 @@ from asgiref.sync import async_to_sync
 from .models import Notification, UserModuleRole
 from django.contrib.auth import get_user_model
 
-def send_notification_to_user(user, message, link=None):
+def send_notification_to_user(user, message, link=None, extra_data=None):
     """
     Sends a notification to a specific user.
     """
@@ -19,6 +19,7 @@ def send_notification_to_user(user, message, link=None):
                 "message": message,
                 "link": link,
                 "id": notif.id,
+                "extra_data": extra_data
             }
         )
 

@@ -6,6 +6,9 @@ from .models import Reminder, Message, ChatGroup
 from django.db.models import Q
 import json
 from django.utils.dateparse import parse_datetime
+from django.urls import reverse
+from institut_app.utils_notifications import send_notification_to_user
+from institut_app.models import GlobalConfiguration
 
 @login_required
 def calendar_view(request):
@@ -268,6 +271,36 @@ def send_message_api(request):
             msg.receiver = receiver
             
         msg.save()
+
+        # Send Real-time Notifications
+        try:
+            config = GlobalConfiguration.get_solo()
+            # We use the same general notification toggle for now, or assume it's desired for communication
+            if config.crm_notifications_enabled: 
+                link = reverse('t_communication:messages')
+                
+                chat_data = {
+                    'type': 'chat_message',
+                    'sender_id': sender.id,
+                    'sender_name': sender.username,
+                    'content': content,
+                    'timestamp': msg.timestamp.strftime('%H:%M'),
+                    'message_id': msg.id,
+                    'group_id': msg.group.id if msg.group else None,
+                    'receiver_id': msg.receiver.id if msg.receiver else None,
+                    'file_url': msg.file.url if msg.file else None,
+                    'file_name': msg.file.name.split('/')[-1] if msg.file else None,
+                }
+
+                if msg.group:
+                    notif_message = f"Nouveau message de {sender.username} dans {msg.group.name}"
+                    for member in msg.group.members.exclude(id=sender.id):
+                        send_notification_to_user(member, notif_message, link, extra_data=chat_data)
+                else:
+                    notif_message = f"Nouveau message de {sender.username}"
+                    send_notification_to_user(msg.receiver, notif_message, link, extra_data=chat_data)
+        except Exception as e:
+            print(f"Error sending message notification: {e}")
         
         response_data = {
             'status': 'success', 

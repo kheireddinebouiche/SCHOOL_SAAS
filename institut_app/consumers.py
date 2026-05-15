@@ -27,9 +27,11 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         message = event['message']
         link = event.get('link')
         notif_id = event.get('id')
+        extra_data = event.get('extra_data')
         print(f"DEBUG WS: Sending message to user {self.user.id}: {message}")
         await self.send(text_data=json.dumps({
             'message': message,
             'link': link,
             'id': notif_id,
+            'extra_data': extra_data
         }))
