@@ -11,6 +11,7 @@ def send_notification_to_user(user, message, link=None):
     notif = Notification.objects.create(user=user, message=message, link=link)
     channel_layer = get_channel_layer()
     if channel_layer:
+        print(f"DEBUG NOTIF: Sending to group user_{user.id}: {message}")
         async_to_sync(channel_layer.group_send)(
             f"user_{user.id}",
             {

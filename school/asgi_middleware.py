@@ -30,9 +30,10 @@ def get_user(scope):
             
         # Set tenant on connection for this thread
         connection.set_tenant(tenant)
+        print(f"DEBUG ASGI: Tenant resolved to {tenant.schema_name} for host {host}")
         
     except Exception as e:
-        print(f"Tenant resolution error: {e}")
+        print(f"DEBUG ASGI: Tenant resolution error for host {host}: {e}")
         return AnonymousUser()
         
     # 2. Get Session and User
@@ -59,8 +60,10 @@ def get_user(scope):
             User = get_user_model()
             try:
                 user = User.objects.get(id=user_id)
+                print(f"DEBUG ASGI: User resolved: {user.username}")
                 return user
             except User.DoesNotExist:
+                print(f"DEBUG ASGI: User not found for ID: {user_id}")
                 return AnonymousUser()
                 
     except Exception as e:

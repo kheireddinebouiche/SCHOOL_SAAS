@@ -544,6 +544,7 @@ class Derogations(models.Model):
     date_de_traitement = models.DateField(null=True, blank=True, auto_now_add=True)
     observation = models.CharField(max_length=1000, null=True, blank=True)
     etat = models.BooleanField(default=False)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='derogations_created')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

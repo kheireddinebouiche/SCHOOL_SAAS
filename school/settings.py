@@ -31,12 +31,14 @@ SAAS_SYSTEM_PIN = env("SAAS_SYSTEM_PIN", default="1234")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
-ALLOWED_HOSTS = ['.insim360.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['.insim360.com', 'localhost', '127.0.0.1', '.localhost']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://insim360.com',
     'https://test.insim360.com',
-    'https://*.insim360.com'
+    'https://*.insim360.com',
+    'http://*.localhost:8000',
+    'http://localhost:8000'
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -99,7 +101,6 @@ INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_
 MIDDLEWARE = [
     
     'django_tenants.middleware.main.TenantMainMiddleware',
-    'django_tenants.middleware.TenantMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'saas_admin_app.middleware.SaaSMaintenanceMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

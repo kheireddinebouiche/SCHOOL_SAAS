@@ -10,7 +10,7 @@ from django.db import transaction
 from django.utils.dateformat import format
 from django.utils.dateformat import format
 from institut_app.decorators import *
-from institut_app.utils_notifications import send_notification_to_module_level
+from institut_app.utils_notifications import send_notification_to_module_level, send_notification_to_user
 from institut_app.models import GlobalConfiguration
 from django.urls import reverse
 from django.core.paginator import Paginator
@@ -119,6 +119,7 @@ def ApiStoreDerogation(request):
         demandeur = preinscrit,
         type = reason,
         motif = "Documents Incomplets",
+        created_by = request.user
     )
 
     # Log the action
@@ -198,6 +199,19 @@ def ApiTraiteDerogation(request):
         details=f"{action} de la demande de dérogation pour {prospect.nom} {prospect.prenom}. Commentaire: {commentaire}",
         ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
     )
+
+    # Send notification to the user who requested the derogation
+    if obj.created_by:
+        try:
+            status_label = "acceptée" if decision == "acceptee" else "rejetée"
+            message = f"Votre demande de dérogation pour {prospect.nom} {prospect.prenom} a été {status_label}."
+            link = reverse('t_crm:DetailsPrinscrit', kwargs={'pk': prospect.id})
+            
+            config = GlobalConfiguration.get_solo()
+            if config.crm_notifications_enabled:
+                send_notification_to_user(obj.created_by, message, link)
+        except Exception as e:
+            print(f"Error sending notification to requester: {e}")
 
     return JsonResponse({"status" : "success"})
 

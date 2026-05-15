@@ -14,6 +14,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 self.channel_name
             )
             await self.accept()
+            print(f"DEBUG WS: Connection accepted for user {self.user.username} in group {self.group_name}")
 
     async def disconnect(self, close_code):
         if hasattr(self, 'group_name'):
@@ -26,6 +27,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         message = event['message']
         link = event.get('link')
         notif_id = event.get('id')
+        print(f"DEBUG WS: Sending message to user {self.user.id}: {message}")
         await self.send(text_data=json.dumps({
             'message': message,
             'link': link,
