@@ -20,7 +20,7 @@ from django.core.paginator import Paginator
 @module_permission_required('crm','view')
 @module_permission_required('crm','add')
 @module_permission_required('crm','approuv')
-@role_required('crm', ['Administrateur','Superviseur'])
+@role_required('crm', ['Administrateur','Superviseur','Manager'])
 def liste_derogations(request):
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('status', 'all')
@@ -234,4 +234,4 @@ def ApiDeleteDerogation(request):
     except Derogations.DoesNotExist:
         return JsonResponse({"status": "error", "message": "Dérogation introuvable."})
     except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)})
+        return JsonResponse({"status": "error", "message": str(e)})

@@ -31,7 +31,17 @@ SAAS_SYSTEM_PIN = env("SAAS_SYSTEM_PIN", default="1234")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
-ALLOWED_HOSTS = ['localhost', '127.0.0.1','*','insim360.com']
+ALLOWED_HOSTS = ['.insim360.com', 'localhost', '127.0.0.1']
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://insim360.com',
+    'https://test.insim360.com',
+    'https://*.insim360.com'
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
 
 
 # Application definition
@@ -119,6 +129,8 @@ if not DEBUG:
     }
     SESSION_ENGINE = "django.contrib.sessions.backends.cache"
     SESSION_CACHE_ALIAS = "default"
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 else:
     # Development: use local memory cache (default, no config needed)
     pass
