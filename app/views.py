@@ -122,7 +122,7 @@ def new_tenant(request):
     return render(request, 'public_folder/new_tenant.html', context)
 
 def tenant_list(request):
-    list = Institut.objects.all()
+    list = Institut.objects.filter(is_visible=True)
     return render(request,'public_folder/list_tenant.html',{'list' : list})
 
 def CreateSuperUser(request):
@@ -206,9 +206,9 @@ def tenant_comm_hub(request):
     current_tenant = request.tenant
     
     if current_tenant.tenant_type == 'master':
-        tenants_list = Institut.objects.filter(tenant_type='second')
+        tenants_list = Institut.objects.filter(is_visible=True, tenant_type='second')
     else:
-        tenants_list = Institut.objects.filter(tenant_type='master')
+        tenants_list = Institut.objects.filter(is_visible=True, tenant_type='master')
 
     return render(request, 'tenant_folder/communication/inter_tenant_hub.html', {
         'tenants_list': tenants_list,
@@ -336,9 +336,9 @@ def tenant_comm_detail(request, tenant_id):
 
     # If Master, we want the list of Seconds. If Second, we want list of Masters.
     if current_tenant.tenant_type == 'master':
-        tenants_list = Institut.objects.filter(tenant_type='second')
+        tenants_list = Institut.objects.filter(is_visible=True, tenant_type='second')
     else:
-        tenants_list = Institut.objects.filter(tenant_type='master')
+        tenants_list = Institut.objects.filter(is_visible=True, tenant_type='master')
 
     context = {
         'target_tenant': target_tenant,
@@ -503,9 +503,9 @@ def tenant_comm_global(request):
     # Currently we ignore is_read for global
     
     if current_tenant.tenant_type == 'master':
-        tenants_list = Institut.objects.filter(tenant_type='second')
+        tenants_list = Institut.objects.filter(is_visible=True, tenant_type='second')
     else:
-        tenants_list = Institut.objects.filter(tenant_type='master')
+        tenants_list = Institut.objects.filter(is_visible=True, tenant_type='master')
 
     # Mock target_tenant for global space rendering
     target_tenant = type('', (), {})()
