@@ -1,4 +1,5 @@
 {% extends "saas_admin_app/saas_base.html" %}
+{% load static %}
 
 {% block content %}
 <div class="row mb-4">
@@ -17,7 +18,7 @@
                 <button class="btn btn-outline-primary rounded-pill fw-medium" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
                     <i class="ri-folder-add-line me-1"></i> Catégorie
                 </button>
-                <button class="btn btn-primary rounded-pill fw-medium shadow-sm" data-bs-toggle="modal" data-bs-target="#addResourceModal">
+                <button class="btn btn-primary rounded-pill fw-medium shadow-sm" onclick="resetResourceModal()" data-bs-toggle="modal" data-bs-target="#addResourceModal">
                     <i class="ri-file-add-line me-1"></i> Nouvelle Ressource
                 </button>
             </div>
@@ -229,109 +230,183 @@
     </div>
 </div>
 
-<!-- Resource Modal -->
+<!-- Resource Modal (Redesigned Premium) -->
 <div class="modal fade" id="addResourceModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.5rem; overflow: hidden;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.5rem;">
             <form method="POST" action="{% url 'saas_admin_app:saas_knowledge_resource_action' %}" enctype="multipart/form-data">
                 {% csrf_token %}
                 <input type="hidden" name="action" id="res_action" value="add">
                 <input type="hidden" name="id" id="res_id" value="">
                 
-                <div class="modal-header bg-light border-0 p-4 pb-3">
+                <div class="modal-header bg-white border-bottom border-light p-4">
                     <div class="d-flex align-items-center w-100">
-                        <div class="bg-primary bg-opacity-10 p-2 rounded-circle me-3">
-                            <i class="ri-file-add-line text-primary fs-4"></i>
+                        <div class="icon-box primary me-3">
+                            <i class="ri-edit-2-line"></i>
                         </div>
-                        <h5 class="modal-title fw-bold text-dark mb-0 flex-grow-1" id="res_modal_title">Nouvelle Ressource</h5>
+                        <h5 class="modal-title fw-bold text-dark mb-0 flex-grow-1" id="res_modal_title">Gestion de Ressource</h5>
                         <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                 </div>
                 
-                <div class="modal-body p-4">
+                <div class="modal-body p-4 bg-light bg-opacity-50">
                     <div class="row g-4">
-                        <div class="col-md-7">
-                            <label class="form-label fw-medium">Titre de la ressource</label>
-                            <input type="text" name="title" id="res_title" class="form-control bg-light border-0 rounded-3" required placeholder="Titre clair et descriptif">
-                        </div>
-                        <div class="col-md-5">
-                            <label class="form-label fw-medium">Catégorie associée</label>
-                            <select name="category" id="res_category" class="form-select bg-light border-0 rounded-3" required>
-                                {% for cat in categories %}
-                                <option value="{{ cat.id }}">{{ cat.name }}</option>
-                                {% empty %}
-                                <option value="" disabled>Veuillez d'abord créer une catégorie</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-5">
-                            <label class="form-label fw-medium">Type de Contenu</label>
-                            <select name="resource_type" id="res_type" class="form-select bg-light border-0 rounded-3" required onchange="toggleResourceFields()">
-                                <option value="VIDEO">Vidéo (Lien YouTube/Vimeo)</option>
-                                <option value="PDF">Document PDF</option>
-                                <option value="ARTICLE">Article / Texte</option>
-                                <option value="FILE">Fichier à télécharger</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-7" id="video_url_field">
-                            <label class="form-label fw-medium">Lien de la vidéo</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-0"><i class="ri-link-m"></i></span>
-                                <input type="url" name="video_url" id="res_video_url" class="form-control bg-light border-0 rounded-end-3" placeholder="https://www.youtube.com/watch?v=...">
+                        <!-- Left Sidebar: Configuration -->
+                        <div class="col-lg-4">
+                            <div class="card border-0 shadow-sm rounded-4">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-center mb-4">
+                                        <div class="bg-primary bg-opacity-10 p-2 rounded-circle me-2">
+                                            <i class="ri-settings-4-line text-primary"></i>
+                                        </div>
+                                        <h6 class="mb-0 fw-bold">Configuration</h6>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label class="form-label fw-semibold small text-uppercase text-muted mb-2">Titre de la ressource</label>
+                                        <input type="text" name="title" id="res_title" class="form-control border-light-subtle rounded-3" required placeholder="Ex: Tutoriel Finance">
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label class="form-label fw-semibold small text-uppercase text-muted mb-2">Catégorie</label>
+                                        <select name="category" id="res_category" class="form-select border-light-subtle rounded-3" required>
+                                            {% for cat in categories %}
+                                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                            {% empty %}
+                                            <option value="" disabled>Créer une catégorie d'abord</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label class="form-label fw-semibold small text-uppercase text-muted mb-2">Type de ressource</label>
+                                        <select name="resource_type" id="res_type" class="form-select border-light-subtle rounded-3" required onchange="toggleResourceFields()">
+                                            <option value="VIDEO">Vidéo</option>
+                                            <option value="PDF">PDF</option>
+                                            <option value="ARTICLE">Article / Texte</option>
+                                            <option value="FILE">Autre Fichier</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="p-3 rounded-4 bg-primary bg-opacity-10 border border-primary border-opacity-10">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div>
+                                                <h6 class="fw-bold mb-0 text-primary small">Visibilité Publique</h6>
+                                                <p class="text-muted mb-0" style="font-size: 11px;">Visible par tous les tenants</p>
+                                            </div>
+                                            <div class="form-check form-switch form-switch-md mb-0">
+                                                <input class="form-check-input" type="checkbox" name="is_published" id="res_published" checked>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="col-md-7" id="file_upload_field" style="display: none;">
-                            <label class="form-label fw-medium">Fichier joint</label>
-                            <input type="file" name="file_attachment" id="res_file" class="form-control bg-light border-0 rounded-3">
-                            <small class="text-muted mt-1 d-block" id="current_file_display"></small>
-                        </div>
-                        
-                        <div class="col-12">
-                            <label class="form-label fw-medium">Description ou Contenu de l'article</label>
-                            <textarea name="description" id="res_desc" class="form-control bg-light border-0 rounded-3" rows="6" placeholder="Rédigez ici le contenu de votre article ou la description de votre vidéo/fichier..."></textarea>
-                        </div>
-                        
-                        <div class="col-12">
-                            <div class="glass-card p-3 d-flex align-items-center justify-content-between border-0 bg-primary bg-opacity-10">
-                                <div>
-                                    <h6 class="fw-bold mb-1 text-primary">Visibilité</h6>
-                                    <p class="text-muted mb-0 small">Publier immédiatement cette ressource pour qu'elle soit visible par tous les tenants.</p>
-                                </div>
-                                <div class="form-check form-switch form-switch-lg mb-0" style="transform: scale(1.2);">
-                                    <input class="form-check-input" type="checkbox" name="is_published" id="res_published" checked>
+
+                        <!-- Right Panel: Content -->
+                        <div class="col-lg-8">
+                            <div class="card border-0 shadow-sm rounded-4">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-center mb-4">
+                                        <div class="bg-info bg-opacity-10 p-2 rounded-circle me-2">
+                                            <i class="ri-layout-grid-line text-info"></i>
+                                        </div>
+                                        <h6 class="mb-0 fw-bold" id="content_box_title">Contenu de la ressource</h6>
+                                    </div>
+
+                                    <!-- Video URL Field -->
+                                    <div id="video_url_field" class="mb-4">
+                                        <label class="form-label fw-semibold small text-uppercase text-muted mb-2">Lien Vidéo (YouTube/Vimeo)</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light border-light-subtle"><i class="ri-links-line"></i></span>
+                                            <input type="url" name="video_url" id="res_video_url" class="form-control border-light-subtle" placeholder="https://...">
+                                        </div>
+                                    </div>
+
+                                    <!-- File Upload Field -->
+                                    <div id="file_upload_field" class="mb-4" style="display: none;">
+                                        <label class="form-label fw-semibold small text-uppercase text-muted mb-2">Fichier à attacher</label>
+                                        <div class="border-2 border-dashed border-light-subtle p-4 rounded-4 text-center hover-bg-light transition-all cursor-pointer" onclick="document.getElementById('res_file').click()">
+                                            <i class="ri-upload-cloud-2-line fs-1 text-primary mb-2 d-block"></i>
+                                            <p class="mb-0 text-dark fw-medium">Cliquez pour sélectionner un fichier</p>
+                                            <p class="text-muted small mb-0">PDF, ZIP, DOCX (Max 20MB)</p>
+                                            <input type="file" name="file_attachment" id="res_file" class="d-none" onchange="document.getElementById('file-name-display').innerText = this.files[0].name">
+                                            <div id="file-name-display" class="mt-2 fw-bold text-primary small"></div>
+                                        </div>
+                                        <div id="current_file_display" class="mt-2 badge bg-info bg-opacity-10 text-info p-2 rounded-3 w-100 text-wrap text-start d-none"></div>
+                                    </div>
+
+                                    <!-- Article / Description Editor -->
+                                    <div id="description_field" class="mb-0">
+                                        <label class="form-label fw-semibold small text-uppercase text-muted mb-2" id="desc_label">Description ou Contenu</label>
+                                        <div class="ck-editor-container rounded-3 overflow-hidden border border-light-subtle">
+                                            <textarea name="description" id="res_desc" class="form-control"></textarea>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="modal-footer border-0 p-4 pt-0 mt-2">
+                <div class="modal-footer bg-white border-top border-light p-4">
                     <button type="button" class="btn btn-light rounded-pill px-4 fw-medium" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-medium shadow-sm">Enregistrer la ressource</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">
+                        <i class="ri-save-line me-1"></i> Enregistrer les modifications
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<script src="{% static 'design/assets/libs/@ckeditor/ckeditor5-build-classic/build/ckeditor.js' %}"></script>
+<script src="{% static 'design/assets/libs/@ckeditor/ckeditor5-build-classic/build/translations/fr.js' %}"></script>
+
 <script>
+let resEditor;
+
+ClassicEditor
+    .create(document.querySelector('#res_desc'), {
+        language: 'fr',
+        toolbar: {
+            items: [
+                'heading', '|',
+                'bold', 'italic', 'link', 'bulletedList', 'numberedList', '|',
+                'indent', 'outdent', '|',
+                'blockQuote', 'insertTable', 'undo', 'redo'
+            ]
+        }
+    })
+    .then(editor => {
+        resEditor = editor;
+    })
+    .catch(error => {
+        console.error(error);
+    });
+
 function toggleResourceFields() {
     const type = document.getElementById('res_type').value;
     const videoField = document.getElementById('video_url_field');
     const fileField = document.getElementById('file_upload_field');
+    const descLabel = document.getElementById('desc_label');
+    const boxTitle = document.getElementById('content_box_title');
     
     if (type === 'VIDEO') {
         videoField.style.display = 'block';
         fileField.style.display = 'none';
+        descLabel.innerText = "Description de la vidéo";
+        boxTitle.innerText = "Détails de la Vidéo";
     } else if (type === 'PDF' || type === 'FILE') {
         videoField.style.display = 'none';
         fileField.style.display = 'block';
+        descLabel.innerText = "Description du fichier";
+        boxTitle.innerText = "Gestion du Fichier";
     } else { // ARTICLE
         videoField.style.display = 'none';
         fileField.style.display = 'none';
+        descLabel.innerText = "Corps de l'article (Formatage riche)";
+        boxTitle.innerText = "Édition de l'Article";
     }
 }
 
@@ -339,6 +414,21 @@ function toggleResourceFields() {
 document.addEventListener("DOMContentLoaded", function() {
     toggleResourceFields();
 });
+
+function resetResourceModal() {
+    document.getElementById('res_action').value = 'add';
+    document.getElementById('res_id').value = '';
+    document.getElementById('res_title').value = '';
+    document.getElementById('res_type').value = 'VIDEO';
+    toggleResourceFields();
+    if (resEditor) resEditor.setData('');
+    document.getElementById('res_video_url').value = '';
+    document.getElementById('res_published').checked = true;
+    document.getElementById('res_modal_title').innerText = 'Nouvelle Ressource';
+    document.getElementById('res_file').value = "";
+    document.getElementById('file-name-display').innerText = "";
+    document.getElementById('current_file_display').classList.add('d-none');
+}
 
 function editCategory(id, name, desc) {
     document.getElementById('cat_action').value = 'edit';
@@ -358,15 +448,37 @@ function editResource(id, title, cat_id, type, desc, video_url, is_published) {
     document.getElementById('res_type').value = type;
     toggleResourceFields(); // trigger display change
     
-    document.getElementById('res_desc').value = desc !== 'None' ? desc : '';
+    if (resEditor) {
+        resEditor.setData(desc !== 'None' ? desc : '');
+    } else {
+        document.getElementById('res_desc').value = desc !== 'None' ? desc : '';
+    }
+    
     document.getElementById('res_video_url').value = video_url !== 'None' ? video_url : '';
     document.getElementById('res_published').checked = is_published === 'true';
     document.getElementById('res_modal_title').innerText = 'Modifier la ressource';
     
-    // Reset file input for security/HTML rules, user must re-upload if they want to change it.
     document.getElementById('res_file').value = "";
+    document.getElementById('file-name-display').innerText = "";
+    const fileDisplay = document.getElementById('current_file_display');
+    fileDisplay.innerText = "Un fichier est déjà attaché. Téléchargez-en un nouveau pour le remplacer.";
+    fileDisplay.classList.remove('d-none');
     
     new bootstrap.Modal(document.getElementById('addResourceModal')).show();
 }
 </script>
+
+<style>
+    .ck-editor__editable {
+        min-height: 250px;
+        border-bottom-left-radius: 0.75rem !important;
+        border-bottom-right-radius: 0.75rem !important;
+    }
+    .ck-toolbar {
+        border-top-left-radius: 0.75rem !important;
+        border-top-right-radius: 0.75rem !important;
+        background-color: #f8f9fa !important;
+        border-color: transparent !important;
+    }
+</style>
 {% endblock content %}

@@ -207,46 +207,18 @@
                                         <button class="btn btn-dark w-100 rounded-pill fw-medium shadow-sm" onclick="playVideo('{{ res.video_url }}', '{{ res.title|escapejs }}')">
                                             <i class="ri-play-fill me-1"></i> Lancer la vidéo
                                         </button>
-                                        {% elif res.file_attachment %}
-                                        <a href="{{ res.file_attachment.url }}" target="_blank" class="btn btn-outline-primary w-100 rounded-pill fw-medium border-2">
-                                            <i class="ri-download-cloud-2-line me-1"></i> Télécharger
-                                        </a>
                                         {% elif res.resource_type == 'ARTICLE' %}
                                         <button class="btn btn-outline-info w-100 rounded-pill fw-medium border-2" data-bs-toggle="modal" data-bs-target="#articleModal{{ res.id }}">
                                             <i class="ri-book-open-line me-1"></i> Lire l'article
                                         </button>
+                                        {% elif res.file_attachment %}
+                                        <a href="{{ res.file_attachment.url }}" target="_blank" class="btn btn-outline-primary w-100 rounded-pill fw-medium border-2">
+                                            <i class="ri-download-cloud-2-line me-1"></i> Télécharger
+                                        </a>
                                         {% endif %}
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- Article Modal Premium -->
-                            {% if res.resource_type == 'ARTICLE' %}
-                            <div class="modal fade" id="articleModal{{ res.id }}" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-                                    <div class="modal-content border-0 shadow-lg" style="border-radius: 1.5rem; overflow: hidden;">
-                                        <div class="modal-header bg-light border-0 p-4 pb-3">
-                                            <div class="d-flex align-items-center w-100">
-                                                <div class="bg-info bg-opacity-10 p-2 rounded-circle me-3">
-                                                    <i class="ri-article-line text-info fs-4"></i>
-                                                </div>
-                                                <h4 class="modal-title fw-bold text-dark mb-0 flex-grow-1">{{ res.title }}</h4>
-                                                <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                        </div>
-                                        <div class="modal-body p-4 pt-3">
-                                            <div class="bg-white rounded-4 p-4 shadow-sm border border-light">
-                                                <div class="text-dark fs-6" style="white-space: pre-wrap; line-height: 1.8;">{{ res.description }}</div>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer border-0 p-4 pt-0">
-                                            <button type="button" class="btn btn-light rounded-pill px-4 fw-medium" data-bs-dismiss="modal">Fermer</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endif %}
-                            
                             {% endfor %}
                         </div>
                     </div>
@@ -270,6 +242,53 @@
         </div> <!-- End container-fluid -->
     </div> <!-- End page-content -->
 </div> <!-- End main-content -->
+
+<!-- Article Modals (Moved out of loops for stability) -->
+{% for cat_data in categories_with_resources %}
+    {% for res in cat_data.resources %}
+        {% if res.resource_type == 'ARTICLE' %}
+        <div class="modal fade" id="articleModal{{ res.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 1.5rem; overflow: hidden;">
+                    <div class="modal-header bg-light border-0 p-4 pb-3">
+                        <div class="d-flex align-items-center w-100">
+                            <div class="bg-info bg-opacity-10 p-2 rounded-circle me-3">
+                                <i class="ri-article-line text-info fs-4"></i>
+                            </div>
+                            <h4 class="modal-title fw-bold text-dark mb-0 flex-grow-1">{{ res.title }}</h4>
+                            <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                    </div>
+                    <div class="modal-body p-4 pt-3 bg-light bg-opacity-50">
+                        <div class="bg-white rounded-4 p-4 shadow-sm border border-light" style="min-height: 200px;">
+                            <div class="text-dark fs-5 mb-3 fw-bold" style="letter-spacing: -0.2px;">{{ res.title }}</div>
+                            <div class="text-dark fs-6" style="white-space: pre-wrap; line-height: 1.8;">{{ res.description|safe }}</div>
+                            
+                            {% if res.file_attachment %}
+                            <div class="mt-5 p-3 rounded-3 bg-light border d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <i class="ri-file-download-line text-primary fs-3 me-3"></i>
+                                    <div>
+                                        <p class="mb-0 fw-bold small text-dark">Document complémentaire</p>
+                                        <p class="mb-0 text-muted small">Téléchargez le fichier joint pour plus de détails</p>
+                                    </div>
+                                </div>
+                                <a href="{{ res.file_attachment.url }}" target="_blank" class="btn btn-primary btn-sm rounded-pill px-3">
+                                    <i class="ri-download-line me-1"></i> Télécharger
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 p-4 pt-0">
+                        <button type="button" class="btn btn-light rounded-pill px-4 fw-medium" data-bs-dismiss="modal">Fermer la lecture</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+{% endfor %}
 
 <!-- Video Player Modal Premium -->
 <div class="modal fade" id="videoModal" tabindex="-1" aria-hidden="true">
