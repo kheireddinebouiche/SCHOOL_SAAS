@@ -550,19 +550,22 @@ def ApiGetRolePermissions(request):
     try:
         role = Role.objects.get(id=role_id)
 
-        # Récupérer seulement les permissions du rôle qui sont actuellement attribuées
-        role_permissions = RolePermission.objects.filter(role=role).select_related('module_permission', 'module_permission__module')
+        # Récupérer TOUTES les permissions de module existantes
+        all_module_permissions = ModulePermission.objects.select_related('module').all()
+        
+        # Récupérer les IDs des permissions déjà attribuées à ce rôle
+        granted_permission_ids = set(RolePermission.objects.filter(role=role).values_list('module_permission_id', flat=True))
 
         permissions_data = []
-        for rp in role_permissions:
+        for mp in all_module_permissions:
             permissions_data.append({
-                'id': rp.id,
-                'module_permission_id': rp.module_permission.id,
-                'module_code': rp.module_permission.module.name,  # Raw code (e.g. 'crm')
-                'module_name': rp.module_permission.module.get_name_display(), # Display name
-                'permission_name': rp.module_permission.get_permission_type_display(),
-                'permission_type': rp.module_permission.permission_type,
-                'is_granted': True
+                'id': mp.id,
+                'module_permission_id': mp.id,
+                'module_code': mp.module.name,  # Raw code (e.g. 'crm')
+                'module_name': mp.module.get_name_display(), # Display name
+                'permission_name': mp.get_permission_type_display(),
+                'permission_type': mp.permission_type,
+                'is_granted': mp.id in granted_permission_ids
             })
 
         return JsonResponse({
