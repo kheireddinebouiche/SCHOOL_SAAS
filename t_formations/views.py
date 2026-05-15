@@ -1306,7 +1306,10 @@ def ApiListeSpecialiteByFormation(request):
 def AddPromo(request):
     form = PromoForm()
     if request.method =="POST":
-        form = PromoForm(request.POST)
+        post_data = request.POST.copy()
+        if 'label' in post_data: post_data['label'] = post_data['label'].upper()
+        if 'code' in post_data: post_data['code'] = post_data['code'].upper()
+        form = PromoForm(post_data)
         if form.is_valid():
             form.save()
             messages.success(request, 'Promo ajoutée avec succès')
@@ -1353,9 +1356,9 @@ def ApiGetPromo(request):
 def ApiUpdatePromo(request):
     if request.method == "POST":
         id = request.POST.get('id')
-        label = request.POST.get('label')
+        label = request.POST.get('label', '').upper()
         session = request.POST.get('session')
-        new_code  = request.POST.get('new_code')
+        new_code  = request.POST.get('new_code', '').upper()
         new_begin_year = request.POST.get('new_begin_year')
         new_end_year = request.POST.get('new_end_year')
 
