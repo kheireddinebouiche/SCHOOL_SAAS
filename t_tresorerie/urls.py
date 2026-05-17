@@ -107,6 +107,8 @@ urlpatterns = [
 
     path('suivie-des-echeanciers/', SuivieEcheancier, name="SuivieEcheancier"),
     path('ApiLoadConvertedProspects', ApiLoadConvertedProspects, name="ApiLoadConvertedProspects"),
+    path('api/mark_engagement_printed/<int:prospect_id>/', ApiMarkEngagementPrinted, name="mark_engagement_printed"),
+    path('api/mark_quittance_printed/', ApiMarkQuittancePrinted, name="mark_quittance_printed"),
 
     path('details-suivie-echeancier/<int:pk>/', DetailsEcheancierClient, name="DetailsEcheancierClient"),
     path('details-suivie-echeancier/double-diplomation/<int:pk>/', DetailsEcheancierClientDouble, name="DetailsEcheancierClientDouble"),
@@ -140,6 +142,7 @@ urlpatterns = [
 
     path('ApiGetProspectsList', ApiGetProspectsList, name="ApiGetProspectsList"),
     path('ApiToggleFinancialAlert', ApiToggleFinancialAlert, name="ApiToggleFinancialAlert"),
+    path('ApiSendEmailRelance', ApiSendEmailRelance, name="ApiSendEmailRelance"),
 
 
     ##### Gestion des depenses

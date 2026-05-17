@@ -30,6 +30,8 @@ from django.db.models import Count, Sum
 from t_tresorerie.models import DuePaiements, Paiements, Depenses, ClientPaiementsRequest
 import calendar
 from django.db.models.functions import TruncMonth
+from .decorators import ajax_required, module_permission_required, role_required
+from .utils_notifications import send_notification_to_user
 
 
 @login_required(login_url='institut_app:login')
@@ -283,6 +285,9 @@ def default_dashboard(request):
     pass
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre','view')
+@module_permission_required('tre','add')
+@role_required('tre', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def FinanceDashboard(request):
     # 1. Unpaid Dues by Promo
     # Try fetching promo from the echeancier model if direct promo is null
@@ -494,7 +499,7 @@ def ApiFinanceKPIs(request):
     
     # 4. Overdue Amount
     overdue_amount = DuePaiements.objects.filter(is_done=False, date_echeance__lt=datetime.now()).aggregate(Sum('montant_due'))['montant_due__sum'] or 0
-    lists_overdue = DuePaiements.objects.filter(is_done=False, date_echeance__lt=datetime.now()).select_related('client').order_by('date_echeance').values('id','client__nom','client__prenom','montant_due','date_echeance','label')
+    lists_overdue = DuePaiements.objects.filter(is_done=False, date_echeance__lt=datetime.now()).select_related('client').order_by('date_echeance').values('id', 'client__id', 'client__nom', 'client__prenom', 'client__email', 'montant_due', 'date_echeance', 'label')
     
     # 5. Upcoming Deadlines (Next 30 days)
     upcoming_start = datetime.now()
@@ -509,7 +514,7 @@ def ApiFinanceKPIs(request):
     echeance_du_jours = (DuePaiements.objects.filter(is_done=False, date_echeance = datetime.now())
                         .select_related('client')
                         .order_by('date_echeance')
-                        .values('id','client__nom','client__prenom','montant_due','date_echeance','label'))
+                        .values('id', 'client__id', 'client__nom', 'client__prenom', 'client__email', 'montant_due', 'date_echeance', 'label'))
 
     # 7. Pending Amount (Total outstanding)
     pending_amount = total_remaining
@@ -521,7 +526,7 @@ def ApiFinanceKPIs(request):
         date_echeance__lte=upcoming_end
     ).select_related('client')
     .order_by('date_echeance')
-    .values('id','client__nom','client__prenom','montant_due','date_echeance','label'))
+    .values('id', 'client__id', 'client__nom', 'client__prenom', 'client__email', 'montant_due', 'date_echeance', 'label'))
 
     data = {
         'total_collected': total_collected,
@@ -1099,7 +1104,12 @@ def terminate_session_api(request):
                 
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
 
+
+
 @login_required(login_url='institut_app:login')
+@module_permission_required('ger','view')
+@module_permission_required('ger','add')
+@role_required('ger', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def directeur_dashboard(request):
     # --- 1. Commercial & Admission ---
     # Prospects du mois
@@ -1302,6 +1312,10 @@ def AllNotificationsPage(request):
     return render(request, 'tenant_folder/notifications/all_notifications.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('ger','view')
+@module_permission_required('ger','add')
+@module_permission_required('ger','change')
+@role_required('ger', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def my_budget_campaigns(request):
     """
     Shows budget campaigns for the current tenant (Institute).
@@ -1540,15 +1554,40 @@ def budget_campaign_dispatch(request, campaign_slug):
                         except (ValueError, TypeError):
                             continue
                     
-                    if action == 'submit':
-                        global_objective.statut = 'submitted'
-                        global_objective.save()
-                        messages.success(request, f"Proposition soumise ! {saved_count} allocations enregistrées.")
-                    else:
-                        if found_fields == 0:
-                            messages.warning(request, "Aucune donnée budgétaire n'a été détectée dans l'envoi.")
-                        else:
-                            messages.success(request, f"Brouillon enregistré : {saved_count} montants sauvegardés.")
+                    # End of loop
+            
+            # --- POST-TRANSACTION PROCESSING ---
+            if action == 'submit':
+                from associe_app.models import BudgetLine
+                with schema_context('public'):
+                    # Force update in public schema
+                    BudgetLine.objects.filter(
+                        campaign_id=campaign.id, 
+                        institut_id=request.tenant.id
+                    ).update(statut='submitted')
+                
+                messages.success(request, "Votre proposition budgétaire a été soumise avec succès pour validation.")
+
+                # Notification (isolated)
+                try:
+                    tenant_name = request.tenant.nom
+                    campaign_name = campaign.name
+                    notif_message = f"L'institut '{tenant_name}' a soumis son budget pour la campagne '{campaign_name}' pour validation."
+                    notif_link = f"/budget-campaigns/{campaign.slug}/review/{request.tenant.id}/"
+                    
+                    with schema_context('public'):
+                        public_users = get_user_model().objects.filter(is_active=True)
+                        for p_user in public_users:
+                            try:
+                                send_notification_to_user(p_user, notif_message, notif_link)
+                            except: pass
+                except Exception as ne:
+                    print(f"Notification error: {ne}")
+            else:
+                if found_fields == 0:
+                    messages.warning(request, "Aucune donnée budgétaire n'a été détectée dans l'envoi.")
+                else:
+                    messages.success(request, f"Brouillon enregistré : {saved_count} montants sauvegardés.")
                             
         except Exception as e:
             messages.error(request, f"Erreur lors de l'enregistrement : {str(e)}")
@@ -1762,12 +1801,21 @@ def request_extension(request, campaign_slug):
                                 continue
 
                     if saved_count == 0:
-                        # No changes detected
                         ext_request.delete()
-                        messages.warning(request, "Aucune modification budgétaire détectée.")
-                    else:
-                        messages.success(request, f"Demande de rallonge envoyée avec succès ({saved_count} lignes modifiées).")
-                        return redirect('institut_app:dispatch_budget', campaign_slug=campaign_slug)
+
+                if saved_count > 0:
+                    try:
+                        from associe_app.utils import send_saas_notification
+                        notif_msg = f"L'institut '{request.tenant.nom}' souhaite une rallonge budgétaire pour la campagne '{campaign.name}'."
+                        notif_link = f"/configuration/budget-campaigns/extension-requests/{ext_request.id}/"
+                        send_saas_notification(notif_msg, link=notif_link)
+                    except Exception as notif_err:
+                        print(f"Error sending SaaS notification: {notif_err}")
+
+                    messages.success(request, f"Demande de rallonge envoyée avec succès ({saved_count} lignes modifiées).")
+                    return redirect('institut_app:dispatch_budget', campaign_slug=campaign_slug)
+                else:
+                    messages.warning(request, "Aucune modification budgétaire détectée.")
 
         except Exception as e:
             messages.error(request, f"Erreur: {str(e)}")

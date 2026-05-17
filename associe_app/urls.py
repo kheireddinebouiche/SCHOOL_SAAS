@@ -58,7 +58,11 @@ from .views import (
     list_orphaned_schemas,
     get_tenant_sync_list,
     sync_single_tenant_view,
-    mise_en_route
+    mise_en_route,
+    notify_tenants_of_campaign,
+    api_mark_saas_notification_read,
+    api_mark_all_saas_notifications_read,
+    api_delete_saas_notification
 )
 
 
@@ -106,6 +110,7 @@ urlpatterns = [
     path('budget-campaigns/create/', budget_campaign_create, name='budget_campaign_create'),
     path('budget-campaigns/<slug:campaign_slug>/instituts/', budget_campaign_instituts, name='budget_campaign_instituts'),
     path('budget-campaigns/<slug:campaign_slug>/activate/', budget_campaign_activate, name='budget_campaign_activate'),
+    path('budget-campaigns/<slug:campaign_slug>/notify/', notify_tenants_of_campaign, name='notify_tenants_of_campaign'),
     path('budget-campaigns/<slug:campaign_slug>/delete/', budget_campaign_delete, name='budget_campaign_delete'),
     path('budget-campaigns/<slug:campaign_slug>/review/<int:institut_id>/', budget_campaign_review, name='budget_campaign_review'),
     
@@ -114,8 +119,13 @@ urlpatterns = [
     path('extension-requests/<int:request_id>/', review_extension, name='review_extension'),
 
     path('sync-categories/', sync_categories_view, name='sync_categories_view'),
-    path('sync-tenant-list/', get_tenant_sync_list, name='get_tenant_sync_list'),
-    path('sync-single-tenant/', sync_single_tenant_view, name='sync_single_tenant_view'),
+    path('tenants/get-sync-list/', get_tenant_sync_list, name='get_tenant_sync_list'),
+    path('tenants/sync-single/', sync_single_tenant_view, name='sync_single_tenant_view'),
+
+    # Notifications API
+    path('api/notifications/mark-read/', api_mark_saas_notification_read, name='ApiMarkNotificationRead'),
+    path('api/notifications/mark-all-read/', api_mark_all_saas_notifications_read, name='ApiMarkAllNotificationsRead'),
+    path('api/notifications/delete/', api_delete_saas_notification, name='ApiDeleteNotification'),
     
     # CRM Statistics
     path('crm-statistics/', crm_statistics, name='crm_statistics'),

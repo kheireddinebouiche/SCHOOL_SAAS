@@ -4,11 +4,20 @@ from asgiref.sync import async_to_sync
 from .models import Notification, UserModuleRole
 from django.contrib.auth import get_user_model
 
+from django.db import connection
+
 def send_notification_to_user(user, message, link=None, extra_data=None):
     """
     Sends a notification to a specific user.
     """
-    notif = Notification.objects.create(user=user, message=message, link=link)
+    schema_name = connection.schema_name
+    
+    if schema_name == 'public':
+        from associe_app.models import SaaSNotification
+        notif = SaaSNotification.objects.create(user=user, message=message, link=link)
+    else:
+        notif = Notification.objects.create(user=user, message=message, link=link)
+
     channel_layer = get_channel_layer()
     if channel_layer:
         print(f"DEBUG NOTIF: Sending to group user_{user.id}: {message}")

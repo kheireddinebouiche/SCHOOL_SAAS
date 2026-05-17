@@ -56,24 +56,43 @@
     .btn-rounded { border-radius: 0.75rem; }
 
     .btn-action-premium {
-        width: 32px;
-        height: 32px;
+        width: 36px;
+        height: 36px;
         padding: 0;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border-radius: 10px;
+        border-radius: 12px;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 1px solid transparent;
-        background: rgba(100, 116, 139, 0.1);
-        color: #64748b;
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        background: #ffffff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
 
-    .btn-action-premium:hover {
+    .btn-action-premium i {
+        font-size: 1.1rem;
+    }
+
+    .btn-action-premium.details-btn {
+        color: #0284c7;
+    }
+
+    .btn-action-premium.details-btn:hover {
+        background: rgba(14, 165, 233, 0.1);
+        border-color: rgba(14, 165, 233, 0.3);
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        background: #f8fafc;
-        color: #3b82f6;
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+    }
+
+    .btn-action-premium.resultat-btn {
+        color: #16a34a;
+    }
+
+    .btn-action-premium.resultat-btn:hover {
+        background: rgba(34, 197, 94, 0.1);
+        border-color: rgba(34, 197, 94, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
     }
 
     .kpi-card { transition: transform 0.3s ease; }
@@ -612,19 +631,13 @@
                            html +="<td><span class='"+statusClass+"'>"+statusText+"</span></td>";
                            html +="<td class='text-muted small'>" + formattedDate + "</td>";
                            html +="<td class='text-center pe-4'>";
-                           html +="    <div class='dropdown d-inline-block'>";
-                           html +="        <button class='btn-action-premium dropdown shadow-none' type='button' data-bs-toggle='dropdown' aria-expanded='false'>";
-                           html +="            <i class='ri-more-2-fill'></i>";
-                           html +="        </button>";
-                           html +="        <ul class='dropdown-menu dropdown-menu-end border-0 shadow-lg'>";
+                           html +="    <div class='d-flex justify-content-center gap-2'>";
                            if(!p.is_done){
-                                html +="<li><button id='detailsBtn' data-client='" + p.client__id + "' data-id='" + p.id + "' class='dropdown-item details-item-btn d-flex align-items-center py-2'><i class='ri-eye-line text-info me-2'></i>Détails</button></li>";
+                                html +="<button id='detailsBtn' data-client='" + p.client__id + "' data-id='" + p.id + "' class='btn-action-premium details-btn' data-bs-toggle='tooltip' data-bs-placement='top' title='Détails & Traitement'><i class='ri-eye-line'></i></button>";
                            }
                            if(p.is_done){
-                               html += "<li><button id='resultatBtn' data-id='" + p.id + "' class='dropdown-item resultat-item-btn d-flex align-items-center py-2'><i class='ri-file-list-line text-success me-2'></i>Résultat</button></li>";
+                               html += "<button id='resultatBtn' data-id='" + p.id + "' class='btn-action-premium resultat-btn' data-bs-toggle='tooltip' data-bs-placement='top' title='Résultat du Traitement'><i class='ri-file-list-line'></i></button>";
                            }
-                           //html +="<li><button id='deleteConfirmation' data-id='" + p.id + "' class='dropdown-item remove-item-btn d-flex align-items-center text-danger'><i class='ri-delete-bin-line me-2'></i>Supprimer</button></li>";
-                           html +="        </ul>";
                            html +="    </div>";
                            html +="</td>";
                            html +="</tr>";
@@ -741,20 +754,20 @@
                     var statusText = '';
                     switch(p.etat) {
                         case 'enc':
-                            statusClass = 'badge bg-warning';
+                            statusClass = 'badge badge-soft-warning';
                             statusText = 'En attente';
                             break;
                         case 'acp':
-                            statusClass = 'badge bg-success';
+                            statusClass = 'badge badge-soft-success';
                             statusText = 'Accepté';
                             break;
                         case 'ref':
-                            statusClass = 'badge bg-danger';
+                            statusClass = 'badge badge-soft-danger';
                             statusText = 'Rejeté';
                             break;
                         default:
-                            statusClass = 'badge bg-secondary';
-                            statusText = p.etat_label;
+                            statusClass = 'badge badge-soft-secondary';
+                            statusText = p.etat_label || p.etat;
                     }
                     
                     // Format the date
@@ -766,26 +779,18 @@
                     });
                     
                    html +="<tr>";
-                   html +="<td><a href='javascript:void(0);' class='text-body'><div class='d-flex align-items-center'><div class='flex-grow-1'>" + (p.client__nom || '') + " " + (p.client__prenom || '') + "</div></div></a></td>";
-                   html +="<td><div class='fw-medium'>" + (p.motif_rembourssement || 'N/A') + "</div></td>";
+                   html +="<td class='ps-4'><a href='javascript:void(0);' class='fw-semibold text-dark'>" + (p.client__nom || '') + " " + (p.client__prenom || '') + "</a></td>";
+                   html +="<td><div class='fw-medium text-muted'>" + (p.motif_rembourssement || 'N/A') + "</div></td>";
                    html +="<td><span class='"+statusClass+"'>"+statusText+"</span></td>";
-                   html +="<td>" + formattedDate + "</td>";
-                   html +="<td class='text-end'>";
-                   html +="    <div class='dropdown d-inline-block'>";
-                   html +="        <button class='btn btn-soft-info btn-sm dropdown shadow-none' type='button' data-bs-toggle='dropdown' aria-expanded='false'>";
-                   html +="            <i class='ri-more-2-fill'></i>";
-                   html +="        </button>";
-                   html +="        <ul class='dropdown-menu dropdown-menu-end border-0 shadow-sm'>";
+                   html +="<td class='text-muted small'>" + formattedDate + "</td>";
+                   html +="<td class='text-center pe-4'>";
+                   html +="    <div class='d-flex justify-content-center gap-2'>";
                    if(!p.is_done){
-                        html +="            <li><button id='detailsBtn'  data-client='" + p.client__id + "' data-id='" + p.id + "' class='dropdown-item details-item-btn d-flex align-items-center'><i class='ri-eye-line text-info me-2'></i>Détails</button></li>";
+                        html +="<button id='detailsBtn' data-client='" + p.client__id + "' data-id='" + p.id + "' class='btn-action-premium details-btn' data-bs-toggle='tooltip' data-bs-placement='top' title='Détails & Traitement'><i class='ri-eye-line'></i></button>";
                    }
                    if(p.is_done){
-                       html += "<li><button id='resultatBtn' data-id='" + p.id + "' class='dropdown-item resultat-item-btn d-flex align-items-center'><i class='ri-file-list-line text-success me-2'></i>Résultat</button></li>";
+                       html += "<button id='resultatBtn' data-id='" + p.id + "' class='btn-action-premium resultat-btn' data-bs-toggle='tooltip' data-bs-placement='top' title='Résultat du Traitement'><i class='ri-file-list-line'></i></button>";
                    }
-                   html +="            <li><button id='resultatBtn' data-id='" + p.id + "' class='dropdown-item resultat-item-btn d-flex align-items-center'><i class='ri-file-list-line text-success me-2'></i>Résultat</button></li>";
-                   
-                   //html +="            <li><button id='deleteConfirmation' data-id='" + p.id + "' class='dropdown-item remove-item-btn d-flex align-items-center text-danger'><i class='ri-delete-bin-line me-2'></i>Supprimer</button></li>";
-                   html +="        </ul>";
                    html +="    </div>";
                    html +="</td>";
                    html +="</tr>";

@@ -192,6 +192,9 @@
                                 <button class="nav-link" id="settings-modules-tab" data-bs-toggle="pill" data-bs-target="#settings-modules" type="button" role="tab">
                                     <i class="ri-layout-grid-line"></i> Gestion des Modules
                                 </button>
+                                <button class="nav-link" id="settings-emails-tab" data-bs-toggle="pill" data-bs-target="#settings-emails" type="button" role="tab">
+                                    <i class="ri-mail-settings-line"></i> Modèles d'Email
+                                </button>
                             </div>
                         </div>
 
@@ -348,9 +351,6 @@
                                         </div>
                                     </div>
                                 </div>
-
-                                <div class="setting-item shadow-sm">
-
                                 <div class="setting-item shadow-sm">
                                     <div class="d-flex align-items-center justify-content-between">
                                         <div class="d-flex align-items-center">
@@ -387,6 +387,51 @@
                             </div>
                         </div>
 
+                        <!-- TAB: Modèles d'Email -->
+                        <div class="tab-pane fade" id="settings-emails" role="tabpanel">
+                            <div class="card glass-card border-0 p-4">
+                                <div class="setting-group-header mb-4">
+                                    <h5 class="fw-bold mb-0">Modèles d'Email de Relance</h5>
+                                </div>
+                                <div class="glass-card p-4 border-0 shadow-sm animate__animated animate__fadeIn" style="background: rgba(255, 255, 255, 0.4); border-color: rgba(226, 232, 240, 0.6);">
+                                    <div class="d-flex align-items-center mb-4">
+                                        <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3 text-primary">
+                                            <i class="ri-mail-open-line fs-3"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">Modèle d'Email de Relance Échéancier</h5>
+                                            <p class="text-muted mb-0 small">Personnalisez le sujet et le corps HTML de l'email envoyé pour relancer les échéanciers.</p>
+                                        </div>
+                                    </div>
+
+                                    <form id="emailTemplateForm" class="row g-4">
+                                        <div class="col-12">
+                                            <label class="form-label fw-bold text-dark mb-2">Sujet de l'email</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-white border-light-subtle"><i class="ri-edit-box-line text-muted"></i></span>
+                                                <input type="text" id="email_relance_sujet" class="form-control form-control-lg border-light-subtle rounded-end-3 fs-15 fw-medium" placeholder="Sujet de l'email" required>
+                                            </div>
+                                            <small class="text-muted mt-2 d-block fs-12">Variables disponibles : <code class="bg-light text-primary px-2 py-0.5 rounded fw-bold">{nom}</code>, <code class="bg-light text-primary px-2 py-0.5 rounded fw-bold">{prenom}</code>, <code class="bg-light text-primary px-2 py-0.5 rounded fw-bold">{total_remaining}</code>, <code class="bg-light text-primary px-2 py-0.5 rounded fw-bold">{tenant_name}</code>, <code class="bg-light text-primary px-2 py-0.5 rounded fw-bold">{specialite}</code></small>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <label class="form-label fw-bold text-dark mb-2">Corps de l'email (HTML)</label>
+                                            <textarea id="email_relance_corps" class="form-control font-monospace border-light-subtle rounded-3 fs-13" rows="18" placeholder="<html>...</html>" style="line-height: 1.6;" required></textarea>
+                                            <small class="text-muted mt-2 d-block fs-12">Variables disponibles : <code class="bg-light text-primary px-2 py-0.5 rounded fw-bold">{nom}</code>, <code class="bg-light text-primary px-2 py-0.5 rounded fw-bold">{prenom}</code>, <code class="bg-light text-primary px-2 py-0.5 rounded fw-bold">{table_rows}</code> (tableau HTML des échéances), <code class="bg-light text-primary px-2 py-0.5 rounded fw-bold">{total_remaining}</code>, <code class="bg-light text-primary px-2 py-0.5 rounded fw-bold">{annee_courante}</code>, <code class="bg-light text-primary px-2 py-0.5 rounded fw-bold">{tenant_name}</code>, <code class="bg-light text-primary px-2 py-0.5 rounded fw-bold">{specialite}</code></small>
+                                        </div>
+
+                                        <div class="col-12 d-flex justify-content-between align-items-center">
+                                            <button type="button" class="btn btn-outline-info btn-lg rounded-pill px-4 py-2 shadow-sm fs-15 fw-bold" id="btnPreviewEmailTemplate">
+                                                <i class="ri-eye-line me-1"></i> Prévisualiser l'email
+                                            </button>
+                                            <button type="submit" class="btn btn-primary btn-lg rounded-pill px-4 py-2 shadow-sm fs-15 fw-bold" id="btnSaveEmailTemplates">
+                                                <i class="ri-save-line me-1"></i> Enregistrer le Modèle
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
 
                     </div> <!-- tab-content -->
 
@@ -475,6 +520,53 @@
                 <button type="button" class="btn btn-danger rounded-pill px-4 shadow-sm" id="btnConfirmTimeoutChange">
                     Confirmer le changement
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Prévisualisation de l'email -->
+<div class="modal fade" id="emailPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content glass-card border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+            <div class="modal-header border-0 bg-light bg-opacity-75 py-3 px-4">
+                <div class="d-flex align-items-center">
+                    <div class="icon-box bg-info bg-opacity-10 text-info me-3" style="width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                        <i class="ri-eye-line fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0">Aperçu Réaliste de l'Email</h5>
+                        <small class="text-muted">Rendu de la relance avec données de démonstration</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body p-0 bg-light bg-opacity-25 d-flex flex-column" style="height: 600px;">
+                <!-- En-tête type client mail -->
+                <div class="mail-headers p-4 border-bottom bg-white" style="border-top: 1px solid #edf2f7;">
+                    <div class="row mb-2">
+                        <div class="col-sm-2 text-muted fw-semibold">De :</div>
+                        <div class="col-sm-10 text-dark fw-medium" id="preview-from">service-tresorerie@school-saas.com <span class="text-muted font-monospace small">&lt;ne-pas-repondre@school-saas.com&gt;</span></div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-sm-2 text-muted fw-semibold">À :</div>
+                        <div class="col-sm-10 text-dark fw-medium" id="preview-to">Kheireddine Bouiche <span class="text-muted font-monospace small">&lt;kheireddine.bouiche@demo-parent.com&gt;</span></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-2 text-muted fw-semibold">Sujet :</div>
+                        <div class="col-sm-10 text-primary fw-bold" id="preview-subject">...</div>
+                    </div>
+                </div>
+                
+                <!-- Corps de l'email rendu dans un iframe pour isoler le CSS -->
+                <div class="flex-grow-1 p-3 bg-light" style="overflow: hidden;">
+                    <iframe id="emailPreviewFrame" style="width: 100%; height: 100%; border: none; background: white; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);" sandbox="allow-same-origin"></iframe>
+                </div>
+            </div>
+            
+            <div class="modal-footer border-0 bg-white py-3 px-4 justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Fermer</button>
             </div>
         </div>
     </div>
@@ -645,6 +737,132 @@ $(document).ready(function() {
                 }
             }
         }
+    });
+
+    /**
+     * Modèles d'Email Setup
+     */
+    function loadEmailTemplates() {
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiGetParametreFinancier' %}",
+            type: 'GET',
+            success: function(data) {
+                $('#email_relance_sujet').val(data.relance_echeancier_sujet || '');
+                $('#email_relance_corps').val(data.relance_echeancier_corps || '');
+            },
+            error: function(err) {
+                console.error("Erreur lors de la récupération des modèles d'email:", err);
+            }
+        });
+    }
+
+    // Load templates when clicking on the tab
+    $('#settings-emails-tab').on('shown.bs.tab', function() {
+        loadEmailTemplates();
+    });
+
+    // Handle Form Submit
+    $('#emailTemplateForm').on('submit', function(e) {
+        e.preventDefault();
+        const btn = $('#btnSaveEmailTemplates');
+        const originalHtml = btn.html();
+        
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Enregistrement...');
+
+        const payload = {
+            'relance_echeancier_sujet': $('#email_relance_sujet').val(),
+            'relance_echeancier_corps': $('#email_relance_corps').val(),
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        };
+
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiUpdateParametreFinancier' %}",
+            type: 'POST',
+            data: payload,
+            success: function(res) {
+                if (res.status === 'success') {
+                    alertify.success('<i class="ri-checkbox-circle-fill me-1"></i> Modèles d\'email enregistrés avec succès');
+                } else {
+                    alertify.error('Erreur: ' + (res.message || 'Impossible de sauvegarder le modèle.'));
+                }
+            },
+            error: function() {
+                alertify.error('Erreur de communication serveur.');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html(originalHtml);
+            }
+        });
+    });
+
+    // Handle Preview Button Click
+    $('#btnPreviewEmailTemplate').on('click', function() {
+        const sujet = $('#email_relance_sujet').val() || '';
+        let corps = $('#email_relance_corps').val() || '';
+
+        if (!corps) {
+            alertify.error('Veuillez d\'abord saisir un corps d\'email.');
+            return;
+        }
+
+        // Mock Table for Preview
+        const mockTable = `
+<table style="width:100%; border-collapse:collapse; margin:20px 0; font-family:'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+    <thead>
+        <tr style="background-color:#f8fafc; border-bottom:2px solid #e2e8f0; color:#334155;">
+            <th style="padding:12px; text-align:left; font-weight:600; border:1px solid #e2e8f0;">Désignation Échéance</th>
+            <th style="padding:12px; text-align:center; font-weight:600; border:1px solid #e2e8f0;">Date Limite</th>
+            <th style="padding:12px; text-align:right; font-weight:600; border:1px solid #e2e8f0;">Montant Restant</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr style="border-bottom:1px solid #e2e8f0; color:#475569;">
+            <td style="padding:12px; border:1px solid #e2e8f0; font-weight:500;">Frais d'inscription - Échéance 1</td>
+            <td style="padding:12px; text-align:center; border:1px solid #e2e8f0;"><span style="color:#ef4444; background:#fef2f2; padding:3px 8px; border-radius:12px; font-size:12px; font-weight:600;">15 Mai 2026</span></td>
+            <td style="padding:12px; text-align:right; border:1px solid #e2e8f0; font-weight:600; color:#1e293b;">5 000 DA</td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0; color:#475569;">
+            <td style="padding:12px; border:1px solid #e2e8f0; font-weight:500;">Frais Scolarité - Échéance 2</td>
+            <td style="padding:12px; text-align:center; border:1px solid #e2e8f0;"><span style="color:#ef4444; background:#fef2f2; padding:3px 8px; border-radius:12px; font-size:12px; font-weight:600;">15 Juin 2026</span></td>
+            <td style="padding:12px; text-align:right; border:1px solid #e2e8f0; font-weight:600; color:#1e293b;">10 000 DA</td>
+        </tr>
+    </tbody>
+</table>`;
+
+        // Replace placeholders
+        const tenantName = "{{ tenant.nom|escapejs }}";
+
+        let renderedSubject = sujet
+            .replace(/{nom}/g, 'Bouiche')
+            .replace(/{prenom}/g, 'Kheireddine')
+            .replace(/{total_remaining}/g, '15 000 DA')
+            .replace(/{tenant_name}/g, tenantName)
+            .replace(/{specialite}/g, 'Master Ingénierie Logicielle')
+            .replace(/SCHOOL SAAS/g, tenantName);
+
+        let renderedCorps = corps
+            .replace(/{nom}/g, 'Bouiche')
+            .replace(/{prenom}/g, 'Kheireddine')
+            .replace(/{annee_courante}/g, '2026')
+            .replace(/{total_remaining}/g, '15 000 DA')
+            .replace(/{table_rows}/g, mockTable)
+            .replace(/{tenant_name}/g, tenantName)
+            .replace(/{specialite}/g, 'Master Ingénierie Logicielle')
+            .replace(/SCHOOL SAAS/g, tenantName);
+
+        // Inject Subject
+        $('#preview-subject').text(renderedSubject || '(Sans sujet)');
+
+        // Populate iframe content
+        const iframe = document.getElementById('emailPreviewFrame');
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(renderedCorps);
+        iframeDoc.close();
+
+        // Show Modal
+        const previewModal = new bootstrap.Modal(document.getElementById('emailPreviewModal'));
+        previewModal.show();
     });
 });
 </script>

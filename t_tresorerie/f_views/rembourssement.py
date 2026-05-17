@@ -72,7 +72,7 @@ def DetailsRembourssement(request, pk):
     obj = Rembourssements.objects.get(id = pk)
     voeux = FicheDeVoeux.objects.get(prospect = obj.client)
     total_paye = Paiements.objects.filter(prospect = obj.client, is_refund=False).aggregate(total=Sum('montant_paye'))['total'] or 0
-    paiements = Paiements.objects.filter(prospect = obj.client)
+    paiements = Paiements.objects.filter(prospect = obj.client).order_by('due_paiements__date_echeance', 'id')
     last_paiements = Paiements.objects.filter(prospect = obj.client, is_refund=False).last()
 
     groupe_line = GroupeLine.objects.filter(student = obj.client)
@@ -100,9 +100,9 @@ def ApiLoadPaiements(request):
         
         refund = Rembourssements.objects.get(id = remboursement_id)
 
-        paiements = Paiements.objects.filter(prospect_id = refund.client.id).values('id','num','montant_paye','date_paiement','mode_paiement','paiement_label','is_refund')
+        paiements = Paiements.objects.filter(prospect_id = refund.client.id).order_by('due_paiements__date_echeance', 'id').values('id','num','montant_paye','date_paiement','mode_paiement','paiement_label','is_refund')
 
-        paiements_liste = Paiements.objects.filter(prospect_id = refund.client.id)
+        paiements_liste = Paiements.objects.filter(prospect_id = refund.client.id).order_by('due_paiements__date_echeance', 'id')
         data = []
         for i in paiements_liste:
             data.append({

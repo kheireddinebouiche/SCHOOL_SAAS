@@ -102,3 +102,41 @@ def sync_global_categories():
     tenants = Institut.objects.exclude(schema_name='public')
     for tenant in tenants:
         sync_tenant_categories(tenant.schema_name)
+
+def send_saas_notification(message, link=None):
+    """
+    Sends a notification to all SaaS administrators (staff/superusers in public schema).
+    """
+    from django.contrib.auth.models import User
+    from .models import SaaSNotification
+    
+    with schema_context('public'):
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
+        channel_layer = get_channel_layer()
+
+        # Target all staff users in the public schema
+        admins = User.objects.filter(is_staff=True, is_active=True)
+        print(f"DEBUG: Found {admins.count()} SaaS admins to notify.")
+        for admin in admins:
+            notif = SaaSNotification.objects.create(
+                user=admin,
+                message=message,
+                link=link
+            )
+            print(f"DEBUG: Created notification ID {notif.id} for user {admin.username}")
+            
+            # Broadcast to user's private group
+            try:
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{admin.id}",
+                    {
+                        "type": "send_notification",
+                        "message": message,
+                        "link": link,
+                        "id": notif.id
+                    }
+                )
+                print(f"DEBUG: WS Broadcast sent to user_{admin.id}")
+            except Exception as ws_err:
+                print(f"DEBUG: WS Broadcast failed: {ws_err}")

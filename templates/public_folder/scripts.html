@@ -20,3 +20,177 @@
 <script src="{% static 'design/assets/js/app.js' %}"></script>
 
 <script type="text/javascript" src="{% static 'design/assets/js/table_view.js' %}"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const socketUrl = protocol + '//' + window.location.host + '/ws/notifications/';
+        
+        console.log("Connecting to SaaS WebSocket:", socketUrl);
+        
+        const socket = new WebSocket(socketUrl);
+
+        socket.onopen = function(e) {
+            console.log("SaaS WebSocket connection established");
+        };
+
+        socket.onmessage = function(e) {
+            console.log("DEBUG WS: Received message:", e.data);
+            const data = JSON.parse(e.data);
+            const message = data.message;
+            const link = data.link || '#';
+            const notif_id = data.id;
+            
+            // Show toast using Alertify
+            if (typeof alertify !== 'undefined') {
+                alertify.set('notifier','position', 'top-right');
+                alertify.success(message);
+            }
+
+            // Update badge
+            const btn = document.getElementById('page-header-notifications-dropdown');
+            if (btn) {
+                let badge = btn.querySelector('.badge.bg-danger');
+                if (badge) {
+                    let count = parseInt(badge.innerText.trim());
+                    if (!isNaN(count)) {
+                        badge.innerText = count + 1;
+                    }
+                } else {
+                    // Create badge if not present
+                    const newBadge = document.createElement('span');
+                    newBadge.className = 'position-absolute topbar-badge fs-10 translate-middle badge rounded-pill bg-danger';
+                    newBadge.innerHTML = '1<span class="visually-hidden">unread messages</span>';
+                    btn.appendChild(newBadge);
+                }
+                
+                // Also update the "X Nouveau" text in the dropdown header
+                const tabBadge = document.querySelector('.dropdown-tabs .badge');
+                if (tabBadge) {
+                    let count = parseInt(tabBadge.innerText.trim());
+                    if (!isNaN(count)) {
+                        tabBadge.innerText = (count + 1) + " Nouveau";
+                    }
+                }
+            }
+            
+            // Append to all-noti-tab
+            const allNotiTab = document.getElementById('all-noti-tab');
+            if (allNotiTab) {
+                const container = allNotiTab.querySelector('[data-simplebar] .pe-2') || allNotiTab.querySelector('.pe-2');
+                if (container) {
+                    const emptyPlaceholder = container.querySelector('.empty-notification-elem');
+                    if (emptyPlaceholder) {
+                        emptyPlaceholder.remove();
+                    }
+
+                    const alertHtml = `
+                        <div class="text-reset notification-item d-block dropdown-item cursor-pointer bg-light-info fw-bold animate__animated animate__fadeInDown">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-xs me-3 flex-shrink-0" onclick="markAsRead('${notif_id}', '${link}')">
+                                    <span class="avatar-title bg-info-subtle text-info rounded-circle fs-16">
+                                        <i class="bx bx-bell"></i>
+                                    </span>
+                                </div>
+                                <div class="flex-grow-1" onclick="markAsRead('${notif_id}', '${link}')">
+                                    <h6 class="mt-0 mb-1 fs-13 fw-semibold">Nouvelle Notification <span class="badge bg-danger rounded-pill float-end">New</span></h6>
+                                    <div class="fs-13 text-muted">
+                                        <p class="mb-1">${message}</p>
+                                    </div>
+                                    <p class="mb-0 fs-11 fw-medium text-uppercase text-muted">
+                                        <span><i class="mdi mdi-clock-outline"></i> À l'instant</span>
+                                    </p>
+                                </div>
+                                <div class="flex-shrink-0 ms-2">
+                                     <button type="button" class="btn btn-icon btn-sm btn-ghost-danger remove-notif" 
+                                             onclick="event.stopPropagation();"
+                                             data-bs-toggle="modal" data-bs-target="#removeNotificationModal" data-id="${notif_id}">
+                                         <i class="bx bx-trash fs-16"></i>
+                                     </button>
+                                 </div>
+                            </div>
+                        </div>`;
+                    
+                    container.insertAdjacentHTML('afterbegin', alertHtml);
+                }
+            }
+        };
+
+        socket.onclose = function(e) {
+            console.error('SaaS Notification socket closed unexpectedly');
+        };
+    });
+
+    function markAsRead(id, link) {
+        fetch("{% url 'associe_app:ApiMarkNotificationRead' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'id=' + id
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                if (link && link !== 'None' && link !== '#') {
+                    window.location.href = link;
+                } else {
+                     location.reload(); 
+                }
+            }
+        });
+    }
+
+    function markAllAsRead() {
+        fetch("{% url 'associe_app:ApiMarkAllNotificationsRead' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            }
+        });
+    }
+
+    // Delete Notification Logic
+    document.addEventListener('DOMContentLoaded', function() {
+        var deleteModal = document.getElementById('removeNotificationModal');
+        var deleteBtn = document.getElementById('delete-notification');
+        var notificationIdToDelete = null;
+
+        if (deleteModal) {
+            deleteModal.addEventListener('show.bs.modal', function(event) {
+                var button = event.relatedTarget;
+                notificationIdToDelete = button.getAttribute('data-id');
+            });
+        }
+
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', function() {
+                if (notificationIdToDelete) {
+                    fetch("{% url 'associe_app:ApiDeleteNotification' %}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: 'id=' + notificationIdToDelete
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            location.reload();
+                        } else {
+                            alertify.error("Erreur lors de la suppression");
+                        }
+                    });
+                }
+            });
+        }
+    });
+</script>

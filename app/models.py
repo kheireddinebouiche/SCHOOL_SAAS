@@ -18,6 +18,12 @@ class Institut(TenantMixin):
     force_password_change = models.BooleanField(default=False, verbose_name=_("Forcer le changement de mot de passe"))
     password_reset_date = models.DateTimeField(null=True, blank=True, verbose_name=_("Date de forçage du reset"))
 
+    # Synchronization fields
+    is_sync_enabled = models.BooleanField(default=True, verbose_name=_("Synchronisation activée"))
+    last_sync_date = models.DateTimeField(null=True, blank=True, verbose_name=_("Dernière synchronisation"))
+    sync_interval_minutes = models.PositiveIntegerField(default=60, verbose_name=_("Intervalle de synchronisation (min)"))
+    sync_token = models.CharField(max_length=255, unique=True, null=True, blank=True, verbose_name=_("Token de synchronisation"))
+
     @property
     def effective_max_upload_size(self):
         """Retourne la limite d'upload effective (Tenant > Global > 400KB)."""

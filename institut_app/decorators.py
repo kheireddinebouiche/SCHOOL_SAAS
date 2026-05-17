@@ -1,7 +1,6 @@
 from functools import wraps
 from django.http import JsonResponse
 from django.shortcuts import redirect
-from .views import Error404
 from .models import *
 
 def ajax_required(view_func):

@@ -2447,10 +2447,10 @@ def saas_email_config_view(request):
     config = SaaSEmailConfiguration.get_solo()
     
     if request.method == 'POST':
-        config.email_enabled = request.POST.get('email_enabled', 'false').lower() == 'true'
+        config.email_enabled = request.POST.get('email_enabled', '').lower() in ['true', 'on', '1']
         config.email_host = request.POST.get('email_host', 'smtp.gmail.com')
         config.email_port = int(request.POST.get('email_port', 587))
-        config.email_use_tls = request.POST.get('email_use_tls', 'true').lower() == 'true'
+        config.email_use_tls = request.POST.get('email_use_tls', '').lower() in ['true', 'on', '1']
         config.email_host_user = request.POST.get('email_host_user', '')
         config.email_host_password = request.POST.get('email_host_password', '')
         config.default_from_email = request.POST.get('default_from_email', 'noreply@school-saas.com')
@@ -2481,26 +2481,28 @@ def saas_test_email_view(request):
         if not config.email_enabled:
             return JsonResponse({'success': False, 'error': "L'envoi d'emails n'est pas activé"}, status=400)
         
-        # Apply email settings
-        config.apply_email_settings()
-        
         test_email = request.POST.get('email', config.email_host_user)
         if not test_email:
             return JsonResponse({'success': False, 'error': 'Aucune email de test fournie'}, status=400)
         
-        # Send test email
-        send_mail(
+        # Send test email via notre mécanisme central
+        from saas_admin_app.email_utils import send_platform_email
+        success = send_platform_email(
             subject='Test Email - School SaaS',
             message='Ceci est un email de test pour vérifier la configuration SMTP de School SaaS.\n\nSi vous avez reçu cet email, la configuration fonctionne correctement.',
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[test_email],
-            fail_silently=False,
+            recipient_list=[test_email]
         )
         
-        return JsonResponse({
-            'success': True,
-            'message': f'Email de test envoyé avec succès à {test_email}'
-        })
+        if success:
+            return JsonResponse({
+                'success': True,
+                'message': f'Email de test envoyé avec succès à {test_email}'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': "Échec de l'envoi. Vérifiez vos identifiants SMTP (Serveur, Port, Utilisateur, Mot de passe) dans la configuration."
+            }, status=500)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 

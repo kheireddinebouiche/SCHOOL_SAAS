@@ -7,7 +7,7 @@ from django.contrib import messages
 from django_tenants.utils import schema_context
 from django.contrib.auth.models import User
 from django.contrib.auth import logout, authenticate, login
-
+from asgiref.sync import async_to_sync, sync_to_async
 
 
 def Index(request):
@@ -53,53 +53,72 @@ def new_tenant(request):
     userForm = NewUser()
 
     if request.method == 'POST' and request.headers.get('x-streaming'):
-        def stream_creation():
+        async def stream_creation():
             yield json.dumps({'status': 'info', 'message': 'Démarrage de la création...'}) + '\n'
             
-            form = NewTenantForm(request.POST)
-            userForm = NewUser(request.POST)
+            def validate_forms():
+                form = NewTenantForm(request.POST)
+                userForm = NewUser(request.POST)
+                is_valid = form.is_valid() and userForm.is_valid()
+                return is_valid, form.errors, userForm.errors, form.cleaned_data if is_valid else None, userForm.cleaned_data if is_valid else None
+
+            is_valid, form_errors, user_errors, tenant_data, user_data = await sync_to_async(validate_forms)()
             
-            if not (form.is_valid() and userForm.is_valid()):
-                errors = {**form.errors, **userForm.errors}
+            if not is_valid:
+                errors = {**form_errors, **user_errors}
                 yield json.dumps({'status': 'error', 'message': 'Validation échouée', 'details': errors}) + '\n'
                 return
 
             try:
-                nom = form.cleaned_data.get('nom').lower().replace(' ', '_')
-                adresse = form.cleaned_data.get('adresse')
-                telephone = form.cleaned_data.get('telephone')
-                username = userForm.cleaned_data.get('username')
-                email = userForm.cleaned_data.get('email')
-                password = userForm.cleaned_data.get('password')
+                nom = tenant_data.get('nom').lower().replace(' ', '_')
+                adresse = tenant_data.get('adresse')
+                telephone = tenant_data.get('telephone')
+                username = user_data.get('username')
+                email = user_data.get('email')
+                password = user_data.get('password')
 
                 # Step 1: Create Institut
                 yield json.dumps({'status': 'info', 'message': f'Étape 1/3 : Création de l\'institut et du schéma "{nom}"...'}) + '\n'
-                tenant = Institut(
-                    schema_name=nom,
-                    nom=nom,
-                    telephone=telephone,
-                    adresse=adresse,
-                    tenant_type='second'
-                )
-                tenant.save() # This triggers schema creation in django-tenants
+                
+                def create_tenant():
+                    tenant = Institut(
+                        schema_name=nom,
+                        nom=nom,
+                        telephone=telephone,
+                        adresse=adresse,
+                        tenant_type='second'
+                    )
+                    tenant.save() # This triggers schema creation in django-tenants
+                    return tenant
+
+                tenant = await sync_to_async(create_tenant)()
                 yield json.dumps({'status': 'success', 'message': 'Institut et schéma créés.'}) + '\n'
 
                 # Step 2: Register Domain
                 yield json.dumps({'status': 'info', 'message': 'Étape 2/3 : Enregistrement du domaine...'}) + '\n'
-                current_site = get_current_site(request)
+                current_site = await sync_to_async(get_current_site)(request)
                 domain_name = current_site.domain.split(':')[0]
-                domain = Domaine(domain=f"{tenant.schema_name}.{domain_name}", tenant=tenant, is_primary=True)
-                domain.save()
+                
+                def create_domain():
+                    domain = Domaine(domain=f"{tenant.schema_name}.{domain_name}", tenant=tenant, is_primary=True)
+                    domain.save()
+                    return domain
+
+                domain = await sync_to_async(create_domain)()
                 yield json.dumps({'status': 'success', 'message': f'Domaine {domain.domain} enregistré.'}) + '\n'
 
                 # Step 3: Create Superuser in new schema
                 yield json.dumps({'status': 'info', 'message': 'Étape 3/3 : Initialisation de l\'administrateur...'}) + '\n'
-                with schema_context(tenant.schema_name):
-                    default_user = User.objects.create_superuser(
-                        username=username,
-                        email=email,
-                        password=password
-                    )
+                
+                def create_superuser():
+                    with schema_context(tenant.schema_name):
+                        return User.objects.create_superuser(
+                            username=username,
+                            email=email,
+                            password=password
+                        )
+
+                await sync_to_async(create_superuser)()
                 yield json.dumps({'status': 'success', 'message': 'Administrateur créé avec succès.'}) + '\n'
 
                 yield json.dumps({'status': 'complete', 'message': 'Tout est prêt ! Redirection...'}) + '\n'

@@ -7,7 +7,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from datetime import date
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, FileResponse
-from .models import GlobalPaymentCategory, GlobalDepensesCategory, GlobalPaymentType, PostesBudgetaire
+from .models import GlobalPaymentCategory, GlobalDepensesCategory, GlobalPaymentType, PostesBudgetaire, SaaSNotification
 from .forms import GlobalPaymentCategoryForm, GlobalDepensesCategoryForm, GlobalPaymentTypeForm
 from .utils import sync_global_categories
 from django.contrib import messages
@@ -15,6 +15,7 @@ from app.models import Institut
 from django_tenants.utils import schema_context
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
+from institut_app.utils_notifications import send_notification_to_module_level
 
 @login_required(login_url='login')
 def update_tenant_type(request):
@@ -171,6 +172,11 @@ def index(request):
             # Depenses
             inst_prorata_d = m_data['pro_d']
             taux_d = (m_data['real_d'] / inst_prorata_d * 100) if inst_prorata_d > 0 else 0
+            
+            # Define values for campus lists
+            real_r = m_data['real_r']
+            real_d = m_data['real_d']
+            prev_d = inst_prorata_d
         elif selected_trimester and selected_trimester != 'all':
             t_key = selected_trimester
             t_data = inst_data['trimester_totals'][t_key]
@@ -185,6 +191,11 @@ def index(request):
             # Depenses
             inst_prorata_d = t_data['pro_d']
             taux_d = (t_data['real_d'] / inst_prorata_d * 100) if inst_prorata_d > 0 else 0
+            
+            # Define values for campus lists
+            real_r = t_data['real_r']
+            real_d = t_data['real_d']
+            prev_d = inst_prorata_d
         else:
             # Chiffre d'affaires - include unallocated gap for consistency with global gauge
             inst_target = budget_goals.get(inst.id, 0)
@@ -1538,6 +1549,22 @@ def budget_campaign_list(request):
     })
 
 
+def perform_bulk_notification(campaign):
+    """Helper to notify all tenants about a campaign"""
+    tenants = Institut.objects.filter(is_visible=True).exclude(schema_name='public')
+    message = f"Une nouvelle campagne budgétaire '{campaign.name}' est maintenant disponible. Veuillez préparer votre proposition."
+    link = "/direction/mes-campagnes-budgetaires/" 
+    
+    success_count = 0
+    for tenant in tenants:
+        try:
+            with schema_context(tenant.schema_name):
+                send_notification_to_module_level('ger', [1, 2, 3, 4], message, link)
+                success_count += 1
+        except Exception as e:
+            print(f"Error notifying tenant {tenant.nom}: {str(e)}")
+    return success_count
+
 @login_required(login_url='login')
 def budget_campaign_activate(request, campaign_slug):
     campaign = get_object_or_404(BudgetCampaign, slug=campaign_slug)
@@ -1548,16 +1575,35 @@ def budget_campaign_activate(request, campaign_slug):
             campaign.save()
             
             action_message = "activée" if campaign.is_active else "désactivée"
-            messages.success(request, f"Campagne '{campaign.name}' {action_message} avec succès.")
+            
+            # Auto-notify if activated
+            notif_msg = ""
+            if campaign.is_active:
+                count = perform_bulk_notification(campaign)
+                notif_msg = f" (Notifications envoyées à {count} instituts)"
+            
+            messages.success(request, f"Campagne '{campaign.name}' {action_message} avec succès.{notif_msg}")
             
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'success', 'message': f"Campagne '{campaign.name}' {action_message} avec succès."})
+                return JsonResponse({'status': 'success', 'message': f"Campagne '{campaign.name}' {action_message} avec succès.{notif_msg}"})
             
         except Exception as e:
             messages.error(request, f"Erreur lors de la modification du statut de la campagne: {e}")
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'error', 'message': f"Erreur lors de la modification du statut de la campagne: {e}"})
                 
+    return redirect('associe_app:budget_campaign_list')
+
+@login_required(login_url='login')
+def notify_tenants_of_campaign(request, campaign_slug):
+    """Manual notification trigger"""
+    campaign = get_object_or_404(BudgetCampaign, slug=campaign_slug)
+    if request.method == 'POST':
+        success_count = perform_bulk_notification(campaign)
+        msg = f"Notification envoyée avec succès à {success_count} instituts."
+        messages.success(request, msg)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': msg})
     return redirect('associe_app:budget_campaign_list')
 
 @login_required(login_url='login')
@@ -1678,7 +1724,7 @@ def budget_campaign_create(request):
         )
         
         if created:
-            messages.success(request, f"Campagne '{name}' créée avec succès.")
+            messages.success(request, f"Campagne '{name}' créée avec succès. Vous pouvez la configurer avant de la lancer.")
         else:
             messages.info(request, f"La campagne '{name}' existe déjà.")
             
@@ -1705,7 +1751,7 @@ def budget_campaign_review(request, campaign_slug, institut_id):
 
     if is_visible_to_admin:
         # 1. Global Items (Public)
-        all_postes = PostesBudgetaire.objects.prefetch_related('payment_categories', 'depense_categories').order_by('order', 'type', 'label')
+        all_postes = PostesBudgetaire.objects.prefetch_related('payment_categories', 'depense_categories').order_by('-type', 'order', 'label')
         
         structured_postes = []
         for p in all_postes:
@@ -1826,6 +1872,32 @@ def budget_campaign_review(request, campaign_slug, institut_id):
             messages.info(request, f"La proposition de budget pour {institut.nom} a été réinitialisée.")
         
         budget_line.save()
+
+        # Notify the institute's managers about the decision
+        try:
+            if action in ['validate', 'reject']:
+                campaign_name = campaign.name
+                if action == 'validate':
+                    notif_message = f"Votre budget pour la campagne '{campaign_name}' a été validé par l'administration."
+                else:
+                    # Truncate comment if too long for notification
+                    clean_comment = commentaire[:100] + "..." if len(commentaire) > 100 else commentaire
+                    notif_message = f"Votre budget pour la campagne '{campaign_name}' a été rejeté. Motif : {clean_comment}"
+                
+                # Link to the dispatch page in the tenant app
+                notif_link = f"/direction/dispatch-budget/{campaign.slug}/"
+                
+                with schema_context(institut.schema_name):
+                    # Notify all users with access to 'ger' module
+                    send_notification_to_module_level(
+                        module_name='ger',
+                        role_levels=[1, 2, 3, 4], # All levels having access to the module
+                        message=notif_message,
+                        link=notif_link
+                    )
+        except Exception as ne:
+            print(f"Error sending decision notification to institute: {ne}")
+
         return redirect('associe_app:budget_campaign_instituts', campaign_slug=campaign.slug)
 
     # Prepare row_quarters for template (Collective for all categories of a poste)
@@ -1928,17 +2000,55 @@ def review_extension(request, request_id):
                     ext_request.save()
                     
                     messages.success(request, f"La demande de rallonge pour {ext_request.institut} a été approuvée.")
-                    return redirect('associe_app:extension_requests_list')
                     
             except Exception as e:
                 messages.error(request, f"Erreur lors de l'approbation : {str(e)}")
         
         elif action == 'reject':
+            if not comment.strip():
+                messages.error(request, "Veuillez indiquer le motif du rejet.")
+                return redirect('associe_app:review_extension', request_id=request_id)
+                
             ext_request.status = 'rejected'
             ext_request.admin_comment = comment
             ext_request.save()
             messages.warning(request, f"La demande de rallonge pour {ext_request.institut} a été rejetée.")
-            return redirect('associe_app:extension_requests_list')
+            
+        # Send Notification to the Institute (Users with 'ger' module access)
+        if action in ['approve', 'reject']:
+            try:
+                from django.urls import reverse
+                with schema_context(ext_request.institut.schema_name):
+                    from institut_app.models import UserModuleRole
+                    from institut_app.utils_notifications import send_notification_to_user
+                    from django.contrib.auth import get_user_model
+                    
+                    status_fr = "approuvée" if action == 'approve' else "rejetée"
+                    message = f"Votre demande de rallonge pour la campagne {ext_request.campaign} a été {status_fr}."
+                    if comment:
+                        message += f" Commentaire : {comment}"
+                    
+                    # Link to the extension request page in the tenant dashboard
+                    link = reverse('institut_app:request_extension', 
+                                   kwargs={'campaign_slug': ext_request.campaign.slug}, 
+                                   urlconf='app.urls')
+                    
+                    # Target users who have access to the 'ger' module
+                    users_to_notify = UserModuleRole.objects.filter(module__name='ger').values_list('user_id', flat=True).distinct()
+                    TenantUser = get_user_model()
+                    
+                    print(f"DEBUG: Notifying {len(users_to_notify)} users in tenant {ext_request.institut.schema_name}")
+                    for user_id in users_to_notify:
+                        try:
+                            user = TenantUser.objects.get(id=user_id)
+                            send_notification_to_user(user, message, link)
+                        except Exception as u_err:
+                            print(f"DEBUG: Failed to notify user {user_id}: {u_err}")
+                            
+            except Exception as e:
+                print(f"DEBUG: Error in extension review notification: {e}")
+
+        return redirect('associe_app:extension_requests_list')
 
     # Fetch enterprise names mapping
     entreprise_map = {0: 'Global'}
@@ -2175,3 +2285,35 @@ def sync_single_tenant_view(request):
             except Exception as e:
                 return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Requête invalide.'})
+
+@login_required
+def api_mark_saas_notification_read(request):
+    if request.method == 'POST':
+        notif_id = request.POST.get('id')
+        try:
+            notification = SaaSNotification.objects.get(id=notif_id, user=request.user)
+            notification.is_read = True
+            notification.save()
+            return JsonResponse({'status': 'success'})
+        except SaaSNotification.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Notification not found'})
+    return JsonResponse({'status': 'error', 'message': 'Invalid request'})
+
+@login_required
+def api_mark_all_saas_notifications_read(request):
+    if request.method == 'POST':
+        SaaSNotification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error', 'message': 'Invalid request'})
+
+@login_required
+def api_delete_saas_notification(request):
+    if request.method == 'POST':
+        notif_id = request.POST.get('id')
+        try:
+            notification = SaaSNotification.objects.get(id=notif_id, user=request.user)
+            notification.delete()
+            return JsonResponse({'status': 'success'})
+        except SaaSNotification.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Notification not found'})
+    return JsonResponse({'status': 'error', 'message': 'Invalid request'})

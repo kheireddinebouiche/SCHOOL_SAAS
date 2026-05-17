@@ -310,11 +310,22 @@ def ApiGetDetailsDemandePaiement(request):
             has_due_paiement = False
             due_paiement_data = []
 
-        done_paiements = Paiements.objects.filter(prospect = obj.client)
+        done_paiements = Paiements.objects.filter(prospect = obj.client).order_by('due_paiements__date_echeance', 'id')
         if done_paiements.count()>0:
             has_paiement = True
             total_paiement = done_paiements.filter(is_refund = False).aggregate(total=Sum('montant_paye'))['total'] or 0
             for i in done_paiements:
+                # Calculate the remaining balance of the tranche immediately after this payment
+                if i.due_paiements:
+                    prev_total = Paiements.objects.filter(
+                        due_paiements=i.due_paiements,
+                        id__lte=i.id,
+                        is_refund=False
+                    ).aggregate(total=Sum('montant_paye'))['total'] or 0
+                    montant_restant_val = float(i.due_paiements.montant_due - prev_total)
+                else:
+                    montant_restant_val = None
+
                 paiements_done_data.append({
                     'id': i.id,
                     'montant_paye' : i.montant_paye,
@@ -329,6 +340,10 @@ def ApiGetDetailsDemandePaiement(request):
                     'logo_footer': i.due_paiements.entite.pied_page_logo.url if i.due_paiements and i.due_paiements.entite and i.due_paiements.entite.pied_page_logo else (echeancierId.entite.pied_page_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.pied_page_logo else None),
                     'facture_id': i.facture.id if i.facture else None,
                     'facture_num': i.facture.num_facture if i.facture else None,
+                    'montant_restant': montant_restant_val,
+                    'has_printed_quittance': i.has_printed_quittance,
+                    'quittance_printed_at': i.quittance_printed_at.strftime("%Y-%m-%d %H:%M:%S") if i.quittance_printed_at else None,
+                    'quittance_printed_by': i.quittance_printed_by,
                 })
 
         else:
@@ -460,7 +475,9 @@ def ApiGetDetailsDemandePaiement(request):
             "client_id" : obj.client.id,
             "motif": obj.get_motif_display(),
             "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "client_id": obj.client.id,  # Add client ID to the response
+            "has_printed_engagement": obj.client.has_printed_engagement,
+            "engagement_printed_at": obj.client.engagement_printed_at.strftime("%Y-%m-%d %H:%M:%S") if obj.client.engagement_printed_at else None,
+            "engagement_printed_by": obj.client.engagement_printed_by,
         }
 
         voeux_data = {
@@ -615,11 +632,22 @@ def ApiGetDetailsDemandePaiementDouble(request):
             has_due_paiement = False
             due_paiement_data = []
 
-        done_paiements = Paiements.objects.filter(prospect = obj.client)
+        done_paiements = Paiements.objects.filter(prospect = obj.client).order_by('due_paiements__date_echeance', 'id')
         if done_paiements.count()>0:
             has_paiement = True
             total_paiement = done_paiements.filter(is_refund = False).aggregate(total=Sum('montant_paye'))['total'] or 0
             for i in done_paiements:
+                # Calculate the remaining balance of the tranche immediately after this payment
+                if i.due_paiements:
+                    prev_total = Paiements.objects.filter(
+                        due_paiements=i.due_paiements,
+                        id__lte=i.id,
+                        is_refund=False
+                    ).aggregate(total=Sum('montant_paye'))['total'] or 0
+                    montant_restant_val = float(i.due_paiements.montant_due - prev_total)
+                else:
+                    montant_restant_val = None
+
                 paiements_done_data.append({
                     'id': i.id,
                     'montant_paye' : i.montant_paye,
@@ -633,6 +661,10 @@ def ApiGetDetailsDemandePaiementDouble(request):
                     'logo_footer': i.due_paiements.entite.pied_page_logo.url if i.due_paiements and i.due_paiements.entite and i.due_paiements.entite.pied_page_logo else (echeancierId.entite.pied_page_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.pied_page_logo else None),
                     'facture_id': i.facture.id if i.facture else None,
                     'facture_num': i.facture.num_facture if i.facture else None,
+                    'montant_restant': montant_restant_val,
+                    'has_printed_quittance': i.has_printed_quittance,
+                    'quittance_printed_at': i.quittance_printed_at.strftime("%Y-%m-%d %H:%M:%S") if i.quittance_printed_at else None,
+                    'quittance_printed_by': i.quittance_printed_by,
                 })
 
         else:
@@ -766,7 +798,9 @@ def ApiGetDetailsDemandePaiementDouble(request):
             "client_id" : obj.client.id,
             "motif": obj.get_motif_display(),
             "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "client_id": obj.client.id,  
+            "has_printed_engagement": obj.client.has_printed_engagement,
+            "engagement_printed_at": obj.client.engagement_printed_at.strftime("%Y-%m-%d %H:%M:%S") if obj.client.engagement_printed_at else None,
+            "engagement_printed_by": obj.client.engagement_printed_by,
         }
 
         # Use resolved objects for the response
@@ -1288,6 +1322,8 @@ def ApiGetParametreFinancier(request):
         'timbre_min': str(params.timbre_min),
         'timbre_max': str(params.timbre_max),
         'timbre_cash_only': params.timbre_cash_only,
+        'relance_echeancier_sujet': params.relance_echeancier_sujet,
+        'relance_echeancier_corps': params.relance_echeancier_corps,
     })
 
 @login_required(login_url="institut_app:login")
@@ -1319,6 +1355,14 @@ def ApiUpdateParametreFinancier(request):
         cash_only = request.POST.get('timbre_cash_only')
         if cash_only is not None:
             params.timbre_cash_only = cash_only.lower() in ('true', '1', 'on')
+
+        relance_sujet = request.POST.get('relance_echeancier_sujet')
+        if relance_sujet is not None:
+            params.relance_echeancier_sujet = relance_sujet
+
+        relance_corps = request.POST.get('relance_echeancier_corps')
+        if relance_corps is not None:
+            params.relance_echeancier_corps = relance_corps
             
         params.save()
         return JsonResponse({

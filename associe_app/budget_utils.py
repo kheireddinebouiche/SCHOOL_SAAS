@@ -54,7 +54,7 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
     all_realisations = {} # Key: poste_id -> {montant, t1_montant, ...}
 
     # 4. Fetch Budget Postes (Public)
-    all_postes = PostesBudgetaire.objects.prefetch_related('payment_categories', 'depense_categories').order_by('order', 'type', 'label')
+    all_postes = PostesBudgetaire.objects.prefetch_related('payment_categories', 'depense_categories').order_by('-type', 'order', 'label')
     
     # 5. Loop Through Instituts and Collect Data
     for inst in target_instituts:

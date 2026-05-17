@@ -222,3 +222,18 @@ class BudgetExtensionItem(models.Model):
     class Meta:
         verbose_name = "Détail Rallonge"
         verbose_name_plural = "Détails Rallonge"
+
+class SaaSNotification(models.Model):
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='saas_notifications')
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    link = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Notification SaaS'
+        verbose_name_plural = 'Notifications SaaS'
+
+    def __str__(self):
+        return f"Notification for {self.user}: {self.message}"

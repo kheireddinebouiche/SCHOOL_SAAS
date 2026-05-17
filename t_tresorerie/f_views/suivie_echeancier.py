@@ -234,6 +234,19 @@ def ApiGetClientEcheancier(request):
 
         due_paiement = DuePaiements.objects.filter(client=obj).filter(Q(is_done=False) | Q(montant_restant__gt=0))
 
+        # Toutes les tranches (payées + non payées) pour l'engagement PDF
+        all_due_paiements_qs = DuePaiements.objects.filter(client=obj, is_annulated=False).order_by('date_echeance')
+        all_due_paiement_data = []
+        for i in all_due_paiements_qs:
+            all_due_paiement_data.append({
+                'id_due_paiement': i.id,
+                'montant_due': float(i.montant_due),
+                'montant_restant': float(i.montant_restant),
+                'label': i.label,
+                'date_echeance': str(i.date_echeance),
+                'is_done': i.is_done,
+            })
+
         if due_paiement.count() > 0:
             has_due_paiement = True
             total_initial = DuePaiements.objects.filter(client = obj, is_annulated=False).aggregate(total=Sum('montant_due'))['total'] or 0
@@ -249,12 +262,24 @@ def ApiGetClientEcheancier(request):
             has_due_paiement = False
             due_paiement_data = []
 
-        done_paiements = Paiements.objects.filter(prospect = obj)
+        done_paiements = Paiements.objects.filter(prospect = obj).order_by('due_paiements__date_echeance', 'id')
         if done_paiements.count()>0:
             has_paiement = True
             total_paiement = done_paiements.filter(is_refund = False).aggregate(total=Sum('montant_paye'))['total'] or 0
             for i in done_paiements:
+                # Calculate the remaining balance of the tranche immediately after this payment
+                if i.due_paiements:
+                    prev_total = Paiements.objects.filter(
+                        due_paiements=i.due_paiements,
+                        id__lte=i.id,
+                        is_refund=False
+                    ).aggregate(total=Sum('montant_paye'))['total'] or 0
+                    montant_restant_val = float(i.due_paiements.montant_due - prev_total)
+                else:
+                    montant_restant_val = None
+
                 paiements_done_data.append({
+                    'id': i.id,
                     'montant_paye' : i.montant_paye,
                     'date_paiement' : i.date_paiement,
                     'label_paiements' : i.due_paiements.label if i.due_paiements and i.due_paiements.label else i.paiement_label,
@@ -262,6 +287,10 @@ def ApiGetClientEcheancier(request):
                     'mode_paiement' : i.get_mode_paiement_display(),
                     'reference_paiement' : i.reference_paiement,
                     'is_refund' : i.is_refund, 'facture_num' : i.facture.num_facture if i.facture else None, 'facture_id' : i.facture.id if i.facture else None, 'entite_id': i.entite.id if i.entite else None,
+                    'montant_restant': montant_restant_val,
+                    'has_printed_quittance': i.has_printed_quittance,
+                    'quittance_printed_at': i.quittance_printed_at.strftime("%Y-%m-%d %H:%M:%S") if i.quittance_printed_at else None,
+                    'quittance_printed_by': i.quittance_printed_by,
                 })
 
         else:
@@ -368,6 +397,9 @@ def ApiGetClientEcheancier(request):
             "financial_alert_message": obj.financial_alert_message,
             "can_disable_alert": obj.financial_alert_user == request.user if obj.has_financial_alert else True,
             "alert_user_name": f"{obj.financial_alert_user.first_name} {obj.financial_alert_user.last_name}" if obj.financial_alert_user else None,
+            "has_printed_engagement": obj.has_printed_engagement,
+            "engagement_printed_at": obj.engagement_printed_at.strftime("%Y-%m-%d %H:%M:%S") if obj.engagement_printed_at else None,
+            "engagement_printed_by": obj.engagement_printed_by,
         }
 
         # Extraction des frais d'inscription depuis DuePaiements
@@ -377,12 +409,15 @@ def ApiGetClientEcheancier(request):
         voeux_data = {
             'specialite_id' : voeux.specialite.id,
             'specialite_label' : voeux.specialite.label,
+            'formation' : voeux.specialite.formation.nom,
             'formation_label' : voeux.specialite.formation.nom,
+            'entite' : voeux.specialite.formation.entite_legal.designation,
+            'entite_ville' : voeux.specialite.formation.entite_legal.ville,
             'promo' : voeux.promo.code,
-            'prix_formation' : voeux.specialite.formation.prix_formation,
+            'prix_formation' : voeux.specialite.prix,
             'frais_inscription' : frais_inscription_val,
-            'logo_header' : voeux.specialite.formation.entite_legal.entete_logo.url,
-            'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url,
+            'logo_header' : voeux.specialite.formation.entite_legal.entete_logo.url if voeux.specialite.formation.entite_legal.entete_logo else None,
+            'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url if voeux.specialite.formation.entite_legal.pied_page_logo else None,
         }
 
         total_solde = total_initial - total_paiement if has_due_paiement and has_paiement else 0
@@ -399,6 +434,7 @@ def ApiGetClientEcheancier(request):
             'echeancier_special_state_approuvel' : echeancier_state_approuvel,
             "has_due_paiement" : has_due_paiement,
             "due_paiement_data" : due_paiement_data,
+            "all_due_paiement_data" : all_due_paiement_data,
             "has_paiement" : has_paiement,
             "paiements_done_data" : paiements_done_data,
             "total_paiement" : total_paiement if has_paiement else 0,
@@ -450,6 +486,19 @@ def ApiGetClientEcheancierDouble(request):
 
         due_paiement = DuePaiements.objects.filter(client=obj).filter(Q(is_done=False) | Q(montant_restant__gt=0))
 
+        # Toutes les tranches (payées + non payées) pour l'engagement PDF
+        all_due_paiements_qs = DuePaiements.objects.filter(client=obj, is_annulated=False).order_by('date_echeance')
+        all_due_paiement_data = []
+        for i in all_due_paiements_qs:
+            all_due_paiement_data.append({
+                'id_due_paiement': i.id,
+                'montant_due': float(i.montant_due),
+                'montant_restant': float(i.montant_restant),
+                'label': i.label,
+                'date_echeance': str(i.date_echeance),
+                'is_done': i.is_done,
+            })
+
         if due_paiement.count() > 0:
             has_due_paiement = True
             total_initial = DuePaiements.objects.filter(client = obj, is_annulated=False).aggregate(total=Sum('montant_due'))['total'] or 0
@@ -465,12 +514,24 @@ def ApiGetClientEcheancierDouble(request):
             has_due_paiement = False
             due_paiement_data = []
 
-        done_paiements = Paiements.objects.filter(prospect = obj)
+        done_paiements = Paiements.objects.filter(prospect = obj).order_by('due_paiements__date_echeance', 'id')
         if done_paiements.count()>0:
             has_paiement = True
             total_paiement = done_paiements.filter(is_refund = False).aggregate(total=Sum('montant_paye'))['total'] or 0
             for i in done_paiements:
+                # Calculate the remaining balance of the tranche immediately after this payment
+                if i.due_paiements:
+                    prev_total = Paiements.objects.filter(
+                        due_paiements=i.due_paiements,
+                        id__lte=i.id,
+                        is_refund=False
+                    ).aggregate(total=Sum('montant_paye'))['total'] or 0
+                    montant_restant_val = float(i.due_paiements.montant_due - prev_total)
+                else:
+                    montant_restant_val = None
+
                 paiements_done_data.append({
+                    'id': i.id,
                     'montant_paye' : i.montant_paye,
                     'date_paiement' : i.date_paiement,
                     'label_paiements' : i.due_paiements.label if i.due_paiements and i.due_paiements.label else i.paiement_label,
@@ -478,6 +539,10 @@ def ApiGetClientEcheancierDouble(request):
                     'mode_paiement' : i.get_mode_paiement_display(),
                     'reference_paiement' : i.reference_paiement,
                     'is_refund' : i.is_refund, 'facture_num' : i.facture.num_facture if i.facture else None, 'facture_id' : i.facture.id if i.facture else None, 'entite_id': i.entite.id if i.entite else None,
+                    'montant_restant': montant_restant_val,
+                    'has_printed_quittance': i.has_printed_quittance,
+                    'quittance_printed_at': i.quittance_printed_at.strftime("%Y-%m-%d %H:%M:%S") if i.quittance_printed_at else None,
+                    'quittance_printed_by': i.quittance_printed_by,
                 })
 
         else:
@@ -584,6 +649,9 @@ def ApiGetClientEcheancierDouble(request):
             "financial_alert_message": obj.financial_alert_message,
             "can_disable_alert": obj.financial_alert_user == request.user if obj.has_financial_alert else True,
             "alert_user_name": f"{obj.financial_alert_user.first_name} {obj.financial_alert_user.last_name}" if obj.financial_alert_user else None,
+            "has_printed_engagement": obj.has_printed_engagement,
+            "engagement_printed_at": obj.engagement_printed_at.strftime("%Y-%m-%d %H:%M:%S") if obj.engagement_printed_at else None,
+            "engagement_printed_by": obj.engagement_printed_by,
         }
 
         # Extraction des frais d'inscription depuis DuePaiements
@@ -593,11 +661,14 @@ def ApiGetClientEcheancierDouble(request):
         voeux_data = {
             'specialite_id' : voeux.specialite.id,
             'specialite_label' : voeux.specialite.label,
+            'formation' : f"{voeux.specialite.specialite1.label} / {voeux.specialite.specialite2.label}" if voeux.specialite and voeux.specialite.specialite1 and voeux.specialite.specialite2 else "Double Diplomation",
             'promo' : voeux.promo.code,
-            'prix_formation' : voeux.specialite.prix,
+            'prix_formation' : (voeux.specialite.prix_spec1 or 0) + (voeux.specialite.prix_spec2 or 0) if voeux.specialite else 0,
             'frais_inscription' : frais_inscription_val,
-            # 'logo_header' : voeux.specialite.formation.entite_legal.entete_logo.url,
-            # 'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url,
+            'logo_header' : echeancierId.entite.entete_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.entete_logo else None,
+            'logo_footer' : echeancierId.entite.pied_page_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.pied_page_logo else None,
+            'entite' : echeancierId.entite.designation if echeancierId and echeancierId.entite else "Double Diplomation",
+            'entite_ville' : echeancierId.entite.ville if echeancierId and echeancierId.entite else "",
         }
 
         total_solde = total_initial - total_paiement if has_due_paiement and has_paiement else 0
@@ -614,6 +685,7 @@ def ApiGetClientEcheancierDouble(request):
             'echeancier_special_state_approuvel' : echeancier_state_approuvel,
             "has_due_paiement" : has_due_paiement,
             "due_paiement_data" : due_paiement_data,
+            "all_due_paiement_data" : all_due_paiement_data,
             "has_paiement" : has_paiement,
             "paiements_done_data" : paiements_done_data,
             "total_paiement" : total_paiement if has_paiement else 0,
@@ -881,4 +953,212 @@ def ApiToggleFinancialAlert(request):
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)})
 
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiSendEmailRelance(request):
+    if request.method == "POST":
+        id_client = request.POST.get('client_id')
+        echeance_ids = request.POST.getlist('echeance_ids[]')
+        
+        if not id_client or not echeance_ids:
+            try:
+                data = json.loads(request.body)
+                if not id_client:
+                    id_client = data.get('client_id')
+                if not echeance_ids:
+                    echeance_ids = data.get('echeance_ids', [])
+            except:
+                pass
+
+        if not id_client:
+            return JsonResponse({"status": "error", "message": "Identifiant du client manquant"}, status=400)
+
+        try:
+            student = Prospets.objects.get(id=id_client)
+        except Prospets.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Client introuvable"}, status=404)
+
+        email_dest = student.email
+        if not email_dest or not email_dest.strip():
+            return JsonResponse({
+                "status": "error", 
+                "message": "Le prospect n'a pas d'adresse e-mail configurée."
+            }, status=400)
+
+        # Get unpaid due payments
+        due_paiements = DuePaiements.objects.filter(
+            client=student,
+            is_annulated=False
+        ).filter(Q(is_done=False) | Q(montant_restant__gt=0)).order_by('date_echeance')
+
+        # Filter by selected échéance IDs if provided
+        if echeance_ids:
+            due_paiements = due_paiements.filter(id__in=echeance_ids)
+
+        if not due_paiements.exists():
+            return JsonResponse({
+                "status": "info", 
+                "message": "Aucune échéance en suspens n'a été sélectionnée."
+            })
+
+        # Calculate total remaining balance for selected due payments
+        total_remaining = sum(item.montant_restant for item in due_paiements)
+
+        # Build outstanding payments list HTML
+        table_rows_html = ""
+        for item in due_paiements:
+            date_str = item.date_echeance.strftime('%d/%m/%Y') if item.date_echeance else "Non spécifiée"
+            table_rows_html += f"""
+            <tr>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px;">{item.label}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px;">{date_str}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-weight: 600; font-size: 14px; text-align: right;">{float(item.montant_due):,.2f} DA</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #e11d48; font-weight: 600; font-size: 14px; text-align: right;">{float(item.montant_restant):,.2f} DA</td>
+            </tr>
+            """
+
+        # Load templates from settings
+        from t_tresorerie.models import ParametreFinancier
+        config_fin = ParametreFinancier.get_instance()
+        subject_template = config_fin.relance_echeancier_sujet
+        body_template = config_fin.relance_echeancier_corps
+
+        # Replace dynamic variables
+        nom = student.nom
+        prenom = student.prenom
+        annee_courante = str(datetime.now().year)
+        total_remaining_formatted = f"{float(total_remaining):,.2f}"
+        tenant_name = request.tenant.nom if request.tenant and hasattr(request.tenant, 'nom') else "Notre Établissement"
+
+        # Fetch specialty information (standard and double)
+        specialite_labels = []
+        try:
+            from t_crm.models import FicheDeVoeux, FicheVoeuxDouble
+            # Standard wishes
+            standard_voeux = FicheDeVoeux.objects.filter(prospect=student, is_confirmed=True)
+            for voeu in standard_voeux:
+                if voeu.specialite:
+                    specialite_labels.append(voeu.specialite.label)
+            
+            # Double wishes
+            double_voeux = FicheVoeuxDouble.objects.filter(prospect=student, is_confirmed=True)
+            for voeu in double_voeux:
+                if voeu.specialite:
+                    specialite_labels.append(voeu.specialite.label)
+            
+            # Fallback if no confirmed wishes found, check all wishes
+            if not specialite_labels:
+                for voeu in FicheDeVoeux.objects.filter(prospect=student):
+                    if voeu.specialite:
+                        specialite_labels.append(voeu.specialite.label)
+                for voeu in FicheVoeuxDouble.objects.filter(prospect=student):
+                    if voeu.specialite:
+                        specialite_labels.append(voeu.specialite.label)
+        except Exception:
+            pass
+
+        specialite_str = ", ".join(specialite_labels) if specialite_labels else "Non spécifiée"
+
+        subject = subject_template.replace('{nom}', nom).replace('{prenom}', prenom).replace('{annee_courante}', annee_courante).replace('{total_remaining}', total_remaining_formatted).replace('{tenant_name}', tenant_name).replace('SCHOOL SAAS', tenant_name).replace('{specialite}', specialite_str)
+        
+        if '{specialite}' in body_template:
+            html_message = body_template.replace('{specialite}', specialite_str)
+        else:
+            # Fallback substitution for default template without the placeholder
+            html_message = body_template.replace(
+                "échéancier de paiement de formation présente",
+                f"échéancier de paiement pour la spécialité <strong>{specialite_str}</strong> présente"
+            ).replace(
+                "échéancier de paiement présente",
+                f"échéancier de paiement pour la spécialité <strong>{specialite_str}</strong> présente"
+            )
+
+        html_message = html_message.replace('{nom}', nom).replace('{prenom}', prenom).replace('{table_rows}', table_rows_html).replace('{total_remaining}', total_remaining_formatted).replace('{annee_courante}', annee_courante).replace('{tenant_name}', tenant_name).replace('SCHOOL SAAS', tenant_name)
+
+        plain_message = f"Bonjour {nom} {prenom},\n\nNous vous contactons pour vous rappeler que votre échéancier de paiement pour la spécialité {specialite_str} présente des échéances en attente de régularisation pour un montant restant total de {total_remaining_formatted} DA.\n\nMerci de bien vouloir régulariser votre situation au plus vite.\n\nCordialement,\nLe service Trésorerie de {tenant_name}."
+
+        reply_to_list = [request.user.email] if request.user and request.user.email else None
+
+        from saas_admin_app.email_utils import send_platform_email
+        success = send_platform_email(
+            subject=subject,
+            message=plain_message,
+            recipient_list=[email_dest],
+            html_message=html_message,
+            reply_to=reply_to_list,
+            from_email_display=tenant_name
+        )
+
+        if success:
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='EMAIL',
+                target_model='Prospets',
+                target_id=str(id_client),
+                details=f"Email de relance envoyé pour l'échéancier de {student.nom} {student.prenom} à l'adresse {email_dest}. Montant relancé: {total_remaining_formatted} DA. Échéances relancées: {', '.join(item.label for item in due_paiements)}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            return JsonResponse({"status": "success", "message": "L'email de relance a été envoyé avec succès !"})
+        else:
+            return JsonResponse({
+                "status": "error", 
+                "message": "Échec de l'envoi de l'email. Veuillez vérifier la configuration SMTP globale du SaaS Admin."
+            }, status=500)
+
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+@login_required(login_url="institut_app:login")
+@require_http_methods(["POST"])
+def ApiMarkEngagementPrinted(request, prospect_id):
+    try:
+        data = json.loads(request.body)
+        signataire = data.get('signataire', 'Inconnu')
+        
+        prospect = Prospets.objects.get(id=prospect_id)
+        prospect.has_printed_engagement = True
+        prospect.engagement_printed_at = now()
+        prospect.engagement_printed_by = signataire
+        prospect.save(update_fields=['has_printed_engagement', 'engagement_printed_at', 'engagement_printed_by'])
+        
+        return JsonResponse({
+            'status': 'success', 
+            'message': 'Engagement marqué comme imprimé',
+            'printed_at': prospect.engagement_printed_at.strftime('%d/%m/%Y %H:%M'),
+            'printed_by': prospect.engagement_printed_by
+        })
+    except Prospets.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required(login_url="institut_app:login")
+@require_http_methods(["POST"])
+def ApiMarkQuittancePrinted(request):
+    try:
+        data = json.loads(request.body)
+        payment_num = data.get('payment_num')
+        if not payment_num:
+            return JsonResponse({'status': 'error', 'message': 'Numéro de paiement manquant'}, status=400)
+        
+        user = request.user
+        printed_by = f"{user.first_name} {user.last_name}".strip() or user.username
+        
+        payment = Paiements.objects.get(num=payment_num)
+        payment.has_printed_quittance = True
+        payment.quittance_printed_at = now()
+        payment.quittance_printed_by = printed_by
+        payment.save(update_fields=['has_printed_quittance', 'quittance_printed_at', 'quittance_printed_by'])
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Impression de la quittance enregistrée avec succès',
+            'quittance_printed_at': payment.quittance_printed_at.strftime('%d/%m/%Y à %H:%M'),
+            'quittance_printed_by': payment.quittance_printed_by
+        })
+    except Paiements.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Paiement non trouvé'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

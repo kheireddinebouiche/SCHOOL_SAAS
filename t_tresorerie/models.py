@@ -104,6 +104,11 @@ class Paiements(models.Model):
     is_refund = models.BooleanField(default=False)
     refund_id = models.ForeignKey('Rembourssements', null=True, blank=True, on_delete=models.SET_NULL)
 
+    # Tracking of receipt/quittance printing
+    has_printed_quittance = models.BooleanField(default=False)
+    quittance_printed_at = models.DateTimeField(null=True, blank=True)
+    quittance_printed_by = models.CharField(max_length=255, null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     facture = models.ForeignKey('t_conseil.Facture', on_delete=models.SET_NULL, null=True, blank=True, related_name='tresorerie_paiements')
@@ -532,6 +537,82 @@ class SpecialiteCompte(models.Model):
         return f"{self.specialite.label} - {self.compte.label}"
 
 
+
+DEFAULT_RELANCE_CORPS = """<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rappel de Paiement</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #334155;">
+    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 10px;">
+        <tr>
+            <td align="center">
+                <table width="600" border="0" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); overflow: hidden;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #1e3a8a 0%, #0d9488 100%); padding: 35px 40px; text-align: left;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Rappel d'échéance de paiement</h1>
+                            <p style="color: #e2e8f0; margin: 5px 0 0 0; font-size: 14px;">{tenant_name} - Service Trésorerie</p>
+                        </td>
+                    </tr>
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <h2 style="color: #0f172a; margin-top: 0; margin-bottom: 20px; font-size: 18px; font-weight: 600;">Bonjour {nom} {prenom},</h2>
+                            <p style="line-height: 1.6; color: #475569; font-size: 15px; margin-bottom: 25px;">
+                                Nous vous contactons pour vous rappeler que votre échéancier de paiement de formation présente une ou plusieurs échéances en attente de régularisation.
+                            </p>
+                            
+                            <!-- Table structure -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; margin-bottom: 25px;">
+                                <thead>
+                                    <tr style="background-color: #f1f5f9;">
+                                        <th style="padding: 12px; font-weight: 600; text-align: left; color: #475569; font-size: 13px; border-bottom: 2px solid #cbd5e1;">Échéance</th>
+                                        <th style="padding: 12px; font-weight: 600; text-align: left; color: #475569; font-size: 13px; border-bottom: 2px solid #cbd5e1;">Date d'échéance</th>
+                                        <th style="padding: 12px; font-weight: 600; text-align: right; color: #475569; font-size: 13px; border-bottom: 2px solid #cbd5e1;">Montant dû</th>
+                                        <th style="padding: 12px; font-weight: 600; text-align: right; color: #475569; font-size: 13px; border-bottom: 2px solid #cbd5e1;">Reste à payer</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {table_rows}
+                                </tbody>
+                            </table>
+
+                            <!-- Summary Banner -->
+                            <div style="background-color: #fff1f2; border-left: 4px solid #f43f5e; padding: 15px 20px; border-radius: 6px; margin-bottom: 30px;">
+                                <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                                    <tr>
+                                        <td style="color: #9f1239; font-size: 15px; font-weight: 600;">Total restant à payer :</td>
+                                        <td style="color: #be123c; font-size: 18px; font-weight: 700; text-align: right;">{total_remaining} DA</td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <p style="line-height: 1.6; color: #475569; font-size: 15px; margin-bottom: 25px;">
+                                Nous vous prions de bien vouloir procéder à la régularisation de ces montants dans les plus brefs délais auprès de notre service comptabilité.
+                            </p>
+                            
+                            <p style="line-height: 1.6; color: #64748b; font-size: 13px; font-style: italic; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                                Si vous avez déjà procédé à ce paiement récemment, merci de ne pas tenir compte de ce message ou de nous transmettre votre reçu de paiement pour mise à jour de votre dossier.
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f1f5f9; padding: 25px 40px; text-align: center; font-size: 12px; color: #94a3b8;">
+                            <p style="margin: 0 0 5px 0;">Ce courriel a été généré automatiquement par {tenant_name}.</p>
+                            <p style="margin: 0;">© {annee_courante} Tous droits réservés.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>"""
+
 class ParametreFinancier(models.Model):
     """Singleton model for global financial parameters."""
 
@@ -573,6 +654,17 @@ class ParametreFinancier(models.Model):
         default=True,
         verbose_name="Uniquement pour les espèces",
         help_text="Si activé, le timbre ne s'applique qu'aux paiements marqués comme 'Espèce'."
+    )
+
+    # Email Templates
+    relance_echeancier_sujet = models.CharField(
+        max_length=255,
+        default="Rappel de paiement - Échéancier de formation - {nom} {prenom}",
+        verbose_name="Sujet de l'email de relance"
+    )
+    relance_echeancier_corps = models.TextField(
+        default=DEFAULT_RELANCE_CORPS,
+        verbose_name="Corps de l'email de relance (HTML)"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

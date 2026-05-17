@@ -533,9 +533,17 @@
                                             <small class="text-danger fw-medium"><i class="ri-time-line me-1"></i> Échu le ${new Date(item.date_echeance).toLocaleDateString()}</small>
                                         </div>
                                     </div>
-                                    <div class="text-end d-flex align-items-center gap-3">
-                                        <div class="amount-text-premium text-danger">${dzFormat.format(item.montant_due)} DA</div>
+                                    <div class="text-end d-flex align-items-center gap-2">
+                                        <div class="amount-text-premium text-danger me-2">${dzFormat.format(item.montant_due)} DA</div>
                                         <span class="status-pill-soft bg-danger-subtle text-danger">J+${diffDays}</span>
+                                        <button class="btn btn-sm btn-soft-danger rounded-circle p-2 ms-2 btn-send-relance-dash" 
+                                                data-client-id="${item.client__id}" 
+                                                data-echeance-id="${item.id}"
+                                                data-client-name="${item.client__nom} ${item.client__prenom}"
+                                                data-type="echue"
+                                                title="Envoyer un email de relance">
+                                            <i class="ri-mail-send-line fs-14"></i>
+                                        </button>
                                     </div>
                                 </div>
                             `);
@@ -570,8 +578,16 @@
                                             <span class="status-pill-soft pill-today">${item.label || 'Tranche'}</span>
                                         </div>
                                     </div>
-                                    <div class="text-end">
-                                        <div class="amount-text-premium">${dzFormat.format(item.montant_due)} DA</div>
+                                    <div class="text-end d-flex align-items-center gap-2">
+                                        <div class="amount-text-premium me-2">${dzFormat.format(item.montant_due)} DA</div>
+                                        <button class="btn btn-sm btn-soft-warning rounded-circle p-2 ms-2 btn-send-relance-dash" 
+                                                data-client-id="${item.client__id}" 
+                                                data-echeance-id="${item.id}"
+                                                data-client-name="${item.client__nom} ${item.client__prenom}"
+                                                data-type="aujourdhui"
+                                                title="Envoyer un email de relance">
+                                            <i class="ri-mail-send-line fs-14"></i>
+                                        </button>
                                     </div>
                                 </div>
                             `);
@@ -608,9 +624,17 @@
                                             <small class="text-muted"><i class="ri-calendar-line me-1"></i> ${new Date(item.date_echeance).toLocaleDateString()}</small>
                                         </div>
                                     </div>
-                                    <div class="text-end d-flex align-items-center gap-4">
-                                        <div class="amount-text-premium">${dzFormat.format(item.montant_due)} DA</div>
+                                    <div class="text-end d-flex align-items-center gap-2">
+                                        <div class="amount-text-premium me-2">${dzFormat.format(item.montant_due)} DA</div>
                                         <span class="status-pill-soft pill-upcoming">J-${diffDays}</span>
+                                        <button class="btn btn-sm btn-soft-primary rounded-circle p-2 ms-2 btn-send-relance-dash" 
+                                                data-client-id="${item.client__id}" 
+                                                data-echeance-id="${item.id}"
+                                                data-client-name="${item.client__nom} ${item.client__prenom}"
+                                                data-type="rappel"
+                                                title="Envoyer un email de rappel anticipé">
+                                            <i class="ri-mail-send-line fs-14"></i>
+                                        </button>
                                     </div>
                                 </div>
                             `);
@@ -623,6 +647,69 @@
         }
 
         loadKpiData();
+
+        // --- 1.5. Delegated Relance Email Sending ---
+        $(document).on('click', '.btn-send-relance-dash', function(e) {
+            e.preventDefault();
+            const btn = $(this);
+            const clientId = btn.data('client-id');
+            const echeanceId = btn.data('echeance-id');
+            const clientName = btn.data('client-name');
+            const type = btn.data('type'); // "echue", "aujourdhui", "rappel"
+
+            if (!clientId) {
+                alertify.error("ID client manquant.");
+                return;
+            }
+
+            const title = type === "rappel" ? "Rappel d'échéance" : "Relance de paiement";
+            const confirmMsg = type === "rappel" 
+                ? `Voulez-vous envoyer un email de rappel anticipé à <strong>${clientName}</strong> pour sa prochaine échéance ?`
+                : `Voulez-vous envoyer un email de relance à <strong>${clientName}</strong> pour son échéance ?`;
+
+            alertify.confirm(
+                title, 
+                confirmMsg, 
+                function() {
+                    // Show spinner on the button
+                    const origHtml = btn.html();
+                    btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>').prop('disabled', true);
+
+                    $.ajax({
+                        url: "{% url 't_tresorerie:ApiSendEmailRelance' %}",
+                        type: 'POST',
+                        data: {
+                            client_id: clientId,
+                            'echeance_ids[]': [echeanceId],
+                            csrfmiddlewaretoken: '{{ csrf_token }}'
+                        },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                alertify.success(response.message || "Email envoyé avec succès !");
+                            } else if (response.status === 'warning') {
+                                alertify.warning(response.message);
+                            } else {
+                                alertify.error(response.message || "Une erreur s'est produite.");
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            let errorMsg = "Erreur lors de l'envoi de l'email.";
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMsg = xhr.responseJSON.message;
+                            }
+                            alertify.error(errorMsg);
+                        },
+                        complete: function() {
+                            // Restore button
+                            btn.html(origHtml).prop('disabled', false);
+                        }
+                    });
+                },
+                function() {
+                    // Cancelled
+                }
+            );
+        });
         
         // --- 2. Chart Initialization ---
         // (Assuming you passed monthly_stats from view as JSON or loop)

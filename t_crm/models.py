@@ -286,6 +286,11 @@ class Prospets(models.Model):
     conseil_closing_date = models.DateField(null=True, blank=True, verbose_name="Date de closing prévue")
     conseil_is_active = models.BooleanField(default=True, verbose_name="Pipeline Actif", blank=True, null=True)
 
+    # Suivi d'impression de l'engagement
+    has_printed_engagement = models.BooleanField(default=False)
+    engagement_printed_at = models.DateTimeField(null=True, blank=True)
+    engagement_printed_by = models.CharField(max_length=255, null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
