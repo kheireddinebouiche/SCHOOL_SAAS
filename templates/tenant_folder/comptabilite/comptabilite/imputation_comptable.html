@@ -398,10 +398,18 @@
                                     <label class="form-check-label text-muted" for="showOnlyUnassignedInModal">Uniquement non-assignées</label>
                                 </div>
                             </div>
-                            
-                            <div class="search-input-group mb-3">
-                                <i class="ri-search-line"></i>
-                                <input type="text" id="modalSpecialiteSearch" class="form-control" placeholder="Rechercher une spécialité...">
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-6">
+                                    <div class="search-input-group">
+                                        <i class="ri-search-line"></i>
+                                        <input type="text" id="modalSpecialiteSearch" class="form-control" placeholder="Rechercher une spécialité...">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <select id="modalFormationFilter" class="form-select" style="border-radius: 0.75rem; border: 1px solid #e2e8f0; height: 38px;">
+                                        <option value="">Toutes les formations</option>
+                                    </select>
+                                </div>
                             </div>
 
                             <div id="specialiteChecklist" class="spec-checklist-container">
@@ -498,9 +506,31 @@
     }
 
     function renderUI() {
+        populateFormationFilter();
         renderTable();
         updateKPIs();
         renderSpecialiteChecklist();
+    }
+
+    function populateFormationFilter() {
+        const formationsMap = {};
+        allSpecialites.forEach(spec => {
+            if (spec.formation_id) {
+                formationsMap[spec.formation_id] = spec.formation_nom;
+            }
+        });
+
+        let options = '<option value="">Toutes les formations</option>';
+        Object.keys(formationsMap).forEach(id => {
+            options += `<option value="${id}">${formationsMap[id]}</option>`;
+        });
+        
+        const hasUnassigned = allSpecialites.some(spec => !spec.formation_id);
+        if (hasUnassigned) {
+            options += '<option value="none">Sans formation</option>';
+        }
+
+        $('#modalFormationFilter').html(options);
     }
 
     function updateKPIs() {
@@ -528,7 +558,7 @@
             
             $.each(unassigned, function(index, spec) {
                 row += "<tr class='category-row border-start border-danger border-4' style='transition: all 0.3s ease;'>";
-                row += "<td class='ps-4'><div class='d-flex align-items-center'><div class='bg-danger bg-opacity-10 rounded-circle p-2 me-2'><i class='ri-error-warning-line text-danger fs-14'></i></div><span class='fw-medium text-dark'>" + spec.label + "</span></div></td>";
+                row += "<td class='ps-4'><div class='d-flex align-items-center'><div class='bg-danger bg-opacity-10 rounded-circle p-2 me-2'><i class='ri-error-warning-line text-danger fs-14'></i></div><div><span class='fw-medium text-dark d-block'>" + spec.label + "</span><span class='text-muted fs-12'>" + (spec.formation_nom || "Sans formation") + "</span></div></div></td>";
                 row += "<td><span class='badge badge-soft-danger fs-13 px-3 py-2'><i class='ri-link-unlink-m me-1'></i>Non assignée</span></td>";
                 row += "<td class='text-center'>";
                 row += "<button class='btn btn-soft-primary btn-sm btn-rounded quick-assign px-3' data-id='" + spec.id + "' data-label='" + spec.label + "'>Assigner</button>";
@@ -538,7 +568,7 @@
         } else {
             $.each(allAssociations, function(index, assoc) {
                 row += "<tr class='category-row' style='transition: all 0.3s ease;'>";
-                row += "<td class='ps-4'><div class='d-flex align-items-center'><div class='bg-primary bg-opacity-10 rounded-circle p-2 me-2'><i class='ri-book-mark-line text-primary fs-14'></i></div><span class='fw-medium text-dark'>" + (assoc.specialite__label || "N/A") + "</span></div></td>";
+                row += "<td class='ps-4'><div class='d-flex align-items-center'><div class='bg-primary bg-opacity-10 rounded-circle p-2 me-2'><i class='ri-book-mark-line text-primary fs-14'></i></div><div><span class='fw-medium text-dark d-block'>" + (assoc.specialite__label || "N/A") + "</span><span class='text-muted fs-12'>" + (assoc.specialite__formation__nom || "Sans formation") + "</span></div></div></td>";
                 row += "<td><span class='badge badge-soft-success fs-13 px-3 py-2'><i class='ri-bank-line me-1'></i>" + (assoc.compte__name || "N/A") + "</span></td>";
                 row += "<td class='text-center'>";
                 row += "<div class='dropdown'>";
@@ -567,6 +597,7 @@
     function renderSpecialiteChecklist() {
         const onlyUnassigned = $('#showOnlyUnassignedInModal').is(':checked');
         const searchTerm = $('#modalSpecialiteSearch').val().toLowerCase();
+        const selectedFormationId = $('#modalFormationFilter').val();
         
         let html = "";
 
@@ -576,6 +607,13 @@
             let shouldShow = true;
             if (onlyUnassigned && isAssigned) shouldShow = false;
             if (searchTerm && !spec.label.toLowerCase().includes(searchTerm) && !spec.code.toLowerCase().includes(searchTerm)) shouldShow = false;
+            if (selectedFormationId) {
+                if (selectedFormationId === 'none') {
+                    if (spec.formation_id) shouldShow = false;
+                } else {
+                    if (String(spec.formation_id) !== String(selectedFormationId)) shouldShow = false;
+                }
+            }
             
             if (shouldShow) {
                 html += `
@@ -669,11 +707,13 @@
     // Modal Events
     $('#showOnlyUnassignedInModal').change(renderSpecialiteChecklist);
     $('#modalSpecialiteSearch').on('input', renderSpecialiteChecklist);
+    $('#modalFormationFilter').change(renderSpecialiteChecklist);
     $(document).on('change', '.spec-checkbox', updateSelectedCount);
 
     $('#addAssociationBtn').on('click', function() {
       $('#associationId').val('');
       $('#compteSelect').val('');
+      $('#modalFormationFilter').val('');
       toggleModalMode(false);
       $('#associationModal').modal('show');
     });
@@ -684,6 +724,7 @@
       const compteId = $(this).data('compte');
       
       $('#associationId').val(id);
+      $('#modalFormationFilter').val('');
       toggleModalMode(true);
       
       // Select the specific one
@@ -696,6 +737,7 @@
     $(document).on('click', '.quick-assign', function() {
         const specId = $(this).data('id');
         $('#associationId').val('');
+        $('#modalFormationFilter').val('');
         toggleModalMode(false);
         $(`#spec_${specId}`).prop('checked', true);
         $('#associationModal').modal('show');

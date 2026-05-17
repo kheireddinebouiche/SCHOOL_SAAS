@@ -16,7 +16,7 @@ def LoadSpecialiteComptes(request):
     """
     Charge la liste des associations spécialité-compte
     """
-    associations = SpecialiteCompte.objects.select_related('specialite', 'compte').all()
+    associations = SpecialiteCompte.objects.select_related('specialite__formation', 'compte').all()
     
     data = []
     for assoc in associations:
@@ -24,6 +24,7 @@ def LoadSpecialiteComptes(request):
             'id': assoc.id,
             'specialite': assoc.specialite.id if assoc.specialite else None,
             'specialite__label': assoc.specialite.label if assoc.specialite else "N/A",
+            'specialite__formation__nom': assoc.specialite.formation.nom if (assoc.specialite and assoc.specialite.formation) else "Sans formation",
             'compte': assoc.compte.id if assoc.compte else None,
             'compte__name': assoc.compte.name if assoc.compte else "N/A",
             'created_at': assoc.created_at.strftime('%Y-%m-%d') if assoc.created_at else None,
@@ -37,7 +38,7 @@ def LoadSpecialites(request):
     """
     Charge la liste des spécialités avec leur statut d'assignation
     """
-    specialites = Specialites.objects.all()
+    specialites = Specialites.objects.select_related('formation').all()
     assigned_specialite_ids = SpecialiteCompte.objects.values_list('specialite_id', flat=True)
     
     data = []
@@ -46,7 +47,9 @@ def LoadSpecialites(request):
             'id': specialite.id,
             'label': specialite.label,
             'code': specialite.code,
-            'is_assigned': specialite.id in assigned_specialite_ids
+            'is_assigned': specialite.id in assigned_specialite_ids,
+            'formation_id': specialite.formation.id if specialite.formation else None,
+            'formation_nom': specialite.formation.nom if specialite.formation else "Sans formation",
         })
     
     return JsonResponse(data, safe=False)
