@@ -1453,6 +1453,14 @@ $(document).ready(function () {
                     if(response.status === 'success') {
                         var data = response.data;
                         
+                        // Store double diplomation properties for recalculation
+                        var isDouble = (data.type_model === "Double Diplomation");
+                        $('#editEcheancierModal').data('is-double', isDouble);
+                        $('#editEcheancierModal').data('prix-spec1', data.prix_spec1 || 0);
+                        $('#editEcheancierModal').data('prix-spec2', data.prix_spec2 || 0);
+                        $('#editEcheancierModal').data('spec1-label', data.spec1_label || '');
+                        $('#editEcheancierModal').data('spec2-label', data.spec2_label || '');
+
                         // Fill the form with data
                         $('#editEcheancierId').val(data.id);
                         $('#editEcheancierStatus').val(data.is_active ? 1 : 0);
@@ -1560,6 +1568,12 @@ $(document).ready(function () {
     
     // Recalculate amounts visually in the modal
     $('#btnRecalculerMontants').on('click', function() {
+        var isDouble = $('#editEcheancierModal').data('is-double');
+        var prixSpec1 = parseFloat($('#editEcheancierModal').data('prix-spec1')) || 0;
+        var prixSpec2 = parseFloat($('#editEcheancierModal').data('prix-spec2')) || 0;
+        var labelSpec1 = $('#editEcheancierModal').data('spec1-label') || '';
+        var labelSpec2 = $('#editEcheancierModal').data('spec2-label') || '';
+
         var tarifBase = parseFloat($('#editSummaryTarif').attr('data-raw-tarif')) || 0;
         
         var remise = parseFloat($('#editEcheancierRemise').val()) || 0;
@@ -1567,20 +1581,41 @@ $(document).ready(function () {
         var majoration = parseFloat($('#editEcheancierMajoration').val()) || 0;
         var typeMajoration = $('#editEcheancierTypeMajoration').val();
         
-        var actualRemise = (typeRemise === 'pourcentage') ? (tarifBase * remise / 100) : remise;
-        var actualMajoration = (typeMajoration === 'pourcentage') ? (tarifBase * majoration / 100) : majoration;
-        
-        var netTotal = Math.max(0, tarifBase - actualRemise + actualMajoration);
+        var actualRemiseTotal = (typeRemise === 'pourcentage') ? (tarifBase * remise / 100) : remise;
+        var actualMajorationTotal = (typeMajoration === 'pourcentage') ? (tarifBase * majoration / 100) : majoration;
+        var netTotal = Math.max(0, tarifBase - actualRemiseTotal + actualMajorationTotal);
         
         // Update summary
         $('#editSummaryNet').text(netTotal.toLocaleString() + ' DA');
         
         // Update tranches table visually
         $('#editTranchesList .tranche-row').each(function() {
+            var libelle = $(this).find('.tranche-libelle').val() || "";
             var tauxText = $(this).find('td:eq(1) .badge').text().replace(/[^0-9.-]+/g,"");
             var taux = parseFloat(tauxText) || 0;
             
-            var nouveauMontant = (netTotal * taux) / 100;
+            var basePrice = tarifBase;
+            var actualDiscount = actualRemiseTotal;
+            var actualMaj = actualMajorationTotal;
+            
+            if (isDouble) {
+                if (labelSpec1 && libelle.indexOf(labelSpec1) !== -1) {
+                    basePrice = prixSpec1;
+                    actualDiscount = (typeRemise === 'pourcentage') ? (basePrice * remise / 100) : (remise / 2);
+                    actualMaj = (typeMajoration === 'pourcentage') ? (basePrice * majoration / 100) : (majoration / 2);
+                } else if (labelSpec2 && libelle.indexOf(labelSpec2) !== -1) {
+                    basePrice = prixSpec2;
+                    actualDiscount = (typeRemise === 'pourcentage') ? (basePrice * remise / 100) : (remise / 2);
+                    actualMaj = (typeMajoration === 'pourcentage') ? (basePrice * majoration / 100) : (majoration / 2);
+                } else {
+                    basePrice = prixSpec1 + prixSpec2;
+                    actualDiscount = (typeRemise === 'pourcentage') ? (basePrice * remise / 100) : remise;
+                    actualMaj = (typeMajoration === 'pourcentage') ? (basePrice * majoration / 100) : majoration;
+                }
+            }
+            
+            var basePriceNet = Math.max(0, basePrice - actualDiscount + actualMaj);
+            var nouveauMontant = (basePriceNet * taux) / 100;
             $(this).find('td:eq(2)').text(nouveauMontant.toLocaleString() + ' DA');
         });
         

@@ -109,6 +109,10 @@ def ApiLoadEcheancierDetails(request):
             'type_majoration': type_majoration,
             'tarif_formation': tarif_formation_float,
             'total_after_adjustments': str(total_after_adjustments),
+            'prix_spec1': float(echeancier.formation_double.prix_spec1 or 0) if echeancier.formation_double else 0.0,
+            'prix_spec2': float(echeancier.formation_double.prix_spec2 or 0) if echeancier.formation_double else 0.0,
+            'spec1_label': echeancier.formation_double.specialite1.label if (echeancier.formation_double and echeancier.formation_double.specialite1) else "",
+            'spec2_label': echeancier.formation_double.specialite2.label if (echeancier.formation_double and echeancier.formation_double.specialite2) else "",
         }
         
         return JsonResponse({'status': 'success', 'data': data}, safe=False)
@@ -714,7 +718,34 @@ def ApiUpdateEcheancier(request):
                         
                         # Recalculate montant_tranche
                         taux = float(tranche_obj.taux or 0)
-                        tranche_obj.montant_tranche = (net_total * taux / 100)
+                        
+                        if echeancier.formation_double:
+                            double_obj = echeancier.formation_double
+                            label1 = double_obj.specialite1.label if (double_obj.specialite1 and double_obj.specialite1.label) else ""
+                            label2 = double_obj.specialite2.label if (double_obj.specialite2 and double_obj.specialite2.label) else ""
+                            
+                            prix1 = float(double_obj.prix_spec1 or 0)
+                            prix2 = float(double_obj.prix_spec2 or 0)
+                            
+                            # check which specialty block this tranche belongs to
+                            t_val = tranche_obj.value or ""
+                            if label1 and label1 in t_val:
+                                base_price = prix1
+                                disc = (base_price * remise_val / 100.0) if echeancier.type_remise == 'pourcentage' else (remise_val / 2.0)
+                                maj = (base_price * maj_val / 100.0) if echeancier.type_majoration == 'pourcentage' else (maj_val / 2.0)
+                            elif label2 and label2 in t_val:
+                                base_price = prix2
+                                disc = (base_price * remise_val / 100.0) if echeancier.type_remise == 'pourcentage' else (remise_val / 2.0)
+                                maj = (base_price * maj_val / 100.0) if echeancier.type_majoration == 'pourcentage' else (maj_val / 2.0)
+                            else:
+                                base_price = prix1 + prix2
+                                disc = (base_price * remise_val / 100.0) if echeancier.type_remise == 'pourcentage' else remise_val
+                                maj = (base_price * maj_val / 100.0) if echeancier.type_majoration == 'pourcentage' else maj_val
+                            
+                            net_block = max(0.0, base_price - disc + maj)
+                            tranche_obj.montant_tranche = (net_block * taux / 100.0)
+                        else:
+                            tranche_obj.montant_tranche = (net_total * taux / 100.0)
                         
                         # Update tranche entity
                         t_entite_id = update.get('entite_id')

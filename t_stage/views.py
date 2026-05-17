@@ -201,7 +201,7 @@ def launch_stage(request):
         'etudiants': Prospets.objects.all(), # Fallback if no group selected or initial load
         'encadrants': Formateurs.objects.all(),
         'focus_groups': FocusGroup.objects.all(),
-        'groupes': Groupe.objects.all().order_by('nom'),
+        'groupes': Groupe.objects.filter(admissible_stage=True).order_by('nom'),
     }
     return render(request, 't_stage/stage_form.html', context)
 
@@ -252,12 +252,13 @@ def edit_stage(request, stage_id):
     # Find current focus group if any
     current_fg = FocusGroup.objects.filter(stages=stage).first()
 
+    from django.db.models import Q
     context = {
         'stage': stage,
         'etudiants': Prospets.objects.all(),
         'encadrants': Formateurs.objects.all(),
         'focus_groups': FocusGroup.objects.all(),
-        'groupes': Groupe.objects.all().order_by('nom'),
+        'groupes': Groupe.objects.filter(Q(admissible_stage=True) | Q(id=stage.groupe_id) if stage.groupe_id else Q(admissible_stage=True)).distinct().order_by('nom'),
         'selected_etudiants_ids': [e.id for e in selected_etudiants],
         'current_fg_id': current_fg.id if current_fg else None
     }

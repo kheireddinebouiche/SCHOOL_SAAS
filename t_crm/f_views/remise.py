@@ -150,6 +150,39 @@ def ApiLoadRemiseAppliquerDetails(request):
             # Get prospects associated with this discount
             prospects = RemiseAppliquerLine.objects.filter(remise_appliquer=remise_appliquer).select_related('prospect')
             
+            prospects_list = []
+            for p in prospects:
+                prospect = p.prospect
+                formation_label = "-"
+                specialite_label = "-"
+                promo_label = "-"
+                
+                if prospect.is_double:
+                    # Double diplomation
+                    fdv_double = FicheVoeuxDouble.objects.filter(prospect=prospect).select_related('specialite', 'promo').first()
+                    if fdv_double:
+                        specialite_label = fdv_double.specialite.label if fdv_double.specialite else "-"
+                        promo_label = fdv_double.promo.label if fdv_double.promo else "-"
+                        formation_label = "Double diplômation"
+                else:
+                    # Standard fiche de voeux
+                    fdv = FicheDeVoeux.objects.filter(prospect=prospect).select_related('specialite__formation', 'promo').first()
+                    if fdv:
+                        specialite_label = fdv.specialite.label if fdv.specialite else "-"
+                        promo_label = fdv.promo.label if fdv.promo else "-"
+                        formation_label = fdv.specialite.formation.nom if (fdv.specialite and fdv.specialite.formation) else "-"
+                
+                prospects_list.append({
+                    'id': prospect.id,
+                    'nom': prospect.nom,
+                    'prenom': prospect.prenom,
+                    'date_naissance': prospect.date_naissance.strftime('%d/%m/%Y') if prospect.date_naissance else '-',
+                    'statut': prospect.get_statut_display() if prospect.statut else '-',
+                    'formation': formation_label,
+                    'specialite': specialite_label,
+                    'promo': promo_label,
+                })
+            
             # Format the response data
             data = {
                 'id': remise_appliquer.id,
@@ -159,16 +192,7 @@ def ApiLoadRemiseAppliquerDetails(request):
                 'is_approuved': remise_appliquer.is_approuved,
                 'created_at': remise_appliquer.created_at.strftime('%d/%m/%Y') if remise_appliquer.created_at else '-',
                 'fichie_justificatif': remise_appliquer.fichie_justificatif.url if remise_appliquer.fichie_justificatif else None,
-                'prospects': [
-                    {
-                        'id': p.prospect.id,
-                        'nom': p.prospect.nom,
-                        'prenom': p.prospect.prenom,
-                        'date_naissance': p.prospect.date_naissance.strftime('%d/%m/%Y') if p.prospect.date_naissance else '-',
-                        'statut': p.prospect.get_statut_display() if p.prospect.statut else '-'
-                    }
-                    for p in prospects
-                ]
+                'prospects': prospects_list
             }
             return JsonResponse({'status': 'success', 'data': data})
         

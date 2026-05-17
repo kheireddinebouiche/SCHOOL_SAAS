@@ -25,6 +25,7 @@ class Groupe(models.Model):
 
     date_creation = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    admissible_stage = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.nom} - {self.promotion}"

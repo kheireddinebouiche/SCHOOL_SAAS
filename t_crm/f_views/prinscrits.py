@@ -1120,8 +1120,17 @@ def ApiCancelPreinscrit(request):
         else:
             FicheDeVoeux.objects.filter(prospect=preinscrit).delete()
 
-        # Supprimer la demande de dérogation associée
-        Derogations.objects.filter(demandeur=preinscrit).delete()
+        # Gérer la demande de dérogation associée
+        if preinscrit.is_double:
+            # Pour la double diplomation, on ne supprime pas la demande de dérogation (elle reste en BDD)
+            # Mais on l'archive pour qu'une nouvelle dérogation soit nécessaire lors de la réactivation
+            Derogations.objects.filter(demandeur=preinscrit, motif="Documents Incomplets").update(motif="Documents Incomplets (Archive)")
+        else:
+            # Pour le cursus standard, on supprime simplement la demande
+            Derogations.objects.filter(demandeur=preinscrit).delete()
+            
+        preinscrit.has_derogation = False
+        preinscrit.save()
 
         return JsonResponse({'status': 'success', 'message': 'La préinscription a été annulée avec succès.'})
 
@@ -1179,6 +1188,8 @@ def ApiReactivatePreinscrit(request):
             preinscrit.statut = 'prinscrit'
             preinscrit.etat = 'accepte'
             preinscrit.motif_annulation = ''
+            if preinscrit.is_double:
+                preinscrit.has_derogation = False
             preinscrit.save()
 
             # Log the action

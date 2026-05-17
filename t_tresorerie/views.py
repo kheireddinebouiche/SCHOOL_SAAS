@@ -139,6 +139,47 @@ def ApiLoadRefundDetails(request):
         obj = Rembourssements.objects.get(id = id)
         paiement_lines = Paiements.objects.filter(prospect = obj.client, context='frais_f').aggregate(total=Sum('montant_paye'))['total'] or 0
 
+        # Récupération des informations de groupe
+        groupes = []
+        for gl in GroupeLine.objects.filter(student=obj.client):
+            if gl.groupe and gl.groupe.nom not in groupes:
+                groupes.append(gl.groupe.nom)
+        for aff in AffectationGroupe.objects.filter(etudiant=obj.client):
+            if aff.groupe and aff.groupe.nom not in groupes:
+                groupes.append(aff.groupe.nom)
+        
+        group_display = ", ".join(groupes) if groupes else "Non affecté"
+
+        # Récupération de l'historique des absences
+        from t_etudiants.models import HistoriqueAbsence
+        abs_query = HistoriqueAbsence.objects.filter(etudiant=obj.client)
+        absences_list = []
+        for abs_obj in abs_query:
+            if abs_obj.historique:
+                for entry in abs_obj.historique:
+                    entry_date = entry.get('date', 'N/A')
+                    for detail in entry.get('data', []):
+                        absences_list.append({
+                            'date': entry_date,
+                            'module': detail.get('module', 'N/A'),
+                            'code': detail.get('code', 'N/A'),
+                            'etat': detail.get('etat', 'Absent')
+                        })
+        
+        # Récupération de l'échéancier (montants dus et payés)
+        due_query = DuePaiements.objects.filter(client=obj.client).order_by('date_echeance', 'id')
+        echeancier_list = []
+        for due in due_query:
+            paid_amount = Paiements.objects.filter(due_paiements=due).aggregate(total=Sum('montant_paye'))['total'] or 0
+            echeancier_list.append({
+                'label': due.label or 'N/A',
+                'montant_due': float(due.montant_due) if due.montant_due else 0.0,
+                'montant_paye': float(paid_amount),
+                'montant_restant': float(due.montant_restant) if due.montant_restant is not None else float((due.montant_due or 0) - paid_amount),
+                'date_echeance': due.date_echeance.strftime("%d/%m/%Y") if due.date_echeance else "N/A",
+                'is_done': due.is_done
+            })
+
         data= {
             'client_id': obj.client.id,
             'client_nom' : obj.client.nom,
@@ -147,6 +188,10 @@ def ApiLoadRefundDetails(request):
             'date_demande' : obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             'etat' : obj.get_etat_display(),
             'paiement_total' : paiement_lines,
+            'description': obj.observation or 'N/A',
+            'groupe': group_display,
+            'absences': absences_list,
+            'echeancier': echeancier_list,
         }
         return JsonResponse(data, safe=False)
     else:

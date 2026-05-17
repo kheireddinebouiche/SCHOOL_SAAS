@@ -20,6 +20,7 @@ urlpatterns = [
 
     path('api-close-inscription/<int:pk>/', ApiCloseGroupInscription, name="ApiCloseGroupInscription"),
     path('api-open-inscription/<int:pk>/', ApiOpenGroupInscription, name="ApiOpenGroupInscription"),
+    path('toggle-admissible-stage/<int:pk>/', toggleAdmissibleStage, name="toggleAdmissibleStage"),
 
     path('ApiGetGroupeList', ApiGetGroupeList, name="ApiGetGroupeList"),
 

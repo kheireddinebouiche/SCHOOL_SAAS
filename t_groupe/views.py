@@ -331,3 +331,24 @@ def ApiOpenGroupInscription(request, pk):
     groupe.save()
     messages.success(request, f"L'inscription au groupe {groupe.nom} est désormais réouverte.")
     return redirect('t_groupe:detailsgroupe', pk=pk)
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def toggleAdmissibleStage(request, pk):
+    groupe = Groupe.objects.get(id=pk)
+    groupe.admissible_stage = not groupe.admissible_stage
+    groupe.save()
+
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='UPDATE',
+        target_model='Groupe',
+        target_id=str(groupe.id),
+        details=f"Modification de l'admissibilité au stage du groupe {groupe.nom} (Admissible: {groupe.admissible_stage})",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+
+    status_str = "admissible au stage" if groupe.admissible_stage else "non admissible au stage"
+    messages.success(request, f"Le groupe {groupe.nom} est désormais {status_str}.")
+    return redirect('t_groupe:detailsgroupe', pk=pk)

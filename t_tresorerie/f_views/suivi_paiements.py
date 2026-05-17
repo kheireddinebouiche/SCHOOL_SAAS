@@ -93,9 +93,9 @@ def ApiSuiviPaiements(request):
         if fiche and fiche.specialite:
             specialite_name = f"{fiche.specialite.formation.nom} / {fiche.specialite.label}"
         elif p.is_double:
-            fiche_double = FicheVoeuxDouble.objects.filter(prospect=p, is_confirmed=True).select_related('specialite__formation').first()
+            fiche_double = FicheVoeuxDouble.objects.filter(prospect=p, is_confirmed=True).select_related('specialite__specialite1', 'specialite__specialite2').first()
             if fiche_double and fiche_double.specialite:
-                specialite_name = f"{fiche_double.specialite.formation.nom} / {fiche_double.specialite.label}"
+                specialite_name = f"Double Diplomation / {fiche_double.specialite.label}"
 
         data.append({
             'id': p.id,
@@ -112,6 +112,7 @@ def ApiSuiviPaiements(request):
             'total_restant': float(total_restant),
             'total_overdue': float(overdue_amount),
             'is_unpaid': is_unpaid,
+            'is_double': p.is_double,
             'slug': p.slug,
             'dues': dues_list
         })

@@ -788,7 +788,14 @@ def ApiSaveRefundOperation(request):
 @login_required(login_url="institut_app:login")
 def ApiShowRefundTraiteResult(request):
     id_demande = request.GET.get('id_demande')
-    rembourssement_obj = Rembourssements.objects.get(id=id_demande)
+    if not id_demande:
+        return JsonResponse({"status": "error", "message": "Identifiant de demande manquant"}, status=400)
+    
+    try:
+        rembourssement_obj = Rembourssements.objects.get(id=id_demande)
+    except Rembourssements.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "La demande de remboursement n'existe pas"}, status=404)
+
     client_paiement = (
         Paiements.objects.filter(prospect=rembourssement_obj.client, is_refund=False)
         .aggregate(total=Sum('montant_paye'))['total'] or 0

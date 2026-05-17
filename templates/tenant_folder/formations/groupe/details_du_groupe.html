@@ -177,6 +177,9 @@
                         {% else %}
                             <span class="badge bg-secondary text-white">{{groupe.get_etat_display}}</span>
                         {% endif %}
+                        {% if groupe.admissible_stage %}
+                            <span class="badge bg-info text-white"><i class="ri-rocket-line me-1"></i> Admissible au Stage</span>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="d-flex gap-2">
@@ -612,6 +615,34 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Admissibilité aux Stages -->
+                            <div class="card border border-primary bg-primary bg-opacity-10 rounded-3 p-4 mt-4 shadow-sm">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-md bg-primary bg-opacity-20 text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
+                                            <i class="ri-rocket-line fs-3"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold text-primary mb-1">Admissibilité aux Stages</h6>
+                                            <p class="text-muted small mb-0">Rendre ce groupe éligible pour le lancement des stages dans le module Stage.</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        {% if groupe.admissible_stage %}
+                                            <span class="badge bg-success text-white me-2 px-3 py-2 rounded-pill"><i class="ri-checkbox-circle-line me-1"></i> Admissible</span>
+                                            <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#confirmRemoveAdmissibleStageModal">
+                                                <i class="ri-close-circle-line me-1"></i> Retirer l'éligibilité
+                                            </button>
+                                        {% else %}
+                                            <span class="badge bg-secondary text-white me-2 px-3 py-2 rounded-pill"><i class="ri-error-warning-line me-1"></i> Non éligible</span>
+                                            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#confirmAdmissibleStageModal">
+                                                <i class="ri-checkbox-circle-line me-1"></i> Rendre admissible
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                     </div>
@@ -981,6 +1012,84 @@
     </div>
 </div>
 
+<!-- Modal for confirming admissibility to stages -->
+<div class="modal fade" id="confirmAdmissibleStageModal" tabindex="-1" aria-labelledby="confirmAdmissibleStageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-rocket-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1" id="confirmAdmissibleStageModalLabel">
+                            Valider l'admissibilité au stage
+                        </h5>
+                        <p class="text-muted small mb-0">Rendre le groupe admissible</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p>Souhaitez-vous rendre le groupe <strong>{{groupe.nom}}</strong> admissible au stage ?</p>
+                <div class="alert alert-info bg-info bg-opacity-10 border border-info border-opacity-25 rounded-3 mb-0" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-information-line text-info fs-4 me-3"></i>
+                        <div>
+                            <p class="mb-0 small">Cela permettra d'afficher ce groupe dans le module <strong>Stage > Lancement</strong> pour pouvoir lui attribuer des stages.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button id="btnConfirmeAdmissibleStage" type="button" class="btn btn-primary px-4">Confirmer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for confirming removal of admissibility to stages -->
+<div class="modal fade" id="confirmRemoveAdmissibleStageModal" tabindex="-1" aria-labelledby="confirmRemoveAdmissibleStageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-danger bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-danger bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-close-circle-line text-danger fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-danger mb-1" id="confirmRemoveAdmissibleStageModalLabel">
+                            Retirer l'admissibilité au stage
+                        </h5>
+                        <p class="text-muted small mb-0">Retirer l'éligibilité aux stages</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p>Souhaitez-vous retirer l'admissibilité au stage pour le groupe <strong>{{groupe.nom}}</strong> ?</p>
+                <div class="alert alert-warning bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3 mb-0" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-alert-line text-warning fs-4 me-3"></i>
+                        <div>
+                            <p class="mb-0 small">Le groupe ne sera plus visible dans l'écran de lancement des stages.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <div class="hstack gap-2 justify-content-end w-100">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button id="btnConfirmeRemoveAdmissibleStage" type="button" class="btn btn-danger px-4">Confirmer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script>
     $(document).ready(function(){
@@ -1001,6 +1110,14 @@
 
         $(document).on('click','#btnConfirmeOpenInscription', function(){
             window.location = "{% url 't_groupe:ApiOpenGroupInscription' pk=groupe.id %}";
+        });
+
+        $(document).on('click','#btnConfirmeAdmissibleStage', function(){
+            window.location = "{% url 't_groupe:toggleAdmissibleStage' groupe.id %}";
+        });
+
+        $(document).on('click','#btnConfirmeRemoveAdmissibleStage', function(){
+            window.location = "{% url 't_groupe:toggleAdmissibleStage' groupe.id %}";
         });
 
         

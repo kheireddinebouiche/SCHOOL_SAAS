@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 import json
-from t_crm.models import RemiseAppliquer,FicheDeVoeux,FicheVoeuxDouble, UserActionLog
+from t_crm.models import RemiseAppliquer,FicheDeVoeux,FicheVoeuxDouble, UserActionLog, Derogations
 from django.db.models import Q
 from institut_app.decorators import *
 from datetime import datetime
@@ -458,6 +458,87 @@ def ApiRequestRefundPaiement(request):
     else:
         return JsonResponse({"status" : "error"})
     
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiCancelPaiementRequest(request):
+    if request.method == "POST":
+        id_demande = request.POST.get('id_demande')
+        try:
+            obj = ClientPaiementsRequest.objects.get(id=id_demande)
+            client = obj.client
+            if client:
+                client.statut = 'visiteur'
+                client.motif_annulation = 'annulation du paiement'
+                client.has_derogation = False
+                client.save()
+                
+                # Delete choice sheets
+                FicheDeVoeux.objects.filter(prospect=client).delete()
+                FicheVoeuxDouble.objects.filter(prospect=client).delete()
+                
+                # Gérer la demande de dérogation associée
+                if client.is_double:
+                    Derogations.objects.filter(demandeur=client, motif="Documents Incomplets").update(motif="Documents Incomplets (Archive)")
+                else:
+                    Derogations.objects.filter(demandeur=client).delete()
+                
+                # Delete generated due payments
+                DuePaiements.objects.filter(client=client).delete()
+                
+                # Log the cancellation
+                UserActionLog.objects.create(
+                    user=request.user,
+                    action_type='DELETE',
+                    target_model='ClientPaiementsRequest',
+                    target_id=str(obj.id),
+                    details=f"Annulation de la demande de paiement pour l'étudiant {client.nom} {client.prenom}. Statut client réinitialisé à 'visiteur' et fiche de vœux supprimée.",
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+                
+            obj.delete()
+            return JsonResponse({'status': 'success', 'message': "La demande a été annulée avec succès. L'étudiant redevient visiteur et sa fiche de vœux est supprimée."})
+        except ClientPaiementsRequest.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': "Demande de paiement introuvable."})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': "Méthode non autorisée."}, status=405)
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiCancelDuePaiements(request):
+    if request.method == "POST":
+        id_demande = request.POST.get('id_demande')
+        try:
+            obj = ClientPaiementsRequest.objects.get(id=id_demande)
+            client = obj.client
+            if client:
+                # Check if any payments are made
+                has_payments = Paiements.objects.filter(prospect=client).exists()
+                if has_payments:
+                    return JsonResponse({'status': 'error', 'message': "Impossible d'annuler les montants dus : des paiements ont déjà été effectués pour cet étudiant."})
+                
+                # Delete generated due payments
+                deleted_count, _ = DuePaiements.objects.filter(client=client).delete()
+                
+                # Log the cancellation of due payments
+                UserActionLog.objects.create(
+                    user=request.user,
+                    action_type='DELETE',
+                    target_model='DuePaiements',
+                    target_id=str(client.id),
+                    details=f"Annulation des montants dus ({deleted_count} tranches supprimées) pour l'étudiant {client.nom} {client.prenom}.",
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+                
+                return JsonResponse({'status': 'success', 'message': "Les montants dus ont été annulés avec succès."})
+            else:
+                return JsonResponse({'status': 'error', 'message': "Étudiant introuvable pour cette demande."})
+        except ClientPaiementsRequest.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': "Demande de paiement introuvable."})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': "Méthode non autorisée."}, status=405)
+
 @login_required(login_url="institut_app:login")
 def SuivieEcheancier(request):
     return render(request, 'tenant_folder/comptabilite/echeancier/suivie_echeancier.html')

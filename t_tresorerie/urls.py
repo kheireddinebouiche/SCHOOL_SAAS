@@ -77,6 +77,8 @@ urlpatterns = [
 
     path('ApiGetPaiementRequestDetails', ApiGetPaiementRequestDetails, name="ApiGetPaiementRequestDetails"),
     path('ApiGetPaiementRequestDetailsDouble', ApiGetPaiementRequestDetailsDouble, name="ApiGetPaiementRequestDetailsDouble"),
+    path('ApiCancelPaiementRequest', ApiCancelPaiementRequest, name="ApiCancelPaiementRequest"),
+    path('ApiCancelDuePaiements', ApiCancelDuePaiements, name="ApiCancelDuePaiements"),
     
     path('ApiDeleteEcheancier', ApiDeleteEcheancier, name="ApiDeleteEcheancier"),
     path('ApiBulkDeleteEcheanciers', ApiBulkDeleteEcheanciers, name="ApiBulkDeleteEcheanciers"),
