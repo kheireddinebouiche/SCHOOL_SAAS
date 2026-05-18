@@ -1328,10 +1328,55 @@ def detailPromo(request, pk):
     promo = Promos.objects.get(id=pk)
     groupes = Groupe.objects.filter(promotion=promo).select_related('specialite')
     
+    from t_crm.models import FicheDeVoeux, FicheVoeuxDouble
+    
+    # 1. Standard prospects by specialty
+    fiches_standard = FicheDeVoeux.objects.filter(promo=promo).select_related('prospect', 'specialite')
+    
+    # Group by specialty
+    specialites_dict = {}
+    for fiche in fiches_standard:
+        if fiche.specialite:
+            spec_id = fiche.specialite.id
+            if spec_id not in specialites_dict:
+                specialites_dict[spec_id] = {
+                    'specialite': fiche.specialite,
+                    'fiches': []
+                }
+            specialites_dict[spec_id]['fiches'].append(fiche)
+            
+    # Convert dict to sorted list of specialties
+    specialites_standard = sorted(specialites_dict.values(), key=lambda x: x['specialite'].label or '')
+
+    # 2. Double diplomation prospects by double diplomation combination
+    fiches_double = FicheVoeuxDouble.objects.filter(promo=promo).select_related('prospect', 'specialite')
+    
+    # Group by double diplomation Combination
+    double_dict = {}
+    for fiche in fiches_double:
+        if fiche.specialite: # This is a DoubleDiplomation object
+            double_id = fiche.specialite.id
+            if double_id not in double_dict:
+                double_dict[double_id] = {
+                    'double_diplomation': fiche.specialite,
+                    'fiches': []
+                }
+            double_dict[double_id]['fiches'].append(fiche)
+            
+    specialites_double = sorted(double_dict.values(), key=lambda x: x['double_diplomation'].label or '')
+
+    total_prospects_standard = len(fiches_standard)
+    total_prospects_double = len(fiches_double)
+    
     context = {
         'promo': promo,
         'groupes': groupes,
-        'tenant': request.tenant
+        'tenant': request.tenant,
+        'specialites_standard': specialites_standard,
+        'specialites_double': specialites_double,
+        'total_prospects_standard': total_prospects_standard,
+        'total_prospects_double': total_prospects_double,
+        'total_prospects_all': total_prospects_standard + total_prospects_double
     }
     return render(request, 'tenant_folder/formations/promos/details_promo.html', context)
 

@@ -11,6 +11,7 @@ from t_timetable.models import Salle
 from t_groupe.models import *
 from django.db import IntegrityError
 from django.contrib.auth.decorators import login_required
+from t_crm.models import UserActionLog
 
 
 @login_required(login_url="institut_app:login")
@@ -33,6 +34,15 @@ def NewSession(request):
                 
                 instance = form.save()
                 code = instance.code
+                
+                UserActionLog.objects.create(
+                    user=request.user,
+                    action_type='CREATE',
+                    target_model='SessionExamen',
+                    target_id=str(instance.id),
+                    details=f"Création de la session d'examen code: {instance.code}, libellé: {instance.label}",
+                    ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+                )
                 
                 return JsonResponse({'statut' : 'success','id' : code})
         else:
@@ -81,6 +91,14 @@ def ApiDeleteSession(request):
     id = request.GET.get('id')
     obj = SessionExam.objects.get(id = id)
     try:
+        UserActionLog.objects.create(
+            user=request.user if request.user.is_authenticated else None,
+            action_type='DELETE',
+            target_model='SessionExamen',
+            target_id=str(obj.id),
+            details=f"Suppression de la session d'examen code: {obj.code}, libellé: {obj.label}",
+            ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+        )
         obj.delete()
 
         return JsonResponse({'status' : True, 'message': 'La session a été supprimée avec succès'})
@@ -115,6 +133,16 @@ def ApiDeleteGroupeSessionLine(request):
     id = request.GET.get('id')
 
     obj = SessionExamLine.objects.get(id = id)
+    
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='DELETE',
+        target_model='SessionExamLine',
+        target_id=str(obj.id),
+        details=f"Suppression de la planification du groupe {obj.groupe.nom} de la session d'examen {obj.session.label}",
+        ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+    )
+    
     obj.delete()
 
     return JsonResponse({'status' : 'success', 'message': "Suppression effectuée avec succès"})
@@ -138,6 +166,16 @@ def ApiUpdateSession(request):
         if type_session:  # Only update if type_session is provided
             obj.type_session = type_session
         obj.save()
+
+        UserActionLog.objects.create(
+            user=request.user if request.user.is_authenticated else None,
+            action_type='UPDATE',
+            target_model='SessionExamen',
+            target_id=str(obj.id),
+            details=f"Mise à jour de la session d'examen code: {obj.code}, libellé: {obj.label}",
+            ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+        )
+
         return JsonResponse({'status' : 'success', 'message' : 'Les informations de la session ont été mises à jour avec succès'})
 
 @login_required(login_url="institut_app:login")
@@ -176,6 +214,15 @@ def ApiUpdateGroupeSessionLine(request):
             session_line.date_debut = date_debut
             session_line.date_fin = date_fin
             session_line.save()
+
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='SessionExamLine',
+                target_id=str(session_line.id),
+                details=f"Mise à jour de la planification du groupe {session_line.groupe.nom} (Semestre: {semestre}, Début: {date_debut}, Fin: {date_fin}) dans la session d'examen {session_line.session.label}",
+                ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+            )
 
             return JsonResponse({'status': 'success', 'message': 'Les informations du groupe de session ont été mises à jour avec succès'})
         except SessionExamLine.DoesNotExist:
@@ -238,6 +285,15 @@ def ApiUpdateExamPlanification(request):
 
             exam_plan.save()
 
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='ExamPlanification',
+                target_id=str(exam_plan.id),
+                details=f"Mise à jour de la planification de l'examen du module {exam_plan.module.label} (Date: {date}, Salle: {exam_plan.salle.nom if exam_plan.salle else 'N/A'}, Horaires: {heure_debut} - {heure_fin})",
+                ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+            )
+
             return JsonResponse({'status': 'success', 'message': 'La planification d\'examen a été mise à jour avec succès'})
         except ExamPlanification.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Planification d\'examen non trouvée'})
@@ -287,6 +343,16 @@ def ApiPlaneExam(request):
         )
 
         new_session_line.save()
+
+        UserActionLog.objects.create(
+            user=request.user if request.user.is_authenticated else None,
+            action_type='CREATE',
+            target_model='SessionExamLine',
+            target_id=str(new_session_line.id),
+            details=f"Planification du groupe {groupe.nom} pour la session d'examen {obj.label} (Semestre: {semestre}, Début: {date_debut}, Fin: {date_fin})",
+            ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+        )
+
         return JsonResponse({'status' : 'success', 'message' : 'Le groupe a été planifié'})
 
 def ExamConfiguration(request, pk):
@@ -375,6 +441,19 @@ def save_exam_plan(request):
     if erreurs:
         for err in erreurs:
             print(f"Erreur à l'index {err['index']}: {err['error']}")
+
+    if planifications:
+        modules_list = ", ".join([p["module"] for p in planifications])
+        details_str = f"Planification enregistrée pour {len(planifications)} module(s) ({modules_list}) du groupe {obj.groupe.nom} pour la session d'examen {obj.session.label}."
+        
+        UserActionLog.objects.create(
+            user=request.user if request.user.is_authenticated else None,
+            action_type='CREATE',
+            target_model='SessionExamLine',
+            target_id=str(obj.id),
+            details=details_str,
+            ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+        )
 
     return JsonResponse({"status": "success","message": "Planifications enregistrées","data": planifications})
 

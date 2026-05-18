@@ -139,8 +139,8 @@ def get_student_context(student_id, group_id=None):
                 formation_label = formation_obj.nom if formation_obj else ''
                 if fiche.promo:
                      annee_academique = fiche.promo.annee_academique
-                     date_entree = fiche.promo.date_debut
-                     date_sortie = fiche.promo.date_fin
+                     date_entree = getattr(fiche.promo, 'date_debut', None)
+                     date_sortie = getattr(fiche.promo, 'date_fin', None)
                 documents_qs = DossierInscription.objects.filter(formation=formation_obj.id) if formation_obj else []
                 qualification = formation_obj.qualification if formation_obj else ''
                 branche = current_groupe.specialite.branche
@@ -168,8 +168,8 @@ def get_student_context(student_id, group_id=None):
             specialite_label = fiche.specialite.label
             formation_label = formation_obj.nom if formation_obj else ''
             annee_academique = fiche.promo.annee_academique if fiche.promo else ''
-            date_entree = fiche.promo.date_debut if fiche.promo else None
-            date_sortie = fiche.promo.date_fin if fiche.promo else None
+            date_entree = getattr(fiche.promo, 'date_debut', None) if fiche.promo else None
+            date_sortie = getattr(fiche.promo, 'date_fin', None) if fiche.promo else None
             documents_qs = DossierInscription.objects.filter(formation=formation_obj.id) if formation_obj else []
             qualification = formation_obj.qualification if formation_obj else ''
             branche = fiche.specialite.branche

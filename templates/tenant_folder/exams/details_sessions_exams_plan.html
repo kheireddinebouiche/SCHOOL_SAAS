@@ -4,6 +4,35 @@
 
 {% block content %}
 <style>
+  :root {
+    --glass-bg: rgba(255, 255, 255, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.06);
+    --primary-gradient: linear-gradient(135deg, #17a2b8 0%, #0097a7 100%);
+  }
+
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    border-radius: 14px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+
+  .glass-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.09);
+  }
+
+  .badge-soft-primary { background-color: rgba(59, 125, 221, 0.1); color: #3b7ddd; }
+  .badge-soft-success { background-color: rgba(28, 187, 140, 0.1); color: #1cbb8c; }
+  .badge-soft-info { background-color: rgba(23, 162, 184, 0.1); color: #17a2b8; }
+  .badge-soft-warning { background-color: rgba(252, 185, 44, 0.1); color: #fcb92c; }
+  .badge-soft-danger { background-color: rgba(220, 53, 69, 0.1); color: #dc3545; }
+  .badge-soft-secondary { background-color: rgba(108, 117, 125, 0.1); color: #6c757d; }
+
   .search-box {
     position: relative;
   }
@@ -15,14 +44,21 @@
   }
   .table th {
     font-weight: 600;
-    background-color: #f8f9fa;
+    background-color: rgba(0, 0, 0, 0.02) !important;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.05) !important;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    color: #495057;
   }
   .table td {
     vertical-align: middle;
+    font-size: 0.875rem;
   }
   .badge {
     padding: 0.5em 1em;
     font-weight: 500;
+    border-radius: 6px;
   }
   .dropdown-item {
     padding: 0.5rem 1rem;
@@ -54,7 +90,9 @@
     vertical-align: middle;
   }
   .modal-content {
-    border-radius: 1rem;
+    border-radius: 1.25rem;
+    border: none;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.15);
   }
   .modal-header {
     border-bottom: none;
@@ -73,6 +111,29 @@
   .input-group:focus-within .form-select {
     border-color: #17a2b8;
   }
+
+  /* Premium inputs inside input-group-modern */
+  .input-group-modern {
+    border-radius: 10px !important;
+    border: 1px solid rgba(200, 205, 215, 0.6) !important;
+    overflow: hidden;
+    transition: all 0.25s ease-in-out;
+    background: #fff;
+  }
+  .input-group-modern:focus-within {
+    border-color: #17a2b8 !important;
+    box-shadow: 0 0 0 0.15rem rgba(23, 162, 184, 0.15) !important;
+  }
+  .input-group-modern .input-group-text {
+    border: none !important;
+    background-color: transparent !important;
+  }
+  .input-group-modern .form-control,
+  .input-group-modern .form-select {
+    border: none !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+  }
 </style>
 
 <!-- jsPDF and AutoTable CDNs -->
@@ -83,111 +144,113 @@
   <div class="page-content bg-light">
     <div class="container-fluid">
       <!-- start page title -->
-      <div class="row mb-3">
+      <div class="row mb-4">
         <div class="col-12">
-          <div class="d-sm-flex align-items-center justify-content-between bg-white rounded-lg shadow-sm p-3">
-            <div class="d-flex align-items-center">
-              <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
-                <i class="ri-file-text-line text-info"></i>
+          <div class="glass-card p-4">
+            <div class="d-flex align-items-center justify-content-between border-bottom border-white border-opacity-20 pb-3 mb-3">
+              <div class="d-flex align-items-center">
+                <div class="avatar-md bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
+                  <i class="ri-file-text-line text-info fs-24"></i>
+                </div>
+                <div>
+                  <h4 class="mb-0 fw-bold text-dark">Détails de planification des examens</h4>
+                  <p class="text-muted mb-0 small">Consultez et gérez le planning des examens de cette session de groupe</p>
+                </div>
               </div>
-              <h4 class="mb-0 text-info">Détails des sessions d'examens</h4>
-            </div>
-            <div class="page-title-right">
-              <nav aria-label="breadcrumb">
-                <ol class="breadcrumb m-0 bg-transparent">
-                  <li class="breadcrumb-item">
-                    <a href="javascript: void(0);">Examens</a>
-                  </li>
-                  <li class="breadcrumb-item active">Sessions d'examens</li>
+              <div class="d-none d-sm-block">
+                <ol class="breadcrumb m-0 bg-transparent text-end">
+                  <li class="breadcrumb-item"><a href="javascript: void(0);" class="text-muted">Examens</a></li>
+                  <li class="breadcrumb-item active text-info">Sessions d'examens</li>
                 </ol>
-              </nav>
+              </div>
+            </div>
+            
+            <div class="row g-3 align-items-center">
+              <div class="col-auto d-flex align-items-center me-3">
+                <div class="avatar-xs bg-light rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+                  <i class="ri-survey-line text-info fs-14"></i>
+                </div>
+                <div>
+                  <span class="text-muted fs-11 d-block mb-0">Nom de la Session</span>
+                  <strong id="sessionLabel" class="text-dark fs-13">-</strong>
+                </div>
+              </div>
+              <div class="col-auto border-start border-white border-opacity-30 ps-3 me-3 d-flex align-items-center">
+                <div class="avatar-xs bg-light rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+                  <i class="ri-calendar-event-line text-info fs-14"></i>
+                </div>
+                <div>
+                  <span class="text-muted fs-11 d-block mb-0">Période d'Examens</span>
+                  <span id="sessionPeriod" class="fw-semibold text-dark fs-13">-</span>
+                </div>
+              </div>
+              <div class="col-auto border-start border-white border-opacity-30 ps-3 me-3 d-flex align-items-center">
+                <div class="avatar-xs bg-light rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+                  <i class="ri-equalizer-line text-info fs-14"></i>
+                </div>
+                <div>
+                  <span class="text-muted fs-11 d-block mb-0">Type de Session</span>
+                  <span id="sessionType" class="fw-semibold text-info fs-13">-</span>
+                </div>
+              </div>
+              <div class="col-auto border-start border-white border-opacity-30 ps-3 me-3 d-flex align-items-center">
+                <div class="avatar-xs bg-light rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+                  <i class="ri-shield-user-line text-info fs-14"></i>
+                </div>
+                <div>
+                  <span class="text-muted fs-11 d-block mb-0">Groupe Cible</span>
+                  <span id="groupName" class="fw-bold text-primary fs-13">-</span>
+                </div>
+              </div>
+              <div class="col-auto border-start border-white border-opacity-30 ps-3 d-flex align-items-center">
+                <div class="avatar-xs bg-light rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px;">
+                  <i class="ri-toggle-line text-info fs-14"></i>
+                </div>
+                <div>
+                  <span class="text-muted fs-11 d-block mb-0.5">Statut</span>
+                  <span id="sessionStatus" class="badge bg-secondary bg-opacity-10 text-secondary fs-11 py-0.5 px-2">-</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
       <!-- end page title -->
 
-      <!-- Information Section -->
-      <div class="row mb-4">
-        <div class="col-lg-12">
-          <div class="card shadow border-0 rounded-3">
-            <div class="card-header bg-white p-3">
-              <div class="d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                  <i class="ri-information-line text-info me-2"></i>
-                  <h5 class="card-title mb-0 text-info">Informations sur la session</h5>
-                </div>
-              </div>
-            </div>
-            <div class="card-body p-3">
-              <div class="d-flex flex-wrap align-items-center justify-content-between">
-                <div class="d-flex align-items-center me-4 mb-2">
-                  <span class="text-muted me-2">Nom:</span>
-                  <strong id="sessionLabel">Chargement...</strong>
-                </div>
-                <div class="d-flex align-items-center me-4 mb-2">
-                  <span class="text-muted me-2">Période:</span>
-                  <span id="sessionPeriod">Chargement...</span>
-                </div>
-                <div class="d-flex align-items-center me-4 mb-2">
-                  <span class="text-muted me-2">Type:</span>
-                  <span class="fw-semibold" id="sessionType">Chargement...</span>
-                </div>
-                <div class="d-flex align-items-center me-4 mb-2">
-                  <span class="text-muted me-2">Statut:</span>
-                  <span id="sessionStatus" class="badge bg-secondary bg-opacity-10 text-secondary">Chargement...</span>
-                </div>
-                <div class="d-flex align-items-center mb-2">
-                  <span class="text-muted me-2">Groupe:</span>
-                  <span id="groupName"></span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Table Section -->
       <div class="row">
         <div class="col-lg-12">
-          <div class="card shadow border-0 rounded-3">
-            <div class="card-header bg-white p-3">
-              <div class="d-flex justify-content-between align-items-center">
+          <div class="glass-card w-100 p-0 overflow-hidden">
+            <div class="p-4 border-bottom border-white border-opacity-20 bg-white bg-opacity-40 rounded-top-3">
+              <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <div class="d-flex align-items-center">
-                  <i class="ri-table-line text-info me-2"></i>
-                  <h5 class="card-title mb-0 text-info">Planification des examens</h5>
+                  <div class="avatar-sm bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                    <i class="ri-table-line fs-18"></i>
+                  </div>
+                  <div>
+                    <h5 class="mb-0 fw-bold text-dark">Planification des examens</h5>
+                    <p class="text-muted mb-0 small">Liste des matières et examens programmés</p>
+                  </div>
                 </div>
 
-                <div class="d-flex align-items-center gap-3">
-                  <button type="button" class="btn btn-primary" id="openPlanExamModal">
-                    <i class="ri-add-line me-1"></i>Nouvel examen
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                  <button type="button" class="btn btn-info text-white rounded-pill px-4 shadow-sm d-flex align-items-center gap-1" id="openPlanExamModal">
+                    <i class="ri-add-line fs-5"></i>Nouvel examen
                   </button>
-                  <button type="button" class="btn btn-secondary" id="printPlanningBtn">
-                     <i class="ri-printer-line me-1"></i>Imprimer le planning
+                  <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm d-flex align-items-center gap-1" id="printPlanningBtn">
+                     <i class="ri-printer-line fs-5"></i>Imprimer le planning
                    </button>
-                  <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#helpModal">
-                    <i class="ri-question-line me-1"></i>Aide
+                  <button type="button" class="btn btn-outline-info rounded-pill px-3 d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#helpModal">
+                    <i class="ri-question-line fs-5"></i>Aide
                   </button>
                   <div class="search-box">
-                    <input type="text" placeholder="Rechercher..." class="form-control rounded-pill" style="width: 220px;"/>
+                    <input type="text" placeholder="Rechercher..." class="form-control rounded-pill px-3 py-1.5" style="width: 180px; font-size: 0.9rem;"/>
                     <i class="ri-search-line text-muted search-icon"></i>
                   </div>
-                  <select class="form-select rounded-pill" style="width: 220px;">
-                    <option value="0">Filtrer par statut</option>
-                    <option value="programme">Programmé</option>
-                    <option value="termine">Terminé</option>
-                    <option value="annule">Annulé</option>
-                  </select>
-
-                  <select class="form-select rounded-pill" style="width: 220px;">
-                    <option value="0">Trier par date</option>
-                    <option value="croissant">Date croissante</option>
-                    <option value="decroissant">Date décroissante</option>
-                  </select>
                 </div>
               </div>
             </div>
-            <div class="card-body p-3">
+            <div class="card-body p-4 bg-white bg-opacity-20">
               <div id="exam-plans-container">
                 <!-- Data will be loaded via AJAX -->
                 <div class="text-center text-muted py-5">
@@ -211,9 +274,9 @@
 
 <!-- Modal de modification des plannifications d'examen -->
 <div class="modal fade" id="editExamPlanModal" tabindex="-1" aria-labelledby="editExamPlanModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-gradient bg-info text-white rounded-top-3 p-4">
+      <div class="modal-header bg-gradient text-white rounded-top-3 p-4" style="background: var(--primary-gradient) !important;">
         <div class="d-flex align-items-center">
           <div class="avatar-sm bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center me-3">
             <i class="ri-edit-line fs-5"></i>
@@ -232,35 +295,35 @@
 
           <!-- Section Informations de base -->
           <div class="mb-4 exam-field">
-            <h6 class="text-muted mb-3">Informations de base</h6>
+            <h6 class="text-muted mb-3 fw-bold small text-uppercase" style="letter-spacing: 0.5px;">Informations de base</h6>
             <div class="row g-3">
               <div class="col-md-6">
-                <label for="editModule" class="form-label fw-medium">Matière</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
+                <label for="editModule" class="form-label fw-semibold text-dark small">Matière</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
                     <i class="ri-book-line text-info"></i>
                   </span>
-                  <input type="text" class="form-control form-control-lg bg-light" id="editModule" name="module" readonly>
+                  <input type="text" class="form-control form-control-lg bg-light text-dark" id="editModule" name="module" readonly>
                 </div>
               </div>
               <div class="col-md-6">
-                <label for="editTypeExamen" class="form-label fw-medium">Type d'examen</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
+                <label for="editTypeExamen" class="form-label fw-semibold text-dark small">Type d'examen</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
                     <i class="ri-file-text-line text-info"></i>
                   </span>
-                  <input type="text" class="form-control form-control-lg bg-light" id="editTypeExamen" name="type_examen" readonly>
+                  <input type="text" class="form-control form-control-lg bg-light text-dark" id="editTypeExamen" name="type_examen" readonly>
                 </div>
               </div>
             </div>
             <div class="row g-3 mt-2">
               <div class="col-md-12">
-                <label for="editModeExamen" class="form-label fw-medium">Mode d'examination</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
+                <label for="editModeExamen" class="form-label fw-semibold text-dark small">Mode d'examination</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
                     <i class="ri-settings-2-line text-info"></i>
                   </span>
-                  <select class="form-select form-select-lg" id="editModeExamen" name="mode_examen">
+                  <select class="form-select form-select-lg text-dark" id="editModeExamen" name="mode_examen">
                     <option value="exam">Examen</option>
                     <option value="tr">Travail à remettre</option>
                     <option value="ligne">Examen en ligne</option>
@@ -273,33 +336,33 @@
 
           <!-- Section Date et Heure -->
           <div class="mb-4 exam-field" id="date-heure-section">
-            <h6 class="text-muted mb-3">Date et heure</h6>
+            <h6 class="text-muted mb-3 fw-bold small text-uppercase" style="letter-spacing: 0.5px;">Date et heure</h6>
             <div class="row g-3">
               <div class="col-md-6">
-                <label for="editDate" class="form-label fw-medium">Date de l'examen</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
+                <label for="editDate" class="form-label fw-semibold text-dark small">Date de l'examen</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
                     <i class="ri-calendar-2-line text-info"></i>
                   </span>
-                  <input type="date" class="form-control form-control-lg" id="editDate" name="date" required>
+                  <input type="date" class="form-control form-control-lg text-dark" id="editDate" name="date" required>
                 </div>
               </div>
               <div class="col-md-3">
-                <label for="editHeureDebut" class="form-label fw-medium">Heure de début</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
+                <label for="editHeureDebut" class="form-label fw-semibold text-dark small">Heure de début</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
                     <i class="ri-time-line text-info"></i>
                   </span>
-                  <input type="time" class="form-control form-control-lg" id="editHeureDebut" name="heure_debut" required>
+                  <input type="time" class="form-control form-control-lg text-dark" id="editHeureDebut" name="heure_debut" required>
                 </div>
               </div>
               <div class="col-md-3">
-                <label for="editHeureFin" class="form-label fw-medium">Heure de fin</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
+                <label for="editHeureFin" class="form-label fw-semibold text-dark small">Heure de fin</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
                     <i class="ri-time-line text-info"></i>
                   </span>
-                  <input type="time" class="form-control form-control-lg" id="editHeureFin" name="heure_fin">
+                  <input type="time" class="form-control form-control-lg text-dark" id="editHeureFin" name="heure_fin">
                 </div>
               </div>
             </div>
@@ -307,27 +370,27 @@
 
           <!-- Section Salle et Surveillant -->
           <div class="mb-4 exam-field">
-            <h6 class="text-muted mb-3">Salle et surveillance</h6>
+            <h6 class="text-muted mb-3 fw-bold small text-uppercase" style="letter-spacing: 0.5px;">Salle et surveillance</h6>
             <div class="row g-3">
               <div class="col-md-6">
-                <label for="editSalle" class="form-label fw-medium">Salle d'examen</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
+                <label for="editSalle" class="form-label fw-semibold text-dark small">Salle d'examen</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
                     <i class="ri-building-2-line text-info"></i>
                   </span>
-                  <select class="form-select form-select-lg" id="editSalle" name="salle" required>
+                  <select class="form-select form-select-lg text-dark" id="editSalle" name="salle" required>
                     <option value="">Sélectionner une salle</option>
                     <!-- Les options seront chargées dynamiquement -->
                   </select>
                 </div>
               </div>
               <div class="col-md-6">
-                <label for="editSurveillant" class="form-label fw-medium">Surveillant</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
+                <label for="editSurveillant" class="form-label fw-semibold text-dark small">Surveillant</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
                     <i class="ri-user-line text-info"></i>
                   </span>
-                  <select class="form-select form-select-lg" id="editSurveillant" name="surveillant">
+                  <select class="form-select form-select-lg text-dark" id="editSurveillant" name="surveillant">
                     <option value="">Sélectionner un surveillant</option>
                     <!-- Les options seront chargées dynamiquement -->
                   </select>
@@ -338,15 +401,15 @@
 
           <!-- Section Observations -->
           <div class="mb-4 exam-field">
-            <h6 class="text-muted mb-3">Observations</h6>
+            <h6 class="text-muted mb-3 fw-bold small text-uppercase" style="letter-spacing: 0.5px;">Observations</h6>
             <div class="row g-3">
               <div class="col-md-12">
-                <label for="editObservations" class="form-label fw-medium">Observations</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
+                <label for="editObservations" class="form-label fw-semibold text-dark small">Observations</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text align-items-start pt-3">
                     <i class="ri-sticky-note-line text-info"></i>
                   </span>
-                  <textarea class="form-control form-control-lg" id="editObservations" name="observations" rows="3" placeholder="Ajouter des observations..."></textarea>
+                  <textarea class="form-control form-control-lg text-dark" id="editObservations" name="observations" rows="3" placeholder="Ajouter des observations..."></textarea>
                 </div>
               </div>
             </div>
@@ -355,10 +418,10 @@
       </div>
       <div class="modal-footer bg-light rounded-bottom-3 p-4">
         <div class="d-flex w-100">
-          <button type="button" class="btn btn-outline-secondary flex-fill me-2" data-bs-dismiss="modal">
+          <button type="button" class="btn btn-outline-secondary rounded-pill px-4 flex-fill me-2" data-bs-dismiss="modal">
             <i class="ri-close-line me-1"></i>Annuler
           </button>
-          <button type="button" class="btn btn-info flex-fill text-white" id="saveExamPlanBtn">
+          <button type="button" class="btn btn-info text-white rounded-pill px-4 flex-fill shadow-sm" id="saveExamPlanBtn">
             <i class="ri-save-3-line me-1"></i>Enregistrer
           </button>
         </div>
@@ -417,7 +480,7 @@
 <div class="modal fade" id="validateExamModal" tabindex="-1" aria-labelledby="validateExamModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-gradient bg-success text-white rounded-top-3 p-4">
+      <div class="modal-header bg-gradient text-white rounded-top-3 p-4" style="background: var(--primary-gradient) !important;">
         <div class="d-flex align-items-center">
           <div class="avatar-sm bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center me-3">
             <i class="ri-checkbox-circle-line fs-5"></i>
@@ -433,11 +496,11 @@
         <form id="validateExamForm">
           <div class="text-center mb-4">
             <div class="avatar-lg mx-auto mb-4">
-              <div class="avatar-title bg-success bg-opacity-10 text-success rounded-circle fs-2">
-                <i class="ri-checkbox-circle-line"></i>
+              <div class="avatar-title bg-info bg-opacity-10 text-info rounded-circle fs-2" style="width: 80px; height: 80px; line-height: 80px; margin: 0 auto;">
+                <i class="ri-checkbox-circle-line fs-1"></i>
               </div>
             </div>
-            <h5 class="mb-3">Validation de l'examen</h5>
+            <h5 class="mb-3 fw-bold text-dark">Validation de l'examen</h5>
             <p class="text-muted mb-4">
               Veuillez sélectionner le statut approprié pour cet examen :
             </p>
@@ -446,12 +509,12 @@
           <div class="row justify-content-center">
             <div class="col-lg-8">
               <div class="mb-4">
-                <label for="examStatus" class="form-label fw-medium">Statut de l'examen</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
-                    <i class="ri-bar-chart-line text-success"></i>
+                <label for="examStatus" class="form-label fw-semibold text-dark small">Statut de l'examen</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
+                    <i class="ri-bar-chart-line text-info"></i>
                   </span>
-                  <select class="form-select form-select-lg" id="examStatus" name="exam_status">
+                  <select class="form-select form-select-lg text-dark" id="examStatus" name="exam_status">
                     <option value="termine">Terminé</option>
                     <option value="nabouti">Non abouti</option>
                   </select>
@@ -468,10 +531,10 @@
       </div>
       <div class="modal-footer bg-light rounded-bottom-3 p-4">
         <div class="d-flex w-100">
-          <button type="button" class="btn btn-outline-secondary flex-fill me-2" data-bs-dismiss="modal">
+          <button type="button" class="btn btn-outline-secondary rounded-pill px-4 flex-fill me-2" data-bs-dismiss="modal">
             <i class="ri-close-line me-1"></i>Annuler
           </button>
-          <button type="button" class="btn btn-success flex-fill" id="confirmValidateBtn">
+          <button type="button" class="btn btn-info text-white rounded-pill px-4 flex-fill shadow-sm" id="confirmValidateBtn">
             <i class="ri-checkbox-circle-line me-1"></i>Valider
           </button>
         </div>
@@ -574,9 +637,9 @@
 
 <!-- Modal de planification d'examen -->
 <div class="modal fade" id="planExamModal" tabindex="-1" aria-labelledby="planExamModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-gradient bg-primary text-white rounded-top-3 p-4">
+      <div class="modal-header bg-gradient text-white rounded-top-3 p-4" style="background: var(--primary-gradient) !important;">
         <div class="d-flex align-items-center">
           <div class="avatar-sm bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center me-3">
             <i class="ri-calendar-2-line fs-5"></i>
@@ -595,27 +658,27 @@
 
           <!-- Section Matière et Type -->
           <div class="mb-4">
-            <h6 class="text-muted mb-3">Matière et type d'examen</h6>
+            <h6 class="text-muted mb-3 fw-bold small text-uppercase" style="letter-spacing: 0.5px;">Matière et type d'examen</h6>
             <div class="row g-3">
               <div class="col-md-6">
-                <label for="moduleSelect" class="form-label fw-medium">Matière</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
-                    <i class="ri-book-line text-primary"></i>
+                <label for="moduleSelect" class="form-label fw-semibold text-dark small">Matière</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
+                    <i class="ri-book-line text-info"></i>
                   </span>
-                  <select class="form-select form-select-lg" id="moduleSelect" name="moduleSelect" required>
+                  <select class="form-select form-select-lg text-dark" id="moduleSelect" name="moduleSelect" required>
                     <option value="">Sélectionner une matière</option>
                     <!-- Options will be loaded dynamically -->
                   </select>
                 </div>
               </div>
               <div class="col-md-6">
-                <label for="typeExamenSelect" class="form-label fw-medium">Type d'examen</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
-                    <i class="ri-file-text-line text-primary"></i>
+                <label for="typeExamenSelect" class="form-label fw-semibold text-dark small">Type d'examen</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
+                    <i class="ri-file-text-line text-info"></i>
                   </span>
-                  <select class="form-select form-select-lg" id="typeExamenSelect" name="typeExamenSelect" required>
+                  <select class="form-select form-select-lg text-dark" id="typeExamenSelect" name="typeExamenSelect" required>
                     <option value="">Sélectionner un type</option>
                     <option value="normal">Examen ordinaire</option>
                     <option value="rachat">Rachat de crédit</option>
@@ -628,15 +691,15 @@
 
           <!-- Section Mode d'examen -->
           <div class="mb-4">
-            <h6 class="text-muted mb-3">Mode d'examination</h6>
+            <h6 class="text-muted mb-3 fw-bold small text-uppercase" style="letter-spacing: 0.5px;">Mode d'examination</h6>
             <div class="row g-3">
               <div class="col-md-12">
-                <label for="modeExamenSelect" class="form-label fw-medium">Mode d'examination</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
-                    <i class="ri-settings-2-line text-primary"></i>
+                <label for="modeExamenSelect" class="form-label fw-semibold text-dark small">Mode d'examination</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
+                    <i class="ri-settings-2-line text-info"></i>
                   </span>
-                  <select class="form-select form-select-lg" id="modeExamenSelect" name="modeExamenSelect" required>
+                  <select class="form-select form-select-lg text-dark" id="modeExamenSelect" name="modeExamenSelect" required>
                     <option value="">Sélectionner un mode</option>
                     <option value="exam">Examen</option>
                     <option value="tr">Travail à remettre</option>
@@ -650,33 +713,33 @@
 
           <!-- Section Date et Heure -->
           <div class="mb-4" id="dateHeureSection">
-            <h6 class="text-muted mb-3">Date et heure</h6>
+            <h6 class="text-muted mb-3 fw-bold small text-uppercase" style="letter-spacing: 0.5px;">Date et heure</h6>
             <div class="row g-3">
               <div class="col-md-6">
-                <label for="dateExamen" class="form-label fw-medium">Date de l'examen</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
-                    <i class="ri-calendar-2-line text-primary"></i>
+                <label for="dateExamen" class="form-label fw-semibold text-dark small">Date de l'examen</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
+                    <i class="ri-calendar-2-line text-info"></i>
                   </span>
-                  <input type="date" class="form-control form-control-lg" id="dateExamen" name="dateExamen" required>
+                  <input type="date" class="form-control form-control-lg text-dark" id="dateExamen" name="dateExamen" required>
                 </div>
               </div>
               <div class="col-md-3">
-                <label for="heureDebut" class="form-label fw-medium">Heure de début</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
-                    <i class="ri-time-line text-primary"></i>
+                <label for="heureDebut" class="form-label fw-semibold text-dark small">Heure de début</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
+                    <i class="ri-time-line text-info"></i>
                   </span>
-                  <input type="time" class="form-control form-control-lg" id="heureDebut" name="heureDebut" required>
+                  <input type="time" class="form-control form-control-lg text-dark" id="heureDebut" name="heureDebut" required>
                 </div>
               </div>
               <div class="col-md-3">
-                <label for="heureFin" class="form-label fw-medium">Heure de fin</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
-                    <i class="ri-time-line text-primary"></i>
+                <label for="heureFin" class="form-label fw-semibold text-dark small">Heure de fin</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
+                    <i class="ri-time-line text-info"></i>
                   </span>
-                  <input type="time" class="form-control form-control-lg" id="heureFin" name="heureFin" required>
+                  <input type="time" class="form-control form-control-lg text-dark" id="heureFin" name="heureFin" required>
                 </div>
               </div>
             </div>
@@ -684,15 +747,15 @@
 
           <!-- Section Salle -->
           <div class="mb-4" id="salleSection">
-            <h6 class="text-muted mb-3">Salle d'examen</h6>
+            <h6 class="text-muted mb-3 fw-bold small text-uppercase" style="letter-spacing: 0.5px;">Salle d'examen</h6>
             <div class="row g-3">
               <div class="col-md-12">
-                <label for="salleSelect" class="form-label fw-medium">Salle d'examen</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
-                    <i class="ri-building-2-line text-primary"></i>
+                <label for="salleSelect" class="form-label fw-semibold text-dark small">Salle d'examen</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text">
+                    <i class="ri-building-2-line text-info"></i>
                   </span>
-                  <select class="form-select form-select-lg" id="salleSelect" name="salleSelect">
+                  <select class="form-select form-select-lg text-dark" id="salleSelect" name="salleSelect">
                     <option value="">Sélectionner une salle (optionnel)</option>
                     <!-- Options will be loaded dynamically -->
                   </select>
@@ -703,15 +766,15 @@
 
           <!-- Section Informations complémentaires -->
           <div class="mb-4">
-            <h6 class="text-muted mb-3">Informations complémentaires</h6>
+            <h6 class="text-muted mb-3 fw-bold small text-uppercase" style="letter-spacing: 0.5px;">Informations complémentaires</h6>
             <div class="row g-3">
               <div class="col-md-12">
-                <label for="observations" class="form-label fw-medium">Observations</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-light">
-                    <i class="ri-sticky-note-line text-primary"></i>
+                <label for="observations" class="form-label fw-semibold text-dark small">Observations</label>
+                <div class="input-group input-group-modern">
+                  <span class="input-group-text align-items-start pt-3">
+                    <i class="ri-sticky-note-line text-info"></i>
                   </span>
-                  <textarea class="form-control form-control-lg" id="observations" name="observations" rows="3" placeholder="Ajouter des observations..."></textarea>
+                  <textarea class="form-control form-control-lg text-dark" id="observations" name="observations" rows="3" placeholder="Ajouter des observations..."></textarea>
                 </div>
               </div>
             </div>
@@ -720,10 +783,10 @@
       </div>
       <div class="modal-footer bg-light rounded-bottom-3 p-4">
         <div class="d-flex w-100">
-          <button type="button" class="btn btn-outline-secondary flex-fill me-2" data-bs-dismiss="modal">
+          <button type="button" class="btn btn-outline-secondary rounded-pill px-4 flex-fill me-2" data-bs-dismiss="modal">
             <i class="ri-close-line me-1"></i>Annuler
           </button>
-          <button type="button" class="btn btn-primary flex-fill" id="submitPlanExamBtn">
+          <button type="button" class="btn btn-info text-white rounded-pill px-4 flex-fill shadow-sm" id="submitPlanExamBtn">
             <i class="ri-check-line me-1"></i>Planifier
           </button>
         </div>
@@ -786,6 +849,8 @@
         let groupeId = "";
         let currentExamPlans = []; // Store plans for PDF generation
         let sessionInfo = {}; // Store session info for PDF
+        let groupSessionDateDebut = "";
+        let groupSessionDateFin = "";
 
         function loadExamPlanification(){
             // Reset modal fields to ensure clean state on each load
@@ -803,6 +868,8 @@
                         const plans = data.planifications.data;
                         groupeName = data.planifications.groupe_name;
                         groupeId = data.planifications.groupe_id;
+                        groupSessionDateDebut = data.planifications.date_debut ? data.planifications.date_debut.split('T')[0] : "";
+                        groupSessionDateFin = data.planifications.date_fin ? data.planifications.date_fin.split('T')[0] : "";
 
                         // Update Session Info
                         $('#sessionLabel').text(data.planifications.session_nom);
@@ -900,17 +967,17 @@
                                     let editDeleteValidationButtonDisabled = '';
                                     let resultButtonDisabled = '';
                                     if(plan.statut === 'termine'){
-                                        statusBadge = '<span class="badge bg-success bg-opacity-10 text-white">Terminé</span>';
+                                        statusBadge = '<span class="badge badge-soft-success">Terminé</span>';
                                         classText = "enable";
                                         editDeleteValidationButtonDisabled = 'disabled';
                                         resultButtonDisabled = '';
                                     } else if(plan.statut === 'att'){
-                                        statusBadge = '<span class="badge bg-warning bg-opacity-10 text-white">En attente</span>';
+                                        statusBadge = '<span class="badge badge-soft-warning">En attente</span>';
                                         classText = "disabled";
                                         editDeleteValidationButtonDisabled = '';
                                         resultButtonDisabled = 'disabled';
                                     } else {
-                                        statusBadge = '<span class="badge bg-danger bg-opacity-10 text-warning">Non abouti</span>';
+                                        statusBadge = '<span class="badge badge-soft-danger">Non abouti</span>';
                                         classText = "disabled";
                                         editDeleteValidationButtonDisabled = '';
                                         resultButtonDisabled = 'disabled';
@@ -919,11 +986,11 @@
 
                                     let existePv = '';
                                     if(plan.pv_existe && plan.est_valide){
-                                      existePv = '<span class="badge bg-info bg-opacity-10 text-white">PV enregistré et validé</span>';
+                                      existePv = '<span class="badge badge-soft-primary">PV enregistré et validé</span>';
                                     }else if (plan.pv_existe && !plan.est_valide){
-                                      existePv = '<span class="badge bg-warning bg-opacity-10 text-white">PV en attente de validation</span>';
+                                      existePv = '<span class="badge badge-soft-warning">PV en attente de validation</span>';
                                     }else{
-                                      existePv = '<span class="badge bg-success bg-opacity-10 text-white">Aucun PV généré</span>';
+                                      existePv = '<span class="badge badge-soft-secondary">Aucun PV généré</span>';
                                     }
 
                                     let dateExiste = '';
@@ -1218,6 +1285,22 @@
             if (!isValid) {
                 showNotification('Veuillez remplir tous les champs obligatoires.', 'error');
                 return;
+            }
+
+            // Validation des limites de date du groupe
+            const selectedDate = $('#editDate').val();
+            if (selectedDate && groupSessionDateDebut && groupSessionDateDebut !== "-" && groupSessionDateFin && groupSessionDateFin !== "-") {
+                const examDate = new Date(selectedDate);
+                const startLimit = new Date(groupSessionDateDebut);
+                const endLimit = new Date(groupSessionDateFin);
+
+                if (examDate < startLimit || examDate > endLimit) {
+                    $('#editDate').addClass('is-invalid');
+                    showNotification("La date de l'examen (" + selectedDate + ") doit être comprise entre le " + groupSessionDateDebut + " et le " + groupSessionDateFin + " (dates de la session pour ce groupe).", 'error');
+                    return;
+                } else {
+                    $('#editDate').removeClass('is-invalid');
+                }
             }
 
             // Désactiver le bouton pour éviter les soumissions multiples et ajouter un effet de chargement
@@ -1659,6 +1742,22 @@
             if (!isValid) {
                 showNotification('Veuillez remplir tous les champs obligatoires.', 'error');
                 return;
+            }
+
+            // Validation des limites de date du groupe
+            const selectedDate = $('#dateExamen').val();
+            if (selectedDate && groupSessionDateDebut && groupSessionDateDebut !== "-" && groupSessionDateFin && groupSessionDateFin !== "-") {
+                const examDate = new Date(selectedDate);
+                const startLimit = new Date(groupSessionDateDebut);
+                const endLimit = new Date(groupSessionDateFin);
+
+                if (examDate < startLimit || examDate > endLimit) {
+                    $('#dateExamen').addClass('is-invalid');
+                    showNotification("La date de l'examen (" + selectedDate + ") doit être comprise entre le " + groupSessionDateDebut + " et le " + groupSessionDateFin + " (dates de la session pour ce groupe).", 'error');
+                    return;
+                } else {
+                    $('#dateExamen').removeClass('is-invalid');
+                }
             }
 
             // Disable button and show loading

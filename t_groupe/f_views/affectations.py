@@ -34,8 +34,8 @@ def ApiListePromosEnAttente(request):
             'end_year': i.end_year,
             'session': i.get_session_display(),
             'session_key': i.session,
-            'date_debut': i.date_debut,
-            'date_fin': i.date_fin,
+            'date_debut': getattr(i, 'date_debut', None),
+            'date_fin': getattr(i, 'date_fin', None),
             'created_at': i.created_at.strftime("%Y-%m-%d"),
             'nombre_etudiants' : nombre_etudiant,
         })
@@ -290,14 +290,35 @@ def ApiGetSpecialiteDatas(request):
         specialite = request.GET.get('specialite')
         promo = request.GET.get('promo')
         
-        object = Specialites.objects.filter(id = specialite).values('id','label','code','condition_access')
+        spec = Specialites.objects.filter(id=specialite).first()
+        spec_data = []
+        if spec:
+            responsable_fullname = f"{spec.responsable.nom or ''} {spec.responsable.prenom or ''}".strip() if spec.responsable else "Non assigné"
+            spec_data.append({
+                'id': spec.id,
+                'label': spec.label,
+                'code': spec.code,
+                'condition_access': spec.condition_access or "-",
+                'responsable': responsable_fullname,
+                'date_creation': spec.created_at.strftime("%Y-%m-%d") if spec.created_at else "-",
+            })
+
         nb_groupe = Groupe.objects.filter(promotion__code=promo, specialite_id=specialite, etat='inscription').count()
         nb_groupe_brouillon = Groupe.objects.filter(promotion__code=promo, specialite_id=specialite, etat='brouillon').count()
 
+        promo_label = promo
+        try:
+            promo_obj = Promos.objects.filter(code=promo).first()
+            if promo_obj:
+                promo_label = f"{promo_obj.label} - {promo_obj.get_session_display() or promo_obj.session}"
+        except Exception:
+            pass
+
         data = {
-            'specialite' : list(object),
+            'specialite' : spec_data,
             'nb_groupe' : nb_groupe,
             'nb_groupe_brouillon': nb_groupe_brouillon,
+            'promo': promo_label,
         }
 
         return JsonResponse(data, safe=False)
