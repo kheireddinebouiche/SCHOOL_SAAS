@@ -972,6 +972,9 @@ def ApiDeleteDemandePaiement(request):
 def PageConfigPaiementSeuil(request):
     return render(request, 'tenant_folder/comptabilite/tresorerie/config.html', {'tenant' : request.tenant})
 
+def PageConfigPaiementFacturation(request):
+    return render(request, 'tenant_folder/comptabilite/tresorerie/config_paiement_facturation.html', {'tenant' : request.tenant})
+
 def ApiListSeuilPaiement(request):
     liste = SeuilPaiements.objects.all().values('id','specialite','specialite__label','specialite__code','label','valeur','created_at','updated_at')
     
@@ -1359,7 +1362,12 @@ def ApiUpdateDoubleDiplomationPrice(request):
 @login_required(login_url="institut_app:login")
 def ApiGetParametreFinancier(request):
     """Returns the current financial parameter settings."""
+    import json
     params = ParametreFinancier.get_instance()
+    try:
+        bareme_json = json.loads(params.timbre_bareme)
+    except Exception:
+        bareme_json = []
     return JsonResponse({
         'bloquer_date_paiement': params.bloquer_date_paiement,
         'activer_timbre': params.activer_timbre,
@@ -1367,6 +1375,7 @@ def ApiGetParametreFinancier(request):
         'timbre_min': str(params.timbre_min),
         'timbre_max': str(params.timbre_max),
         'timbre_cash_only': params.timbre_cash_only,
+        'timbre_bareme': bareme_json,
         'relance_echeancier_sujet': params.relance_echeancier_sujet,
         'relance_echeancier_corps': params.relance_echeancier_corps,
     })
@@ -1375,6 +1384,7 @@ def ApiGetParametreFinancier(request):
 def ApiUpdateParametreFinancier(request):
     """Updates the financial parameter settings."""
     if request.method == 'POST':
+        import json
         params = ParametreFinancier.get_instance()
         
         bloquer = request.POST.get('bloquer_date_paiement')
@@ -1400,6 +1410,15 @@ def ApiUpdateParametreFinancier(request):
         cash_only = request.POST.get('timbre_cash_only')
         if cash_only is not None:
             params.timbre_cash_only = cash_only.lower() in ('true', '1', 'on')
+
+        bareme = request.POST.get('timbre_bareme')
+        if bareme is not None:
+            try:
+                # Validate JSON structure
+                json.loads(bareme)
+                params.timbre_bareme = bareme
+            except ValueError:
+                return JsonResponse({'status': 'error', 'message': 'Le barème fourni est invalide.'})
 
         relance_sujet = request.POST.get('relance_echeancier_sujet')
         if relance_sujet is not None:

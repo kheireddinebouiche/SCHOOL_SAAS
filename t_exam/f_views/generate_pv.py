@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from ..models import ModelBuilltins, BuiltinTypeNote, BuiltinSousNote
 from t_formations.models import Formation, Modules
@@ -10,6 +10,13 @@ from django.db import transaction, IntegrityError
 import json
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+
+# ReportLab imports for high-fidelity vector PDF generation
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+from reportlab.lib.units import mm
 
 
 @login_required(login_url="institut_app:login")
@@ -355,6 +362,7 @@ def GeneratePvModal(request, pk):
                         'nom': student.nom,
                         'prenom': student.prenom,
                         'matricule': student.matricule,
+                        'matricule_interne': student.matricule_interne,
                     })
                 except Prospets.DoesNotExist:
                     # Handle case where student doesn't exist
@@ -396,3 +404,329 @@ def GeneratePvModal(request, pk):
         'commission_stats': commission_stats,  # Pass commission statistics
     }
     return render(request, 'tenant_folder/exams/remplissage_notes.html', context)
+
+
+@login_required(login_url="institut_app:login")
+def DownloadBlankPvsPdf(request):
+    """
+    Generates a single, high-fidelity landscape A4 PDF compiled server-side via ReportLab,
+    containing blank PVs (Procès-Verbaux) for a list of comma-separated ExamPlanification IDs.
+    """
+    plan_ids_str = request.GET.get('plan_ids', '')
+    if not plan_ids_str:
+        return HttpResponse("Aucun examen spécifié.", status=400)
+    
+    try:
+        plan_ids = [int(x) for x in plan_ids_str.split(',') if x.strip()]
+    except ValueError:
+        return HttpResponse("Liste d'examens invalide.", status=400)
+        
+    if not plan_ids:
+        return HttpResponse("Aucun examen spécifié.", status=400)
+
+    # Setup the ReportLab document
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="PV_Vierges.pdf"'
+    
+    # Page setup: landscape A4
+    doc = SimpleDocTemplate(
+        response,
+        pagesize=landscape(A4),
+        leftMargin=15*mm,
+        rightMargin=15*mm,
+        topMargin=15*mm,
+        bottomMargin=15*mm
+    )
+    
+    styles = getSampleStyleSheet()
+    
+    # Premium customized paragraph styles
+    title_style = ParagraphStyle(
+        'PVTitle',
+        parent=styles['Heading1'],
+        fontName='Helvetica-Bold',
+        fontSize=15,
+        leading=18,
+        alignment=1,  # Centered
+        textColor=colors.HexColor("#1e293b"),
+        spaceAfter=4
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'PVSubtitle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Oblique',
+        fontSize=9.5,
+        leading=12,
+        alignment=1,  # Centered
+        textColor=colors.HexColor("#475569"),
+        spaceAfter=15
+    )
+    
+    meta_label_style = ParagraphStyle(
+        'PVMetaLabel',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=8.5,
+        leading=11,
+        textColor=colors.HexColor("#475569")
+    )
+    
+    meta_val_style = ParagraphStyle(
+        'PVMetaVal',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=8.5,
+        leading=11,
+        textColor=colors.HexColor("#0f172a")
+    )
+    
+    cell_hdr_style = ParagraphStyle(
+        'PVCellHdr',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=7.5,
+        leading=9,
+        alignment=1,  # Centered
+        textColor=colors.HexColor("#1e293b")
+    )
+    
+    cell_data_style = ParagraphStyle(
+        'PVCellData',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=8,
+        leading=10,
+        alignment=1,  # Centered
+        textColor=colors.HexColor("#0f172a")
+    )
+    
+    cell_data_left_style = ParagraphStyle(
+        'PVCellDataLeft',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=8,
+        leading=10,
+        alignment=0,  # Left-aligned
+        textColor=colors.HexColor("#0f172a")
+    )
+
+    story = []
+    
+    for plan_idx, pk in enumerate(plan_ids):
+        try:
+            obj = ExamPlanification.objects.get(id=pk)
+        except ExamPlanification.DoesNotExist:
+            continue
+            
+        # Check if the PV is already validated; if so, skip it for blank PV printing
+        is_validated = obj.pv.est_valide if hasattr(obj, 'pv') else False
+        if is_validated:
+            continue
+            
+        groupe = SessionExamLine.objects.get(id=obj.exam_line.id)
+        modeleBuiltin = ModelBuilltins.objects.get(formation=groupe.groupe.specialite.formation)
+        all_students = GroupeLine.objects.filter(groupe_id=groupe.groupe.id)
+        
+        # Get commission results for session filtering if normal
+        commission_results = {}
+        if groupe.session.commission:
+            commission_results = {
+                result.etudiants.id: result.result
+                for result in CommisionResult.objects.filter(
+                    commission=groupe.session.commission,
+                    modules__id=obj.module.id
+                ).distinct()
+            }
+            
+        # Filter students based on exam type and commission status
+        exam_type = obj.type_examen
+        filtered_students = []
+        for student_line in all_students:
+            student_id = student_line.student.id
+            commission_result = commission_results.get(student_id, None)
+            
+            if exam_type == 'normal':
+                filtered_students.append(student_line)
+            elif exam_type == 'rachat':
+                if commission_result == 'rach':
+                    filtered_students.append(student_line)
+            elif exam_type == 'rattrage':
+                original_planification = ExamPlanification.objects.filter(
+                    exam_line=groupe,
+                    module=obj.module,
+                    type_examen='normal'
+                ).first()
+                if original_planification:
+                    original_pv = PvExamen.objects.filter(exam_planification=original_planification).first()
+                    if original_pv:
+                        if ExamDecisionEtudiant.objects.filter(pv=original_pv, etudiant=student_line.student, statut='rattrapage').exists():
+                            filtered_students.append(student_line)
+                else:
+                    pv_examen = PvExamen.objects.filter(exam_planification=obj).first()
+                    if pv_examen and ExamDecisionEtudiant.objects.filter(pv=pv_examen, etudiant=student_line.student, statut='rattrapage').exists():
+                        filtered_students.append(student_line)
+            else:
+                filtered_students.append(student_line)
+
+        # Get the PvExamen record if it exists
+        pv_examen = PvExamen.objects.filter(exam_planification=obj).first()
+        
+        # Determine builtin note types to include
+        if exam_type == 'normal':
+            builtin_types_to_include = modeleBuiltin.types_notes.filter(is_rattrapage=False, is_rachat=False).order_by('bloc__ordre', 'ordre')
+        elif exam_type == 'rattrage':
+            builtin_types_to_include = modeleBuiltin.types_notes.filter(is_rattrapage=True).order_by('bloc__ordre', 'ordre')
+        elif exam_type == 'rachat':
+            builtin_types_to_include = modeleBuiltin.types_notes.filter(is_rachat=True).order_by('bloc__ordre', 'ordre')
+        else:
+            builtin_types_to_include = modeleBuiltin.types_notes.all().order_by('bloc__ordre', 'ordre')
+
+        all_types_notes = list(builtin_types_to_include)
+        types_with_sous_notes = [tn for tn in all_types_notes if tn.has_sous_notes and tn.nb_sous_notes > 0]
+        types_without_sous_notes = [tn for tn in all_types_notes if not tn.has_sous_notes]
+        filtered_types_notes = types_with_sous_notes + types_without_sous_notes
+
+        # Construct PV layout structure
+        if plan_idx > 0:
+            story.append(PageBreak())
+            
+        # 1. Page Title
+        session_name = groupe.session.get_type_session_display()
+        date_debut_str = groupe.session.date_debut.date().strftime("%d/%m/%Y")
+        date_fin_str = groupe.session.date_fin.date().strftime("%d/%m/%Y")
+        session_label = f"Session d'examens : {session_name} ({date_debut_str} au {date_fin_str})"
+        
+        story.append(Paragraph("PROCES-VERBAL DE NOTES", title_style))
+        story.append(Paragraph(session_label, subtitle_style))
+        
+        # 2. Meta Information Section
+        meta_data = [
+            [
+                Paragraph("<b>Module / Matière :</b>", meta_label_style),
+                Paragraph(obj.module.label, meta_val_style),
+                Paragraph("<b>Type d'examen :</b>", meta_label_style),
+                Paragraph(obj.get_type_examen_display(), meta_val_style)
+            ],
+            [
+                Paragraph("<b>Groupe :</b>", meta_label_style),
+                Paragraph(groupe.groupe.nom, meta_val_style),
+                Paragraph("<b>Note Éliminatoire :</b>", meta_label_style),
+                Paragraph(f"{obj.module.n_elimate or 0.0} / 20", meta_val_style)
+            ],
+            [
+                Paragraph("<b>Date d'édition :</b>", meta_label_style),
+                Paragraph(timezone.now().strftime("%d/%m/%Y"), meta_val_style),
+                Paragraph("", meta_label_style),
+                Paragraph("", meta_val_style)
+            ]
+        ]
+        
+        meta_table = Table(meta_data, colWidths=[100, 278, 100, 278])
+        meta_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+        ]))
+        
+        story.append(meta_table)
+        story.append(Spacer(1, 15))
+        
+        # 3. Marks Grid Table Headers
+        row0 = [
+            Paragraph("N°", cell_hdr_style),
+            Paragraph("Nom et Prénom", cell_hdr_style),
+            Paragraph("Matricule", cell_hdr_style)
+        ]
+        row1 = [
+            Paragraph("", cell_hdr_style),
+            Paragraph("", cell_hdr_style),
+            Paragraph("", cell_hdr_style)
+        ]
+        
+        spans = [
+            ('SPAN', (0, 0), (0, 1)),
+            ('SPAN', (1, 0), (1, 1)),
+            ('SPAN', (2, 0), (2, 1)),
+        ]
+        
+        col_idx = 3
+        for type_note in filtered_types_notes:
+            if type_note.has_sous_notes and type_note.nb_sous_notes > 0:
+                nb_sn = type_note.nb_sous_notes
+                spans.append(('SPAN', (col_idx, 0), (col_idx + nb_sn, 0)))
+                row0.append(Paragraph(f"{type_note.libelle}<br/>(Max: {type_note.max_note})", cell_hdr_style))
+                for _ in range(nb_sn):
+                    row0.append("")
+                
+                builtin_type = modeleBuiltin.types_notes.filter(code=type_note.code).first()
+                if builtin_type:
+                    for sn in builtin_type.sous_notes.all().order_by('ordre'):
+                        row1.append(Paragraph(f"{sn.label}<br/>(Max: {sn.max_note})", cell_hdr_style))
+                else:
+                    for i in range(nb_sn):
+                        row1.append(Paragraph(f"SN {i+1}", cell_hdr_style))
+                
+                total_lbl = type_note.libelle
+                if type_note.is_calculee and type_note.type_calcul:
+                    total_lbl += f" ({type_note.type_calcul})"
+                else:
+                    total_lbl += " (Total)"
+                row1.append(Paragraph(total_lbl, cell_hdr_style))
+                
+                col_idx += nb_sn + 1
+            else:
+                spans.append(('SPAN', (col_idx, 0), (col_idx, 1)))
+                row0.append(Paragraph(f"{type_note.libelle}<br/>(Max: {type_note.max_note})", cell_hdr_style))
+                row1.append("")
+                col_idx += 1
+                
+        # Average Column (Moyenne UV)
+        spans.append(('SPAN', (col_idx, 0), (col_idx, 1)))
+        row0.append(Paragraph("Moyenne UV", cell_hdr_style))
+        row1.append("")
+        total_cols = col_idx + 1
+        
+        table_data = [row0, row1]
+        
+        # Student marks grid population
+        for idx, student_line in enumerate(filtered_students, 1):
+            student_row = [
+                Paragraph(str(idx), cell_data_style),
+                Paragraph(f"{student_line.student.nom} {student_line.student.prenom}", cell_data_left_style),
+                Paragraph(student_line.student.matricule_interne or student_line.student.matricule or "", cell_data_style)
+            ]
+            for _ in range(total_cols - 3):
+                student_row.append("")
+            table_data.append(student_row)
+            
+        # Column widths distribution for perfect A4 landscape alignment
+        col_widths = [25, 130, 75]
+        remaining_width = 756.85 - 25 - 130 - 75
+        col_w = remaining_width / (total_cols - 3)
+        for _ in range(total_cols - 3):
+            col_widths.append(col_w)
+            
+        t_style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 1), colors.HexColor("#f8fafc")),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#475569")),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ] + spans)
+        
+        t = Table(table_data, colWidths=col_widths, repeatRows=2)
+        t.setStyle(t_style)
+        
+        story.append(t)
+        
+    # Compile the final document
+    doc.build(story)
+    return response

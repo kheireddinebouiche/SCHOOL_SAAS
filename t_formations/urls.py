@@ -120,7 +120,7 @@ urlpatterns = [
     path('ApiLoadAssociatedModules', ApiLoadAssociatedModules, name="ApiLoadAssociatedModules"),
     path('AssiciateModuleDouble', AssiciateModuleDouble, name="AssiciateModuleDouble"),
     path('ApiDeleteAssociatedModule', ApiDeleteAssociatedModule, name="ApiDeleteAssociatedModule"),
-    
+    path('dashboard/', pedagogique_dashboard, name="pedagogique_dashboard"),
     path('import-data/', import_data_view, name="import_data_view"),
     path('export-formations/', export_formations, name="export_formations"),
     path('export-partenaires/', export_partenaires, name="export_partenaires"),

@@ -1,0 +1,510 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Paiements & Facturation - Configuration Premium {% endblock title %}
+
+{% block content %}
+<style>
+    /* Premium Look & Feel - Strictly Harmonized with Plan Comptable */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        transition: all 0.3s ease;
+    }
+    
+    .glass-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.1);
+    }
+
+    .badge-soft-primary { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .badge-soft-success { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .badge-soft-danger { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .badge-soft-warning { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .badge-soft-info { background-color: rgba(6, 182, 212, 0.1); color: #0891b2; }
+
+    .table thead th {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.025em;
+        border-top: none;
+        padding: 1rem;
+    }
+
+    .table tbody tr {
+        transition: all 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8fafc;
+    }
+
+    .modal-content {
+        border-radius: 1.5rem;
+        border: none;
+        overflow: hidden;
+    }
+
+    .modal-header {
+        border-bottom: 1px solid #f1f5f9;
+        padding: 1.5rem;
+    }
+
+    .modal-body {
+        padding: 2rem;
+    }
+
+    .btn-rounded {
+        border-radius: 0.75rem;
+    }
+
+    .btn-action-premium {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid transparent;
+        background: rgba(100, 116, 139, 0.1);
+        color: #64748b;
+    }
+
+    .btn-action-premium:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        background: #f8fafc;
+        color: #3b82f6;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+
+            <!-- Header Section - Harmonized -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                                <i class="ri-bank-card-line text-primary fs-3"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-1 fw-bold">Paiements & Facturation</h4>
+                                <p class="text-muted mb-0">Configuration de la facturation et gestion réglementaire des droits de timbre</p>
+                            </div>
+                        </div>
+                        <div class="mt-3 mt-sm-0">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0">
+                                    <li class="breadcrumb-item"><a href="javascript: void(0);">Trésorerie</a></li>
+                                    <li class="breadcrumb-item"><a href="javascript: void(0);">Configuration</a></li>
+                                    <li class="breadcrumb-item active">Paiements & Facturation</li>
+                                </ol>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =============== PARAMÈTRES & DROITS DE TIMBRE =============== -->
+            <div class="row mb-4 g-3">
+                <!-- Col Paramètres Généraux -->
+                <div class="col-lg-4 col-md-5 col-12">
+                    <div class="glass-card p-4 h-100">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
+                                <i class="ri-shield-keyhole-line text-warning fs-5"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold mb-0">Paramètres Généraux</h5>
+                                <p class="text-muted mb-0 small">Règles de saisie et de contrôle</p>
+                            </div>
+                        </div>
+                        <hr class="my-3">
+
+                        <div class="d-flex align-items-center justify-content-between py-2 px-3 rounded-3 bg-light mb-2">
+                            <div>
+                                <p class="fw-semibold mb-0">Blocage de la date de paiement</p>
+                                <small class="text-muted">Forcer la date du jour</small>
+                            </div>
+                            <div class="ms-4 form-check form-switch fs-4">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="toggleBloquerDate" style="width:3rem; height:1.5rem; cursor:pointer;">
+                            </div>
+                        </div>
+                        <div id="parametre-status" class="mt-2 small text-muted ps-3"></div>
+
+                        <!-- Guide de conformité algérienne -->
+                        <div class="mt-4 p-3 rounded-3 bg-soft-info border border-info border-opacity-10">
+                            <h6 class="fw-bold text-info mb-2 d-flex align-items-center">
+                                <i class="ri-information-line me-2 fs-5 text-info"></i> Législation Algérienne
+                            </h6>
+                            <p class="text-muted small mb-0 lh-base" style="font-size: 0.82rem;">
+                                Selon la législation fiscale algérienne (LF 2025+), les encaissements en espèces sont soumis au droit de timbre progressif par tranches de 100 DA (avec minimum de 5 DA, exonération sous 300 DA, et sans plafond).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Col Droits de Timbre -->
+                <div class="col-lg-8 col-md-7 col-12">
+                    <div class="glass-card p-4 h-100">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                <i class="ri-scales-3-line text-primary fs-5"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <h5 class="fw-bold mb-0">Droits de Timbre</h5>
+                                        <p class="text-muted mb-0 small">Législation Fiscale en Vigueur</p>
+                                    </div>
+                                    <div class="form-check form-switch fs-4">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               id="toggleActiverTimbre" style="width:3rem; height:1.5rem; cursor:pointer;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr class="my-3">
+
+                        <div id="timbre-config-fields" style="opacity: 0.5; pointer-events: none; transition: all 0.3s ease;">
+                            <div class="row g-3 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold text-muted text-uppercase">Mode d'application</label>
+                                    <div class="form-check form-switch mt-1">
+                                        <input class="form-check-input" type="checkbox" id="checkTimbreCashOnly" checked style="cursor:pointer;">
+                                        <label class="form-check-label small text-muted" for="checkTimbreCashOnly">Espèces uniquement</label>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold text-muted text-uppercase">Minimum (DA)</label>
+                                    <input type="number" step="1" id="inputTimbreMin" class="form-control form-control-sm border-light-subtle" value="5">
+                                </div>
+                            </div>
+                            
+                            <!-- Barème progressive section -->
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <label class="form-label small fw-bold text-muted text-uppercase mb-0">Barème des tranches</label>
+                                <button class="btn btn-xs btn-outline-primary rounded-pill px-2 py-0" id="btnAddBracket" type="button" style="font-size: 0.75rem;">
+                                    <i class="ri-add-line me-1"></i> Ajouter une tranche
+                                </button>
+                            </div>
+                            
+                            <div class="table-responsive rounded border border-light-subtle mb-3" style="max-height: 250px; overflow-y: auto;">
+                                <table class="table table-sm table-hover align-middle mb-0 text-center" style="font-size: 0.85rem;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="text-start ps-3">Min (DA)</th>
+                                            <th class="text-start">Max (DA)</th>
+                                            <th>Taux (Tranche de 100 DA)</th>
+                                            <th style="width: 100px;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bareme-table-body">
+                                        <!-- Dynamically populated -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="text-end">
+                                <button class="btn btn-sm btn-primary rounded-pill px-3" id="btnSaveTimbreConfig">
+                                    <i class="ri-save-line me-1"></i> Enregistrer les configurations
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal pour les tranches de Droit de Timbre -->
+            <div class="modal fade" id="bracketModal" tabindex="-1" aria-labelledby="bracketModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content glass-card border border-light-subtle" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);">
+                        <div class="modal-header border-bottom border-light-subtle">
+                            <h5 class="modal-title fw-bold" id="bracketModalLabel">Tranche de Droit de Timbre</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="bracketForm">
+                                <input type="hidden" id="bracketIndex">
+                                <div class="mb-3">
+                                    <label for="bracketMin" class="form-label small fw-bold text-muted text-uppercase">Montant Minimal (DA)</label>
+                                    <input type="number" step="1" min="0" class="form-control border-light-subtle" id="bracketMin" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="bracketMax" class="form-label small fw-bold text-muted text-uppercase">Montant Maximal (DA)</label>
+                                    <div class="input-group">
+                                        <input type="number" step="1" min="0" class="form-control border-light-subtle" id="bracketMax">
+                                        <div class="input-group-text bg-light border-light-subtle">
+                                            <input class="form-check-input mt-0 me-1" type="checkbox" id="bracketMaxInfinity">
+                                            <label class="small mb-0" for="bracketMaxInfinity">Sans limite</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="bracketRate" class="form-label small fw-bold text-muted text-uppercase">Taux par tranche de 100 DA</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.01" min="0" class="form-control border-light-subtle" id="bracketRate" required>
+                                        <span class="input-group-text bg-light border-light-subtle">DA</span>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="bracketExempt" style="cursor:pointer;">
+                                        <label class="form-check-label small" for="bracketExempt">Cette tranche est exonérée</label>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer border-top border-light-subtle">
+                            <button type="button" class="btn btn-sm btn-light rounded-pill px-3" data-bs-dismiss="modal">Annuler</button>
+                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3" id="btnSaveBracket">Valider</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let currentBareme = [];
+
+    // Render bareme table rows
+    function renderBaremeTable() {
+        let html = '';
+        if (currentBareme.length === 0) {
+            html = '<tr><td colspan="4" class="text-center text-muted py-3">Aucune tranche configurée</td></tr>';
+        } else {
+            // Sort bareme by min_ttc
+            currentBareme.sort((a, b) => (parseFloat(a.min_ttc) || 0) - (parseFloat(b.min_ttc) || 0));
+            
+            currentBareme.forEach((item, index) => {
+                let minLabel = `${parseFloat(item.min_ttc).toLocaleString('fr-FR')} DA`;
+                let maxLabel = item.max_ttc === null || item.max_ttc === undefined || item.max_ttc === "" 
+                    ? '<span class="badge bg-soft-secondary text-secondary rounded-pill px-2">Sans limite</span>' 
+                    : `${parseFloat(item.max_ttc).toLocaleString('fr-FR')} DA`;
+                
+                let rateLabel = item.is_exempt 
+                    ? '<span class="badge bg-soft-success text-success rounded-pill px-2">Exonéré</span>' 
+                    : `<span class="fw-bold text-primary">${parseFloat(item.rate).toFixed(2)} DA</span>`;
+                
+                html += `
+                <tr>
+                    <td class="fw-semibold text-dark text-start ps-3">${minLabel}</td>
+                    <td class="text-start">${maxLabel}</td>
+                    <td>${rateLabel}</td>
+                    <td>
+                        <div class="d-flex align-items-center justify-content-center gap-1">
+                            <button type="button" class="btn btn-xs btn-icon btn-soft-warning edit-bracket-btn" data-index="${index}" title="Modifier" style="padding: 2px 6px;">
+                                <i class="ri-edit-line" style="font-size: 0.85rem;"></i>
+                            </button>
+                            <button type="button" class="btn btn-xs btn-icon btn-soft-danger delete-bracket-btn" data-index="${index}" title="Supprimer" style="padding: 2px 6px;">
+                                <i class="ri-delete-bin-line" style="font-size: 0.85rem;"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+            });
+        }
+        $('#bareme-table-body').html(html);
+    }
+
+    // Load configurations from API
+    function loadParametreFinancier() {
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiGetParametreFinancier' %}",
+            type: 'GET',
+            success: function(data) {
+                $('#toggleBloquerDate').prop('checked', data.bloquer_date_paiement);
+                
+                // Stamp Duty Fields
+                $('#toggleActiverTimbre').prop('checked', data.activer_timbre);
+                $('#inputTimbreMin').val(data.timbre_min);
+                $('#checkTimbreCashOnly').prop('checked', data.timbre_cash_only);
+                
+                currentBareme = data.timbre_bareme || [];
+                renderBaremeTable();
+                
+                updateTimbreUI(data.activer_timbre);
+            }
+        });
+    }
+    loadParametreFinancier();
+
+    function updateTimbreUI(active) {
+        if (active) {
+            $('#timbre-config-fields').css({ 'opacity': '1', 'pointer-events': 'auto' });
+        } else {
+            $('#timbre-config-fields').css({ 'opacity': '0.5', 'pointer-events': 'none' });
+        }
+    }
+
+    $('#toggleActiverTimbre').on('change', function() {
+        var active = $(this).is(':checked');
+        updateTimbreUI(active);
+        saveParametreFinancier({ 'activer_timbre': active });
+    });
+
+    // Add bracket click
+    $('#btnAddBracket').on('click', function() {
+        $('#bracketIndex').val('');
+        $('#bracketForm')[0].reset();
+        $('#bracketMax').prop('disabled', false);
+        $('#bracketMaxInfinity').prop('checked', false);
+        $('#bracketExempt').prop('checked', false);
+        $('#bracketRate').val('').prop('disabled', false);
+        $('#bracketModalLabel').text("Ajouter une tranche");
+        $('#bracketModal').modal('show');
+    });
+
+    // Edit bracket click
+    $(document).on('click', '.edit-bracket-btn', function() {
+        let index = $(this).data('index');
+        let item = currentBareme[index];
+        
+        $('#bracketIndex').val(index);
+        $('#bracketMin').val(item.min_ttc);
+        
+        if (item.max_ttc === null || item.max_ttc === undefined || item.max_ttc === "") {
+            $('#bracketMaxInfinity').prop('checked', true);
+            $('#bracketMax').val('').prop('disabled', true);
+        } else {
+            $('#bracketMaxInfinity').prop('checked', false);
+            $('#bracketMax').val(item.max_ttc).prop('disabled', false);
+        }
+        
+        $('#bracketExempt').prop('checked', item.is_exempt);
+        if (item.is_exempt) {
+            $('#bracketRate').val('0').prop('disabled', true);
+        } else {
+            $('#bracketRate').val(item.rate).prop('disabled', false);
+        }
+        
+        $('#bracketModalLabel').text("Modifier la tranche");
+        $('#bracketModal').modal('show');
+    });
+
+    // Toggle exempt field inside modal
+    $('#bracketExempt').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#bracketRate').val('0').prop('disabled', true);
+        } else {
+            $('#bracketRate').val('').prop('disabled', false);
+        }
+    });
+
+    // Toggle max infinity checkbox inside modal
+    $('#bracketMaxInfinity').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#bracketMax').val('').prop('disabled', true);
+        } else {
+            $('#bracketMax').prop('disabled', false);
+        }
+    });
+
+    // Delete bracket click
+    $(document).on('click', '.delete-bracket-btn', function() {
+        let index = $(this).data('index');
+        alertify.confirm("Supprimer cette tranche ?", "Voulez-vous vraiment supprimer cette tranche du barème ?", function() {
+            currentBareme.splice(index, 1);
+            renderBaremeTable();
+            alertify.success("Tranche supprimée temporairement. N'oubliez pas d'enregistrer.");
+        }, function() {});
+    });
+
+    // Save bracket in modal list
+    $('#btnSaveBracket').on('click', function() {
+        let min_ttc = parseFloat($('#bracketMin').val());
+        let maxInfinity = $('#bracketMaxInfinity').is(':checked');
+        let max_ttc = maxInfinity ? null : parseFloat($('#bracketMax').val());
+        let is_exempt = $('#bracketExempt').is(':checked');
+        let rate = is_exempt ? 0.0 : parseFloat($('#bracketRate').val());
+        
+        if (isNaN(min_ttc)) {
+            alertify.error("Veuillez renseigner un montant minimal valide.");
+            return;
+        }
+        if (!maxInfinity && isNaN(max_ttc)) {
+            alertify.error("Veuillez renseigner un montant maximal valide ou cochez 'Sans limite'.");
+            return;
+        }
+        if (!maxInfinity && max_ttc < min_ttc) {
+            alertify.error("Le montant maximal doit être supérieur ou égal au montant minimal.");
+            return;
+        }
+        if (!is_exempt && isNaN(rate)) {
+            alertify.error("Veuillez renseigner un taux valide.");
+            return;
+        }
+        
+        let newBracket = {
+            min_ttc: min_ttc,
+            max_ttc: max_ttc,
+            rate: rate,
+            is_exempt: is_exempt
+        };
+        
+        let indexStr = $('#bracketIndex').val();
+        if (indexStr !== '') {
+            let index = parseInt(indexStr);
+            currentBareme[index] = newBracket;
+        } else {
+            currentBareme.push(newBracket);
+        }
+        
+        renderBaremeTable();
+        $('#bracketModal').modal('hide');
+        alertify.success("Tranche ajoutée/modifiée. N'oubliez pas d'enregistrer.");
+    });
+
+    // Save stamp configurations
+    $('#btnSaveTimbreConfig').on('click', function() {
+        var data = {
+            'timbre_min': $('#inputTimbreMin').val(),
+            'timbre_cash_only': $('#checkTimbreCashOnly').is(':checked'),
+            'timbre_bareme': JSON.stringify(currentBareme),
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        };
+        saveParametreFinancier(data);
+    });
+
+    function saveParametreFinancier(payload) {
+        if (!payload.csrfmiddlewaretoken) payload.csrfmiddlewaretoken = '{{ csrf_token }}';
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiUpdateParametreFinancier' %}",
+            type: 'POST',
+            data: payload,
+            success: function(res) {
+                if (res.status === 'success') {
+                    alertify.success("Paramètres mis à jour avec succès");
+                } else {
+                    alertify.error(res.message || "Erreur lors de la sauvegarde");
+                }
+            }
+        });
+    }
+
+    // Toggle payment date block switch
+    $('#toggleBloquerDate').on('change', function() {
+        var val = $(this).is(':checked');
+        saveParametreFinancier({ 'bloquer_date_paiement': val });
+    });
+});
+</script>
+{% endblock %}

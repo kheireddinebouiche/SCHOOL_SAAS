@@ -88,22 +88,76 @@ def generate_invoice_from_payment(request):
                 apply_timbre = True
         
         if apply_timbre:
-            # Total paid = Base_TTC + Timbre
-            # Timbre = round(Base_TTC * 0.01, 0)
+            # Under LF 2025/Dynamic configuration: Total paid (montant_paye) = base_ttc + timbre
+            # We use an iterative numerical refinement loop to find the exact base_ttc
+            import math
+            import json
             
-            # First guess
-            base_ttc = montant_paye / (Decimal('1') + (config_fin.taux_timbre / Decimal('100')))
-            timbre = Decimal('0')
+            # Load and parse the bareme JSON from config
+            try:
+                bareme = json.loads(config_fin.timbre_bareme)
+            except Exception:
+                bareme = [
+                    {"min_ttc": 0, "max_ttc": 300, "rate": 0.0, "is_exempt": True},
+                    {"min_ttc": 301, "max_ttc": 30000, "rate": 1.0, "is_exempt": False},
+                    {"min_ttc": 30001, "max_ttc": 100000, "rate": 1.5, "is_exempt": False},
+                    {"min_ttc": 100001, "max_ttc": None, "rate": 2.0, "is_exempt": False}
+                ]
             
-            # Refinement loop to handle rounding/thresholds of timbre
-            for _ in range(3):
-                # Calculate timbre based on current base_ttc guess
-                t_val = base_ttc * (config_fin.taux_timbre / Decimal('100'))
-                if t_val < config_fin.timbre_min: t_val = config_fin.timbre_min
-                elif t_val > config_fin.timbre_max: t_val = config_fin.timbre_max
-                timbre = t_val.quantize(Decimal('1'))
+            # Ensure sort order by min_ttc
+            bareme = sorted(bareme, key=lambda b: b.get('min_ttc', 0))
+            
+            # Helper to calculate timbre for a given ttc_brut and rate
+            def calculate_timbre_for_bracket(ttc_val, bracket_rate, is_ex):
+                if is_ex or bracket_rate == Decimal('0'):
+                    return Decimal('0')
+                nb_t = Decimal(str(math.ceil(ttc_val / 100)))
+                raw_timbre = nb_t * bracket_rate
+                min_stamp = max(config_fin.timbre_min, Decimal('5'))
+                if raw_timbre < min_stamp:
+                    raw_timbre = min_stamp
+                return Decimal(str(math.ceil(raw_timbre)))
                 
+            # 1. Tranche Detection to avoid boundary oscillations
+            selected_bracket = None
+            for b in bareme:
+                min_ttc = Decimal(str(b.get('min_ttc', 0)))
+                max_ttc = b.get('max_ttc')
+                rate_val = Decimal(str(b.get('rate', 0.0)))
+                is_ex = b.get('is_exempt', rate_val == Decimal('0'))
+                
+                # Check range in terms of total paid amount (min_ttc + timbre_at_min, max_ttc + timbre_at_max)
+                t_min = calculate_timbre_for_bracket(min_ttc, rate_val, is_ex)
+                paye_min = min_ttc + t_min
+                
+                if max_ttc is not None:
+                    max_ttc = Decimal(str(max_ttc))
+                    t_max = calculate_timbre_for_bracket(max_ttc, rate_val, is_ex)
+                    paye_max = max_ttc + t_max
+                    if paye_min <= montant_paye <= paye_max:
+                        selected_bracket = b
+                        break
+                else:
+                    if montant_paye >= paye_min:
+                        selected_bracket = b
+                        break
+                        
+            if not selected_bracket:
+                selected_bracket = bareme[-1]
+                
+            bracket_rate = Decimal(str(selected_bracket.get('rate', 0.0)))
+            is_ex = selected_bracket.get('is_exempt', bracket_rate == Decimal('0'))
+            
+            # Start loop with a robust estimation
+            base_ttc = montant_paye - calculate_timbre_for_bracket(montant_paye, bracket_rate, is_ex)
+            
+            # 5 iterations are guaranteed to perfectly converge within the correct bracket range
+            for _ in range(5):
+                timbre = calculate_timbre_for_bracket(base_ttc, bracket_rate, is_ex)
                 base_ttc = montant_paye - timbre
+                
+            # Final verification of dynamic timbre
+            timbre = calculate_timbre_for_bracket(base_ttc, bracket_rate, is_ex)
             
             # Now we have base_ttc = HT + TVA
             # HT = base_ttc / (1 + TVA_percent / 100)

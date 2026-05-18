@@ -165,13 +165,49 @@ def reminder_api_delete(request, pk):
 
 @login_required
 def messages_view(request):
-    # Get all users the current user has chatted with
-    sent_to = Message.objects.filter(sender=request.user, group__isnull=True).values_list('receiver', flat=True)
-    received_from = Message.objects.filter(receiver=request.user, group__isnull=True).values_list('sender', flat=True)
-    contact_ids = set(list(sent_to) + list(received_from))
+    from django.db.models import Subquery, OuterRef, F
     
-    contacts = User.objects.filter(id__in=contact_ids).exclude(id=request.user.id)
-    all_users = User.objects.exclude(id=request.user.id)
+    # Subquery to get the latest message timestamp between request.user and the target user
+    last_message_subquery = Message.objects.filter(
+        group__isnull=True
+    ).filter(
+        Q(sender=request.user, receiver=OuterRef('pk')) |
+        Q(sender=OuterRef('pk'), receiver=request.user)
+    ).order_by('-timestamp').values('timestamp')[:1]
+
+    # Subquery to get the latest message content between request.user and the target user
+    last_message_content_subquery = Message.objects.filter(
+        group__isnull=True
+    ).filter(
+        Q(sender=request.user, receiver=OuterRef('pk')) |
+        Q(sender=OuterRef('pk'), receiver=request.user)
+    ).order_by('-timestamp').values('content')[:1]
+
+    # Subquery to get whether the last message was read
+    last_message_read_subquery = Message.objects.filter(
+        group__isnull=True
+    ).filter(
+        Q(sender=request.user, receiver=OuterRef('pk')) |
+        Q(sender=OuterRef('pk'), receiver=request.user)
+    ).order_by('-timestamp').values('is_read')[:1]
+
+    # Subquery to get the sender of the last message
+    last_message_sender_subquery = Message.objects.filter(
+        group__isnull=True
+    ).filter(
+        Q(sender=request.user, receiver=OuterRef('pk')) |
+        Q(sender=OuterRef('pk'), receiver=request.user)
+    ).order_by('-timestamp').values('sender_id')[:1]
+
+    # Annotate and fetch all users (except current user) with their last message information
+    contacts = User.objects.exclude(id=request.user.id).annotate(
+        last_message_time=Subquery(last_message_subquery),
+        last_message_content=Subquery(last_message_content_subquery),
+        last_message_is_read=Subquery(last_message_read_subquery),
+        last_message_sender_id=Subquery(last_message_sender_subquery)
+    ).order_by(F('last_message_time').desc(nulls_last=True), 'username')
+    
+    all_users = contacts  # Both list all messageable users, contacts is intelligently sorted
     
     # Get user's groups
     groups = ChatGroup.objects.filter(members=request.user)
@@ -181,6 +217,7 @@ def messages_view(request):
         'all_users': all_users,
         'groups': groups
     })
+
 
 @login_required
 def conversation_view(request, user_id):

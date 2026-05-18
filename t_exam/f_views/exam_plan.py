@@ -584,7 +584,37 @@ def validate_pv_exam(request):
             pv_examen.date_validation = timezone.now()
             pv_examen.save()
 
-            return JsonResponse({"status": "success","message": "PV d'examen validé avec succès"})
+            # Check if we should propose a makeup exam
+            has_rattrapage = False
+            makeup_plan_id = None
+            mode_examination = None
+            if exam_plan.type_examen == 'normal' or (exam_plan.exam_line and exam_plan.exam_line.session and exam_plan.exam_line.session.type_session == 'normal'):
+                has_rattrapage = ExamDecisionEtudiant.objects.filter(pv=pv_examen, statut='rattrapage').exists()
+                if has_rattrapage:
+                    # Directly create the planning line for the makeup exam if it doesn't exist
+                    makeup_plan, created_plan = ExamPlanification.objects.get_or_create(
+                        exam_line=exam_plan.exam_line,
+                        module=exam_plan.module,
+                        type_examen='rattrage',
+                        defaults={
+                            'mode_examination': exam_plan.mode_examination,
+                            'statut': 'att',
+                            'passed': False
+                        }
+                    )
+                    makeup_plan_id = makeup_plan.id
+                    mode_examination = makeup_plan.mode_examination
+
+            return JsonResponse({
+                "status": "success",
+                "message": "PV d'examen validé avec succès et ligne de rattrapage créée automatiquement",
+                "has_rattrapage": has_rattrapage,
+                "makeup_plan_id": makeup_plan_id,
+                "mode_examination": mode_examination,
+                "module_id": exam_plan.module.id if has_rattrapage else None,
+                "module_label": exam_plan.module.label if has_rattrapage else None,
+                "session_line_id": exam_plan.exam_line.id if (has_rattrapage and exam_plan.exam_line) else None,
+            })
 
         except ExamPlanification.DoesNotExist:
             return JsonResponse({"status": "error", "message": "Examen planifié non trouvé"})

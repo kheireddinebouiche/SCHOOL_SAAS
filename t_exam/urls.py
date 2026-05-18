@@ -98,6 +98,7 @@ urlpatterns = [
 
    path('ShowPvModal/<int:pk>', ShowPvModal, name="ShowPvModal"),
    path('GeneratePvModal/<int:pk>/', GeneratePvModal, name="GeneratePvModal"),
+   path('download-blank-pvs-pdf/', DownloadBlankPvsPdf, name="DownloadBlankPvsPdf"),
 
    # URLs pour les résultats d'examens
    path('exams-results/', exams_results, name="exams_results"),

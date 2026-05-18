@@ -43,6 +43,7 @@
 
                 #fillNotesModal table {
                     margin-bottom: 0;
+                    font-size: 0.78rem;
                 }
 
                 #fillNotesModal thead th {
@@ -51,7 +52,7 @@
                     background-color: #f1f3f9;
                     color: #495057;
                     font-weight: 600;
-                    font-size: 0.85rem;
+                    font-size: 0.78rem;
                     border-bottom: 2px solid #e9ecef;
                     z-index: 10;
                     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
@@ -68,8 +69,14 @@
                     text-align: center;
                     font-weight: 500;
                     color: #212529;
-                    padding: 4px;
+                    padding: 2px 4px;
+                    font-size: 0.75rem;
                     transition: all 0.2s;
+                }
+
+                #fillNotesModal select.form-select-sm {
+                    font-size: 0.75rem;
+                    padding: 2px 4px;
                 }
 
                 #fillNotesModal input.form-control-sm:focus {
@@ -253,7 +260,7 @@
                                                 <tr>
                                                     <td class="text-dark">{{ forloop.counter }}</td>
                                                     <td class="text-dark">{{ student.nom }} {{ student.prenom }}</td>
-                                                    <td class="text-dark">{{ student.matricule }}</td>
+                                                    <td class="text-dark">{{ student.matricule_interne|default:student.matricule|default:"-" }}</td>
                                                 </tr>
                                                 {% endfor %}
                                             </tbody>
@@ -335,7 +342,7 @@
                                                 {{ student_line.student.nom }} {{ student_line.student.prenom }}
                                                 {% if exam_planification.type_examen == 'normal' and student_line.student.id|stringformat:"s" in rachat_only_students %}<span class="badge bg-warning text-dark ms-2">RACHAT</span>{% elif student_line.student.id|stringformat:"s" in rach_ajou_students %}<span class="badge bg-secondary text-light ms-2">RACHAT/AJOURNÉ</span>{% endif %}
                                             </td>
-                                            <td class="text-dark">{{ student_line.student.matricule }}</td>
+                                            <td class="text-dark">{{ student_line.student.matricule_interne|default:student_line.student.matricule|default:"-" }}</td>
                                             {% for type_note in filtered_types_notes %}
                                                 {% for builtin_type in modele.types_notes.all %}
                                                     {% if builtin_type.code == type_note.code %}
@@ -685,6 +692,67 @@
                     validatedSpan.className = 'text-success fw-bold ms-2';
                     validatedSpan.textContent = 'PV Validé';
                     modalFooter.appendChild(validatedSpan);
+                }
+
+                // Propose to configure the automatically created makeup exam planification line
+                if (data.has_rattrapage && data.makeup_plan_id) {
+                    setTimeout(() => {
+                        const confirmMsg = "Des étudiants ont une mention de rattrapage. Une ligne de planification de rattrapage a été créée automatiquement. Voulez-vous configurer sa date, son heure et sa salle dès maintenant ?";
+                        if (typeof alertify !== 'undefined') {
+                            alertify.confirm(
+                                "Planifier l'examen de rattrapage",
+                                confirmMsg,
+                                function() {
+                                    // Close the fillNotesModal
+                                    $('#fillNotesModal').modal('hide');
+                                    
+                                    // Open editExamPlanModal directly using the global function
+                                    setTimeout(() => {
+                                        if (typeof window.openEditExamPlanModalDirectly === 'function') {
+                                            window.openEditExamPlanModalDirectly(
+                                                data.makeup_plan_id,
+                                                data.module_label,
+                                                'rattrage',
+                                                data.mode_examination,
+                                                null, null, null, null, null, null
+                                            );
+                                        } else {
+                                            showStatus("Erreur: Impossible de charger le modal de modification.", false);
+                                            setTimeout(() => { location.reload(); }, 1500);
+                                        }
+                                    }, 400);
+                                },
+                                function() {
+                                    // On cancel, refresh the page to show the new planning line in the table!
+                                    location.reload();
+                                }
+                            );
+                        } else {
+                            if (confirm(confirmMsg)) {
+                                $('#fillNotesModal').modal('hide');
+                                setTimeout(() => {
+                                    if (typeof window.openEditExamPlanModalDirectly === 'function') {
+                                        window.openEditExamPlanModalDirectly(
+                                            data.makeup_plan_id,
+                                            data.module_label,
+                                            'rattrage',
+                                            data.mode_examination,
+                                            null, null, null, null, null, null
+                                        );
+                                    } else {
+                                        location.reload();
+                                    }
+                                }, 400);
+                            } else {
+                                location.reload();
+                            }
+                        }
+                    }, 500);
+                } else {
+                    // Standard reload after successful validation if no rattrapage
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
                 }
             } else {
                 showStatus(data.message, false);

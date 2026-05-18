@@ -201,9 +201,11 @@ class Facture(models.Model):
         super().save(*args, **kwargs)
 
     def get_timbre(self):
-        """Calculates Algerian Stamp Duty based on global ParametreFinancier or returns stored value."""
+        """Calculates Algerian Stamp Duty based on global ParametreFinancier (dynamic scale) or returns stored value."""
         from t_tresorerie.models import ParametreFinancier
         from decimal import Decimal
+        import math
+        import json
         
         # Priority 1: Stored value
         if self.montant_timbre > 0:
@@ -222,19 +224,57 @@ class Facture(models.Model):
         for ligne in self.lignes_facture.all():
             total_ttc_raw += ligne.montant_ht * (Decimal('1') + (ligne.tva_percent / Decimal('100')))
             
-        if total_ttc_raw <= 0:
+        # Load bareme from config
+        try:
+            bareme = json.loads(config.timbre_bareme)
+        except Exception:
+            # Fallback bareme (LF 2025) in case of JSON parse error
+            bareme = [
+                {"min_ttc": 0, "max_ttc": 300, "rate": 0.0, "is_exempt": True},
+                {"min_ttc": 301, "max_ttc": 30000, "rate": 1.0, "is_exempt": False},
+                {"min_ttc": 30001, "max_ttc": 100000, "rate": 1.5, "is_exempt": False},
+                {"min_ttc": 100001, "max_ttc": None, "rate": 2.0, "is_exempt": False}
+            ]
+            
+        # Sort bareme by min_ttc
+        bareme = sorted(bareme, key=lambda b: b.get('min_ttc', 0))
+        
+        # Find matching bracket
+        matching_bracket = None
+        for b in bareme:
+            min_val = Decimal(str(b.get('min_ttc', 0)))
+            max_val = b.get('max_ttc')
+            if max_val is not None:
+                max_val = Decimal(str(max_val))
+                if min_val <= total_ttc_raw <= max_val:
+                    matching_bracket = b
+                    break
+            else:
+                if min_val <= total_ttc_raw:
+                    matching_bracket = b
+                    break
+                    
+        if not matching_bracket:
+            # Fallback to last bracket
+            matching_bracket = bareme[-1]
+            
+        rate = Decimal(str(matching_bracket.get('rate', 0.0)))
+        is_exempt = matching_bracket.get('is_exempt', rate == 0)
+        
+        if is_exempt or rate == Decimal('0'):
             return Decimal('0')
             
-        timbre = total_ttc_raw * (config.taux_timbre / Decimal('100'))
+        # Calculate per tranche or fraction of 100 DA based on total amount
+        nb_tranches = Decimal(str(math.ceil(total_ttc_raw / 100)))
+        timbre = nb_tranches * rate
         
-        # Apply min/max
-        if timbre < config.timbre_min:
-            timbre = config.timbre_min
-        elif timbre > config.timbre_max:
-            timbre = config.timbre_max
+        # Apply minimum legal (from config)
+        min_stamp = max(config.timbre_min, Decimal('5'))
+        if timbre < min_stamp:
+            timbre = min_stamp
             
-        # Rounding (Algerian custom is often to the next integer or just standard rounding)
-        return timbre.quantize(Decimal('1'))
+        # Round up to next integer to avoid fractional dinars on invoice
+        return Decimal(str(math.ceil(timbre)))
 
     def total_ttc(self):
         from decimal import Decimal

@@ -139,6 +139,9 @@
 <!-- jsPDF and AutoTable CDNs -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<!-- html2pdf.js CDN for landscape PDF generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 
 <div class="main-content">
   <div class="page-content bg-light">
@@ -240,6 +243,9 @@
                   <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm d-flex align-items-center gap-1" id="printPlanningBtn">
                      <i class="ri-printer-line fs-5"></i>Imprimer le planning
                    </button>
+                  <button type="button" class="btn btn-outline-primary rounded-pill px-4 shadow-sm d-flex align-items-center gap-1" id="printAllBlankPvsBtn">
+                     <i class="ri-printer-line fs-5"></i>Imprimer tous les PV (vierges)
+                  </button>
                   <button type="button" class="btn btn-outline-info rounded-pill px-3 d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#helpModal">
                     <i class="ri-question-line fs-5"></i>Aide
                   </button>
@@ -843,11 +849,13 @@
 
 
 <script>
+    window.currentExamPlans = []; // Store plans globally for PDF generation
+    var currentExamPlans = window.currentExamPlans;
     $(document).ready(function(){
         const idExamLine = "{{pk}}";
         let groupeName = "";
         let groupeId = "";
-        let currentExamPlans = []; // Store plans for PDF generation
+        
         let sessionInfo = {}; // Store session info for PDF
         let groupSessionDateDebut = "";
         let groupSessionDateFin = "";
@@ -1002,6 +1010,15 @@
                                       dateExiste = "enable";
                                     }
 
+                                    let printDisabled = '';
+                                    let printTextClass = '';
+                                    if (!plan.date || plan.est_valide){
+                                      printDisabled = "disabled";
+                                      printTextClass = "text-muted";
+                                    }else{
+                                      printDisabled = "enable";
+                                    }
+
                                     const row = `
                                         <tr data-plan-id="${plan.id}">
                                             <td>
@@ -1039,7 +1056,7 @@
                                                     <button ${editDeleteValidationButtonDisabled} class="btn btn-sm btn-outline-primary edit-btn" data-plan-id="${plan.id}" data-module="${plan.module_nom}" data-type="${plan.type_examen}" data-mode="${plan.mode_examen || 'exam'}" data-date="${plan.date}" data-heure-debut="${plan.heure_debut || ''}" data-heure-fin="${plan.heure_fin || ''}" data-salle="${plan.salle_nom}" data-surveillant="${plan.surveillant || ''}" data-observations="${plan.observations || ''}" title="Modification">
                                                         <i class="ri-edit-line"></i>
                                                     </button>
-                                                    <button ${dateExiste} class="btn btn-sm btn-outline-success ${textClass} print-pv-btn" data-plan-id="${plan.id}" title="Impression">
+                                                    <button ${printDisabled} class="btn btn-sm btn-outline-success ${printTextClass} print-pv-btn" data-plan-id="${plan.id}" title="Impression">
        <i class="ri-printer-line"></i>
 </button>
                                                     <button ${editDeleteValidationButtonDisabled} class="btn btn-sm btn-outline-danger delete-btn " data-plan-id="${plan.id}" data-module="${plan.module_nom}" title="Suppression">
@@ -1249,6 +1266,63 @@
             // Afficher le modal
             $('#editExamPlanModal').modal('show');
         });
+
+        // Fonction globale pour ouvrir directement le modal d'édition d'une planification d'examen
+        window.openEditExamPlanModalDirectly = function(planId, moduleLabel, typeExamen, modeExamen, date, heureDebut, heureFin, salleId, surveillantId, observations) {
+            // Réinitialiser les classes d'erreur
+            $('.is-invalid').removeClass('is-invalid');
+            $('#examPlanId').val(planId);
+            $('#editModule').val(moduleLabel);
+            $('#editTypeExamen').val(typeExamen);
+            $('#editModeExamen').val(modeExamen || 'exam');
+
+            if(date) {
+                const formattedDate = new Date(date).toISOString().split('T')[0];
+                $('#editDate').val(formattedDate);
+            } else {
+                $('#editDate').val('');
+            }
+
+            $('#editHeureDebut').val(heureDebut || '');
+            $('#editHeureFin').val(heureFin || '');
+            $('#editObservations').val(observations || '');
+
+            // Charger les salles et surveillants dynamiquement puis pré-sélectionner
+            $.ajax({
+                url : "{% url 't_exam:ApiLoadSalle' %}",
+                dataType: "JSON",
+                type: "GET",
+                success : function(data){
+                    var option ="<option value=''>Veuillez sélectionner une salle</option>";
+                    $.each(data, function(index, p){
+                        option += "<option value="+p.id+">"+p.nom+"</label>";
+                    });
+                    $('#editSalle').html(option);
+                    if (salleId) {
+                        $('#editSalle').val(salleId);
+                    }
+                }
+            });
+
+            $.ajax({
+                url : "{% url 't_exam:ApiLoadFormateur' %}",
+                dataType :"JSON",
+                type : "GET",
+                success : function(data){
+                    var option = '<option value="">Sélectionner un surveillant</option>';
+                    $.each(data, function(index, p){
+                        option += "<option value="+p.id+">"+p.nom+' '+p.prenom+"</option>";
+                    });
+                    $('#editSurveillant').html(option);
+                    if (surveillantId) {
+                        $('#editSurveillant').val(surveillantId);
+                    }
+                }
+            });
+
+            updateFieldVisibility();
+            $('#editExamPlanModal').modal('show');
+        };
 
         // Gestion de la soumission du formulaire de modification
         $('#saveExamPlanBtn').click(function() {
@@ -1978,6 +2052,40 @@
             generatePlanningPDF();
         });
 
+        // Handler for Printing all Blank PVs at once (Generates a landscape PDF of all blank PVs)
+        $(document).on('click', '#printAllBlankPvsBtn', function(e) {
+            e.preventDefault();
+            
+            // Check if there are scheduled exams in this session
+            if (!currentExamPlans || currentExamPlans.length === 0) {
+                if (typeof alertify !== 'undefined') {
+                    alertify.error("Aucun examen à imprimer.");
+                } else {
+                    alert("Aucun examen à imprimer.");
+                }
+                return;
+            }
+            
+            // Filter only exams that are scheduled (i.e. have a date) and not yet validated
+            const validPlans = currentExamPlans.filter(function(plan) {
+                return plan.date && plan.date !== "" && !plan.est_valide;
+            });
+            
+            if (validPlans.length === 0) {
+                if (typeof alertify !== 'undefined') {
+                    alertify.error("Aucun examen planifié (avec date) et non encore validé à imprimer.");
+                } else {
+                    alert("Aucun examen planifié (avec date) et non encore validé à imprimer.");
+                }
+                return;
+            }
+            
+            const planIds = validPlans.map(function(plan) { return plan.id; }).join(',');
+            const url = "{% url 't_exam:DownloadBlankPvsPdf' %}?plan_ids=" + planIds;
+            window.open(url, '_blank');
+        });
+
+
     });
 
    
@@ -2021,6 +2129,123 @@
 </div>
 
 
+<!-- Styles specific for html2pdf off-screen generation under screen media -->
+<style>
+    .pdf-generation-container {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 1080px !important; /* Fixed landscape width close to A4 landscape ratio */
+        background-color: white !important;
+        color: black !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        z-index: 9999 !important;
+    }
+    
+    .pdf-generation-container .modal-dialog {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        transform: none !important;
+        height: auto !important;
+    }
+
+    .pdf-generation-container .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+        height: auto !important;
+        background-color: white !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .pdf-generation-container .modal-body {
+        padding: 10px 15px !important; /* Compact padding for smaller footprint */
+        background-color: white !important;
+        overflow: visible !important;
+    }
+    
+    .pdf-generation-container .table-responsive {
+        overflow: visible !important;
+        max-height: none !important;
+        display: block !important;
+    }
+    
+    /* Force show the print-only header elements */
+    .pdf-generation-container .d-none.d-print-block {
+        display: block !important;
+    }
+    
+    /* Hide all screen-only items */
+    .pdf-generation-container .d-print-none,
+    .pdf-generation-container .no-print,
+    .pdf-generation-container #status-message,
+    .pdf-generation-container .card.d-print-none,
+    .pdf-generation-container .row.d-print-none {
+        display: none !important;
+    }
+    
+    .pdf-generation-container .table {
+        width: 100% !important;
+        border: 1px solid black !important;
+        border-collapse: collapse !important;
+        color: black !important;
+        margin-top: 10px !important;
+    }
+    
+    .pdf-generation-container .table th,
+    .pdf-generation-container .table td {
+        border: 1px solid black !important;
+        border-collapse: collapse !important;
+        color: black !important;
+        padding: 4px 5px !important; /* Tight padding to shrink table size */
+        font-size: 10px !important; /* Smaller elegant font size */
+        text-align: center !important;
+    }
+    
+    .pdf-generation-container .table thead th {
+        background-color: #f8f9fa !important;
+        font-weight: bold !important;
+        font-size: 9.5px !important;
+    }
+    
+    .pdf-generation-container input {
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+        color: black !important;
+        text-align: center !important;
+        font-size: 9.5px !important;
+        width: 100% !important;
+    }
+    
+    .pdf-generation-container select {
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+        color: black !important;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        width: 100% !important;
+        font-size: 9.5px !important;
+        text-align: center !important;
+        text-align-last: center !important;
+    }
+    
+    .pv-print-page {
+        page-break-after: always;
+        break-after: page;
+        background-color: white !important;
+        padding: 0 !important; /* Zero padding to respect page margins strictly */
+        margin: 0 !important;
+    }
+</style>
+
+
 <!-- Styles specific for printing the results modal -->
 <style media="print">
     @page {
@@ -2032,12 +2257,13 @@
         display: none !important;
     }
     
-    /* Only show the fillNotesModal and its children */
-    #fillNotesModal, #fillNotesModal * {
+    /* Only show the fillNotesModal or allBlankPvsPrintContainer and their children */
+    #fillNotesModal, #fillNotesModal *,
+    #allBlankPvsPrintContainer, #allBlankPvsPrintContainer * {
         visibility: visible !important;
     }
 
-    #fillNotesModal {
+    #fillNotesModal, #allBlankPvsPrintContainer {
         display: block !important;
         position: absolute;
         left: 0;
@@ -2051,7 +2277,22 @@
         z-index: 20000 !important;
     }
 
-    #fillNotesModal .modal-dialog {
+    #allBlankPvsPrintContainer .modal {
+        position: static !important;
+        display: block !important;
+        opacity: 1 !important;
+        background: transparent !important;
+        overflow: visible !important;
+    }
+
+    .pv-print-page {
+        page-break-after: always;
+        break-after: page;
+        background-color: white !important;
+    }
+
+    #fillNotesModal .modal-dialog,
+    #allBlankPvsPrintContainer .modal-dialog {
         margin: 0;
         padding: 0;
         max-width: 100%;
@@ -2060,19 +2301,23 @@
         height: auto !important;
     }
 
-    #fillNotesModal .modal-content {
+    #fillNotesModal .modal-content,
+    #allBlankPvsPrintContainer .modal-content {
         border: none;
         box-shadow: none;
         height: auto !important;
+        background-color: white !important;
     }
 
-    #fillNotesModal .modal-body {
+    #fillNotesModal .modal-body,
+    #allBlankPvsPrintContainer .modal-body {
         padding: 0 !important;
         overflow: visible !important;
     }
 
     /* Expand the table functionality for printing */
-    #fillNotesModal .table-responsive {
+    #fillNotesModal .table-responsive,
+    #allBlankPvsPrintContainer .table-responsive {
         overflow: visible !important;
         max-height: none !important;
         height: auto !important;
@@ -2082,31 +2327,38 @@
     /* Hide Controls in the modal during print */
     #fillNotesModal .modal-header .btn-close,
     #fillNotesModal .modal-footer,
+    #allBlankPvsPrintContainer .modal-header .btn-close,
+    #allBlankPvsPrintContainer .modal-footer,
     #print-notes-btn-injected,
     .no-print {
         display: none !important;
     }
     
     /* Ensure text is black for printing */
-    #fillNotesModal {
+    #fillNotesModal, #allBlankPvsPrintContainer {
         color: black !important;
     }
 
     /* Force Table Borders in Print */
     #fillNotesModal .table,
     #fillNotesModal .table th,
-    #fillNotesModal .table td {
+    #fillNotesModal .table td,
+    #allBlankPvsPrintContainer .table,
+    #allBlankPvsPrintContainer .table th,
+    #allBlankPvsPrintContainer .table td {
         border: 1px solid black !important;
         border-collapse: collapse !important;
     }
     
-    #fillNotesModal .table thead th {
+    #fillNotesModal .table thead th,
+    #allBlankPvsPrintContainer .table thead th {
         background-color: #f8f9fa !important; /* Keep a light grey background for header */
         -webkit-print-color-adjust: exact;
     }
 
     /* Make inputs look cleaner */
-    #fillNotesModal input {
+    #fillNotesModal input,
+    #allBlankPvsPrintContainer input {
         border: none !important;
         background: transparent !important;
         padding: 0 !important;
@@ -2150,6 +2402,17 @@
         $(document).on('click', '.print-pv-btn', function(e) {
             e.preventDefault();
             const examPlanId = $(this).data('plan-id');
+            
+            // Check if this plan is already validated
+            const planObj = currentExamPlans.find(p => p.id === examPlanId);
+            if (planObj && planObj.est_valide) {
+                if (typeof alertify !== 'undefined') {
+                    alertify.error("Impossible d'imprimer un PV vierge car l'examen est déjà validé.");
+                } else {
+                    alert("Impossible d'imprimer un PV vierge car l'examen est déjà validé.");
+                }
+                return;
+            }
             
             // Clean up old modals
             $('#fillNotesModal, #confirmValidateModal, #confirmSaveInvalidModal, #confirmValidateInvalidModal').remove();

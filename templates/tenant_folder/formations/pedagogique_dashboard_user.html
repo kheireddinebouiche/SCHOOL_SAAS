@@ -1,0 +1,346 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Pédagogie - Mon Espace{% endblock title %}
+
+{% block content %}
+<style>
+    /* Premium Glassmorphism & UI Tokens */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 1.25rem;
+        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .glass-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.08);
+    }
+
+    .kpi-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 1.25rem;
+    }
+
+    .kpi-card::before {
+        content: "";
+        position: absolute;
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        top: -60px;
+        right: -60px;
+        opacity: 0.1;
+        transition: all 0.5s ease;
+    }
+
+    .kpi-card:hover::before {
+        transform: scale(1.2);
+    }
+
+    .kpi-primary::before { background: #4f46e5; }
+    .kpi-success::before { background: #10b981; }
+    .kpi-info::before { background: #06b6d4; }
+    .kpi-warning::before { background: #f59e0b; }
+
+    .avatar-sm-custom {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1rem;
+        font-size: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .glass-card:hover .avatar-sm-custom {
+        transform: scale(1.1) rotate(5deg);
+    }
+
+    .badge-soft {
+        font-weight: 600;
+        padding: 0.4rem 0.8rem;
+        border-radius: 0.5rem;
+    }
+
+    .badge-soft-primary { background: rgba(79, 70, 229, 0.1); color: #4f46e5; }
+    .badge-soft-success { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .badge-soft-info { background: rgba(6, 182, 212, 0.1); color: #06b6d4; }
+    .badge-soft-warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+
+    /* Custom scrollbars */
+    .custom-scroll::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+
+    .dashboard-header-gradient {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: #ffffff;
+        border-radius: 1.5rem;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light pb-5">
+        <div class="container-fluid">
+
+            <!-- Premium Header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="dashboard-header-gradient p-4 p-md-5 shadow-lg position-relative overflow-hidden">
+                        <!-- Abstract Background Art -->
+                        <div class="position-absolute end-0 top-0 bottom-0 opacity-10 d-none d-lg-block" style="width: 40%;">
+                            <svg viewBox="0 0 100 100" class="w-100 h-100 fill-white">
+                                <circle cx="50" cy="50" r="40" stroke="white" stroke-width="2" fill="none" />
+                                <circle cx="50" cy="50" r="30" stroke="white" stroke-width="1" stroke-dasharray="5 5" fill="none" />
+                                <path d="M 10 50 L 90 50 M 50 10 L 50 90" stroke="white" stroke-width="0.5" />
+                            </svg>
+                        </div>
+                        
+                        <div class="row align-items-center position-relative z-index-1">
+                            <div class="col-lg-8">
+                                <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-50 px-3 py-2 mb-3 text-uppercase fw-bold letter-spacing-1">
+                                    <i class="ri-user-settings-line me-1"></i> Espace Pédagogique - Collaborateur
+                                </span>
+                                <h2 class="display-6 fw-bold mb-2">Mon Espace de Travail</h2>
+                                <p class="lead text-white text-opacity-75 mb-0">
+                                    Consultez le catalogue de formations, suivez les spécialités actives et gérez le suivi quotidien des promotions pour <span class="text-primary fw-bold">{{ tenant.nom }}</span>.
+                                </p>
+                            </div>
+                            <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
+                                <div class="btn-group gap-2">
+                                    <a href="{% url 't_formations:listFormations' %}" class="btn btn-light rounded-pill px-4 fw-bold shadow-sm">
+                                        <i class="ri-book-open-line me-1 text-primary"></i> Catalogue
+                                    </a>
+                                    <a href="{% url 't_formations:listPromos' %}" class="btn btn-outline-light rounded-pill px-4 fw-bold">
+                                        <i class="ri-calendar-line me-1"></i> Promotions
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Cards Grid -->
+            <div class="row g-4 mb-4">
+                <!-- Formations KPI -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card glass-card kpi-card kpi-primary h-100 border-0">
+                        <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                            <div>
+                                <p class="text-muted fw-medium text-uppercase fs-13 mb-1">Formations Actives</p>
+                                <h3 class="fw-bold mb-0 text-dark">{{ total_formations }}</h3>
+                            </div>
+                            <div class="avatar-sm-custom bg-primary bg-opacity-10 text-primary">
+                                <i class="ri-graduation-cap-line"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spécialités KPI -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card glass-card kpi-card kpi-success h-100 border-0">
+                        <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                            <div>
+                                <p class="text-muted fw-medium text-uppercase fs-13 mb-1">Domaines / Spécialités</p>
+                                <h3 class="fw-bold mb-0 text-dark">{{ total_specialites }}</h3>
+                            </div>
+                            <div class="avatar-sm-custom bg-success bg-opacity-10 text-success">
+                                <i class="ri-compass-3-line"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Promotions KPI -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card glass-card kpi-card kpi-info h-100 border-0">
+                        <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                            <div>
+                                <p class="text-muted fw-medium text-uppercase fs-13 mb-1">Promotions Actives</p>
+                                <h3 class="fw-bold mb-0 text-dark">{{ active_promos }} / {{ total_promos }}</h3>
+                            </div>
+                            <div class="avatar-sm-custom bg-info bg-opacity-10 text-info">
+                                <i class="ri-calendar-event-line"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modules KPI -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card glass-card kpi-card kpi-warning h-100 border-0">
+                        <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                            <div>
+                                <p class="text-muted fw-medium text-uppercase fs-13 mb-1">Modules d'Enseignement</p>
+                                <h3 class="fw-bold mb-0 text-dark">{{ total_modules }}</h3>
+                            </div>
+                            <div class="avatar-sm-custom bg-warning bg-opacity-10 text-warning">
+                                <i class="ri-booklet-line"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Row -->
+            <div class="row g-4">
+                <!-- Left Column (Promotions & Specialites) -->
+                <div class="col-lg-8">
+                    <!-- Promotions Table Widget -->
+                    <div class="card glass-card border-0 mb-4">
+                        <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between p-4 pb-0">
+                            <div>
+                                <h5 class="fw-bold text-dark mb-1">Suivi des Promotions</h5>
+                                <p class="text-muted mb-0 fs-13">Les promotions académiques les plus récentes enregistrées.</p>
+                            </div>
+                            <a href="{% url 't_formations:listPromos' %}" class="btn btn-sm btn-soft-primary px-3 rounded-pill fw-bold">
+                                Tout voir
+                            </a>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="table-responsive custom-scroll">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead>
+                                        <tr class="text-muted fs-12 text-uppercase">
+                                            <th scope="col" class="border-0 pb-3">Code / Libellé</th>
+                                            <th scope="col" class="border-0 pb-3">Année Académique</th>
+                                            <th scope="col" class="border-0 pb-3">Session</th>
+                                            <th scope="col" class="border-0 pb-3 text-end">Statut</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for promo in recent_promotions %}
+                                        <tr>
+                                            <td class="ps-0 border-bottom-0 py-3">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-xs bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 38px; height: 38px;">
+                                                        <i class="ri-team-line text-primary fs-18"></i>
+                                                    </div>
+                                                    <div>
+                                                        <a href="{% url 't_formations:detailPromo' promo.id %}" class="fw-bold text-dark d-block mb-0 hover-primary">
+                                                            {{ promo.label }}
+                                                        </a>
+                                                        <small class="text-muted">Code: {{ promo.code }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="border-bottom-0 py-3 text-muted fw-medium">{{ promo.annee_scolaire }}</td>
+                                            <td class="border-bottom-0 py-3 text-muted fw-medium">{{ promo.session }}</td>
+                                            <td class="border-bottom-0 py-3 text-end">
+                                                {% if promo.etat == 'active' %}
+                                                    <span class="badge badge-soft-success">Actif</span>
+                                                {% else %}
+                                                    <span class="badge badge-soft-warning">Inactif</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted">
+                                                <i class="ri-inbox-line fs-24 d-block mb-2"></i> Aucune promotion enregistrée.
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Spécialités Grid Widget -->
+                    <div class="card glass-card border-0">
+                        <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between p-4 pb-0">
+                            <div>
+                                <h5 class="fw-bold text-dark mb-1">Domaines d'Expertise</h5>
+                                <p class="text-muted mb-0 fs-13">Spécialités de formations actives avec volume de modules associés.</p>
+                            </div>
+                            <a href="{% url 't_formations:listSpecialites' %}" class="btn btn-sm btn-soft-primary px-3 rounded-pill fw-bold">
+                                Tout voir
+                            </a>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row g-3">
+                                {% for spec in specialites_list %}
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light bg-opacity-50 rounded-4 border border-light d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center">
+                                            <div class="p-2 bg-info bg-opacity-10 text-info rounded-3 me-3">
+                                                <i class="ri-compass-line fs-20"></i>
+                                            </div>
+                                            <div>
+                                                <a href="{% url 't_formations:detailSpecialite' spec.id %}" class="fw-bold text-dark mb-1 d-block">
+                                                    {{ spec.label }}
+                                                </a>
+                                                <small class="text-muted">Directeur: {{ spec.responsable|default:"Non assigné" }}</small>
+                                            </div>
+                                        </div>
+                                        <span class="badge badge-soft-info">{{ spec.module_count }} Modules</span>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="col-12 text-center py-4 text-muted">
+                                    Aucune spécialité disponible.
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column (Catalogue de formations) -->
+                <div class="col-lg-4">
+                    <!-- Training Catalog Widget -->
+                    <div class="card glass-card border-0 h-100">
+                        <div class="card-header bg-transparent border-0 p-4 pb-0">
+                            <h5 class="fw-bold text-dark mb-1">Catalogue de Formations</h5>
+                            <p class="text-muted mb-0 fs-13">Nos parcours et diplômes d'enseignement.</p>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="d-flex flex-column gap-3">
+                                {% for formation in recent_formations %}
+                                <div class="p-3 bg-light bg-opacity-50 rounded-4 border border-light transition-all hover-shadow">
+                                    <div class="d-flex align-items-start justify-content-between mb-2">
+                                        <span class="badge badge-soft-primary text-uppercase">{{ formation.code }}</span>
+                                        <small class="text-muted fw-bold"><i class="ri-time-line me-1"></i>{{ formation.duree_mois }} Mois</small>
+                                    </div>
+                                    <a href="{% url 't_formations:detailFormation' formation.id %}" class="fw-bold text-dark hover-primary mb-1 d-block fs-15">
+                                        {{ formation.label }}
+                                    </a>
+                                    <p class="text-muted fs-12 mb-2 line-clamp-2">
+                                        {{ formation.description|default:"Aucune description fournie pour ce programme pédagogique." }}
+                                    </p>
+                                    <div class="d-flex align-items-center justify-content-between pt-2 border-top border-light">
+                                        <small class="text-primary fw-semibold"><i class="ri-links-line me-1"></i>{{ formation.spec_count }} Spécialités</small>
+                                        <small class="text-muted">{{ formation.date_creation|date:"M Y" }}</small>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="text-center py-4 text-muted">
+                                    Catalogue vide pour le moment.
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock content %}

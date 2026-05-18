@@ -37,6 +37,7 @@ urlpatterns = [
     path('details-paiement-request/<int:pk>/',PageDetailsDemandePaiement, name="PageDetailsDemandePaiement"),
 
     path('configuration/' , PageConfigPaiementSeuil, name="PageConfigPaiementSeuil"),
+    path('configuration/paiement-facturation/', PageConfigPaiementFacturation, name="PageConfigPaiementFacturation"),
     path('ApiListSeuilPaiement', ApiListSeuilPaiement, name="ApiListSeuilPaiement"),
 
     path('ApiListeSpecialite', ApiListeSpecialite, name="ApiListeSpecialite"),

@@ -1,0 +1,459 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Pédagogie - Tableau de bord{% endblock title %}
+
+{% block content %}
+<style>
+    /* Premium Glassmorphism & UI Tokens */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 1.25rem;
+        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .glass-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.08);
+    }
+
+    .kpi-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 1.25rem;
+    }
+
+    .kpi-card::before {
+        content: "";
+        position: absolute;
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        top: -60px;
+        right: -60px;
+        opacity: 0.1;
+        transition: all 0.5s ease;
+    }
+
+    .kpi-card:hover::before {
+        transform: scale(1.2);
+    }
+
+    .kpi-primary::before { background: #4f46e5; }
+    .kpi-success::before { background: #10b981; }
+    .kpi-info::before { background: #06b6d4; }
+    .kpi-warning::before { background: #f59e0b; }
+    .kpi-danger::before { background: #ef4444; }
+
+    .avatar-sm-custom {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1rem;
+        font-size: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .glass-card:hover .avatar-sm-custom {
+        transform: scale(1.1) rotate(5deg);
+    }
+
+    .badge-soft {
+        font-weight: 600;
+        padding: 0.4rem 0.8rem;
+        border-radius: 0.5rem;
+    }
+
+    .badge-soft-primary { background: rgba(79, 70, 229, 0.1); color: #4f46e5; }
+    .badge-soft-success { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .badge-soft-info { background: rgba(6, 182, 212, 0.1); color: #06b6d4; }
+    .badge-soft-warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .badge-soft-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+    /* Custom scrollbars */
+    .custom-scroll::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+
+    /* Progress ring or beautiful bars */
+    .progress-custom {
+        height: 8px;
+        border-radius: 10px;
+        background-color: #f1f5f9;
+        overflow: hidden;
+    }
+
+    .progress-bar-custom {
+        border-radius: 10px;
+        transition: width 1s ease-in-out;
+    }
+
+    .dashboard-header-gradient {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        color: #ffffff;
+        border-radius: 1.5rem;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light pb-5">
+        <div class="container-fluid">
+
+            <!-- Premium Header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="dashboard-header-gradient p-4 p-md-5 shadow-lg position-relative overflow-hidden">
+                        <!-- Abstract Background Art -->
+                        <div class="position-absolute end-0 top-0 bottom-0 opacity-10 d-none d-lg-block" style="width: 40%;">
+                            <svg viewBox="0 0 100 100" class="w-100 h-100 fill-white">
+                                <circle cx="50" cy="50" r="40" stroke="white" stroke-width="2" fill="none" />
+                                <circle cx="50" cy="50" r="30" stroke="white" stroke-width="1" stroke-dasharray="5 5" fill="none" />
+                                <path d="M 10 50 L 90 50 M 50 10 L 50 90" stroke="white" stroke-width="0.5" />
+                            </svg>
+                        </div>
+                        
+                        <div class="row align-items-center position-relative z-index-1">
+                            <div class="col-lg-8">
+                                <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-3 py-2 mb-3 text-uppercase fw-bold letter-spacing-1">
+                                    <i class="ri-dashboard-line me-1"></i> Directeur Pédagogique
+                                </span>
+                                <h2 class="display-6 fw-bold mb-2">Tableau de Bord Académique</h2>
+                                <p class="lead text-white text-opacity-75 mb-0">
+                                    Pilotez l'offre de formation, configurez les spécialités et suivez l'avancement pédagogique de l'établissement <span class="text-success fw-bold">{{ tenant.nom }}</span>.
+                                </p>
+                            </div>
+                            <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
+                                <div class="btn-group gap-2">
+                                    <a href="{% url 't_formations:listFormations' %}" class="btn btn-light rounded-pill px-4 fw-bold shadow-sm">
+                                        <i class="ri-book-open-line me-1 text-primary"></i> Catalogue
+                                    </a>
+                                    <a href="{% url 't_formations:listPromos' %}" class="btn btn-outline-light rounded-pill px-4 fw-bold">
+                                        <i class="ri-calendar-line me-1"></i> Promotions
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Counters Row -->
+            <div class="row g-4 mb-4">
+                <!-- Formations -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="glass-card kpi-card kpi-primary p-4 h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="avatar-sm-custom bg-primary bg-opacity-10 text-primary">
+                                <i class="ri-book-open-line"></i>
+                            </div>
+                            <span class="text-muted small">Offre active</span>
+                        </div>
+                        <h3 class="display-6 fw-bold mb-1 text-dark">{{ total_formations }}</h3>
+                        <p class="text-muted mb-0 fw-semibold">Formations de référence</p>
+                    </div>
+                </div>
+
+                <!-- Specialités -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="glass-card kpi-card kpi-success p-4 h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="avatar-sm-custom bg-success bg-opacity-10 text-success">
+                                <i class="ri-award-line"></i>
+                            </div>
+                            <span class="text-muted small">Spécialisations</span>
+                        </div>
+                        <h3 class="display-6 fw-bold mb-1 text-dark">{{ total_specialites }}</h3>
+                        <p class="text-muted mb-0 fw-semibold">Parcours de spécialité</p>
+                    </div>
+                </div>
+
+                <!-- Formateurs -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="glass-card kpi-card kpi-warning p-4 h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="avatar-sm-custom bg-warning bg-opacity-10 text-warning">
+                                <i class="ri-user-star-line"></i>
+                            </div>
+                            <span class="text-muted small">Corps enseignant</span>
+                        </div>
+                        <h3 class="display-6 fw-bold mb-1 text-dark">{{ total_formateurs }}</h3>
+                        <p class="text-muted mb-0 fw-semibold">Formateurs qualifiés</p>
+                    </div>
+                </div>
+
+                <!-- Promotions Actives -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="glass-card kpi-card kpi-danger p-4 h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="avatar-sm-custom bg-danger bg-opacity-10 text-danger">
+                                <i class="ri-calendar-check-line"></i>
+                            </div>
+                            <span class="badge badge-soft-danger">{{ active_promos }} active{% if active_promos > 1 %}s{% endif %}</span>
+                        </div>
+                        <h3 class="display-6 fw-bold mb-1 text-dark">{{ total_promos }}</h3>
+                        <p class="text-muted mb-0 fw-semibold">Promotions gérées</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Validation Progress Area -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-4">
+                        <div class="row align-items-center">
+                            <div class="col-lg-8">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="avatar-sm-custom bg-info bg-opacity-10 text-info me-3">
+                                        <i class="ri-list-check-2"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="fw-bold mb-0 text-dark">Validation des Maquettes Pédagogiques</h5>
+                                        <p class="text-muted mb-0 small">Avancement général de la validation réglementaire des modules par spécialité</p>
+                                    </div>
+                                </div>
+                                <div class="progress-custom mb-2">
+                                    <div class="progress-bar-custom bg-info h-100" style="width: {{ validation_rate }}%"></div>
+                                </div>
+                                <div class="d-flex justify-content-between text-muted small fw-semibold">
+                                    <span>{{ validated_modules }} modules validés</span>
+                                    <span>{{ validation_rate }}% complété</span>
+                                    <span>{{ pending_modules }} en attente</span>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 mt-3 mt-lg-0 text-lg-end">
+                                <div class="p-3 bg-light rounded-3 d-inline-block text-start border border-dashed border-muted w-100" style="max-width: 320px;">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="small text-muted">Total Modules</span>
+                                        <span class="fw-bold text-dark">{{ total_modules }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="small text-muted">Partenaires Actifs</span>
+                                        <span class="badge badge-soft-success">{{ total_partenaires }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Grid Listings -->
+            <div class="row g-4">
+                <!-- Promotions Actives -->
+                <div class="col-xl-6">
+                    <div class="glass-card p-4 h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-4">
+                            <h5 class="fw-bold mb-0 text-dark">
+                                <i class="ri-calendar-2-line me-2 text-danger"></i>Suivi des Promotions
+                            </h5>
+                            <a href="{% url 't_formations:listPromos' %}" class="btn btn-sm btn-soft-danger rounded-pill px-3">
+                                Tout voir
+                            </a>
+                        </div>
+                        <div class="table-responsive custom-scroll" style="max-height: 380px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="fw-semibold small">Code / Label</th>
+                                        <th class="fw-semibold small">Année Académique</th>
+                                        <th class="fw-semibold small">Session</th>
+                                        <th class="fw-semibold small">Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if recent_promotions %}
+                                        {% for promo in recent_promotions %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex flex-column">
+                                                    <span class="fw-bold text-dark">{{ promo.label }}</span>
+                                                    <span class="text-muted small fs-7">{{ promo.code|default:"--" }}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-soft-primary">{{ promo.annee_academique|default:"N/A" }}</span>
+                                            </td>
+                                            <td class="text-capitalize">
+                                                {{ promo.get_session_display }}
+                                            </td>
+                                            <td>
+                                                {% if promo.etat == 'active' %}
+                                                    <span class="badge badge-soft-success"><i class="ri-checkbox-circle-fill me-1"></i>Active</span>
+                                                {% else %}
+                                                    <span class="badge badge-soft-danger"><i class="ri-close-circle-fill me-1"></i>Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted">
+                                                Aucune promotion enregistrée.
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Offre de Spécialités avec Modules -->
+                <div class="col-xl-6">
+                    <div class="glass-card p-4 h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-4">
+                            <h5 class="fw-bold mb-0 text-dark">
+                                <i class="ri-award-line me-2 text-success"></i>Spécialités & Modules
+                            </h5>
+                            <a href="{% url 't_formations:listSpecialites' %}" class="btn btn-sm btn-soft-success rounded-pill px-3">
+                                Tout voir
+                            </a>
+                        </div>
+                        <div class="table-responsive custom-scroll" style="max-height: 380px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="fw-semibold small">Spécialité</th>
+                                        <th class="fw-semibold small">Formation</th>
+                                        <th class="fw-semibold small text-center">Modules</th>
+                                        <th class="fw-semibold small">Durée</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if specialites_list %}
+                                        {% for spec in specialites_list %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex flex-column">
+                                                    <a href="{% url 't_formations:detailSpecialite' pk=spec.id %}" class="fw-bold text-dark text-decoration-none hover-primary">{{ spec.label }}</a>
+                                                    <span class="text-muted small fs-7">{{ spec.code }}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="text-muted small">{{ spec.formation.nom|truncatechars:25 }}</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-light text-dark fw-bold px-2 py-1 rounded border">
+                                                    {{ spec.module_count }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="text-muted small">{{ spec.duree|default:"--" }}</span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted">
+                                                Aucune spécialité enregistrée.
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Last Row: Formations Récentes & Partenaires Académiques -->
+            <div class="row g-4 mt-2">
+                <!-- Formations Récentes -->
+                <div class="col-xl-7 col-md-12">
+                    <div class="glass-card p-4 h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-4">
+                            <h5 class="fw-bold mb-0 text-dark">
+                                <i class="ri-book-open-line me-2 text-primary"></i>Offres de Formation Récentes
+                            </h5>
+                            <a href="{% url 't_formations:listFormations' %}" class="btn btn-sm btn-soft-primary rounded-pill px-3">
+                                Catalogue complet
+                            </a>
+                        </div>
+                        <div class="row g-3">
+                            {% if recent_formations %}
+                                {% for form in recent_formations %}
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light bg-opacity-50 rounded-3 border h-100 d-flex flex-column justify-content-between">
+                                        <div>
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <span class="badge badge-soft-primary small">Code: {{ form.code }}</span>
+                                                <span class="small text-muted"><i class="ri-time-line me-1"></i>{{ form.duree }} mois</span>
+                                            </div>
+                                            <h6 class="fw-bold text-dark mb-1">{{ form.nom }}</h6>
+                                            {% if form.partenaire %}
+                                                <p class="text-muted small mb-0"><i class="ri-building-line me-1"></i> {{ form.partenaire.nom }}</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="mt-3 border-top pt-2 d-flex justify-content-between align-items-center">
+                                            <span class="small text-muted">{{ form.spec_count }} Spécialité{% if form.spec_count > 1 %}s{% endif %}</span>
+                                            <a href="{% url 't_formations:detailFormation' pk=form.id %}" class="btn btn-sm btn-ghost-primary rounded-circle">
+                                                <i class="ri-arrow-right-line"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="col-12 text-center py-4 text-muted">
+                                    Aucune formation configurée.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Partenaires & Diplomation -->
+                <div class="col-xl-5 col-md-12">
+                    <div class="glass-card p-4 h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-4">
+                            <h5 class="fw-bold mb-0 text-dark">
+                                <i class="ri-global-line me-2 text-warning"></i>Partenaires Académiques
+                            </h5>
+                            <a href="{% url 't_formations:listPartenaires' %}" class="btn btn-sm btn-soft-warning rounded-pill px-3">
+                                Gérer
+                            </a>
+                        </div>
+                        <div class="custom-scroll" style="max-height: 380px; overflow-y: auto;">
+                            {% if active_partners %}
+                                {% for part in active_partners %}
+                                <div class="d-flex align-items-center p-3 rounded-3 mb-3 border bg-white shadow-xs">
+                                    <div class="avatar-sm-custom bg-warning bg-opacity-10 text-warning me-3">
+                                        <i class="ri-building-2-line"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold text-dark mb-1">{{ part.nom }}</h6>
+                                        <p class="text-muted small mb-0"><i class="ri-mail-line me-1"></i>{{ part.email|default:"--" }} | <i class="ri-phone-line me-1"></i>{{ part.telephone|default:"--" }}</p>
+                                    </div>
+                                    <div>
+                                        <span class="badge {% if part.type_partenaire == 'etranger' %}badge-soft-warning{% else %}badge-soft-info{% endif %} text-capitalize small">
+                                            {{ part.get_type_partenaire_display|default:part.type_partenaire }}
+                                        </span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-4 text-muted">
+                                    Aucun partenaire configuré.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock content %}

@@ -311,21 +311,39 @@
                         <div class="tab-content contacts-list custom-scroll pt-2" id="pills-tabContent">
                             <div class="tab-pane fade show active" id="pills-contacts" role="tabpanel">
                                 {% for contact in contacts %}
-                                <div class="contact-item" data-type="user" data-id="{{ contact.id }}">
+                                <div class="contact-item d-flex align-items-center" data-type="user" data-id="{{ contact.id }}">
                                     <div class="contact-avatar">
                                         <div class="avatar-char">
                                             {{ contact.username|slice:":1"|upper }}
                                         </div>
                                         <div class="online-indicator"></div>
                                     </div>
-                                    <div class="contact-info">
-                                        <h6 class="contact-name">{{ contact.username }}</h6>
-                                        <p class="contact-last-msg">Cliquez pour voir la conversation</p>
+                                    <div class="contact-info flex-grow-1 min-w-0">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <h6 class="contact-name mb-0 text-truncate fw-semibold" style="max-width: 140px;">{{ contact.username }}</h6>
+                                            {% if contact.last_message_time %}
+                                            <span class="text-muted fs-11 ms-2" style="white-space: nowrap;">{{ contact.last_message_time|date:"H:i" }}</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="d-flex align-items-center justify-content-between mt-1">
+                                            <p class="contact-last-msg mb-0 text-truncate {% if contact.last_message_sender_id != request.user.id and not contact.last_message_is_read and contact.last_message_time %}fw-bold text-primary{% else %}text-muted{% endif %}" style="font-size: 0.75rem; max-width: 160px;">
+                                                {% if contact.last_message_content %}
+                                                    {{ contact.last_message_content }}
+                                                {% elif contact.last_message_time %}
+                                                    <i class="ri-file-line me-1"></i> Fichier joint
+                                                {% else %}
+                                                    Cliquez pour discuter
+                                                {% endif %}
+                                            </p>
+                                            {% if contact.last_message_sender_id != request.user.id and not contact.last_message_is_read and contact.last_message_time %}
+                                            <span class="badge bg-danger rounded-circle p-0 ms-2" style="width: 8px; height: 8px; flex-shrink: 0;" title="Nouveau message"></span>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                                 {% empty %}
                                 <div class="text-center p-4">
-                                    <p class="text-muted small">Aucune conversation récente.</p>
+                                    <p class="text-muted small">Aucun utilisateur disponible.</p>
                                 </div>
                                 {% endfor %}
                             </div>
@@ -637,6 +655,39 @@ document.addEventListener('DOMContentLoaded', function() {
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
           return new bootstrap.Tooltip(tooltipTriggerEl)
         })
+    }
+
+    // Client-side search and filtering logic scoped to pills-tabContent
+    window.filterContacts = function(type) {
+        const searchInput = document.querySelector('.search-box__input');
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        document.querySelectorAll('#pills-tabContent .contact-item').forEach(item => {
+            item.style.setProperty('display', 'flex', 'important');
+        });
+    };
+
+    const searchInput = document.querySelector('.search-box__input');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            const activePane = document.querySelector('#pills-tabContent .tab-pane.active');
+            if (activePane) {
+                const items = activePane.querySelectorAll('.contact-item');
+                items.forEach(item => {
+                    const nameElement = item.querySelector('.contact-name');
+                    if (nameElement) {
+                        const name = nameElement.textContent.toLowerCase();
+                        if (name.includes(query)) {
+                            item.style.setProperty('display', 'flex', 'important');
+                        } else {
+                            item.style.setProperty('display', 'none', 'important');
+                        }
+                    }
+                });
+            }
+        });
     }
 
     // Global handler for real-time messages via WebSocket

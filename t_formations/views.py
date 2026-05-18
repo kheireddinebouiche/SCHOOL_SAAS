@@ -1958,3 +1958,80 @@ def export_partenaires(request):
             ])
 
         return response
+
+
+@login_required(login_url="institut_app:login")
+def pedagogique_dashboard(request):
+    from django.db.models import Count, Q
+    from institut_app.models import UserModuleRole
+    
+    # Déterminer si l'utilisateur est un Responsable/Directeur Pédagogique ou Collaborateur standard
+    is_responsable = False
+    if request.user.is_superuser:
+        is_responsable = True
+    else:
+        try:
+            umr = UserModuleRole.objects.select_related('role').get(
+                user=request.user,
+                module__name='ped'
+            )
+            # Rôles d'encadrement considérés comme "Responsable"
+            if umr.role.name in ['Administrateur', 'Manager', 'Superviseur', 'Directeur']:
+                is_responsable = True
+        except UserModuleRole.DoesNotExist:
+            is_responsable = False
+            
+    total_formations = Formation.objects.count()
+    total_specialites = Specialites.objects.count()
+    
+    modules_qs = Modules.objects.filter(is_archived=False)
+    total_modules = modules_qs.count()
+    validated_modules = modules_qs.filter(est_valider=True).count()
+    pending_modules = modules_qs.filter(est_valider=False).count()
+    
+    validation_rate = int((validated_modules / total_modules * 100)) if total_modules > 0 else 0
+    
+    total_formateurs = Formateurs.objects.count()
+    total_partenaires = Partenaires.objects.filter(etat='active').count()
+    
+    promos_qs = Promos.objects.filter(is_archived=False)
+    total_promos = promos_qs.count()
+    active_promos = promos_qs.filter(etat='active').count()
+    
+    # Detailed listings
+    recent_promotions = promos_qs.order_by('-created_at')[:6]
+    recent_formations = Formation.objects.annotate(
+        spec_count=Count('formation_specilite')
+    ).order_by('-date_creation')[:6]
+    
+    active_partners = Partenaires.objects.filter(etat='active').order_by('-created_at')[:6]
+    
+    # Specialites stats (with module count)
+    specialites_list = Specialites.objects.annotate(
+        module_count=Count('modules')
+    ).order_by('-created_at')[:6]
+    
+    context = {
+        'tenant': request.tenant,
+        'is_responsable': is_responsable,
+        'total_formations': total_formations,
+        'total_specialites': total_specialites,
+        'total_modules': total_modules,
+        'validated_modules': validated_modules,
+        'pending_modules': pending_modules,
+        'validation_rate': validation_rate,
+        'total_formateurs': total_formateurs,
+        'total_partenaires': total_partenaires,
+        'total_promos': total_promos,
+        'active_promos': active_promos,
+        'recent_promotions': recent_promotions,
+        'recent_formations': recent_formations,
+        'active_partners': active_partners,
+        'specialites_list': specialites_list,
+    }
+    
+    if is_responsable:
+        return render(request, 'tenant_folder/formations/pedagogique_dashboard.html', context)
+    else:
+        return render(request, 'tenant_folder/formations/pedagogique_dashboard_user.html', context)
+

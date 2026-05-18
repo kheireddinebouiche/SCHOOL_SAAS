@@ -655,6 +655,11 @@ class ParametreFinancier(models.Model):
         verbose_name="Uniquement pour les espèces",
         help_text="Si activé, le timbre ne s'applique qu'aux paiements marqués comme 'Espèce'."
     )
+    timbre_bareme = models.TextField(
+        default='[{"min_ttc": 0, "max_ttc": 300, "rate": 0.0, "is_exempt": true}, {"min_ttc": 301, "max_ttc": 30000, "rate": 1.0, "is_exempt": false}, {"min_ttc": 30001, "max_ttc": 100000, "rate": 1.5, "is_exempt": false}, {"min_ttc": 100001, "max_ttc": null, "rate": 2.0, "is_exempt": false}]',
+        verbose_name="Barème progressif des droits de timbre (JSON)",
+        help_text="Liste ordonnée de tranches progressives avec min, max, taux et statut d'exonération au format JSON."
+    )
 
     # Email Templates
     relance_echeancier_sujet = models.CharField(
