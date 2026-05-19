@@ -88,6 +88,10 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="header-title mb-0">PV de Délibération - {{ groupe.nom }}</h4>
+                <a href="{% url 't_exam:groupe_deliberation_results_pdf_view' pk=session_line.id %}" target="_blank" class="btn btn-soft-danger rounded-pill px-3 py-1.5 btn-sm shadow-sm d-flex align-items-center gap-1">
+                    <i class="ri-file-pdf-line fs-16"></i>
+                    <span>Exporter en PDF</span>
+                </a>
             </div>
             <p class="text-muted font-14 mb-4">
                 Résultats des examens pour le groupe {{ groupe.label }} - Session: {{ session_line.session.label }}
@@ -100,8 +104,8 @@
                             <tr>
                                 <th rowspan="3" class="student-name">Étudiant</th>
                                 {% for pv_item in pv_data %}
-                                    {% comment %} Calculate total columns for this module (types_notes + moyenne) {% endcomment %}
-                                    <th colspan="{{ pv_item.exam_types_notes|length|add:1 }}" class="text-center module-header">
+                                    {% comment %} Use pre-calculated total columns for perfect alignment {% endcomment %}
+                                    <th colspan="{{ pv_item.total_columns }}" class="text-center module-header">
                                         <strong>{{ pv_item.module.label }}</strong>
                                     </th>
                                 {% endfor %}
@@ -197,21 +201,25 @@
                                     {% endfor %}
                                     {% comment %} Décision Jury column {% endcomment %}
                                     <td class="text-center decision-cell">
-                                        <select class="form-control form-control-sm" name="decision_jury_{{ etudiant.id }}">
+                                        {% with delib=deliberations_by_student|get_item:etudiant.id %}
+                                        <select class="form-control form-control-sm jury-decision-select" data-student-id="{{ etudiant.id }}" name="decision_jury_{{ etudiant.id }}">
                                             <option value="">-</option>
-                                            <option value="valide">Semestre validé</option>
-                                            <option value="valide_dette">Semestre validé avec dette</option>
-                                            <option value="non_valide">Semestre non validé</option>
+                                            <option value="valide" {% if delib.decision_jury == 'valide' %}selected{% endif %}>Semestre validé</option>
+                                            <option value="valide_dette" {% if delib.decision_jury == 'valide_dette' %}selected{% endif %}>Semestre validé avec dette</option>
+                                            <option value="non_valide" {% if delib.decision_jury == 'non_valide' %}selected{% endif %}>Semestre non validé</option>
                                         </select>
+                                        {% endwith %}
                                     </td>
                                     {% comment %} Observation column {% endcomment %}
                                     <td class="text-center decision-cell">
-                                        <select class="form-control form-control-sm" name="observation_{{ etudiant.id }}">
+                                        {% with delib=deliberations_by_student|get_item:etudiant.id %}
+                                        <select class="form-control form-control-sm observation-select" data-student-id="{{ etudiant.id }}" name="observation_{{ etudiant.id }}">
                                             <option value="">-</option>
-                                            <option value="admis">Admis(e)</option>
-                                            <option value="ajourne">Ajourné(e)</option>
-                                            <option value="radie">Radié(e)</option>
+                                            <option value="admis" {% if delib.observation == 'admis' %}selected{% endif %}>Admis(e)</option>
+                                            <option value="ajourne" {% if delib.observation == 'ajourne' %}selected{% endif %}>Ajourné(e)</option>
+                                            <option value="radie" {% if delib.observation == 'radie' %}selected{% endif %}>Radié(e)</option>
                                         </select>
+                                        {% endwith %}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -227,3 +235,48 @@
         </div>
     </div>
 </div>
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('.jury-decision-select, .observation-select').on('change', function() {
+        const $select = $(this);
+        const studentId = $select.data('student-id');
+        const $row = $select.closest('tr');
+        const $cell = $select.closest('td');
+        
+        const decisionJury = $row.find('.jury-decision-select').val();
+        const observation = $row.find('.observation-select').val();
+        
+        $cell.removeClass('bg-success bg-opacity-25 bg-danger bg-opacity-25')
+             .addClass('bg-warning bg-opacity-25');
+        
+        $.post("{% url 't_exam:api_save_deliberation_decision' %}", {
+            session_line_id: "{{ session_line.id }}",
+            student_id: studentId,
+            decision_jury: decisionJury,
+            observation: observation,
+            csrfmiddlewaretoken: "{{ csrf_token }}"
+        })
+        .done(function(response) {
+            if (response.status === 'success') {
+                $cell.removeClass('bg-warning bg-opacity-25')
+                     .addClass('bg-success bg-opacity-25');
+                setTimeout(function() {
+                    $cell.removeClass('bg-success bg-opacity-25');
+                }, 1000);
+            } else {
+                $cell.removeClass('bg-warning bg-opacity-25')
+                     .addClass('bg-danger bg-opacity-25');
+                console.error(response.message);
+            }
+        })
+        .fail(function(xhr, status, error) {
+            $cell.removeClass('bg-warning bg-opacity-25')
+                 .addClass('bg-danger bg-opacity-25');
+            console.error('AJAX Error: ' + error);
+        });
+    });
+});
+</script>
+{% endblock %}

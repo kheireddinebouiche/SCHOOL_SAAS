@@ -124,7 +124,8 @@ def ApiGetModelBuilltinDetails(request):
                     'ordre': sn.ordre
                 } for sn in sous_notes
             ],
-            'in_moyenne': type_note.in_moyenne
+            'in_moyenne': type_note.in_moyenne,
+            'coefficient': type_note.coefficient
         })
 
     return JsonResponse(data)
@@ -177,6 +178,7 @@ def ApiGetTypeNotes(request):
             'nb_sous_notes': type_note.nb_sous_notes,
             'ordre': type_note.ordre,
             'in_moyenne': type_note.in_moyenne,
+            'coefficient': type_note.coefficient,
             'bloc_id': type_note.bloc.id if type_note.bloc else None
         })
 
@@ -207,6 +209,9 @@ def ApiAddTypeNote(request):
         if bloc_id and bloc_id != 'null' and bloc_id != '':
             bloc = NoteBloc.objects.get(id=bloc_id)
 
+        coef_val = request.POST.get('coefficient')
+        coefficient = float(coef_val) if coef_val and coef_val.strip() != '' else 1.0
+
         type_note = BuiltinTypeNote.objects.create(
             builtin=builtin,
             bloc=bloc,
@@ -220,6 +225,7 @@ def ApiAddTypeNote(request):
             ordre=int(ordre),
             is_calculee=is_calculee,
             in_moyenne=in_moyenne,
+            coefficient=coefficient,
             type_calcul=type_calcul
         )
 
@@ -258,6 +264,9 @@ def ApiUpdateTypeNote(request):
         else:
             type_note.bloc = None
 
+        coef_val = request.POST.get('coefficient')
+        coefficient = float(coef_val) if coef_val and coef_val.strip() != '' else 1.0
+
         type_note.code = code
         type_note.libelle = libelle
         type_note.max_note = float(max_note)
@@ -268,6 +277,7 @@ def ApiUpdateTypeNote(request):
         type_note.ordre = int(ordre)
         type_note.is_calculee = is_calculee
         type_note.in_moyenne = request.POST.get('in_moyenne') == 'on'
+        type_note.coefficient = coefficient
         type_note.type_calcul = type_calcul
         type_note.save()
 

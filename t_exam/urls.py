@@ -117,9 +117,11 @@ urlpatterns = [
 
     # URLs for group deliberation results
     path('groupe-deliberation-results/<int:pk>/', groupe_deliberation_results_view, name="groupe_deliberation_results_view"),
+    path('groupe-deliberation-results-pdf/<int:pk>/', groupe_deliberation_results_pdf_view, name="groupe_deliberation_results_pdf_view"),
 
 
     path('details-session/exams/planification/<int:pk>/',PageDetailsSessionExamPlan, name="PageDetailsSessionExamPlan"),
+    path('api-save-deliberation-decision/', api_save_deliberation_decision, name="api_save_deliberation_decision"),
 
     path('ApiLoadFormateur',ApiLoadFormateur ,name="ApiLoadFormateur"),
 

@@ -106,7 +106,8 @@ def GeneratePvModal(request, pk):
                 is_calculee=builtin_type_note.is_calculee,
                 in_moyenne=builtin_type_note.in_moyenne,
                 type_calcul=builtin_type_note.type_calcul,
-                ordre=builtin_type_note.ordre
+                ordre=builtin_type_note.ordre,
+                coefficient=builtin_type_note.coefficient
             )
 
             # Create ExamNote records for each student for this type of note
@@ -329,7 +330,8 @@ def GeneratePvModal(request, pk):
                 'dependencies': dependencies,
                 'max_note': exam_type_note.max_note,
                 'has_sous_notes': exam_type_note.has_sous_notes,
-                'nb_sous_notes': exam_type_note.nb_sous_notes
+                'nb_sous_notes': exam_type_note.nb_sous_notes,
+                'coefficient': exam_type_note.coefficient
             }
 
     import json

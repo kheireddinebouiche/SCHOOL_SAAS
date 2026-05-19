@@ -124,6 +124,11 @@ class BuiltinTypeNote(models.Model):
         help_text="Intervient dans le calcul de la moyenne générale"
     )
 
+    coefficient = models.FloatField(
+        default=1.0,
+        help_text="Coefficient de pondération pour le calcul de la moyenne générale"
+    )
+
     class Meta:
         unique_together = ('builtin', 'code')
         ordering = ['ordre']
@@ -207,6 +212,51 @@ class PvExamen(models.Model):
     def __str__(self):
         return f"PV - {self.exam_planification.module}"
     
+    def recalculer_notes_calculees(self):
+        # Pour chaque étudiant ayant des notes dans ce PV
+        etudiant_ids = self.notes.values_list('etudiant', flat=True).distinct()
+        for etudiant_id in etudiant_ids:
+            # Récupérer tous les types de notes calculées de ce PV
+            calculated_types = self.exam_types_notes.filter(is_calculee=True)
+            for type_note in calculated_types:
+                dependencies = type_note.dependencies.all()
+                if not dependencies.exists():
+                    continue
+                
+                total = 0.0
+                count = 0
+                all_valid = True
+                
+                for dep in dependencies:
+                    dep_note = self.notes.filter(etudiant_id=etudiant_id, type_note=dep.child).first()
+                    if dep_note and dep_note.valeur is not None:
+                        total += dep_note.valeur
+                        count += 1
+                    else:
+                        all_valid = False
+                
+                exam_note, created = self.notes.get_or_create(
+                    etudiant_id=etudiant_id,
+                    type_note=type_note
+                )
+                
+                if all_valid and count > 0:
+                    valeur_calculee = total
+                    if type_note.type_calcul == 'AVG':
+                        valeur_calculee = total / count
+                    
+                    # S'assurer que le résultat ne dépasse pas la note max
+                    if type_note.max_note is not None and valeur_calculee > type_note.max_note:
+                        valeur_calculee = type_note.max_note
+                    
+                    exam_note.valeur = round(valeur_calculee, 2)
+                    exam_note.save()
+                else:
+                    # Si toutes les dépendances ne sont pas encore saisies, la note reste None/vide
+                    exam_note.valeur = None
+                    exam_note.save()
+
+    
 class ExamTypeNote(models.Model):
     pv = models.ForeignKey(PvExamen,on_delete=models.CASCADE,related_name="exam_types_notes")
 
@@ -232,6 +282,11 @@ class ExamTypeNote(models.Model):
     in_moyenne = models.BooleanField(
         default=False,
         help_text="Intervient dans le calcul de la moyenne générale"
+    )
+
+    coefficient = models.FloatField(
+        default=1.0,
+        help_text="Coefficient de pondération pour le calcul de la moyenne générale"
     )
 
     class Meta:
@@ -305,3 +360,20 @@ class ExamDecisionEtudiant(models.Model):
 
     def __str__(self):
         return f"{self.etudiant} - {self.statut}"
+
+
+class DeliberationEtudiant(models.Model):
+    session_line = models.ForeignKey(SessionExamLine, on_delete=models.CASCADE, related_name="deliberations")
+    etudiant = models.ForeignKey(Prospets, on_delete=models.CASCADE)
+    decision_jury = models.CharField(max_length=50, null=True, blank=True)
+    observation = models.CharField(max_length=50, null=True, blank=True)
+    moyenne_semestre = models.FloatField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('session_line', 'etudiant')
+
+    def __str__(self):
+        return f"Délibération {self.etudiant} - {self.session_line}"

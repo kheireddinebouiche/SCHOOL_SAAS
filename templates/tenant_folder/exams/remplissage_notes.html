@@ -897,13 +897,16 @@
                         // This requires checking the backend data
                         const noteData = dependenciesData[extractedTypeId];
                         if (noteData && noteData.in_moyenne) {
-                            // Calculate coefficient based on max_note (weight)
                             const maxNote = noteData.max_note || 20; // Default to 20 if no max_note
-
-                            // Calculate the weighted value: (note_value / max_note) * 20 * coefficient
-                            // For a weighted average, we use: (value/max) * coefficient
                             const normalizedValue = (noteValue / maxNote) * 20; // Normalize to 20 scale
-                            const coefficient = maxNote / 20; // Use max_note as coefficient (adjust as needed)
+
+                            // Calculate coefficient based on user custom coefficient, fall back to maxNote/20
+                            let coefficient = 1.0;
+                            if (noteData.coefficient !== undefined && noteData.coefficient !== null && parseFloat(noteData.coefficient) !== 0) {
+                                coefficient = parseFloat(noteData.coefficient);
+                            } else {
+                                coefficient = maxNote / 20; // Fallback to raw max_note ratio
+                            }
 
                             weightedSum += normalizedValue * coefficient;
                             totalCoefficients += coefficient;
@@ -1184,8 +1187,32 @@
             });
         }
 
+        // Function to initialize calculations for all students on page load
+        function initializeAllCalculations() {
+            const studentRows = document.querySelectorAll('tr[data-student-id]');
+            studentRows.forEach(row => {
+                const studentId = row.getAttribute('data-student-id');
+                if (studentId) {
+                    // Find all calculated inputs for this student in the row
+                    const calculatedInputs = row.querySelectorAll('input.calculated-field');
+                    calculatedInputs.forEach(input => {
+                        const name = input.name;
+                        const match = name.match(/note_(\d+)_(\d+)/);
+                        if (match) {
+                            const builtinId = match[2];
+                            calculateFromDependencies(studentId, builtinId);
+                        }
+                    });
+                    
+                    // Also recalculate the student's global UV average
+                    calculateAverage(studentId);
+                }
+            });
+        }
+
         // Call the initialization function when the modal is shown
         initializeRachAjourneStudents();
+        initializeAllCalculations();
     });
 
     // Create JavaScript array from Django template data

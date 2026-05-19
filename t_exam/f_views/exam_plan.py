@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
 from ..models import ModelBuilltins, BuiltinTypeNote, BuiltinSousNote
 from t_formations.models import Formation, Modules
@@ -75,6 +75,10 @@ def ApiLoadDataToPlan(request):
 
 @login_required(login_url="institut_app:login")
 def PageDetailsSessionExamPlan(request, pk):
+    try:
+        SessionExamLine.objects.get(id=pk)
+    except SessionExamLine.DoesNotExist:
+        raise Http404("La planification de session demandée n'existe pas.")
     context = {
         'pk' : pk,
     }
@@ -83,7 +87,14 @@ def PageDetailsSessionExamPlan(request, pk):
 @login_required(login_url="institut_app:login")
 def get_exam_planifications(request):
     session_line_id = request.GET.get("id")
-    groupe = SessionExamLine.objects.get(id = session_line_id)
+    try:
+        groupe = SessionExamLine.objects.get(id = session_line_id)
+    except SessionExamLine.DoesNotExist:
+        return JsonResponse({
+            "status": "error",
+            "message": "La ligne de session d'examen n'existe pas ou a été supprimée."
+        }, status=404)
+
 
     plans = ExamPlanification.objects.filter(exam_line__id=session_line_id).order_by('created_at').select_related('pv','module','salle')
 
@@ -238,7 +249,8 @@ def GeneratePv(request, pk):
                 max_note=builtin_type_note.max_note,
                 has_sous_notes=builtin_type_note.has_sous_notes,
                 nb_sous_notes=builtin_type_note.nb_sous_notes,
-                ordre=builtin_type_note.ordre
+                ordre=builtin_type_note.ordre,
+                coefficient=builtin_type_note.coefficient
             )
 
             # Create ExamNote records for each student for this type of note
@@ -1183,6 +1195,16 @@ def SaveExamResults(request, pk):
                 processed_data['details'].append(student_details)
                 processed_data['students_processed'] += 1
 
+            # Recalculate calculated type notes for all students on the backend to ensure consistency
+            try:
+                pv_examen.recalculer_notes_calculees()
+            except Exception as e:
+                print(f"Error during backend recalculation: {str(e)}")
+                processed_data['errors'].append({
+                    'student_id': None,
+                    'error': f"Backend recalculation failed: {str(e)}"
+                })
+
             return JsonResponse({
                 "status": "success",
                 "message": f"Résultats sauvegardés partiellement. {processed_data['notes_updated']} notes mises à jour, {processed_data['sous_notes_updated']} sous-notes mises à jour, {processed_data['sous_notes_created']} sous-notes créées. {len(processed_data['errors'])} erreurs rencontrées.",
@@ -1442,8 +1464,12 @@ def ApiLoadDeliberationPv(request):
     else:
         return JsonResponse({"status" : "error"})
 
-@login_required(login_url="insitut_app:login")
+@login_required(login_url="institut_app:login")
 def PageDeliberationResult(request, pk):
+    try:
+        SessionExam.objects.get(id=pk)
+    except SessionExam.DoesNotExist:
+        raise Http404("La délibération demandée n'existe pas.")
     context = {
         'pk' : pk
     }
@@ -1466,6 +1492,7 @@ def ApiLoadSessionExamLines(request):
                     'id': line.id,
                     'groupe_code': line.groupe.code_partenaire,
                     'groupe_label': line.groupe.nom,
+                    'groupe_type': line.groupe.specialite.label if (line.groupe and line.groupe.specialite) else 'N/A',
                     'date_creation': line.created_at.strftime("%Y-%m-%d %H:%M:%S") if line.created_at else None,
                     'session_code': session.code,
                     'session_label': session.label,
@@ -1549,7 +1576,7 @@ def delete_exam_plan(request):
     else:
         return JsonResponse({"status":"error"})
     
-@login_required(login_url="insitut_app:login")
+@login_required(login_url="institut_app:login")
 def ApiLoadFormateur(request):
     if request.method == "GET":
         liste = Formateurs.objects.all().values('id','nom','prenom')

@@ -117,9 +117,15 @@ def StudentBulletin(request, session_line_id, student_id):
         # Get the student
         student = Prospets.objects.get(id=student_id)
         
-        # Get all exam planifications for this session line
+        # Get all session lines for this group and semester to compile complete results
+        session_lines = SessionExamLine.objects.filter(
+            groupe=session_line.groupe,
+            semestre=session_line.semestre
+        )
+        
+        # Get all exam planifications for these session lines
         exam_planifications = ExamPlanification.objects.filter(
-            exam_line=session_line
+            exam_line__in=session_lines
         ).select_related('module', 'pv')
         
         # Get all PVs with related data
@@ -131,6 +137,11 @@ def StudentBulletin(request, session_line_id, student_id):
             'notes__sous_notes',
             'decisions'
         )
+        
+        # Cache NoteBloc IDs for the bulletin to avoid database hits in loops
+        bulletin_bloc_ids = set(NoteBloc.objects.filter(
+            Q(in_pv_deliberation=True) | Q(in_builltin_note=True)
+        ).values_list('id', flat=True))
         
         # Group PVs by module (like in deliberation.py)
         modules_dict = {}
@@ -147,9 +158,11 @@ def StudentBulletin(request, session_line_id, student_id):
         # We'll collect all unique note types across all PVs
         all_note_types = set()
         for pv in pvs:
-            exam_types = pv.exam_types_notes.filter(
-                bloc__in=NoteBloc.objects.filter(Q(in_pv_deliberation=True) | Q(in_builltin_note=True))
-            ).order_by('ordre')
+            exam_types = [
+                et for et in pv.exam_types_notes.all()
+                if et.bloc_id in bulletin_bloc_ids
+            ]
+            exam_types.sort(key=lambda x: x.ordre)
             for et in exam_types:
                 bloc_ordre = et.bloc.ordre if et.bloc else 0
                 bloc_label = et.bloc.label if et.bloc else ""
@@ -175,24 +188,24 @@ def StudentBulletin(request, session_line_id, student_id):
             all_decisions_for_module = []
             
             for pv in pvs_list:
-                # Get exam types notes that should appear in bulletin
-                exam_types_notes = pv.exam_types_notes.filter(
-                    bloc__in=NoteBloc.objects.filter(Q(in_pv_deliberation=True) | Q(in_builltin_note=True))
-                ).order_by('ordre')
+                # Get exam types notes that should appear in bulletin using prefetched cache
+                exam_types_notes = [
+                    etn for etn in pv.exam_types_notes.all()
+                    if etn.bloc_id in bulletin_bloc_ids
+                ]
+                exam_types_notes_set = set(exam_types_notes)
                 
-                # Get notes for this student from this PV
-                notes = pv.notes.filter(
-                    etudiant=student,
-                    type_note__in=exam_types_notes
-                ).select_related('type_note').prefetch_related('sous_notes')
+                # Get notes for this student from this PV using prefetched cache
+                notes = [
+                    n for n in pv.notes.all()
+                    if n.etudiant_id == student.id and n.type_note in exam_types_notes_set
+                ]
                 all_notes_for_module.extend(notes)
                 
-                # Get decisions for this student from this PV
-                try:
-                    decision = pv.decisions.get(etudiant=student)
+                # Get decisions for this student from this PV using prefetched cache
+                decision = next((d for d in pv.decisions.all() if d.etudiant_id == student.id), None)
+                if decision:
                     all_decisions_for_module.append(decision)
-                except ExamDecisionEtudiant.DoesNotExist:
-                    pass
             
             # Organize notes by type code
             notes_by_type = {}
@@ -234,6 +247,12 @@ def StudentBulletin(request, session_line_id, student_id):
         
         # Calculate semester average
         moyenne_semestre = round(total_points / total_coef, 2) if total_coef > 0 else 0
+
+        # Get saved deliberation decision and observation for this student in this session line
+        deliberation = DeliberationEtudiant.objects.filter(
+            session_line=session_line,
+            etudiant=student
+        ).first()
         
         context = {
             'student': student,
@@ -243,7 +262,8 @@ def StudentBulletin(request, session_line_id, student_id):
             'note_types_list': note_types_list,
             'moyenne_semestre': moyenne_semestre,
             'total_coef': total_coef,
-            'total_points': round(total_points, 2)
+            'total_points': round(total_points, 2),
+            'deliberation': deliberation,
         }
         
     except (SessionExamLine.DoesNotExist, Prospets.DoesNotExist):

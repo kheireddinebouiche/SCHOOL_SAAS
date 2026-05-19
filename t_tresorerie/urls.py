@@ -235,6 +235,7 @@ urlpatterns = [
     path('ApiModifierCategorieProduit', ApiModifierCategorieProduit, name="ApiModifierCategorieProduit"),
     path('ApiSupprimerCategorieProduit', ApiSupprimerCategorieProduit, name="ApiSupprimerCategorieProduit"),
     path('ApiGenerateInvoiceFromPayment', generate_invoice_from_payment, name="ApiGenerateInvoiceFromPayment"),
+    path('ApiGenerateConsolidatedInvoice', generate_consolidated_invoice, name="ApiGenerateConsolidatedInvoice"),
     path('ApiGetCategorieProduit/<int:pk>/', ApiGetCategorieProduit, name="ApiGetCategorieProduit"),
 
 
@@ -293,6 +294,8 @@ urlpatterns = [
     # Paramètres Financiers Généraux
     path('api/get-parametre-financier/', ApiGetParametreFinancier, name='ApiGetParametreFinancier'),
     path('api/update-parametre-financier/', ApiUpdateParametreFinancier, name='ApiUpdateParametreFinancier'),
+
+    path('api/get-prospect-payments-by-nin/', facturation.ApiGetProspectPaymentsByNin, name='ApiGetProspectPaymentsByNin'),
 
     path('suivi-des-paiements/', PageSuiviPaiements, name="PageSuiviPaiements"),
     path('ApiSuiviPaiements', ApiSuiviPaiements, name="ApiSuiviPaiements"),

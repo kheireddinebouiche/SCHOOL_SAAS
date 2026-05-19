@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from .models import *
 from .forms import *
 from django.db import transaction
@@ -356,6 +356,10 @@ def ApiPlaneExam(request):
         return JsonResponse({'status' : 'success', 'message' : 'Le groupe a été planifié'})
 
 def ExamConfiguration(request, pk):
+    try:
+        SessionExamLine.objects.get(id=pk)
+    except SessionExamLine.DoesNotExist:
+        raise Http404("La planification demandée n'existe pas.")
     context = {
         'pk' : pk,
         'tenant' : request.tenant,

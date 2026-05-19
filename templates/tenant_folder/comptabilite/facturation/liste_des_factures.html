@@ -120,6 +120,38 @@
         background-color: #3b82f6;
         color: white;
     }
+
+    /* Custom Select2 Modern Harmonization to match Glassmorphism theme */
+    .select2-container--bootstrap-5 .select2-selection {
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 0.75rem !important;
+        padding: 0.5rem 1rem !important;
+        height: auto !important;
+        background-color: #ffffff !important;
+        transition: border-color 0.2s, box-shadow 0.2s !important;
+    }
+    .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.15) !important;
+    }
+    .select2-container--bootstrap-5 .select2-selection__rendered {
+        color: #1e293b !important;
+    }
+    .select2-dropdown {
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 0.75rem !important;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important;
+        overflow: hidden !important;
+        z-index: 9999 !important;
+    }
+    .select2-results__option {
+        padding: 0.6rem 1rem !important;
+        font-size: 0.875rem !important;
+    }
+    .select2-results__option--highlighted {
+        background-color: #3b82f6 !important;
+        color: white !important;
+    }
 </style>
 
 <div class="main-content">
@@ -210,40 +242,110 @@
         </div>
       </div>
 
-      <!-- Entity Tabs -->
-      <div class="mb-4">
-        <ul class="nav nav-pills-premium" id="entityTabs" role="tablist">
-          <li class="nav-item">
-            <a class="nav-link active" data-bs-toggle="tab" href="#all-entities" role="tab" data-entity-id="all">
-              Toutes les entités
-            </a>
-          </li>
-          <!-- Dynamic Tabs Here -->
-        </ul>
-      </div>
-
-            <!-- Main Table Card -->
-      <div class="card glass-card border-0">
-        <div class="card-header bg-transparent border-0 p-4 pb-0">
-          <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <!-- Control Center Card -->
+      <div class="card glass-card border-0 mb-4 p-4">
+        <!-- Upper Control Row -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+          <div class="d-flex align-items-center gap-4">
             <div class="d-flex align-items-center">
-              <i class="ri-filter-2-line text-info me-2 fs-4"></i>
-              <h5 class="card-title mb-0 fw-bold">Registre des Factures</h5>
+              <i class="ri-file-list-3-line text-primary me-2 fs-4"></i>
+              <h5 class="mb-0 fw-bold">Registre des Factures</h5>
+            </div>
+            <!-- Entity Tabs -->
+            <ul class="nav nav-pills-premium mb-0" id="entityTabs" role="tablist">
+              <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#all-entities" role="tab" data-entity-id="all">
+                  Toutes les entités
+                </a>
+              </li>
+              <!-- Dynamic Tabs Here -->
+            </ul>
+          </div>
+          <button type="button" id="btnNouvelleFacture" class="btn btn-primary btn-rounded shadow-sm px-4" style="height: 42px;">
+            <i class="ri-add-line me-1 fw-bold"></i> Nouvelle Facture
+          </button>
+        </div>
+
+        <div class="border-top pt-4">
+          <div class="row g-3">
+            <!-- Search bar -->
+            <div class="col-md-3">
+              <label class="form-label small fw-bold text-muted text-uppercase mb-1">Recherche</label>
+              <div class="search-input-group">
+                <i class="ri-search-2-line text-muted"></i>
+                <input type="text" class="form-control btn-rounded" id="table-filter" placeholder="Rechercher..." style="height: 42px;">
+              </div>
             </div>
 
-            <div class="d-flex align-items-center gap-3">
-              <div class="search-input-group" style="min-width: 250px;">
-                <i class="ri-search-2-line text-muted"></i>
-                <input type="text" class="form-control" id="table-filter" placeholder="Rechercher...">
+            <!-- Statut -->
+            <div class="col-md-2">
+              <label class="form-label small fw-bold text-muted text-uppercase mb-1">Statut</label>
+              <select class="form-select btn-rounded" id="filter-status" style="height: 42px;">
+                <option value="all">Tous les statuts</option>
+                <option value="brouillon">Brouillon</option>
+                <option value="valide">Validée</option>
+                <option value="paye">Payée</option>
+                <option value="annule">Annulée</option>
+              </select>
+            </div>
+
+            <!-- Période -->
+            <div class="col-md-2">
+              <label class="form-label small fw-bold text-muted text-uppercase mb-1">Période</label>
+              <select class="form-select btn-rounded" id="filter-period" style="height: 42px;">
+                <option value="all">Toutes les dates</option>
+                <option value="today">Aujourd'hui</option>
+                <option value="month">Ce mois-ci</option>
+                <option value="year">Cette année</option>
+                <option value="custom">Plage personnalisée</option>
+              </select>
+            </div>
+
+            <!-- Dates personnalisées (hidden by default) -->
+            <div class="col-md-5 d-none" id="custom-date-inputs">
+              <label class="form-label small fw-bold text-muted text-uppercase mb-1">Plage de dates</label>
+              <div class="d-flex gap-2 align-items-center">
+                <input type="date" class="form-control btn-rounded" id="filter-start-date" style="height: 42px;">
+                <span class="text-muted small">au</span>
+                <input type="date" class="form-control btn-rounded" id="filter-end-date" style="height: 42px;">
               </div>
-              <button type="button" class="btn btn-primary btn-rounded shadow-sm px-4">
-                <i class="ri-add-line me-1 fw-bold"></i> Nouvelle Facture
+            </div>
+
+            <!-- Mode de règlement -->
+            <div class="col-md-2" id="payment-mode-col">
+              <label class="form-label small fw-bold text-muted text-uppercase mb-1">Mode de règlement</label>
+              <select class="form-select btn-rounded" id="filter-payment-mode" style="height: 42px;">
+                <option value="all">Tous les modes</option>
+                <option value="virement">Virement Bancaire</option>
+                <option value="cheque">Chèque</option>
+                <option value="espece">Espèces</option>
+                <option value="autre">Autre</option>
+              </select>
+            </div>
+
+            <!-- Montant range -->
+            <div class="col-md-2" id="amount-col">
+              <label class="form-label small fw-bold text-muted text-uppercase mb-1">Montant TTC (DA)</label>
+              <div class="d-flex gap-2 align-items-center">
+                <input type="number" class="form-control btn-rounded" id="filter-min-amount" placeholder="Min" style="height: 42px;">
+                <span class="text-muted small">-</span>
+                <input type="number" class="form-control btn-rounded" id="filter-max-amount" placeholder="Max" style="height: 42px;">
+              </div>
+            </div>
+
+            <!-- Reset Button -->
+            <div class="col-md-1 d-flex align-items-end" id="reset-btn-col">
+              <button type="button" class="btn btn-soft-danger btn-rounded w-100 d-flex align-items-center justify-content-center" id="btnResetFilters" style="height: 42px;" title="Réinitialiser tous les filtres">
+                <i class="ri-refresh-line fs-5"></i>
               </button>
             </div>
           </div>
         </div>
+      </div>
 
-                        <div class="card-body p-0">
+      <!-- Main Table Card -->
+      <div class="card glass-card border-0">
+        <div class="card-body p-0">
                             <div class="table-responsive">
                                 <table class="table table-hover align-middle mb-0">
                                     <thead>
@@ -367,16 +469,90 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function filterAndDisplay() {
         let filtered = allFactures;
+        
+        // 1. Filter by Entity (currentEntity)
         if (currentEntity !== 'all') {
-            filtered = allFactures.filter(f => f.entreprise_id == currentEntity);
+            filtered = filtered.filter(f => f.entreprise_id == currentEntity);
         }
         
+        // 2. Filter by Search Term (number or client name)
         const searchTerm = document.getElementById('table-filter').value.toLowerCase();
         if (searchTerm) {
             filtered = filtered.filter(f => 
                 f.numero.toLowerCase().includes(searchTerm) || 
                 f.client.toLowerCase().includes(searchTerm)
             );
+        }
+
+        // 3. Filter by Statut
+        const filterStatus = document.getElementById('filter-status').value;
+        if (filterStatus !== 'all') {
+            filtered = filtered.filter(f => f.etat === filterStatus);
+        }
+
+        // 4. Filter by Période (Date Range)
+        const filterPeriod = document.getElementById('filter-period').value;
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+        if (filterPeriod === 'today') {
+            filtered = filtered.filter(f => {
+                if (!f.date) return false;
+                const fDate = new Date(f.date);
+                return fDate >= startOfToday;
+            });
+        } else if (filterPeriod === 'month') {
+            filtered = filtered.filter(f => {
+                if (!f.date) return false;
+                const fDate = new Date(f.date);
+                return fDate >= startOfMonth;
+            });
+        } else if (filterPeriod === 'year') {
+            filtered = filtered.filter(f => {
+                if (!f.date) return false;
+                const fDate = new Date(f.date);
+                return fDate >= startOfYear;
+            });
+        } else if (filterPeriod === 'custom') {
+            const startDateStr = document.getElementById('filter-start-date').value;
+            const endDateStr = document.getElementById('filter-end-date').value;
+            if (startDateStr) {
+                const startDate = new Date(startDateStr);
+                filtered = filtered.filter(f => {
+                    if (!f.date) return false;
+                    const fDate = new Date(f.date);
+                    return fDate >= startDate;
+                });
+            }
+            if (endDateStr) {
+                const endDate = new Date(endDateStr);
+                endDate.setHours(23, 59, 59, 999);
+                filtered = filtered.filter(f => {
+                    if (!f.date) return false;
+                    const fDate = new Date(f.date);
+                    return fDate <= endDate;
+                });
+            }
+        }
+
+        // 5. Filter by Mode de Paiement
+        const filterPaymentMode = document.getElementById('filter-payment-mode').value;
+        if (filterPaymentMode !== 'all') {
+            filtered = filtered.filter(f => f.mode_paiement === filterPaymentMode);
+        }
+
+        // 6. Filter by Montant range (TTC)
+        const minAmountStr = document.getElementById('filter-min-amount').value;
+        const maxAmountStr = document.getElementById('filter-max-amount').value;
+        if (minAmountStr !== '') {
+            const minAmt = parseFloat(minAmountStr);
+            filtered = filtered.filter(f => f.montant >= minAmt);
+        }
+        if (maxAmountStr !== '') {
+            const maxAmt = parseFloat(maxAmountStr);
+            filtered = filtered.filter(f => f.montant <= maxAmt);
         }
 
         displayFacturesInTable(filtered);
@@ -468,7 +644,489 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('table-filter').addEventListener('input', filterAndDisplay);
 
+    // Advanced filters dynamic listeners
+    document.getElementById('filter-status').addEventListener('change', filterAndDisplay);
+    document.getElementById('filter-period').addEventListener('change', function() {
+        const period = this.value;
+        const customDateDiv = document.getElementById('custom-date-inputs');
+        const paymentModeCol = document.getElementById('payment-mode-col');
+        
+        if (period === 'custom') {
+            customDateDiv.classList.remove('d-none');
+            paymentModeCol.classList.replace('col-md-2', 'col-md-4');
+            document.getElementById('amount-col').classList.replace('col-md-2', 'col-md-4');
+            document.getElementById('reset-btn-col').classList.replace('col-md-1', 'col-md-4');
+        } else {
+            customDateDiv.classList.add('d-none');
+            paymentModeCol.classList.replace('col-md-4', 'col-md-2');
+            document.getElementById('amount-col').classList.replace('col-md-4', 'col-md-2');
+            document.getElementById('reset-btn-col').classList.replace('col-md-4', 'col-md-1');
+            document.getElementById('filter-start-date').value = '';
+            document.getElementById('filter-end-date').value = '';
+        }
+        filterAndDisplay();
+    });
+    document.getElementById('filter-start-date').addEventListener('input', filterAndDisplay);
+    document.getElementById('filter-end-date').addEventListener('input', filterAndDisplay);
+    document.getElementById('filter-payment-mode').addEventListener('change', filterAndDisplay);
+    document.getElementById('filter-min-amount').addEventListener('input', filterAndDisplay);
+    document.getElementById('filter-max-amount').addEventListener('input', filterAndDisplay);
+
+    document.getElementById('btnResetFilters').addEventListener('click', function() {
+        document.getElementById('filter-status').value = 'all';
+        document.getElementById('filter-period').value = 'all';
+        document.getElementById('filter-payment-mode').value = 'all';
+        document.getElementById('filter-min-amount').value = '';
+        document.getElementById('filter-max-amount').value = '';
+        document.getElementById('filter-start-date').value = '';
+        document.getElementById('filter-end-date').value = '';
+        
+        const customDateDiv = document.getElementById('custom-date-inputs');
+        const paymentModeCol = document.getElementById('payment-mode-col');
+        customDateDiv.classList.add('d-none');
+        
+        paymentModeCol.className = 'col-md-2';
+        document.getElementById('amount-col').className = 'col-md-2';
+        document.getElementById('reset-btn-col').className = 'col-md-1 d-flex align-items-end';
+
+        filterAndDisplay();
+    });
+
     loadFactures();
+});
+</script>
+
+<!-- Select2 CSS & JS CDN -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<!-- Modal Nouvelle Facture -->
+<div class="modal fade" id="modalNouvelleFacture" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(15px);">
+            <div class="modal-header border-0 py-3 px-4 d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #3b82f6 0%, #0891b2 100%) !important; border-top-left-radius: 1.25rem !important; border-top-right-radius: 1.25rem !important;">
+                <div class="d-flex align-items-center">
+                    <div class="icon-container-premium me-3 d-flex align-items-center justify-content-center" style="width: 40px !important; height: 40px !important; border-radius: 10px !important; background: rgba(255, 255, 255, 0.25) !important;">
+                        <i class="ri-file-add-line fs-4" style="color: #ffffff !important;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" style="color: #ffffff !important;">Créer une Nouvelle Facture</h5>
+                        <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.8) !important;">Recherche de paiements par NIN à travers toutes les promotions</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(1) grayscale(1) brightness(2) !important;"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Prospect Selection Row -->
+                <div class="row mb-4">
+                    <div class="col-md-8 mx-auto">
+                        <div class="card border border-light shadow-sm p-4" style="border-radius: 1rem; background: rgba(248, 250, 252, 0.7); border: 1px solid rgba(226, 232, 240, 0.8);">
+                            <label class="form-label fw-bold text-dark mb-2 fs-14">Sélectionner un Prospect (Étudiant) :</label>
+                            <div class="d-flex gap-2 align-items-center">
+                                <div class="flex-grow-1">
+                                    <select id="selectProspectFacture" class="form-select" style="width: 100%;">
+                                        <option value="">-- Rechercher un étudiant par nom, prénom ou NIN --</option>
+                                    </select>
+                                </div>
+                                <button type="button" id="btnRefreshProspects" class="btn btn-light btn-rounded shadow-sm px-3" title="Actualiser la liste">
+                                    <i class="ri-refresh-line"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Loading Indicator -->
+                <div id="loaderProspectPayments" class="text-center py-5 d-none">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Chargement des paiements...</span>
+                    </div>
+                    <p class="text-muted mt-3 fw-medium">Recherche et consolidation des paiements par NIN...</p>
+                </div>
+
+                <!-- Prospect Payments Info & Content (hidden by default) -->
+                <div id="contentProspectPayments" class="d-none">
+                    <!-- Summary Card -->
+                    <div class="card border-0 shadow-sm mb-4 p-4" style="border-radius: 1rem; background: rgba(248, 250, 252, 0.85); border: 1px solid rgba(226, 232, 240, 0.6) !important;">
+                        <div class="row align-items-center">
+                            <div class="col-md-7">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-md bg-soft-primary text-primary rounded-circle d-flex align-items-center justify-content-center me-3 fw-bold fs-4" style="width: 60px; height: 60px;">
+                                        <span id="summaryInitials">--</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="fw-bold text-dark mb-1" id="summaryFullName">--</h4>
+                                        <div class="d-flex flex-wrap gap-2 fs-13">
+                                            <span class="text-muted"><i class="ri-fingerprint-line me-1"></i>NIN : <strong class="text-dark" id="summaryNIN">--</strong></span>
+                                            <span class="text-muted"><i class="ri-phone-line me-1"></i>Tél : <strong class="text-dark" id="summaryPhone">--</strong></span>
+                                            <span class="text-muted"><i class="ri-mail-line me-1"></i>Email : <strong class="text-dark" id="summaryEmail">--</strong></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-5 text-md-end mt-3 mt-md-0">
+                                <div class="p-3 bg-white rounded-3 shadow-sm d-inline-block border border-light">
+                                    <span class="text-muted small uppercase fw-bold d-block mb-1">Montant consolidé payé</span>
+                                    <h3 class="fw-bold text-success mb-0" id="summaryTotalPaid">0.00 DA</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Consolidated Invoicing Control Box -->
+                    <div id="consolidationControlBox" class="card border-0 shadow-sm mb-4 p-4 d-none" style="border-radius: 1rem; background: linear-gradient(135deg, rgba(59, 130, 246, 0.04) 0%, rgba(8, 145, 178, 0.04) 100%); border: 1px solid rgba(59, 130, 246, 0.15) !important;">
+                        <div class="row align-items-center">
+                            <div class="col-lg-6 col-md-12">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-container-premium bg-primary bg-opacity-10 text-primary me-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 12px;">
+                                        <i class="ri-refund-2-line fs-3"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-1">Consolidation Globale des Règlements</h6>
+                                        <p class="text-muted small mb-0">Vous pouvez regrouper <strong class="text-primary" id="unpaidPaymentsCount">0</strong> paiements non facturés sur une seule facture.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 mt-3 mt-lg-0">
+                                <form id="formConsolidatedInvoice" class="d-flex flex-wrap align-items-center justify-content-lg-end gap-3">
+                                    <!-- TVA Select -->
+                                    <div class="d-flex align-items-center gap-2">
+                                        <label class="form-label small fw-bold text-muted mb-0">TVA :</label>
+                                        <select class="form-select form-select-sm select-tva-consolidated shadow-sm" style="width: 85px; height: 38px;" required>
+                                            <!-- TVA Options dynamically loaded -->
+                                        </select>
+                                        <div class="form-check form-switch small mb-0 ms-1" style="min-height: auto;">
+                                            <input class="form-check-input check-show-tva-consolidated" type="checkbox" checked title="Afficher la TVA">
+                                        </div>
+                                    </div>
+                                    <!-- Consolidation Mode -->
+                                    <div class="d-flex align-items-center gap-2">
+                                        <label class="form-label small fw-bold text-muted mb-0">Mode :</label>
+                                        <select class="form-select form-select-sm shadow-sm" id="selectConsolidationMode" style="width: 185px; height: 38px;" required>
+                                            <option value="multi_line">1 Ligne par Règlement</option>
+                                            <option value="single_line">1 Ligne unique consolidée</option>
+                                        </select>
+                                    </div>
+                                    <!-- Submit Button -->
+                                    <button type="submit" class="btn btn-primary btn-rounded shadow-sm px-4 d-flex align-items-center justify-content-center" style="height: 38px;">
+                                        <i class="ri-checkbox-circle-line me-2"></i> Facturer le tout
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payments Table -->
+                    <h5 class="fw-bold text-dark mb-3"><i class="ri-bank-card-line text-info me-2"></i>Historique des règlements (Toutes promotions confondues)</h5>
+                    <div class="table-responsive shadow-sm border border-light rounded-3" style="border-radius: 0.75rem;">
+                        <table class="table table-hover align-middle mb-0 bg-white">
+                            <thead>
+                                <tr>
+                                    <th>N° Règlement</th>
+                                    <th>Date</th>
+                                    <th>Promo / Formation</th>
+                                    <th>Entité</th>
+                                    <th class="text-end">Montant payé</th>
+                                    <th>Mode</th>
+                                    <th class="text-center">Statut Facturation</th>
+                                    <th class="text-center" style="width: 300px;">Générer Facture</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bodyProspectPayments">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Empty State (No payments found or no prospect selected) -->
+                <div id="emptyProspectPayments" class="text-center py-5">
+                    <i class="ri-user-search-line text-muted opacity-25" style="font-size: 4rem;"></i>
+                    <h5 class="fw-semibold text-muted mt-3">Aucun prospect sélectionné</h5>
+                    <p class="text-muted small">Veuillez sélectionner un étudiant ci-dessus pour consolider son historique de paiements.</p>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-4 bg-light bg-opacity-50">
+                <button type="button" class="btn btn-secondary btn-rounded px-4" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    let select2Initialized = false;
+
+    // Expose loadFactures globally so we can reload the list
+    const originalLoadFactures = window.loadFactures;
+    
+    // Trigger modal show on Nouvelle Facture button click
+    $('#btnNouvelleFacture').on('click', function() {
+        const modalEl = document.getElementById('modalNouvelleFacture');
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+        
+        if (!select2Initialized) {
+            $('#selectProspectFacture').select2({
+                theme: 'bootstrap-5',
+                dropdownParent: $('#modalNouvelleFacture'),
+                placeholder: 'Rechercher un étudiant...'
+            });
+            select2Initialized = true;
+        }
+        
+        loadProspectsDropdown();
+    });
+
+    // Handle refresh button
+    $('#btnRefreshProspects').on('click', function() {
+        const btn = $(this);
+        btn.prop('disabled', true).find('i').addClass('ri-spin');
+        loadProspectsDropdown();
+        setTimeout(() => {
+            btn.prop('disabled', false).find('i').removeClass('ri-spin');
+        }, 800);
+    });
+
+    function loadProspectsDropdown() {
+        fetch("{% url 't_tresorerie:api_liste_clients' %}")
+            .then(response => response.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    const select = $('#selectProspectFacture');
+                    select.empty().append('<option value="">-- Rechercher un étudiant par nom, prénom --</option>');
+                    
+                    data.sort((a, b) => a.nom.localeCompare(b.nom));
+                    
+                    data.forEach(p => {
+                        const fullName = `${p.nom} ${p.prenom || ''}`.trim();
+                        const label = `${fullName} (${p.type_prospect || 'Particulier'})`;
+                        select.append(new Option(label, p.id));
+                    });
+                    
+                    select.trigger('change');
+                }
+            })
+            .catch(err => {
+                console.error("Erreur chargement prospects:", err);
+                alertify.error("Erreur lors de la récupération des prospects.");
+            });
+    }
+
+    // Handle prospect selection change
+    $('#selectProspectFacture').on('change', function() {
+        const prospectId = $(this).val();
+        if (!prospectId) {
+            $('#contentProspectPayments').addClass('d-none');
+            $('#emptyProspectPayments').removeClass('d-none');
+            return;
+        }
+        
+        $('#emptyProspectPayments').addClass('d-none');
+        $('#contentProspectPayments').addClass('d-none');
+        $('#loaderProspectPayments').removeClass('d-none');
+        
+        fetch(`/comptabilite/tresorerie/api/get-prospect-payments-by-nin/?prospect_id=${prospectId}`)
+            .then(response => response.json())
+            .then(res => {
+                $('#loaderProspectPayments').addClass('d-none');
+                if (res.status === 'success') {
+                    // Summary Info
+                    const pInfo = res.prospect_info;
+                    const initials = `${pInfo.nom.charAt(0)}${pInfo.prenom ? pInfo.prenom.charAt(0) : ''}`.toUpperCase();
+                    $('#summaryInitials').text(initials);
+                    $('#summaryFullName').text(`${pInfo.nom} ${pInfo.prenom}`);
+                    $('#summaryNIN').text(pInfo.nin || 'Non renseigné');
+                    $('#summaryPhone').text(pInfo.telephone || 'Non renseigné');
+                    $('#summaryEmail').text(pInfo.email || 'Non renseigné');
+                    $('#summaryTotalPaid').text(`${res.total_paid.toLocaleString('fr-FR', {minimumFractionDigits: 2})} DA`);
+                    
+                    // Show or hide global consolidation control banner
+                    const unpaidPayments = res.payments.filter(p => !p.has_invoice);
+                    const unpaidCount = unpaidPayments.length;
+                    
+                    if (unpaidCount >= 2) {
+                        $('#unpaidPaymentsCount').text(unpaidCount);
+                        $('#consolidationControlBox').removeClass('d-none');
+                        
+                        // Populate TVA select
+                        const tvaSelect = $('.select-tva-consolidated');
+                        tvaSelect.empty();
+                        res.tvas.forEach(t => {
+                            tvaSelect.append(`<option value="${t.valeur}">${t.valeur}%</option>`);
+                        });
+                        
+                        // Store the payment IDs on the form
+                        const unpaidIds = unpaidPayments.map(p => p.id);
+                        $('#formConsolidatedInvoice').attr('data-payment-ids', unpaidIds.join(','));
+                    } else {
+                        $('#consolidationControlBox').addClass('d-none');
+                    }
+                    
+                    // Payments list
+                    const tbody = $('#bodyProspectPayments');
+                    tbody.empty();
+                    
+                    if (res.payments.length === 0) {
+                        tbody.append(`<tr><td colspan="8" class="text-center py-5 text-muted">
+                                         <i class="ri-information-line fs-2 d-block mb-2 opacity-50"></i>
+                                         Aucun paiement enregistré pour cet étudiant.
+                                     </td></tr>`);
+                    } else {
+                        res.payments.forEach(p => {
+                            let statusBadge = '';
+                            let actionForm = '';
+                            
+                            if (p.has_invoice) {
+                                statusBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-1.5 px-3"><i class="ri-checkbox-circle-line me-1"></i>Facturé (#${p.num_facture})</span>`;
+                                actionForm = `<a href="/comptabilite/tresorerie/details-facture/${p.num_facture}/" class="btn btn-sm btn-info btn-rounded w-100 py-1.5"><i class="ri-eye-line me-1"></i>Voir la facture</a>`;
+                            } else {
+                                statusBadge = `<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 py-1.5 px-3"><i class="ri-time-line me-1"></i>Non facturé</span>`;
+                                
+                                let tvaOptions = '';
+                                res.tvas.forEach(t => {
+                                    tvaOptions += `<option value="${t.valeur}">${t.valeur}%</option>`;
+                                });
+                                
+                                actionForm = `
+                                    <form class="form-generate-invoice d-flex align-items-center gap-2" data-payment-id="${p.id}">
+                                        <select class="form-select form-select-sm select-tva shadow-sm" style="width: 85px;" required>
+                                            ${tvaOptions}
+                                        </select>
+                                        <div class="form-check form-switch small mb-0 me-1">
+                                            <input class="form-check-input check-show-tva" type="checkbox" checked title="Afficher la TVA sur la facture">
+                                        </div>
+                                        <button type="submit" class="btn btn-sm btn-primary btn-rounded px-3 py-1.5 whitespace-nowrap shadow-sm">
+                                            <i class="ri-add-circle-line me-1"></i>Générer
+                                        </button>
+                                    </form>
+                                `;
+                            }
+                            
+                            tbody.append(`
+                                <tr>
+                                    <td class="fw-semibold text-dark">${p.num}</td>
+                                    <td>${p.date}</td>
+                                    <td><span class="badge bg-light text-dark border py-1.5 px-2.5">${p.promo_label}</span></td>
+                                    <td><span class="text-muted small">${p.entite_name}</span></td>
+                                    <td class="text-end fw-bold text-dark">${p.montant.toLocaleString('fr-FR', {minimumFractionDigits: 2})} DA</td>
+                                    <td><span class="badge bg-light text-muted border">${p.mode}</span></td>
+                                    <td class="text-center">${statusBadge}</td>
+                                    <td class="text-center">${actionForm}</td>
+                                 </tr>
+                            `);
+                        });
+                        
+                        // Bind dynamic forms
+                        $('.form-generate-invoice').on('submit', function(e) {
+                            e.preventDefault();
+                            const form = $(this);
+                            const paymentId = form.attr('data-payment-id');
+                            const tvaVal = form.find('.select-tva').val();
+                            const showTva = form.find('.check-show-tva').is(':checked');
+                            const btn = form.find('button[type="submit"]');
+                            
+                            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>...');
+                            
+                            const formData = new FormData();
+                            formData.append('paiement_id', paymentId);
+                            formData.append('tva_percent', tvaVal);
+                            formData.append('show_tva', showTva);
+                            
+                            fetch("{% url 't_tresorerie:ApiGenerateInvoiceFromPayment' %}", {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': '{{ csrf_token }}'
+                                },
+                                body: formData
+                            })
+                            .then(response => response.json())
+                            .then(res => {
+                                if (res.status === 'success') {
+                                    alertify.success(`Facture #${res.num_facture} générée avec succès !`);
+                                    
+                                    const parentTd = form.closest('td');
+                                    const statusTd = parentTd.prev('td');
+                                    
+                                    statusTd.html(`<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-1.5 px-3"><i class="ri-checkbox-circle-line me-1"></i>Facturé (#${res.num_facture})</span>`);
+                                    parentTd.html(`<a href="/comptabilite/tresorerie/details-facture/${res.num_facture}/" class="btn btn-sm btn-info btn-rounded w-100 py-1.5"><i class="ri-eye-line me-1"></i>Voir la facture</a>`);
+                                    
+                                    if (typeof window.location.reload === 'function') {
+                                        setTimeout(() => {
+                                            location.reload();
+                                        }, 1000);
+                                    }
+                                } else {
+                                    alertify.error(res.message || "Impossible de générer la facture.");
+                                    btn.prop('disabled', false).html('<i class="ri-add-circle-line me-1"></i>Générer');
+                                }
+                            })
+                            .catch(err => {
+                                console.error("Erreur réseau:", err);
+                                alertify.error("Erreur de connexion.");
+                                btn.prop('disabled', false).html('<i class="ri-add-circle-line me-1"></i>Générer');
+                            });
+                        });
+
+                        // Bind global consolidation form submit
+                        $('#formConsolidatedInvoice').off('submit').on('submit', function(e) {
+                            e.preventDefault();
+                            const form = $(this);
+                            const paymentIds = form.attr('data-payment-ids');
+                            const tvaVal = form.find('.select-tva-consolidated').val();
+                            const showTva = form.find('.check-show-tva-consolidated').is(':checked');
+                            const consolidationMode = form.find('#selectConsolidationMode').val();
+                            const btn = form.find('button[type="submit"]');
+                            
+                            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Facturation...');
+                            
+                            const formData = new FormData();
+                            formData.append('prospect_id', prospectId);
+                            formData.append('payment_ids', paymentIds);
+                            formData.append('tva_percent', tvaVal);
+                            formData.append('show_tva', showTva);
+                            formData.append('consolidation_mode', consolidationMode);
+                            
+                            fetch("{% url 't_tresorerie:ApiGenerateConsolidatedInvoice' %}", {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': '{{ csrf_token }}'
+                                },
+                                body: formData
+                            })
+                            .then(response => response.json())
+                            .then(res => {
+                                if (res.status === 'success') {
+                                    alertify.success(`Facture consolidée #${res.num_facture} générée avec succès !`);
+                                    
+                                    setTimeout(() => {
+                                        location.reload();
+                                    }, 1200);
+                                } else {
+                                    alertify.error(res.message || "Impossible de générer la facture consolidée.");
+                                    btn.prop('disabled', false).html('<i class="ri-checkbox-circle-line me-2"></i> Facturer le tout');
+                                }
+                            })
+                            .catch(err => {
+                                console.error("Erreur réseau:", err);
+                                alertify.error("Erreur de connexion.");
+                                btn.prop('disabled', false).html('<i class="ri-checkbox-circle-line me-2"></i> Facturer le tout');
+                            });
+                        });
+                    }
+                    
+                    $('#contentProspectPayments').removeClass('d-none');
+                } else {
+                    alertify.error(res.message || "Erreur lors de la récupération des paiements.");
+                }
+            })
+            .catch(err => {
+                $('#loaderProspectPayments').addClass('d-none');
+                console.error("Erreur réseau:", err);
+                alertify.error("Erreur de connexion.");
+            });
+    });
 });
 </script>
 {% endblock content %}

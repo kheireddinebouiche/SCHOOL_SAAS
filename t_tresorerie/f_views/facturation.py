@@ -40,6 +40,7 @@ def ApiListeDesFactures(request):
                     'montant': float(f.total_ttc()) if hasattr(f, 'total_ttc') else 0.0,
                     'timbre': float(f.get_timbre()),
                     'etat': f.etat,
+                    'mode_paiement': f.mode_paiement,
                     'created_at': f.created_at.strftime("%Y-%m-%d") if hasattr(f, 'created_at') else "",
                     'entreprise_id': ent_id,
                     'entreprise_name': ent_name
@@ -98,3 +99,61 @@ def DetailsFactureTresorerie(request, pk):
         "tva_breakdown": sorted_tva
     }
     return render(request, 'tenant_folder/comptabilite/facturation/details_facture.html', context)
+
+
+@login_required(login_url="institut_app:login")
+def ApiGetProspectPaymentsByNin(request):
+    if request.method == "GET":
+        try:
+            prospect_id = request.GET.get('prospect_id')
+            if not prospect_id:
+                return JsonResponse({'status': 'error', 'message': 'ID prospect manquant'})
+                
+            try:
+                prospect = Prospets.objects.get(id=prospect_id)
+            except Prospets.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Prospect introuvable'})
+                
+            if prospect.nin:
+                prospects = Prospets.objects.filter(nin=prospect.nin)
+            else:
+                prospects = Prospets.objects.filter(id=prospect.id)
+                
+            payments = Paiements.objects.filter(prospect__in=prospects).select_related('prospect', 'promo', 'facture', 'entite').order_by('-date_paiement')
+            
+            total_paid = payments.aggregate(total=Sum('montant_paye'))['total'] or Decimal('0.00')
+            
+            tvas = [{'id': t.id, 'valeur': float(t.valeur)} for t in TvaConseil.objects.all().order_by('valeur')]
+            
+            payments_list = []
+            for p in payments:
+                payments_list.append({
+                    'id': p.id,
+                    'num': p.num or f"PAI-{p.id}",
+                    'date': p.date_paiement.strftime("%Y-%m-%d") if p.date_paiement else "-",
+                    'montant': float(p.montant_paye) if p.montant_paye else 0.0,
+                    'mode': p.get_mode_paiement_display() if p.mode_paiement else "Autre",
+                    'promo_label': p.promo.label if p.promo else (p.prospect.specialite_obtenu or "Inconnue"),
+                    'label': p.paiement_label or p.observation or "Règlement",
+                    'has_invoice': p.facture is not None,
+                    'num_facture': p.facture.num_facture if p.facture else None,
+                    'entite_name': p.entite.designation if p.entite else "Sans Entité",
+                    'entite_id': p.entite.id if p.entite else None,
+                })
+                
+            return JsonResponse({
+                'status': 'success',
+                'prospect_info': {
+                    'id': prospect.id,
+                    'nom': prospect.nom,
+                    'prenom': prospect.prenom or '',
+                    'nin': prospect.nin or 'Non renseigné',
+                    'telephone': prospect.telephone or 'Non renseigné',
+                    'email': prospect.email or 'Non renseigné',
+                },
+                'total_paid': float(total_paid),
+                'payments': payments_list,
+                'tvas': tvas
+            })
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
