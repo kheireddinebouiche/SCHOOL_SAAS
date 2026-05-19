@@ -131,6 +131,11 @@
                     <h5 class="mb-0 fw-bold text-dark">Détails de la Facture (Comptabilité)</h5>
                 </div>
                 <div class="col-auto d-flex gap-2">
+                    {% if facture.etat == 'brouillon' %}
+                    <button type="button" class="btn btn-success px-4 shadow btn-valider-facture" data-bs-toggle="modal" data-bs-target="#validateInvoiceModal">
+                        <i class="ri-checkbox-circle-line me-2"></i> Valider la facture
+                    </button>
+                    {% endif %}
                     <a href="{% url 't_conseil:DownloadFacturePDF' facture.num_facture %}" class="btn btn-primary px-4 shadow">
                         <i class="ri-file-pdf-line me-2"></i> Télécharger PDF
                     </a>
@@ -156,7 +161,7 @@
                                 {% else %}
                                     <h2 class="text-white fw-bold mb-3">{{ tenant.nom|default:"SALDAE" }}</h2>
                                 {% endif %}
-                                <div class="badge bg-white text-success px-3 py-2 rounded-pill fw-bold">
+                                <div class="badge bg-white {% if facture.etat == 'brouillon' %}text-warning{% elif facture.etat == 'paye' %}text-success{% else %}text-secondary{% endif %} px-3 py-2 rounded-pill fw-bold">
                                     {{ facture.get_etat_display|upper }}
                                 </div>
                             </div>
@@ -278,6 +283,45 @@
                                 </div>
                             </div>
 
+                            {% if paiements_lies %}
+                            <!-- Linked Payments Section -->
+                            <div class="mt-5 pt-4 border-top border-light">
+                                <h5 class="fw-bold text-dark mb-3 fs-15">
+                                    <i class="ri-bank-card-line text-success me-2 align-middle"></i> Règlements associés à cette facture
+                                </h5>
+                                <div class="table-responsive border border-light rounded-3 bg-light bg-opacity-30">
+                                    <table class="table table-hover align-middle mb-0" style="font-size: 13px;">
+                                        <thead>
+                                            <tr style="background: #f8fafb; border-bottom: 2px solid #eff2f7;">
+                                                <th style="font-weight: 800; text-transform: uppercase; color: var(--text-muted); font-size: 11px; padding: 12px 15px;">N° Règlement</th>
+                                                <th style="font-weight: 800; text-transform: uppercase; color: var(--text-muted); font-size: 11px; padding: 12px 15px;">Date</th>
+                                                <th style="font-weight: 800; text-transform: uppercase; color: var(--text-muted); font-size: 11px; padding: 12px 15px;">Mode de Paiement</th>
+                                                <th style="font-weight: 800; text-transform: uppercase; color: var(--text-muted); font-size: 11px; padding: 12px 15px;">Promo / Formation</th>
+                                                <th class="text-end" style="font-weight: 800; text-transform: uppercase; color: var(--text-muted); font-size: 11px; padding: 12px 15px;">Montant payé</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for p in paiements_lies %}
+                                            <tr>
+                                                <td class="fw-bold text-dark" style="padding: 12px 15px;">{{ p.num|default:"-" }}</td>
+                                                <td class="text-muted" style="padding: 12px 15px;">{{ p.date_paiement|date:"d/m/Y" }}</td>
+                                                <td style="padding: 12px 15px;">
+                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-10 py-1 px-2.5 rounded-pill">{{ p.get_mode_paiement_display }}</span>
+                                                </td>
+                                                <td style="padding: 12px 15px;">
+                                                    <span class="badge bg-light text-dark border">{{ p.promo.label|default:p.prospect.specialite_obtenu|default:"Formation" }}</span>
+                                                </td>
+                                                <td class="text-end fw-bold text-success" style="padding: 12px 15px;">
+                                                    {{ p.montant_paye|floatformat:2 }} DA
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            {% endif %}
+
                             <!-- Footer -->
                             <div class="mt-5 pt-5 text-center border-top border-light">
                                 <p class="mb-1 fw-bold text-dark">{{ tenant.nom|default:"Saldae Consulting" }}</p>
@@ -290,4 +334,73 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Validation -->
+<div class="modal fade" id="validateInvoiceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 1.25rem;">
+            <div class="modal-header bg-success text-white border-0 py-3" style="border-top-left-radius: 1.25rem; border-top-right-radius: 1.25rem;">
+                <h5 class="modal-title fw-bold">
+                    <i class="ri-checkbox-circle-line me-2"></i> Valider la facture
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="mb-4">
+                    <i class="ri-checkbox-circle-fill text-success" style="font-size: 4rem;"></i>
+                </div>
+                <h6 class="mb-3 fw-bold fs-16">Êtes-vous sûr de vouloir valider cette facture ?</h6>
+                <p class="text-muted fs-14">La validation passera définitivement cette facture en statut <strong>Payée</strong>. Cette action confirmera l'imputation des règlements rattachés.</p>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center pb-4">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" style="border-radius: 0.50rem;">Annuler</button>
+                <button type="button" class="btn btn-success px-4" id="confirmValidateBtn" style="border-radius: 0.50rem;">
+                    Valider maintenant
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmValidateBtn = document.getElementById('confirmValidateBtn');
+    if (confirmValidateBtn) {
+        confirmValidateBtn.addEventListener('click', function() {
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Validation...';
+            
+            const formData = new FormData();
+            formData.append('facture_id', '{{ facture.id }}');
+            
+            fetch("{% url 't_tresorerie:ApiValidateFacture' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alertify.success(data.message || "Facture validée avec succès !");
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    alertify.error(data.message || "Une erreur est survenue lors de la validation.");
+                    this.disabled = false;
+                    this.innerHTML = 'Valider maintenant';
+                }
+            })
+            .catch(error => {
+                console.error("Erreur réseau:", error);
+                alertify.error("Erreur de connexion réseau.");
+                this.disabled = false;
+                this.innerHTML = 'Valider maintenant';
+            });
+        });
+    }
+});
+</script>
 {% endblock %}

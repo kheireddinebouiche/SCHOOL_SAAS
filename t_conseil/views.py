@@ -1302,6 +1302,8 @@ def DetailsFacture(request, pk):
     except Exception as e:
         print(f"Error converting: {e}")
 
+    paiements_lies = facture.tresorerie_paiements.all().order_by('-date_paiement')
+
     context = {
         "tenant": request.tenant,
         "facture": facture,
@@ -1313,6 +1315,7 @@ def DetailsFacture(request, pk):
         "tva_breakdown": sorted_tva,
         "total_in_words": total_in_words,
         "config": config,
+        "paiements_lies": paiements_lies,
     }
     return render(request, 'tenant_folder/conseil/details_facture.html', context)
 

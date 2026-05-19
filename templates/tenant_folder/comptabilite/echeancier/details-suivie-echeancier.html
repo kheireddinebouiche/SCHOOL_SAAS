@@ -1413,6 +1413,26 @@
                         </div>
                     </div>
                 </div>
+
+                <div id="timbreInfoWrapper" style="display: none;" class="mb-4">
+                    <div class="alert alert-warning border-0 bg-warning bg-opacity-10 d-flex align-items-start p-3 rounded-3" role="alert">
+                        <i class="ri-scales-3-line fs-4 me-3 text-warning mt-1"></i>
+                        <div>
+                            <p class="mb-1 fw-bold text-warning">Droit de Timbre (Paiement Espèce)</p>
+                            <p class="small text-warning opacity-75 mb-2">
+                                Conformément à la législation algérienne, un droit de timbre de 1% (min 5 DA, max 2500 DA) sera appliqué. 
+                                Le montant TTC payé restera identique, et les montants HT et TVA seront recalculés.
+                            </p>
+                            <div class="form-check mt-1">
+                                <input class="form-check-input border-warning" type="checkbox" id="skipTimbreCheck" style="cursor: pointer;">
+                                <label class="form-check-label text-warning fw-medium small" for="skipTimbreCheck" style="cursor: pointer;">
+                                    Ne pas appliquer le droit de timbre pour cette facture
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="alert alert-info border-0 bg-info bg-opacity-10 d-flex align-items-center mb-0 rounded-3" role="alert">
                     <i class="ri-information-line fs-4 me-3 text-info"></i>
                     <div class="small text-info">
@@ -1424,6 +1444,69 @@
                 <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
                 <button type="button" class="btn btn-success px-4 py-2" id="confirmGenerateInvoice">
                     <i class="ri-check-line me-1"></i> Générer la facture
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Détails du Paiement -->
+<div class="modal fade" id="paymentDetailsModal" tabindex="-1" aria-labelledby="paymentDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-information-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1" id="paymentDetailsModalLabel">Détails du paiement</h5>
+                        <p class="text-muted small mb-0">Informations détaillées sur la transaction</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="vstack gap-3">
+                    <div class="p-3 rounded-3 bg-light">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Numéro de paiement:</span>
+                            <span class="fw-medium text-primary" id="detailNumero">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Description:</span>
+                            <span class="fw-medium" id="detailLibelle">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Montant payé:</span>
+                            <span class="fw-bold text-dark" id="detailMontant">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Date de paiement:</span>
+                            <span class="fw-medium" id="detailDate">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Mode de paiement:</span>
+                            <span class="badge bg-info-subtle text-info" id="detailMode">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Type de paiement:</span>
+                            <span class="badge bg-warning-subtle text-warning" id="detailType">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Référence:</span>
+                            <span class="fw-medium" id="detailReference">-</span>
+                        </div>
+                    </div>
+                    <div class="p-3 rounded-3 border border-dashed">
+                        <h6 class="fw-semibold mb-2">Observation:</h6>
+                        <p class="mb-0 text-muted small" id="detailObservation">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-primary px-4 py-2 rounded-pill" data-bs-dismiss="modal">
+                    <i class="ri-close-line me-2"></i>Fermer
                 </button>
             </div>
         </div>
@@ -3955,10 +4038,12 @@
                         $.each(data.paiements_done_data, function(index, item){
                             // Store payment data with payment number as key
                             paymentData[item.num] = {
+                                id: item.id,
                                 num: item.num,
                                 montant_paye: item.montant_paye,
                                 date_paiement: item.date_paiement,
                                 mode_paiement: item.mode_paiement || 'Non spécifié',
+                                mode_paiement_code: item.mode_paiement_code,
                                 reference_paiement: item.reference_paiement || 'Non spécifié',
                                 label_paiements : item.label_paiements,
                                 entite_id: item.entite_id,
@@ -4029,19 +4114,24 @@
                             row += "<td class='action-cell'>";
                             row += "<div class='d-flex align-items-center' style='gap: 8px !important;'>";
                             
-                            // Quittance Button (icon-only squircle)
-                            row += "<button class='btn-action-premium btn-action-print print-quittance-btn' type='button' data-id='"+item.num+"' title='Imprimer la Quittance'>";
-                            row += "<i class='ri-file-text-line'></i>";
+                            // Payment Details Button
+                            row += "<button class='btn-action-premium btn-action-details show-payment-details-btn' type='button' data-id='"+item.id+"' title='Détails'>";
+                            row += "<i class='ri-eye-line'></i>";
                             row += "</button>";
                             
-                            // Facture Button (icon-only squircle)
+                            // Quittance Button
+                            row += "<button class='btn-action-premium btn-action-print print-quittance-btn' type='button' data-id='"+item.num+"' title='Imprimer la Quittance'>";
+                            row += "<i class='ri-printer-line'></i>";
+                            row += "</button>";
+                            
+                            // Facture Button
                             if (item.facture_num) {
-                                row += "<a class='btn-action-premium btn-action-invoice' href='/comptabilite/tresorerie/details-facture/" + item.facture_num + "/' target='_blank' title='Voir la Facture (" + item.facture_num + ")'>";
-                                row += "<i class='ri-eye-line'></i>";
+                                row += "<a class='btn-action-premium btn-action-details' href='/comptabilite/tresorerie/details-facture/" + item.facture_num + "/' target='_blank' title='Voir la Facture (" + item.facture_num + ")'>";
+                                row += "<i class='ri-file-search-line'></i>";
                                 row += "</a>";
                             } else {
                                 row += "<button class='btn-action-premium btn-action-invoice print-facture-btn' type='button' data-id='"+item.num+"' title='Générer la Facture'>";
-                                row += "<i class='ri-printer-line'></i>";
+                                row += "<i class='ri-file-add-line'></i>";
                                 row += "</button>";
                             }
                             
@@ -4474,7 +4564,7 @@
             previousPercentages = [];
             
             for (var i = 1; i <= nombreTranches; i++) {
-                var montant = (prix * (pourcentageParTranche / 100)).toFixed(2);
+                var montant = Math.round(prix * (pourcentageParTranche / 100));
                 previousPercentages.push(parseFloat(pourcentageParTranche));
                 html += '<tr>';
                 html += '<td class="tranche-cell-special"><span class="badge bg-warning">Tranche ' + i + '</span></td>';
@@ -4506,7 +4596,7 @@
         
         // Fonction pour mettre à jour le montant
         function updateMontant($input, percentage, prix) {
-            var montant = (prix * (percentage / 100)).toFixed(2);
+            var montant = Math.round(prix * (percentage / 100));
             $input.closest('tr').find('.montant-cell').text(montant + ' DA');
         }
         
@@ -4525,7 +4615,7 @@
             
             // Mettre à jour les totaux dans le footer
             $('#totalPercentage').text(totalPercentage.toFixed(2) + '%');
-            $('#totalAmount').text(totalAmount.toFixed(2) + ' DA');
+            $('#totalAmount').text(Math.round(totalAmount) + ' DA');
             
             // Activer/désactiver le bouton d'enregistrement (toujours activé maintenant)
             $('#saveSpecialEcheancierBtn').prop('disabled', false);
@@ -5404,6 +5494,27 @@
             $('#resumeEntite').text($('#demandeur').text() || '-');
         });
         
+        // Afficher les détails du paiement
+        $(document).on('click', '.show-payment-details-btn', function(){
+            var id = $(this).data('id');
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiDetailsReceivedPaiement' %}",
+                type: 'GET',
+                data: { 'id': id },
+                success: function(data){
+                    $('#detailNumero').text(data.num);
+                    $('#detailLibelle').text(data.label_paiements);
+                    $('#detailMontant').text(data.montant_paye + ' DA');
+                    $('#detailDate').text(data.date_paiement);
+                    $('#detailMode').text(data.mode_paiement);
+                    $('#detailType').text(data.type_paiement);
+                    $('#detailReference').text(data.reference_paiement || '-');
+                    $('#detailObservation').text(data.observation || 'Aucune observation');
+                    $('#paymentDetailsModal').modal('show');
+                }
+            });
+        });
+
         // Imprimer la quittance
         $(document).on('click', '.print-quittance-btn', function(){
             var id = $(this).data('id');
@@ -5677,8 +5788,17 @@
             var id = $(this).data('id');
             var payment = paymentData[id];
             var entiteId = payment ? payment.entite_id : null;
+            var paymentDbId = payment ? payment.id : null;
             
-            $('#modalPaiementId').val(id);
+            $('#modalPaiementId').val(paymentDbId);
+
+            // Check for Stamp Duty (Espèce)
+            if (payment && payment.mode_paiement_code === 'esp') {
+                $('#timbreInfoWrapper').show();
+            } else {
+                $('#timbreInfoWrapper').hide();
+            }
+            $('#skipTimbreCheck').prop('checked', false);
             
             // Populate TVA options
             var container = $('#tvaOptionsContainer');
@@ -5735,6 +5855,7 @@
             var id = $('#modalPaiementId').val();
             var showTva = !$('#invoiceHTSwitch').is(':checked');
             var tva = showTva ? $('input[name="tvaRate"]:checked').val() : 0;
+            var skipTimbre = $('#skipTimbreCheck').is(':checked');
             var btn = $(this);
             
             btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Génération...');
@@ -5746,6 +5867,7 @@
                     'paiement_id': id,
                     'tva_percent': tva,
                     'show_tva': showTva,
+                    'skip_timbre': skipTimbre,
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
                 success: function(response) {

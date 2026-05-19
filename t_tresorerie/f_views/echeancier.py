@@ -716,6 +716,13 @@ def ApiUpdateEcheancier(request):
                         if update.get('date'):
                             tranche_obj.date_echeancier = update.get('date')
                         
+                        taux_custom = update.get('taux')
+                        if taux_custom is not None and str(taux_custom).strip() != "":
+                            try:
+                                tranche_obj.taux = float(taux_custom)
+                            except ValueError:
+                                pass
+                        
                         # Recalculate montant_tranche
                         taux = float(tranche_obj.taux or 0)
                         
@@ -746,6 +753,14 @@ def ApiUpdateEcheancier(request):
                             tranche_obj.montant_tranche = (net_block * taux / 100.0)
                         else:
                             tranche_obj.montant_tranche = (net_total * taux / 100.0)
+                        
+                        montant_custom = update.get('montant')
+                        if montant_custom is not None and str(montant_custom).strip() != "":
+                            try:
+                                tranche_obj.montant_tranche = float(montant_custom)
+                            except ValueError:
+                                pass
+                        
                         
                         # Update tranche entity
                         t_entite_id = update.get('entite_id')

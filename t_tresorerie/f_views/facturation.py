@@ -85,6 +85,7 @@ def DetailsFactureTresorerie(request, pk):
     timbre = facture.get_timbre()
     total_ttc = facture.total_ttc()
     sorted_tva = sorted([{'rate': r, 'amount': a} for r, a in tva_breakdown.items()], key=lambda x: x['rate'], reverse=True)
+    paiements_lies = facture.tresorerie_paiements.all().order_by('-date_paiement')
 
     context = {
         "tenant": request.tenant,
@@ -96,7 +97,8 @@ def DetailsFactureTresorerie(request, pk):
         "total_tva": total_tva,
         "timbre": timbre,
         "total_ttc": total_ttc,
-        "tva_breakdown": sorted_tva
+        "tva_breakdown": sorted_tva,
+        "paiements_lies": paiements_lies
     }
     return render(request, 'tenant_folder/comptabilite/facturation/details_facture.html', context)
 
@@ -133,6 +135,7 @@ def ApiGetProspectPaymentsByNin(request):
                     'date': p.date_paiement.strftime("%Y-%m-%d") if p.date_paiement else "-",
                     'montant': float(p.montant_paye) if p.montant_paye else 0.0,
                     'mode': p.get_mode_paiement_display() if p.mode_paiement else "Autre",
+                    'mode_raw': p.mode_paiement,
                     'promo_label': p.promo.label if p.promo else (p.prospect.specialite_obtenu or "Inconnue"),
                     'label': p.paiement_label or p.observation or "Règlement",
                     'has_invoice': p.facture is not None,
@@ -152,6 +155,145 @@ def ApiGetProspectPaymentsByNin(request):
                     'email': prospect.email or 'Non renseigné',
                 },
                 'total_paid': float(total_paid),
+                'payments': payments_list,
+                'tvas': tvas
+            })
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+@login_required(login_url="institut_app:login")
+@require_http_methods(["POST"])
+def ApiDeleteFacture(request):
+    try:
+        facture_id = request.POST.get('facture_id')
+        if not facture_id:
+            return JsonResponse({'status': 'error', 'message': 'ID de facture manquant.'})
+            
+        try:
+            facture = Facture.objects.get(id=facture_id, module_source='tresorerie')
+        except Facture.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Facture introuvable.'})
+            
+        if facture.etat != 'brouillon':
+            return JsonResponse({'status': 'error', 'message': 'Une facture validée ne peut pas être supprimée.'})
+            
+        with transaction.atomic():
+            facture.tresorerie_paiements.update(facture=None)
+            facture.delete()
+            
+        return JsonResponse({
+            'status': 'success', 
+            'message': 'La facture a été supprimée avec succès et les règlements associés ont été libérés.'
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+@login_required(login_url="institut_app:login")
+@require_http_methods(["POST"])
+def ApiValidateFacture(request):
+    try:
+        facture_id = request.POST.get('facture_id')
+        if not facture_id:
+            return JsonResponse({'status': 'error', 'message': 'ID de facture manquant.'})
+            
+        try:
+            facture = Facture.objects.get(id=facture_id, module_source='tresorerie')
+        except Facture.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Facture introuvable.'})
+            
+        if facture.etat != 'brouillon':
+            return JsonResponse({'status': 'error', 'message': f'La facture est déjà validée ou dans un autre état (Statut: {facture.get_etat_display()}).'})
+            
+        with transaction.atomic():
+            facture.etat = 'paye'
+            facture.save()
+            
+        return JsonResponse({
+            'status': 'success', 
+            'message': 'La facture a été validée avec succès.'
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+@login_required(login_url="institut_app:login")
+def ApiGetDraftInvoiceDetails(request):
+    if request.method == "GET":
+        try:
+            facture_id = request.GET.get('facture_id')
+            if not facture_id:
+                return JsonResponse({'status': 'error', 'message': 'ID de facture manquant'})
+                
+            try:
+                facture = Facture.objects.get(id=facture_id, module_source='tresorerie')
+            except Facture.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Facture introuvable'})
+                
+            if facture.etat != 'brouillon':
+                return JsonResponse({'status': 'error', 'message': 'La facture n\'est pas en brouillon.'})
+                
+            prospect = facture.client
+            if not prospect:
+                return JsonResponse({'status': 'error', 'message': 'Client introuvable lié à cette facture.'})
+                
+            # Fetch all payments for this student's NIN (similar to ApiGetProspectPaymentsByNin)
+            if prospect.nin:
+                prospects = Prospets.objects.filter(nin=prospect.nin)
+            else:
+                prospects = Prospets.objects.filter(id=prospect.id)
+                
+            payments = Paiements.objects.filter(prospect__in=prospects).select_related('prospect', 'promo', 'facture', 'entite').order_by('-date_paiement')
+            
+            # Determine skip_timbre based on whether montant_timbre is 0
+            skip_timbre = (facture.montant_timbre == 0)
+            
+            # Determine consolidation mode
+            # If there's 1 line in lignes_facture but >1 associated payments, it is single_line.
+            # Otherwise it's multi_line
+            assoc_count = facture.tresorerie_paiements.count()
+            lines_count = facture.lignes_facture.count()
+            consolidation_mode = 'single_line' if (lines_count == 1 and assoc_count > 1) else 'multi_line'
+            
+            tvas = [{'id': t.id, 'valeur': float(t.valeur)} for t in TvaConseil.objects.all().order_by('valeur')]
+            
+            payments_list = []
+            for p in payments:
+                payments_list.append({
+                    'id': p.id,
+                    'num': p.num or f"PAI-{p.id}",
+                    'date': p.date_paiement.strftime("%Y-%m-%d") if p.date_paiement else "-",
+                    'montant': float(p.montant_paye) if p.montant_paye else 0.0,
+                    'mode': p.get_mode_paiement_display() if p.mode_paiement else "Autre",
+                    'mode_raw': p.mode_paiement,
+                    'promo_label': p.promo.label if p.promo else (p.prospect.specialite_obtenu or "Inconnue"),
+                    'label': p.paiement_label or p.observation or "Règlement",
+                    'has_invoice': p.facture is not None,
+                    'num_facture': p.facture.num_facture if p.facture else None,
+                    'facture_id': p.facture.id if p.facture else None,
+                    'entite_name': p.entite.designation if p.entite else "Sans Entité",
+                    'entite_id': p.entite.id if p.entite else None,
+                })
+                
+            return JsonResponse({
+                'status': 'success',
+                'invoice': {
+                    'id': facture.id,
+                    'numero': facture.num_facture,
+                    'tva_percent': float(facture.tva),
+                    'show_tva': facture.show_tva,
+                    'skip_timbre': skip_timbre,
+                    'consolidation_mode': consolidation_mode
+                },
+                'prospect_info': {
+                    'id': prospect.id,
+                    'nom': prospect.nom,
+                    'prenom': prospect.prenom or '',
+                    'nin': prospect.nin or 'Non renseigné',
+                    'telephone': prospect.telephone or 'Non renseigné',
+                    'email': prospect.email or 'Non renseigné',
+                },
                 'payments': payments_list,
                 'tvas': tvas
             })

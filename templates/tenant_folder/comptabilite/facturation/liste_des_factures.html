@@ -612,9 +612,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         <a href="/conseil/facture/pdf/${facture.numero}/" class="btn-action-icon" title="PDF">
                             <i class="ri-file-pdf-line"></i>
                         </a>
+                        ${facture.etat === 'brouillon' ? `
+                        <button type="button" class="btn-action-icon text-warning bg-warning bg-opacity-10 edit-btn" data-id="${facture.id}" title="Modifier">
+                            <i class="ri-edit-line"></i>
+                        </button>
                         <button type="button" class="btn-action-icon text-danger bg-danger bg-opacity-10 delete-btn" data-id="${facture.id}" title="Supprimer">
                             <i class="ri-delete-bin-line"></i>
                         </button>
+                        ` : `
+                        <button type="button" class="btn-action-icon text-muted bg-light border-0" disabled title="Facture validée (non modifiable)" style="cursor: not-allowed; opacity: 0.55;">
+                            <i class="ri-edit-line"></i>
+                        </button>
+                        <button type="button" class="btn-action-icon text-muted bg-light border-0" disabled title="Facture validée (non supprimable)" style="cursor: not-allowed; opacity: 0.55;">
+                            <i class="ri-delete-bin-line"></i>
+                        </button>
+                        `}
                     </div>
                 </td>
             `;
@@ -626,8 +638,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
-                const modal = new bootstrap.Modal(document.querySelector('.deleteModal'));
-                modal.show();
+                const modalEl = document.querySelector('.deleteModal');
+                let modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (!modalInstance) {
+                    modalInstance = new bootstrap.Modal(modalEl);
+                }
+                modalInstance.show();
                 document.querySelector('.deleteModal .hstack').innerHTML = `
                     <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
                     <button type="button" class="btn btn-danger px-4" onclick="confirmDelete(${id})">Supprimer</button>
@@ -637,9 +653,50 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     window.confirmDelete = function(id) {
-        alertify.success("Facture supprimée");
-        bootstrap.Modal.getInstance(document.querySelector('.deleteModal')).hide();
-        loadFactures();
+        const confirmBtn = document.querySelector('.deleteModal .btn-danger');
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Suppression...';
+        }
+        
+        const formData = new FormData();
+        formData.append('facture_id', id);
+        
+        fetch("{% url 't_tresorerie:ApiDeleteFacture' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alertify.success(data.message || "Facture supprimée");
+                const modalEl = document.querySelector('.deleteModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) {
+                    modalInstance.hide();
+                } else {
+                    $(modalEl).modal('hide');
+                }
+                loadFactures();
+            } else {
+                alertify.error(data.message || "Erreur lors de la suppression de la facture.");
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = 'Supprimer';
+                }
+            }
+        })
+        .catch(error => {
+            console.error("Erreur réseau:", error);
+            alertify.error("Erreur de connexion.");
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = 'Supprimer';
+            }
+        });
     };
 
     document.getElementById('table-filter').addEventListener('input', filterAndDisplay);
@@ -784,7 +841,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                     <div>
                                         <h6 class="fw-bold text-dark mb-1">Consolidation Globale des Règlements</h6>
-                                        <p class="text-muted small mb-0">Vous pouvez regrouper <strong class="text-primary" id="unpaidPaymentsCount">0</strong> paiements non facturés sur une seule facture.</p>
+                                        <p class="text-muted small mb-0">Vous pouvez regrouper <strong class="text-primary" id="unpaidPaymentsCount">0</strong> règlement(s) sélectionné(s) sur une seule facture. <span class="d-block mt-1">Montant consolidé : <strong class="text-success fw-bold" id="consolidationSelectedTotal">0.00 DA</strong></span></p>
                                     </div>
                                 </div>
                             </div>
@@ -810,9 +867,29 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                     <!-- Submit Button -->
                                     <button type="submit" class="btn btn-primary btn-rounded shadow-sm px-4 d-flex align-items-center justify-content-center" style="height: 38px;">
-                                        <i class="ri-checkbox-circle-line me-2"></i> Facturer le tout
+                                        <i class="ri-checkbox-circle-line me-2"></i> Facturer la sélection
                                     </button>
                                 </form>
+                            </div>
+                        </div>
+
+                        <!-- Stamp duty warning alert for consolidated cash payments -->
+                        <div id="timbreConsolidatedWrapper" class="mt-3 d-none">
+                            <div class="alert alert-warning border-0 bg-warning bg-opacity-10 d-flex align-items-start p-3 rounded-4 mb-0" role="alert" style="border: 1px solid rgba(245, 158, 11, 0.2) !important;">
+                                <i class="ri-scales-3-line fs-4 me-3 text-warning mt-1"></i>
+                                <div>
+                                    <p class="mb-1 fw-bold text-warning small">Droit de Timbre (Paiements en espèces détectés)</p>
+                                    <p class="small text-warning opacity-75 mb-2" style="font-size: 12px; line-height: 1.5;">
+                                        Conformément à la réglementation, les règlements en espèces sont assujettis aux droits de timbre (1%). 
+                                        Vous pouvez désactiver l'application de ce droit de timbre pour cette facture consolidée si nécessaire.
+                                    </p>
+                                    <div class="form-check mt-1">
+                                        <input class="form-check-input border-warning" type="checkbox" id="skipTimbreConsolidated" style="cursor: pointer;">
+                                        <label class="form-check-label text-warning fw-semibold small" for="skipTimbreConsolidated" style="cursor: pointer;">
+                                            Désactiver le droit de timbre pour ces règlements
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -823,6 +900,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         <table class="table table-hover align-middle mb-0 bg-white">
                             <thead>
                                 <tr>
+                                    <th style="width: 50px;" class="text-center">
+                                        <div class="form-check mb-0 d-inline-block">
+                                            <input class="form-check-input select-all-payments border-primary" type="checkbox" id="checkAllPayments" checked title="Tout sélectionner" style="cursor: pointer; width: 1.2em; height: 1.2em;">
+                                        </div>
+                                    </th>
                                     <th>N° Règlement</th>
                                     <th>Date</th>
                                     <th>Promo / Formation</th>
@@ -854,9 +936,218 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
+<!-- Modal Modifier Facture -->
+<div class="modal fade" id="modalModifierFacture" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(15px);">
+            <div class="modal-header border-0 py-3 px-4 d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important; border-top-left-radius: 1.25rem !important; border-top-right-radius: 1.25rem !important;">
+                <div class="d-flex align-items-center">
+                    <div class="icon-container-premium me-3 d-flex align-items-center justify-content-center" style="width: 40px !important; height: 40px !important; border-radius: 10px !important; background: rgba(255, 255, 255, 0.25) !important;">
+                        <i class="ri-edit-2-line fs-4" style="color: #ffffff !important;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" style="color: #ffffff !important;" id="editModalTitle">Modifier la Facture en Brouillon</h5>
+                        <p class="mb-0 small" style="color: rgba(255, 255, 255, 0.8) !important;">Ajuster la sélection de règlements et les taxes associés</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(1) grayscale(1) brightness(2) !important;"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="editFactureId">
+                <input type="hidden" id="editProspectId">
+                
+                <!-- Live Loading Indicator -->
+                <div id="loaderEditFacture" class="text-center py-5">
+                    <div class="spinner-border text-warning" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Chargement de la facture...</span>
+                    </div>
+                    <p class="text-muted mt-3 fw-medium">Récupération des détails et règlements...</p>
+                </div>
+
+                <!-- Content (hidden by default) -->
+                <div id="contentEditFacture" class="d-none">
+                    <!-- Summary Card -->
+                    <div class="card border-0 shadow-sm mb-4 p-4" style="border-radius: 1rem; background: rgba(248, 250, 252, 0.85); border: 1px solid rgba(226, 232, 240, 0.6) !important;">
+                        <div class="row align-items-center">
+                            <div class="col-md-7">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-md bg-soft-warning text-warning rounded-circle d-flex align-items-center justify-content-center me-3 fw-bold fs-4" style="width: 60px; height: 60px;">
+                                        <span id="editSummaryInitials">--</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="fw-bold text-dark mb-1" id="editSummaryFullName">--</h4>
+                                        <div class="d-flex flex-wrap gap-2 fs-13">
+                                            <span class="text-muted"><i class="ri-fingerprint-line me-1"></i>NIN : <strong class="text-dark" id="editSummaryNIN">--</strong></span>
+                                            <span class="text-muted"><i class="ri-phone-line me-1"></i>Tél : <strong class="text-dark" id="editSummaryPhone">--</strong></span>
+                                            <span class="text-muted"><i class="ri-mail-line me-1"></i>Email : <strong class="text-dark" id="editSummaryEmail">--</strong></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-5 text-md-end mt-3 mt-md-0">
+                                <div class="p-3 bg-white rounded-3 shadow-sm d-inline-block border border-light">
+                                    <span class="text-muted small uppercase fw-bold d-block mb-1">Montant consolidé modifié</span>
+                                    <h3 class="fw-bold text-warning mb-0" id="editSummaryTotalPaid">0.00 DA</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Consolidated Invoicing Control Box -->
+                    <div id="editConsolidationControlBox" class="card border-0 shadow-sm mb-4 p-4" style="border-radius: 1rem; background: linear-gradient(135deg, rgba(245, 158, 11, 0.04) 0%, rgba(217, 119, 6, 0.04) 100%); border: 1px solid rgba(245, 158, 11, 0.15) !important;">
+                        <div class="row align-items-center">
+                            <div class="col-lg-6 col-md-12">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-container-premium bg-warning bg-opacity-10 text-warning me-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 12px;">
+                                        <i class="ri-refund-2-line fs-3"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-1">Modification de la Consolidation</h6>
+                                        <p class="text-muted small mb-0">Vous modifiez <strong class="text-warning" id="editUnpaidPaymentsCount">0</strong> règlement(s) sur cette facture. <span class="d-block mt-1">Nouveau montant : <strong class="text-warning fw-bold" id="editConsolidationSelectedTotal">0.00 DA</strong></span></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-12 mt-3 mt-lg-0">
+                                <form id="formEditDraftInvoice" class="d-flex flex-wrap align-items-center justify-content-lg-end gap-3">
+                                    <!-- TVA Select -->
+                                    <div class="d-flex align-items-center gap-2">
+                                        <label class="form-label small fw-bold text-muted mb-0">TVA :</label>
+                                        <select class="form-select form-select-sm select-tva-edit shadow-sm" style="width: 85px; height: 38px;" required>
+                                            <!-- TVA Options dynamically loaded -->
+                                        </select>
+                                        <div class="form-check form-switch small mb-0 ms-1" style="min-height: auto;">
+                                            <input class="form-check-input check-show-tva-edit" type="checkbox" checked title="Afficher la TVA">
+                                        </div>
+                                    </div>
+                                    <!-- Consolidation Mode -->
+                                    <div class="d-flex align-items-center gap-2">
+                                        <label class="form-label small fw-bold text-muted mb-0">Mode :</label>
+                                        <select class="form-select form-select-sm shadow-sm" id="selectEditConsolidationMode" style="width: 185px; height: 38px;" required>
+                                            <option value="multi_line">1 Ligne par Règlement</option>
+                                            <option value="single_line">1 Ligne unique consolidée</option>
+                                        </select>
+                                    </div>
+                                    <!-- Submit Button -->
+                                    <button type="submit" class="btn btn-warning btn-rounded shadow-sm px-4 d-flex align-items-center justify-content-center text-white fw-semibold" style="height: 38px;">
+                                        <i class="ri-checkbox-circle-line me-2"></i> Enregistrer les modifications
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Stamp duty warning alert for consolidated cash payments -->
+                        <div id="editTimbreConsolidatedWrapper" class="mt-3 d-none">
+                            <div class="alert alert-warning border-0 bg-warning bg-opacity-10 d-flex align-items-start p-3 rounded-4 mb-0" role="alert" style="border: 1px solid rgba(245, 158, 11, 0.2) !important;">
+                                <i class="ri-scales-3-line fs-4 me-3 text-warning mt-1"></i>
+                                <div>
+                                    <p class="mb-1 fw-bold text-warning small">Droit de Timbre (Paiements en espèces détectés)</p>
+                                    <p class="small text-warning opacity-75 mb-2" style="font-size: 12px; line-height: 1.5;">
+                                        Les règlements en espèces sont assujettis aux droits de timbre (1%). Vous pouvez désactiver l'application de ce timbre pour cette facture si nécessaire.
+                                    </p>
+                                    <div class="form-check mt-1">
+                                        <input class="form-check-input border-warning" type="checkbox" id="editSkipTimbre" style="cursor: pointer;">
+                                        <label class="form-check-label text-warning fw-semibold small" for="editSkipTimbre" style="cursor: pointer;">
+                                            Désactiver le droit de timbre pour ces règlements
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payments Table -->
+                    <h5 class="fw-bold text-dark mb-3"><i class="ri-bank-card-line text-warning me-2"></i>Associer des règlements à cette facture</h5>
+                    <div class="table-responsive shadow-sm border border-light rounded-3" style="border-radius: 0.75rem;">
+                        <table class="table table-hover align-middle mb-0 bg-white">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;" class="text-center">
+                                        <div class="form-check mb-0 d-inline-block">
+                                            <input class="form-check-input select-all-edit-payments border-warning" type="checkbox" id="checkAllEditPayments" title="Tout sélectionner" style="cursor: pointer; width: 1.2em; height: 1.2em;">
+                                        </div>
+                                    </th>
+                                    <th>N° Règlement</th>
+                                    <th>Date</th>
+                                    <th>Promo / Formation</th>
+                                    <th>Entité</th>
+                                    <th class="text-end">Montant payé</th>
+                                    <th>Mode</th>
+                                    <th class="text-center">Statut Facturation</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bodyEditProspectPayments">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-4 bg-light bg-opacity-50">
+                <button type="button" class="btn btn-secondary btn-rounded px-4" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 $(document).ready(function() {
     let select2Initialized = false;
+
+    function updateSelectedPayments() {
+        const checkedBoxes = $('.select-payment-checkbox:checked');
+        const checkedCount = checkedBoxes.length;
+        
+        let totalAmount = 0;
+        let hasCash = false;
+        let selectedIds = [];
+        
+        checkedBoxes.each(function() {
+            const box = $(this);
+            totalAmount += parseFloat(box.attr('data-montant') || 0);
+            selectedIds.push(box.attr('data-id'));
+            if (box.attr('data-mode-raw') === 'esp') {
+                hasCash = true;
+            }
+        });
+        
+        // Update the master checkAllPayments state
+        const allUnpaidBoxes = $('.select-payment-checkbox');
+        if (allUnpaidBoxes.length > 0 && checkedCount === allUnpaidBoxes.length) {
+            $('#checkAllPayments').prop('checked', true);
+        } else {
+            $('#checkAllPayments').prop('checked', false);
+        }
+        
+        if (checkedCount >= 1) {
+            $('#unpaidPaymentsCount').text(checkedCount);
+            $('#consolidationSelectedTotal').text(totalAmount.toLocaleString('fr-FR', {minimumFractionDigits: 2}) + ' DA');
+            $('#consolidationControlBox').removeClass('d-none');
+            $('#formConsolidatedInvoice').attr('data-payment-ids', selectedIds.join(','));
+            
+            if (hasCash) {
+                $('#timbreConsolidatedWrapper').removeClass('d-none');
+            } else {
+                $('#timbreConsolidatedWrapper').addClass('d-none');
+                $('#skipTimbreConsolidated').prop('checked', false);
+            }
+        } else {
+            $('#consolidationControlBox').addClass('d-none');
+            $('#timbreConsolidatedWrapper').addClass('d-none');
+            $('#formConsolidatedInvoice').removeAttr('data-payment-ids');
+        }
+    }
+
+    // Master checkbox click
+    $(document).on('change', '#checkAllPayments', function() {
+        const isChecked = $(this).is(':checked');
+        $('.select-payment-checkbox').prop('checked', isChecked);
+        updateSelectedPayments();
+    });
+
+    // Single checkbox change
+    $(document).on('change', '.select-payment-checkbox', function() {
+        updateSelectedPayments();
+    });
 
     // Expose loadFactures globally so we can reload the list
     const originalLoadFactures = window.loadFactures;
@@ -942,34 +1233,19 @@ $(document).ready(function() {
                     $('#summaryEmail').text(pInfo.email || 'Non renseigné');
                     $('#summaryTotalPaid').text(`${res.total_paid.toLocaleString('fr-FR', {minimumFractionDigits: 2})} DA`);
                     
-                    // Show or hide global consolidation control banner
-                    const unpaidPayments = res.payments.filter(p => !p.has_invoice);
-                    const unpaidCount = unpaidPayments.length;
-                    
-                    if (unpaidCount >= 2) {
-                        $('#unpaidPaymentsCount').text(unpaidCount);
-                        $('#consolidationControlBox').removeClass('d-none');
-                        
-                        // Populate TVA select
-                        const tvaSelect = $('.select-tva-consolidated');
-                        tvaSelect.empty();
-                        res.tvas.forEach(t => {
-                            tvaSelect.append(`<option value="${t.valeur}">${t.valeur}%</option>`);
-                        });
-                        
-                        // Store the payment IDs on the form
-                        const unpaidIds = unpaidPayments.map(p => p.id);
-                        $('#formConsolidatedInvoice').attr('data-payment-ids', unpaidIds.join(','));
-                    } else {
-                        $('#consolidationControlBox').addClass('d-none');
-                    }
+                    // Populate TVA select
+                    const tvaSelect = $('.select-tva-consolidated');
+                    tvaSelect.empty();
+                    res.tvas.forEach(t => {
+                        tvaSelect.append(`<option value="${t.valeur}">${t.valeur}%</option>`);
+                    });
                     
                     // Payments list
                     const tbody = $('#bodyProspectPayments');
                     tbody.empty();
                     
                     if (res.payments.length === 0) {
-                        tbody.append(`<tr><td colspan="8" class="text-center py-5 text-muted">
+                        tbody.append(`<tr><td colspan="9" class="text-center py-5 text-muted">
                                          <i class="ri-information-line fs-2 d-block mb-2 opacity-50"></i>
                                          Aucun paiement enregistré pour cet étudiant.
                                      </td></tr>`);
@@ -977,10 +1253,12 @@ $(document).ready(function() {
                         res.payments.forEach(p => {
                             let statusBadge = '';
                             let actionForm = '';
+                            let checkboxCol = '';
                             
                             if (p.has_invoice) {
                                 statusBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-1.5 px-3"><i class="ri-checkbox-circle-line me-1"></i>Facturé (#${p.num_facture})</span>`;
                                 actionForm = `<a href="/comptabilite/tresorerie/details-facture/${p.num_facture}/" class="btn btn-sm btn-info btn-rounded w-100 py-1.5"><i class="ri-eye-line me-1"></i>Voir la facture</a>`;
+                                checkboxCol = `<td class="text-center"><i class="ri-checkbox-circle-fill text-success opacity-50 fs-5"></i></td>`;
                             } else {
                                 statusBadge = `<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 py-1.5 px-3"><i class="ri-time-line me-1"></i>Non facturé</span>`;
                                 
@@ -1002,10 +1280,19 @@ $(document).ready(function() {
                                         </button>
                                     </form>
                                 `;
+                                
+                                checkboxCol = `
+                                    <td class="text-center">
+                                        <div class="form-check mb-0 d-inline-block">
+                                            <input class="form-check-input select-payment-checkbox border-primary" type="checkbox" data-id="${p.id}" data-montant="${p.montant}" data-mode-raw="${p.mode_raw}" checked style="cursor: pointer; width: 1.2em; height: 1.2em;">
+                                        </div>
+                                    </td>
+                                `;
                             }
                             
                             tbody.append(`
                                 <tr>
+                                    ${checkboxCol}
                                     <td class="fw-semibold text-dark">${p.num}</td>
                                     <td>${p.date}</td>
                                     <td><span class="badge bg-light text-dark border py-1.5 px-2.5">${p.promo_label}</span></td>
@@ -1017,6 +1304,9 @@ $(document).ready(function() {
                                  </tr>
                             `);
                         });
+                        
+                        // Recalculate selected totals initially
+                        updateSelectedPayments();
                         
                         // Bind dynamic forms
                         $('.form-generate-invoice').on('submit', function(e) {
@@ -1077,6 +1367,7 @@ $(document).ready(function() {
                             const tvaVal = form.find('.select-tva-consolidated').val();
                             const showTva = form.find('.check-show-tva-consolidated').is(':checked');
                             const consolidationMode = form.find('#selectConsolidationMode').val();
+                            const skipTimbre = $('#skipTimbreConsolidated').is(':checked');
                             const btn = form.find('button[type="submit"]');
                             
                             btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Facturation...');
@@ -1087,6 +1378,7 @@ $(document).ready(function() {
                             formData.append('tva_percent', tvaVal);
                             formData.append('show_tva', showTva);
                             formData.append('consolidation_mode', consolidationMode);
+                            formData.append('skip_timbre', skipTimbre);
                             
                             fetch("{% url 't_tresorerie:ApiGenerateConsolidatedInvoice' %}", {
                                 method: 'POST',
@@ -1105,13 +1397,13 @@ $(document).ready(function() {
                                     }, 1200);
                                 } else {
                                     alertify.error(res.message || "Impossible de générer la facture consolidée.");
-                                    btn.prop('disabled', false).html('<i class="ri-checkbox-circle-line me-2"></i> Facturer le tout');
+                                    btn.prop('disabled', false).html('<i class="ri-checkbox-circle-line me-2"></i> Facturer la sélection');
                                 }
                             })
                             .catch(err => {
                                 console.error("Erreur réseau:", err);
                                 alertify.error("Erreur de connexion.");
-                                btn.prop('disabled', false).html('<i class="ri-checkbox-circle-line me-2"></i> Facturer le tout');
+                                btn.prop('disabled', false).html('<i class="ri-checkbox-circle-line me-2"></i> Facturer la sélection');
                             });
                         });
                     }
@@ -1126,6 +1418,253 @@ $(document).ready(function() {
                 console.error("Erreur réseau:", err);
                 alertify.error("Erreur de connexion.");
             });
+    });
+
+    // ----------------------------------------------------
+    // EDIT DRAFT INVOICE SCRIPT MECHANISM
+    // ----------------------------------------------------
+    function updateSelectedEditPayments() {
+        const checkedBoxes = $('.select-edit-payment-checkbox:checked');
+        const checkedCount = checkedBoxes.length;
+        
+        let totalAmount = 0;
+        let hasCash = false;
+        let selectedIds = [];
+        
+        checkedBoxes.each(function() {
+            const box = $(this);
+            totalAmount += parseFloat(box.attr('data-montant') || 0);
+            selectedIds.push(box.attr('data-id'));
+            if (box.attr('data-mode-raw') === 'esp') {
+                hasCash = true;
+            }
+        });
+        
+        // Update the master checkAllEditPayments state
+        const allBoxes = $('.select-edit-payment-checkbox:not(:disabled)');
+        const allCheckedBoxes = $('.select-edit-payment-checkbox:checked:not(:disabled)');
+        if (allBoxes.length > 0 && allCheckedBoxes.length === allBoxes.length) {
+            $('#checkAllEditPayments').prop('checked', true);
+        } else {
+            $('#checkAllEditPayments').prop('checked', false);
+        }
+        
+        $('#editUnpaidPaymentsCount').text(checkedCount);
+        $('#editConsolidationSelectedTotal').text(totalAmount.toLocaleString('fr-FR', {minimumFractionDigits: 2}) + ' DA');
+        $('#editSummaryTotalPaid').text(totalAmount.toLocaleString('fr-FR', {minimumFractionDigits: 2}) + ' DA');
+        
+        if (checkedCount >= 1) {
+            $('#formEditDraftInvoice').attr('data-payment-ids', selectedIds.join(','));
+            $('#formEditDraftInvoice button[type="submit"]').prop('disabled', false);
+            
+            if (hasCash) {
+                $('#editTimbreConsolidatedWrapper').removeClass('d-none');
+            } else {
+                $('#editTimbreConsolidatedWrapper').addClass('d-none');
+                $('#editSkipTimbre').prop('checked', false);
+            }
+        } else {
+            $('#formEditDraftInvoice').removeAttr('data-payment-ids');
+            $('#formEditDraftInvoice button[type="submit"]').prop('disabled', true);
+            $('#editTimbreConsolidatedWrapper').addClass('d-none');
+        }
+    }
+
+    // Master checkbox click in edit modal
+    $(document).on('change', '#checkAllEditPayments', function() {
+        const isChecked = $(this).is(':checked');
+        $('.select-edit-payment-checkbox:not(:disabled)').prop('checked', isChecked);
+        updateSelectedEditPayments();
+    });
+
+    // Single checkbox change in edit modal
+    $(document).on('change', '.select-edit-payment-checkbox', function() {
+        updateSelectedEditPayments();
+    });
+
+    // Listen for edit button click
+    $(document).on('click', '.edit-btn', function() {
+        const factureId = $(this).attr('data-id');
+        if (!factureId) return;
+
+        // Reset and show modal
+        const modalEl = document.getElementById('modalModifierFacture');
+        let modal = bootstrap.Modal.getInstance(modalEl);
+        if (!modal) {
+            modal = new bootstrap.Modal(modalEl);
+        }
+        modal.show();
+
+        $('#loaderEditFacture').removeClass('d-none');
+        $('#contentEditFacture').addClass('d-none');
+        $('#editFactureId').val(factureId);
+
+        // Fetch draft invoice details
+        fetch(`/comptabilite/tresorerie/ApiGetDraftInvoiceDetails?facture_id=${factureId}`)
+            .then(response => response.json())
+            .then(res => {
+                $('#loaderEditFacture').addClass('d-none');
+                if (res.status === 'success') {
+                    const invoice = res.invoice;
+                    const pInfo = res.prospect_info;
+                    
+                    $('#editModalTitle').text(`Modifier la Facture en Brouillon #${invoice.numero}`);
+                    $('#editProspectId').val(pInfo.id);
+
+                    // Set summary
+                    const initials = `${pInfo.nom.charAt(0)}${pInfo.prenom ? pInfo.prenom.charAt(0) : ''}`.toUpperCase();
+                    $('#editSummaryInitials').text(initials);
+                    $('#editSummaryFullName').text(`${pInfo.nom} ${pInfo.prenom}`);
+                    $('#editSummaryNIN').text(pInfo.nin || 'Non renseigné');
+                    $('#editSummaryPhone').text(pInfo.telephone || 'Non renseigné');
+                    $('#editSummaryEmail').text(pInfo.email || 'Non renseigné');
+
+                    // Set TVA select options
+                    const tvaSelect = $('.select-tva-edit');
+                    tvaSelect.empty();
+                    res.tvas.forEach(t => {
+                        const selectedAttr = (Math.abs(t.valeur - invoice.tva_percent) < 0.01) ? 'selected' : '';
+                        tvaSelect.append(`<option value="${t.valeur}" ${selectedAttr}>${t.valeur}%</option>`);
+                    });
+
+                    // Set checkboxes & controls
+                    $('.check-show-tva-edit').prop('checked', invoice.show_tva);
+                    $('#selectEditConsolidationMode').val(invoice.consolidation_mode);
+                    $('#editSkipTimbre').prop('checked', invoice.skip_timbre);
+
+                    // Populate payments table
+                    const tbody = $('#bodyEditProspectPayments');
+                    tbody.empty();
+
+                    if (res.payments.length === 0) {
+                        tbody.append(`<tr><td colspan="8" class="text-center py-5 text-muted">
+                                         <i class="ri-information-line fs-2 d-block mb-2 opacity-50"></i>
+                                         Aucun paiement trouvé pour cet étudiant.
+                                     </td></tr>`);
+                    } else {
+                        res.payments.forEach(p => {
+                            let statusBadge = '';
+                            let checkboxCol = '';
+
+                            if (p.has_invoice) {
+                                if (p.facture_id == invoice.id) {
+                                    // Linked to this invoice! Show as checked and enabled.
+                                    statusBadge = `<span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 py-1.5 px-3"><i class="ri-time-line me-1"></i>Associé à cette facture</span>`;
+                                    checkboxCol = `
+                                        <td class="text-center">
+                                            <div class="form-check mb-0 d-inline-block">
+                                                <input class="form-check-input select-edit-payment-checkbox border-warning" type="checkbox" data-id="${p.id}" data-montant="${p.montant}" data-mode-raw="${p.mode_raw}" checked style="cursor: pointer; width: 1.2em; height: 1.2em;">
+                                            </div>
+                                        </td>
+                                    `;
+                                } else {
+                                    // Linked to ANOTHER invoice! Show as checked and disabled.
+                                    statusBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-1.5 px-3"><i class="ri-checkbox-circle-line me-1"></i>Facturé (#${p.num_facture})</span>`;
+                                    checkboxCol = `<td class="text-center"><i class="ri-checkbox-circle-fill text-success opacity-50 fs-5"></i></td>`;
+                                }
+                            } else {
+                                // Free payment! Show as unchecked and enabled.
+                                statusBadge = `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 py-1.5 px-3"><i class="ri-checkbox-blank-circle-line me-1"></i>Non facturé</span>`;
+                                checkboxCol = `
+                                    <td class="text-center">
+                                        <div class="form-check mb-0 d-inline-block">
+                                            <input class="form-check-input select-edit-payment-checkbox border-warning" type="checkbox" data-id="${p.id}" data-montant="${p.montant}" data-mode-raw="${p.mode_raw}" style="cursor: pointer; width: 1.2em; height: 1.2em;">
+                                        </div>
+                                    </td>
+                                `;
+                            }
+
+                            tbody.append(`
+                                <tr>
+                                    ${checkboxCol}
+                                    <td class="fw-semibold text-dark">${p.num}</td>
+                                    <td>${p.date}</td>
+                                    <td><span class="badge bg-light text-dark border py-1.5 px-2.5">${p.promo_label}</span></td>
+                                    <td><span class="text-muted small">${p.entite_name}</span></td>
+                                    <td class="text-end fw-bold text-dark">${p.montant.toLocaleString('fr-FR', {minimumFractionDigits: 2})} DA</td>
+                                    <td><span class="badge bg-light text-muted border">${p.mode}</span></td>
+                                    <td class="text-center">${statusBadge}</td>
+                                 </tr>
+                            `);
+                        });
+                    }
+
+                    // Calculate totals
+                    updateSelectedEditPayments();
+
+                    // Show content
+                    $('#contentEditFacture').removeClass('d-none');
+                } else {
+                    alertify.error(res.message || "Erreur lors de la récupération des détails.");
+                    modal.hide();
+                }
+            })
+            .catch(err => {
+                $('#loaderEditFacture').addClass('d-none');
+                console.error("Erreur réseau:", err);
+                alertify.error("Erreur de connexion.");
+                modal.hide();
+            });
+    });
+
+    // Form submission inside edit modal
+    $('#formEditDraftInvoice').on('submit', function(e) {
+        e.preventDefault();
+        const form = $(this);
+        const factureId = $('#editFactureId').val();
+        const paymentIds = form.attr('data-payment-ids');
+        const tvaVal = form.find('.select-tva-edit').val();
+        const showTva = form.find('.check-show-tva-edit').is(':checked');
+        const consolidationMode = form.find('#selectEditConsolidationMode').val();
+        const skipTimbre = $('#editSkipTimbre').is(':checked');
+        const btn = form.find('button[type="submit"]');
+
+        if (!paymentIds) {
+            alertify.error("Veuillez sélectionner au moins un règlement.");
+            return;
+        }
+
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enregistrement...');
+
+        const formData = new FormData();
+        formData.append('facture_id', factureId);
+        formData.append('payment_ids', paymentIds);
+        formData.append('tva_percent', tvaVal);
+        formData.append('show_tva', showTva);
+        formData.append('consolidation_mode', consolidationMode);
+        formData.append('skip_timbre', skipTimbre);
+
+        fetch("{% url 't_tresorerie:ApiUpdateDraftInvoice' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.status === 'success') {
+                alertify.success(res.message || "Facture mise à jour avec succès !");
+                const modalEl = document.getElementById('modalModifierFacture');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+
+                // Reload the invoices registry list
+                if (typeof loadFactures === 'function') {
+                    loadFactures();
+                } else {
+                    setTimeout(() => { location.reload(); }, 1000);
+                }
+            } else {
+                alertify.error(res.message || "Erreur lors de la modification de la facture.");
+                btn.prop('disabled', false).html('<i class="ri-checkbox-circle-line me-2"></i> Enregistrer les modifications');
+            }
+        })
+        .catch(err => {
+            console.error("Erreur réseau:", err);
+            alertify.error("Erreur de connexion.");
+            btn.prop('disabled', false).html('<i class="ri-checkbox-circle-line me-2"></i> Enregistrer les modifications');
+        });
     });
 });
 </script>

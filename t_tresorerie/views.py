@@ -973,7 +973,59 @@ def PageConfigPaiementSeuil(request):
     return render(request, 'tenant_folder/comptabilite/tresorerie/config.html', {'tenant' : request.tenant})
 
 def PageConfigPaiementFacturation(request):
-    return render(request, 'tenant_folder/comptabilite/tresorerie/config_paiement_facturation.html', {'tenant' : request.tenant})
+    try:
+        from t_conseil.models import ConseilConfiguration, TvaConseil
+        from django.contrib import messages
+        from django.shortcuts import redirect
+        
+        config, created = ConseilConfiguration.objects.get_or_create(entreprise=None)
+        
+        if request.method == "POST":
+            action = request.POST.get('action')
+            if action == 'add_tva':
+                label = request.POST.get('tva_label')
+                valeur = request.POST.get('tva_valeur')
+                if label and valeur:
+                    try:
+                        TvaConseil.objects.create(label=label, valeur=valeur)
+                        messages.success(request, f"TVA '{label}' ajoutée avec succès.")
+                    except Exception as e:
+                        messages.error(request, f"Erreur : {e}")
+                else:
+                    messages.warning(request, "Veuillez remplir le libellé et la valeur.")
+                    
+            elif action == 'delete_tva':
+                tva_id = request.POST.get('tva_id')
+                if tva_id:
+                    TvaConseil.objects.filter(id=tva_id).delete()
+                    messages.success(request, "TVA supprimée.")
+                    
+            else:
+                # Optional: handle saving default TVA
+                try:
+                    default_tva = request.POST.get('default_tva_percent')
+                    if default_tva:
+                        config.default_tva_percent = default_tva
+                        
+                    config.show_tva_on_devis = request.POST.get('show_tva_on_devis') == 'on'
+                    config.show_tva_on_facture = request.POST.get('show_tva_on_facture') == 'on'
+                    config.save()
+                    messages.success(request, "Configuration mise à jour.")
+                except Exception as e:
+                    messages.error(request, f"Erreur : {e}")
+                    
+            return redirect('t_tresorerie:PageConfigPaiementFacturation')
+            
+        tvas = TvaConseil.objects.all().order_by('valeur')
+    except ImportError:
+        config = None
+        tvas = []
+        
+    return render(request, 'tenant_folder/comptabilite/tresorerie/config_paiement_facturation.html', {
+        'tenant': request.tenant,
+        'config': config,
+        'tvas': tvas
+    })
 
 def ApiListSeuilPaiement(request):
     liste = SeuilPaiements.objects.all().values('id','specialite','specialite__label','specialite__code','label','valeur','created_at','updated_at')

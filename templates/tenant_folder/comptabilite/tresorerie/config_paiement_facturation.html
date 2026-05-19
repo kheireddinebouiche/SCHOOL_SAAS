@@ -1,5 +1,6 @@
 {% extends 'tenant_folder/base.html' %}
 {% load static %}
+{% load l10n %}
 {% block title %} Paiements & Facturation - Configuration Premium {% endblock title %}
 
 {% block content %}
@@ -222,6 +223,89 @@
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =============== TVA & FISCALITÉ =============== -->
+            <div class="row mb-4 g-3">
+                <div class="col-12">
+                    <div class="glass-card p-4 h-100">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                                <i class="ri-percent-line text-success fs-5"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold mb-0">Taxes & Fiscalité</h5>
+                                <p class="text-muted mb-0 small">Configurez les paramètres de TVA par défaut.</p>
+                            </div>
+                        </div>
+                        <hr class="my-3">
+                        
+                                    <div class="row g-4">
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-bold text-muted text-uppercase">Taux TVA par défaut (%)</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control border-light-subtle" name="default_tva_percent" value="{{ config.default_tva_percent|unlocalize }}" step="0.01">
+                                                <span class="input-group-text bg-light border-light-subtle">%</span>
+                                            </div>
+                                            <p class="text-muted small mt-1 mb-0" style="font-size: 0.75rem;">Appliqué par défaut sur chaque nouvelle ligne de facturation.</p>
+                                        </div>
+
+                                    </div>
+
+                                    <div class="mt-4">
+                                        <label class="form-label small fw-bold text-muted text-uppercase mb-2">Liste des taux disponibles</label>
+                                        <div class="table-responsive rounded border border-light-subtle mb-3" style="max-height: 250px; overflow-y: auto;">
+                                            <table class="table table-sm table-hover align-middle mb-0 text-center" style="font-size: 0.85rem;">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th class="text-start ps-3">Libellé</th>
+                                                        <th>Valeur</th>
+                                                        <th style="width: 100px;">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for tva in tvas %}
+                                                    <tr>
+                                                        <td class="fw-semibold text-dark text-start ps-3">{{ tva.label }}</td>
+                                                        <td><span class="badge bg-soft-primary text-primary rounded-pill px-2">{{ tva.valeur|floatformat:2 }}%</span></td>
+                                                        <td>
+                                                            <div class="d-flex align-items-center justify-content-center">
+                                                                <button type="button" class="btn btn-xs btn-icon btn-soft-danger" onclick="deleteTva({{ tva.id }})" title="Supprimer" style="padding: 2px 6px;">
+                                                                    <i class="ri-delete-bin-line" style="font-size: 0.85rem;"></i>
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    {% empty %}
+                                                    <tr><td colspan="3" class="text-center py-4 text-muted small italic">Aucun taux spécifique configuré.</td></tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <div class="p-3 rounded-3 bg-light border border-light-subtle mt-4">
+                                        <label class="form-label small fw-bold text-muted text-uppercase mb-2">Ajouter un nouveau taux</label>
+                                        <div class="row g-2 align-items-center">
+                                            <div class="col-md-5">
+                                                <input type="text" class="form-control form-control-sm border-light-subtle" id="new_tva_label" placeholder="Libellé (ex: Réduit)">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" class="form-control border-light-subtle" id="new_tva_valeur" placeholder="Ex: 5.5">
+                                                    <span class="input-group-text bg-white border-light-subtle">%</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <button type="button" class="btn btn-sm btn-primary rounded-pill w-100 px-3" onclick="addTva()">
+                                                    <i class="ri-add-line me-1"></i> Ajouter
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
                     </div>
                 </div>
             </div>
@@ -506,5 +590,67 @@ $(document).ready(function() {
         saveParametreFinancier({ 'bloquer_date_paiement': val });
     });
 });
+
+    function addTva() {
+        const label = document.getElementById('new_tva_label').value;
+        const valeur = document.getElementById('new_tva_valeur').value;
+        
+        if (!label || !valeur) {
+            alertify.error('Veuillez remplir le libellé et la valeur.');
+            return;
+        }
+        
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.style.display = 'none';
+        
+        const csrf = document.createElement('input');
+        csrf.name = 'csrfmiddlewaretoken';
+        csrf.value = '{{ csrf_token }}';
+        form.appendChild(csrf);
+        
+        const action = document.createElement('input');
+        action.name = 'action';
+        action.value = 'add_tva';
+        form.appendChild(action);
+        
+        const l = document.createElement('input');
+        l.name = 'tva_label';
+        l.value = label;
+        form.appendChild(l);
+        
+        const v = document.createElement('input');
+        v.name = 'tva_valeur';
+        v.value = valeur;
+        form.appendChild(v);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    function deleteTva(id) {
+        // Simple implementation for immediate deletion via form post
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.style.display = 'none';
+        
+        const csrf = document.createElement('input');
+        csrf.name = 'csrfmiddlewaretoken';
+        csrf.value = '{{ csrf_token }}';
+        form.appendChild(csrf);
+        
+        const action = document.createElement('input');
+        action.name = 'action';
+        action.value = 'delete_tva';
+        form.appendChild(action);
+        
+        const tid = document.createElement('input');
+        tid.name = 'tva_id';
+        tid.value = id;
+        form.appendChild(tid);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
 </script>
 {% endblock %}
