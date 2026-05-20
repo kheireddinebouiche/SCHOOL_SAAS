@@ -32,6 +32,7 @@
         background: url('{% static "img/photos/pattern.png" %}') center/cover;
         opacity: 0.1;
         border-radius: 1rem;
+        pointer-events: none;
     }
 
     .hero-content {
@@ -182,7 +183,10 @@
                         {% endif %}
                     </div>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2" style="position: relative; z-index: 1;">
+                    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#generatePaymentModal">
+                        <i class="ri-hand-coin-line me-1"></i> Générer Paiement
+                    </button>
                     <div class="dropdown">
                         <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="ri-printer-line me-1"></i> Impression Rapide
@@ -655,6 +659,111 @@
     <!-- End Page-content -->
 </div>
 <!-- end main content-->
+
+
+<!-- Modal: Générer un Paiement -->
+<div id="generatePaymentModal" class="modal fade" tabindex="-1" aria-labelledby="generatePaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-hand-coin-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-primary mb-1" id="generatePaymentModalLabel">
+                            Générer des demandes de paiement
+                        </h5>
+                        <p class="text-muted small mb-0">Générer un paiement pour les étudiants du groupe <strong>{{ groupe.nom }}</strong></p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="generatePaymentForm">
+                <input type="hidden" name="group_id" value="{{ groupe.id }}">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <!-- Type de Paiement -->
+                        <div class="col-md-6">
+                            <label for="payment_type_select" class="form-label fw-semibold">Type de Paiement <span class="text-danger">*</span></label>
+                            <select class="form-select border-2" id="payment_type_select" name="payment_type_id" required>
+                                <option value="">Chargement des types...</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Montant -->
+                        <div class="col-md-6">
+                            <label for="payment_amount_input" class="form-label fw-semibold">Montant (DZD) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="ri-money-dollar-circle-line"></i></span>
+                                <input type="number" class="form-control border-2" id="payment_amount_input" name="amount" step="0.01" min="0.01" placeholder="0.00" required>
+                            </div>
+                        </div>
+
+                        <!-- Date d'échéance -->
+                        <div class="col-md-6">
+                            <label for="payment_due_date_input" class="form-label fw-semibold">Date d'échéance <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control border-2" id="payment_due_date_input" name="due_date" required>
+                        </div>
+
+                        <!-- Libellé -->
+                        <div class="col-md-6">
+                            <label for="payment_label_input" class="form-label fw-semibold">Libellé / Objet <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control border-2" id="payment_label_input" name="label" placeholder="Ex: Frais de rattrapage S1, Examen..." required>
+                        </div>
+
+                        <!-- Sélection des étudiants -->
+                        <div class="col-12">
+                            <div class="border rounded-3 p-3 bg-light bg-opacity-50">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="form-label fw-bold mb-0"><i class="ri-group-line me-1"></i> Sélectionner les Étudiants <span class="text-danger">*</span></label>
+                                    <span class="badge bg-primary text-white" id="selectedStudentsCount">{{ students.count }} sélectionné(s)</span>
+                                </div>
+                                <div class="table-responsive" style="max-height: 250px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 0.5rem; background: white;">
+                                    <table class="table table-sm align-middle table-hover mb-0">
+                                        <thead class="table-light position-sticky top-0" style="z-index: 1;">
+                                            <tr>
+                                                <th style="width: 40px;" class="ps-3">
+                                                    <input type="checkbox" id="selectAllStudents" class="form-check-input" checked>
+                                                </th>
+                                                <th>Nom Complet</th>
+                                                <th class="text-end pe-3">Matricule</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for i in students %}
+                                            <tr>
+                                                <td class="ps-3">
+                                                    <input type="checkbox" name="student_ids[]" value="{{ i.student.id }}" class="form-check-input student-checkbox" checked>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="avatar-xs bg-soft-primary text-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 0.7rem;">
+                                                            {{ i.student.nom|first }}{{ i.student.prenom|first }}
+                                                        </div>
+                                                        <span class="fw-semibold text-dark">{{ i.student.nom }} {{ i.student.prenom }}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-end text-muted small pe-3">{{ i.student.matricule_interne|default:"-" }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 py-3 bg-light bg-opacity-50">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary" id="btnSubmitGeneratePayment">
+                        <i class="ri-check-line me-1"></i> Générer les paiements
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 
 <div id="specialiteModel" class="modal fade" tabindex="-1" aria-labelledby="specialiteModelLabel" aria-hidden="true">
@@ -2653,6 +2762,112 @@
                 },
                 error: function() {
                     alertify.error("Erreur lors de l'envoi de la demande.");
+                },
+                complete: function() {
+                    $btn.prop('disabled', false).html(originalText);
+                }
+            });
+        });
+
+        // --- Group Payment Generation Logic ---
+        let paymentTypesLoaded = false;
+
+        $('#generatePaymentModal').on('show.bs.modal', function () {
+            if (!paymentTypesLoaded) {
+                const select = $('#payment_type_select');
+                select.empty().append('<option value="">Chargement des types...</option>');
+                
+                $.ajax({
+                    url: "{% url 't_tresorerie:ApiListePaymentTypes' %}",
+                    type: "GET",
+                    success: function (data) {
+                        select.empty().append('<option value="">Choisir un type...</option>');
+                        if (data && data.length > 0) {
+                            data.forEach(item => {
+                                const amountAttr = (item.default_amount !== null && item.default_amount !== undefined) ? ` data-amount="${item.default_amount}"` : '';
+                                select.append(`<option value="${item.id}"${amountAttr}>${item.name}</option>`);
+                            });
+                            paymentTypesLoaded = true;
+                        } else {
+                            select.empty().append('<option value="">Aucun type de paiement synchronisé</option>');
+                        }
+                    },
+                    error: function () {
+                        select.empty().append('<option value="">Erreur de chargement</option>');
+                        alertify.error("Impossible de charger les types de paiement.");
+                    }
+                });
+            }
+        });
+
+        // Auto-fill amount based on selected payment type's default configured amount
+        $('#payment_type_select').on('change', function() {
+            const selectedOption = $(this).find('option:selected');
+            const defaultAmount = selectedOption.attr('data-amount');
+            if (defaultAmount !== undefined && defaultAmount !== null && defaultAmount !== '') {
+                $('#payment_amount_input').val(parseFloat(defaultAmount).toFixed(2));
+            } else {
+                $('#payment_amount_input').val('');
+            }
+        });
+
+        // "Select All" checkbox logic
+        $('#selectAllStudents').on('change', function() {
+            const isChecked = $(this).is(':checked');
+            $('.student-checkbox').prop('checked', isChecked);
+            updateSelectedCount();
+        });
+
+        // Update selected count when a single student checkbox changes
+        $(document).on('change', '.student-checkbox', function() {
+            const total = $('.student-checkbox').length;
+            const checked = $('.student-checkbox:checked').length;
+            $('#selectAllStudents').prop('checked', total === checked);
+            updateSelectedCount();
+        });
+
+        function updateSelectedCount() {
+            const count = $('.student-checkbox:checked').length;
+            $('#selectedStudentsCount').text(`${count} sélectionné(s)`);
+        }
+
+        // Handle payment generation form submit
+        $('#generatePaymentForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            const checkedCount = $('.student-checkbox:checked').length;
+            if (checkedCount === 0) {
+                alertify.error("Veuillez sélectionner au moins un étudiant.");
+                return;
+            }
+
+            const formData = $(this).serialize();
+            const $btn = $('#btnSubmitGeneratePayment');
+            const originalText = $btn.html();
+            
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Génération...');
+
+            $.ajax({
+                url: "{% url 't_groupe:ApiGenerateGroupPayment' %}",
+                type: 'POST',
+                data: formData,
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                success: function(res) {
+                    if (res.status === 'success') {
+                        alertify.success(res.message);
+                        $('#generatePaymentModal').modal('hide');
+                        // Reset form
+                        $('#generatePaymentForm')[0].reset();
+                        $('.student-checkbox').prop('checked', true);
+                        $('#selectAllStudents').prop('checked', true);
+                        updateSelectedCount();
+                    } else {
+                        alertify.error(res.message || "Une erreur est survenue.");
+                    }
+                },
+                error: function(xhr) {
+                    const res = xhr.responseJSON;
+                    alertify.error(res && res.message ? res.message : "Erreur lors de la génération des paiements.");
                 },
                 complete: function() {
                     $btn.prop('disabled', false).html(originalText);

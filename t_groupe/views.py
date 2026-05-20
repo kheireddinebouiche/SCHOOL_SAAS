@@ -352,3 +352,89 @@ def toggleAdmissibleStage(request, pk):
     status_str = "admissible au stage" if groupe.admissible_stage else "non admissible au stage"
     messages.success(request, f"Le groupe {groupe.nom} est désormais {status_str}.")
     return redirect('t_groupe:detailsgroupe', pk=pk)
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+def ApiGenerateGroupPayment(request):
+    if request.method == 'POST':
+        try:
+            from t_tresorerie.models import DuePaiements, PaymentType
+            from decimal import Decimal
+            
+            group_id = request.POST.get('group_id')
+            payment_type_id = request.POST.get('payment_type_id')
+            amount = request.POST.get('amount')
+            due_date = request.POST.get('due_date')
+            label = request.POST.get('label')
+            
+            # student_ids can come as a list 'student_ids[]' or comma-separated 'student_ids'
+            student_ids = request.POST.getlist('student_ids[]')
+            if not student_ids:
+                student_ids = request.POST.getlist('student_ids')
+            if not student_ids and request.POST.get('student_ids'):
+                student_ids = request.POST.get('student_ids').split(',')
+
+            if not all([group_id, payment_type_id, amount, due_date, label]):
+                return JsonResponse({'status': 'error', 'message': 'Certains paramètres obligatoires sont manquants.'}, status=400)
+            
+            if not student_ids:
+                return JsonResponse({'status': 'error', 'message': 'Veuillez sélectionner au moins un étudiant.'}, status=400)
+                
+            groupe = Groupe.objects.get(id=group_id)
+            payment_type = PaymentType.objects.get(id=payment_type_id)
+            amount_val = Decimal(amount)
+            
+            # Retrieve promotion and legal entity
+            promo = groupe.promotion
+            entite = None
+            if groupe.specialite and groupe.specialite.formation and groupe.specialite.formation.entite_legal:
+                entite = Entreprise.objects.get(id=groupe.specialite.formation.entite_legal.id)
+
+            created_count = 0
+            for student_id in student_ids:
+                if not student_id:
+                    continue
+                student = Prospets.objects.get(id=student_id)
+                
+                # Check if this student is actually in the group
+                if not GroupeLine.objects.filter(groupe=groupe, student=student).exists():
+                    continue
+                
+                # Create DuePaiements
+                DuePaiements.objects.create(
+                    client=student,
+                    label=label,
+                    montant_due=amount_val,
+                    montant_restant=amount_val,
+                    date_echeance=due_date,
+                    is_done=False,
+                    promo=promo,
+                    type='autre',  # Needed for appearing in penalites demandes-paiements
+                    payment_type=payment_type,
+                    entite=entite
+                )
+                created_count += 1
+            
+            # Log action
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='DuePaiements',
+                target_id=str(groupe.id),
+                details=f"Génération de {created_count} demandes de paiement ({payment_type.name}) de {amount_val} DZD pour le groupe {groupe.nom}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            return JsonResponse({'status': 'success', 'message': f'{created_count} demandes de paiement générées avec succès.'})
+            
+        except Groupe.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Groupe introuvable.'}, status=404)
+        except PaymentType.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Type de paiement introuvable.'}, status=404)
+        except Prospets.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Un ou plusieurs étudiants sont introuvables.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)

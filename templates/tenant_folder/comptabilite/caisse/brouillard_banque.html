@@ -351,6 +351,8 @@
             (transaction.nom && transaction.nom.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
             (transaction.order_to && transaction.order_to.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
             (transaction.entite_name && transaction.entite_name.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.reference && transaction.reference.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.ref && transaction.ref.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
             (transaction.montant && transaction.montant.toString().includes(currentSearchTerm))
           );
         });
@@ -582,6 +584,7 @@
                         <th class="border-0 rounded-start">Libellé</th>
                         <th class="border-0">Client/Fournisseur</th>
                         <th class="border-0">Entité</th>
+                        <th class="border-0">Réf. & Mode</th>
                         <th class="border-0">Type</th>
                         <th class="border-0 text-end">Montant</th>
                         <th class="border-0 text-end">Solde</th>
@@ -600,12 +603,39 @@
               '<span class="text-success fw-bold">+' + formatMoney(transaction.montant) + '</span>' :
               '<span class="text-danger fw-bold">-' + formatMoney(transaction.montant) + '</span>';
 
+            var modeText = '';
+            var modeClass = '';
+            var modeVal = (transaction.mode || '').toLowerCase();
+            if (modeVal === 'che' || modeVal === 'cheque') {
+              modeText = 'Chèque';
+              modeClass = 'badge-soft-warning';
+            } else if (modeVal === 'vir' || modeVal === 'virement') {
+              modeText = 'Virement';
+              modeClass = 'badge-soft-primary';
+            } else if (modeVal === 'esp' || modeVal === 'espece') {
+              modeText = 'Espèce';
+              modeClass = 'badge-soft-success';
+            } else {
+              modeText = transaction.mode || 'N/A';
+              modeClass = 'badge-soft-info';
+            }
+
+            var refBadge = `<span class="badge ${modeClass}">${modeText}</span>`;
+            if (transaction.reference) {
+              refBadge += `<div class="small text-muted mt-1 fw-semibold" style="font-size: 0.75rem;"><i class="ri-hashtag text-secondary me-1"></i>${transaction.reference}</div>`;
+            } else {
+              refBadge += `<div class="small text-muted mt-1">-</div>`;
+            }
+
+            var refText = transaction.ref ? `<div class="small text-muted mt-1" style="font-size: 0.75rem;"><i class="ri-file-text-line me-1"></i>${transaction.ref}</div>` : '';
+
             var transactionRow = `
               <tr>
                 <td>
-                  <div class="text-body">
+                  <div class="text-body fw-semibold">
                     ${transaction.nom}
                   </div>
+                  ${refText}
                 </td>
                 <td>
                   <div class="text-body">
@@ -615,6 +645,11 @@
                 <td>
                   <div class="text-body">
                     <span class="badge badge-soft-info">${transaction.entite_name || 'N/A'}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="text-body">
+                    ${refBadge}
                   </div>
                 </td>
                 <td>
@@ -828,7 +863,7 @@
 
       // Create worksheet from filtered data
       var ws_data = [
-        ['Date', 'Libellé', 'Client/Fournisseur', 'Entité', 'Type', 'Montant', 'Solde']
+        ['Date', 'N° Pièce/Reçu', 'Libellé', 'Client/Fournisseur', 'Entité', 'Mode de Paiement', 'Référence de Paiement', 'Type', 'Montant', 'Solde']
       ];
 
       // Add filtered data to the worksheet
@@ -838,11 +873,26 @@
           '+' + transaction.montant :
           '-' + transaction.montant;
 
+        var modeLabel = '';
+        var modeVal = (transaction.mode || '').toLowerCase();
+        if (modeVal === 'che' || modeVal === 'cheque') {
+          modeLabel = 'Chèque';
+        } else if (modeVal === 'vir' || modeVal === 'virement') {
+          modeLabel = 'Virement';
+        } else if (modeVal === 'esp' || modeVal === 'espece') {
+          modeLabel = 'Espèce';
+        } else {
+          modeLabel = transaction.mode || 'N/A';
+        }
+
         ws_data.push([
           transaction.date,
+          transaction.ref || '',
           transaction.nom,
-          transaction.order_to,
+          transaction.order_to || '',
           transaction.entite_name || 'N/A',
+          modeLabel,
+          transaction.reference || '',
           typeLabel,
           montantText,
           formatMoney(transaction.solde)
@@ -873,6 +923,8 @@
             (transaction.nom && transaction.nom.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
             (transaction.order_to && transaction.order_to.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
             (transaction.entite_name && transaction.entite_name.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.reference && transaction.reference.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
+            (transaction.ref && transaction.ref.toLowerCase().includes(currentSearchTerm.toLowerCase())) ||
             (transaction.montant && transaction.montant.toString().includes(currentSearchTerm))
           );
         });
@@ -981,11 +1033,26 @@
             '+' + transaction.montant :
             '-' + transaction.montant;
 
+          var modeLabel = '';
+          var modeVal = (transaction.mode || '').toLowerCase();
+          if (modeVal === 'che' || modeVal === 'cheque') {
+            modeLabel = 'Chèque';
+          } else if (modeVal === 'vir' || modeVal === 'virement') {
+            modeLabel = 'Virement';
+          } else if (modeVal === 'esp' || modeVal === 'espece') {
+            modeLabel = 'Espèce';
+          } else {
+            modeLabel = transaction.mode || 'N/A';
+          }
+
           tableData.push([
             transaction.date,
+            transaction.ref || '',
             transaction.nom,
-            transaction.order_to,
+            transaction.order_to || '',
             transaction.entite_name || 'N/A',
+            modeLabel,
+            transaction.reference || '',
             typeLabel,
             montantText,
             formatMoney(transaction.solde)
@@ -996,7 +1063,7 @@
       // Add the table using autoTable
       if (tableData.length > 0) {
         doc.autoTable({
-          head: [['Date', 'Libellé', 'Client/Fournisseur', 'Entité', 'Type', 'Montant', 'Solde']],
+          head: [['Date', 'N° Pièce', 'Libellé', 'Client/Fournisseur', 'Entité', 'Mode', 'Réf. Paiement', 'Type', 'Montant', 'Solde']],
           body: tableData,
           startY: 40,
           theme: 'grid',
@@ -1006,8 +1073,9 @@
             rowHeight: 12 // Reduced header row height
           },
           styles: {
-            cellPadding: 3, // Reduced padding
-            rowHeight: 15 // Reduced row height
+            cellPadding: 2, // Reduced padding for 10 columns
+            fontSize: 8, // Smaller font for landscape columns
+            rowHeight: 12
           }
         });
       } else {

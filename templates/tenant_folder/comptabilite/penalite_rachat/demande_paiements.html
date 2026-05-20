@@ -60,6 +60,140 @@
     }
     
     .table-responsive { overflow: visible !important; }
+
+    /* Custom Switch & Smooth toggle transitions */
+    #invoiceParamsContainer {
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #invoiceParamsContainer.show {
+        max-height: 350px;
+        opacity: 1;
+        margin-top: 1rem;
+    }
+
+    /* ─── Premium Filter Bar ─── */
+    .filter-bar {
+        background: rgba(255, 255, 255, 0.97);
+        border: 1px solid rgba(59, 130, 246, 0.12);
+        border-radius: 1.25rem;
+        box-shadow: 0 4px 24px 0 rgba(31, 38, 135, 0.06);
+        padding: 1.1rem 1.4rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: flex-end;
+        transition: box-shadow 0.2s ease;
+    }
+    .filter-bar:focus-within {
+        box-shadow: 0 6px 32px 0 rgba(59, 130, 246, 0.11);
+    }
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        flex: 1;
+        min-width: 150px;
+    }
+    .filter-group.search-group { min-width: 220px; flex: 2; }
+    .filter-group.date-group { min-width: 140px; }
+    .filter-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        margin-bottom: 0;
+    }
+    .filter-input {
+        border: 1.5px solid #e2e8f0;
+        border-radius: 0.65rem;
+        padding: 0.42rem 0.8rem;
+        font-size: 0.875rem;
+        color: #1e293b;
+        background: #f8fafc;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        height: 38px;
+        outline: none;
+        width: 100%;
+    }
+    .filter-input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+        background: #fff;
+    }
+    .search-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+    .search-icon {
+        position: absolute;
+        left: 0.65rem;
+        color: #94a3b8;
+        font-size: 1rem;
+        pointer-events: none;
+    }
+    .search-wrapper .filter-input { padding-left: 2rem; }
+    .btn-reset-filters {
+        height: 38px;
+        padding: 0 1rem;
+        border-radius: 0.65rem;
+        border: 1.5px solid #e2e8f0;
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+    .btn-reset-filters:hover {
+        border-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.06);
+        color: #3b82f6;
+        transform: translateY(-1px);
+    }
+    .filter-badge-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.1rem 0.45rem;
+        min-width: 20px;
+        transition: all 0.2s ease;
+    }
+    .filter-divider {
+        width: 1px;
+        height: 38px;
+        background: #e2e8f0;
+        align-self: flex-end;
+    }
+    @media (max-width: 768px) {
+        .filter-bar { flex-direction: column; }
+        .filter-group { min-width: 100%; }
+        .filter-divider { display: none; }
+    }
+
+    /* ─── KPI Cards ─── */
+    .kpi-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 32px 0 rgba(31, 38, 135, 0.1) !important;
+    }
+    .kpi-card.clickable { cursor: pointer; }
 </style>
 <div class="main-content">
   <div class="page-content">
@@ -93,6 +227,163 @@
         </div>
       </div>
 
+      <!-- ─── KPI Cards ─── -->
+      <div class="row g-3 mb-4" id="kpiRow">
+
+        <!-- Total dossiers -->
+        <div class="col-md-4 col-sm-6">
+          <div class="glass-card p-4 kpi-card h-100 border-0">
+            <div class="d-flex align-items-center">
+              <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                <i class="ri-file-list-3-line text-primary fs-3"></i>
+              </div>
+              <div>
+                <p class="text-muted mb-1 fw-medium small text-uppercase" style="letter-spacing: 0.05em;">Total dossiers</p>
+                <h3 class="mb-0 fw-bold" id="kpiTotal">–</h3>
+                <span class="text-muted" style="font-size: 0.72rem;">Rachats • Dettes • Autres</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- En attente (count) -->
+        <div class="col-md-4 col-sm-6">
+          <div class="glass-card p-4 kpi-card clickable h-100 border-0" onclick="quickFilter('pending')" title="Cliquer pour filtrer : En attente">
+            <div class="d-flex align-items-center">
+              <div class="bg-warning bg-opacity-10 rounded-circle p-3 me-3">
+                <i class="ri-time-line text-warning fs-3"></i>
+              </div>
+              <div>
+                <p class="text-muted mb-1 fw-medium small text-uppercase" style="letter-spacing: 0.05em;">En attente</p>
+                <h3 class="mb-0 fw-bold text-warning" id="kpiPending">–</h3>
+                <span class="text-muted" style="font-size: 0.72rem;">Paiements non encaissés</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payés (count) -->
+        <div class="col-md-4 col-sm-6">
+          <div class="glass-card p-4 kpi-card clickable h-100 border-0" onclick="quickFilter('paid')" title="Cliquer pour filtrer : Payés">
+            <div class="d-flex align-items-center">
+              <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                <i class="ri-checkbox-circle-line text-success fs-3"></i>
+              </div>
+              <div>
+                <p class="text-muted mb-1 fw-medium small text-uppercase" style="letter-spacing: 0.05em;">Payés</p>
+                <h3 class="mb-0 fw-bold text-success" id="kpiPaid">–</h3>
+                <span class="text-muted" style="font-size: 0.72rem;">Paiements encaissés</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Montant à recouvrer -->
+        <div class="col-md-6 col-sm-6">
+          <div class="glass-card p-4 kpi-card clickable h-100 border-0" onclick="quickFilter('pending')" title="Cliquer pour filtrer : En attente">
+            <div class="d-flex align-items-center">
+              <div class="bg-danger bg-opacity-10 rounded-circle p-3 me-3">
+                <i class="ri-error-warning-line text-danger fs-3"></i>
+              </div>
+              <div>
+                <p class="text-muted mb-1 fw-medium small text-uppercase" style="letter-spacing: 0.05em;">Montant à recouvrer</p>
+                <h3 class="mb-0 fw-bold text-danger" id="kpiAmtPending">–</h3>
+                <span class="text-muted" style="font-size: 0.72rem;">DZD · non encaissé</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Montant encaissé -->
+        <div class="col-md-6 col-sm-6">
+          <div class="glass-card p-4 kpi-card clickable h-100 border-0" onclick="quickFilter('paid')" title="Cliquer pour filtrer : Payés">
+            <div class="d-flex align-items-center">
+              <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                <i class="ri-wallet-3-line text-info fs-3"></i>
+              </div>
+              <div>
+                <p class="text-muted mb-1 fw-medium small text-uppercase" style="letter-spacing: 0.05em;">Montant encaissé</p>
+                <h3 class="mb-0 fw-bold text-info" id="kpiAmtPaid">–</h3>
+                <span class="text-muted" style="font-size: 0.72rem;">DZD · reçu</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ─── Filter Bar ─── -->
+      <div class="row mb-3">
+        <div class="col-12">
+          <div class="filter-bar">
+            <!-- Recherche -->
+            <div class="filter-group search-group">
+              <label class="filter-label"><i class="ri-search-2-line me-1"></i>Rechercher</label>
+              <div class="search-wrapper">
+                <i class="ri-search-2-line search-icon"></i>
+                <input type="text" id="filterSearch" class="filter-input" placeholder="Client, libellé…">
+              </div>
+            </div>
+
+            <div class="filter-divider"></div>
+
+            <!-- Type -->
+            <div class="filter-group">
+              <label class="filter-label"><i class="ri-price-tag-3-line me-1"></i>Type</label>
+              <select id="filterType" class="filter-input">
+                <option value="">Tous les types</option>
+              </select>
+            </div>
+
+            <!-- Statut -->
+            <div class="filter-group">
+              <label class="filter-label"><i class="ri-checkbox-circle-line me-1"></i>Statut</label>
+              <select id="filterStatut" class="filter-input">
+                <option value="">Tous les statuts</option>
+                <option value="pending">En attente</option>
+                <option value="paid">Payé</option>
+              </select>
+            </div>
+
+            <div class="filter-divider"></div>
+
+            <!-- Type de date -->
+            <div class="filter-group">
+              <label class="filter-label"><i class="ri-calendar-event-line me-1"></i>Critère date</label>
+              <select id="filterDateType" class="filter-input">
+                <option value="echeance">Date d'échéance</option>
+                <option value="paiement">Date de paiement</option>
+              </select>
+            </div>
+
+            <!-- Date début -->
+            <div class="filter-group date-group">
+              <label class="filter-label">Du</label>
+              <input type="date" id="filterDateFrom" class="filter-input">
+            </div>
+
+            <!-- Date fin -->
+            <div class="filter-group date-group">
+              <label class="filter-label">Au</label>
+              <input type="date" id="filterDateTo" class="filter-input">
+            </div>
+
+            <div class="filter-divider"></div>
+
+            <!-- Bouton reset + compteur -->
+            <div class="filter-group" style="flex:0;min-width:auto;">
+              <label class="filter-label">&nbsp;</label>
+              <div class="d-flex align-items-center gap-2">
+                <span class="filter-badge-count" id="filteredCount">–</span>
+                <button class="btn-reset-filters" id="btnResetFilters" onclick="resetFilters()">
+                  <i class="ri-refresh-line"></i> Réinitialiser
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="row">
         <div class="col-12">
           <div class="glass-card border-0 overflow-hidden">
@@ -121,7 +412,7 @@
                   </thead>
                   <tbody id="duePaiementsList">
                     <tr>
-                      <td colspan="6" class="text-center py-5">
+                      <td colspan="8" class="text-center py-5">
                           <div class="spinner-border text-primary" role="status">
                               <span class="visually-hidden">Chargement...</span>
                           </div>
@@ -185,22 +476,94 @@
               </div>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body px-4 py-4 text-center">
-              <div class="avatar-lg mx-auto mb-3">
-                <div class="avatar-title bg-success bg-opacity-10 text-success display-5 rounded-circle">
-                  <i class="ri-wallet-3-line"></i>
+            <div class="modal-body px-4 py-4 text-start">
+              <div class="text-center mb-4">
+                <div class="avatar-lg mx-auto mb-3">
+                  <div class="avatar-title bg-success bg-opacity-10 text-success display-5 rounded-circle">
+                    <i class="ri-wallet-3-line"></i>
+                  </div>
                 </div>
+                <h5 class="mb-2">Effectuer le paiement</h5>
+                <p class="text-muted mb-2">Voulez-vous confirmer le paiement de la somme de :</p>
+                <h2 class="text-success fw-bold"><span id="paymentAmountDisplay">0.00</span> DZD</h2>
               </div>
-              
-              <h5 class="mb-3">Effectuer le paiement</h5>
-              <p class="text-muted mb-4">Voulez-vous confirmer le paiement de la somme de :</p>
-              
-              <h2 class="text-success fw-bold mb-4"><span id="paymentAmountDisplay">0.00</span> DZD</h2>
 
-              <div class="d-flex gap-2 justify-content-center mt-4">
-                <button type="button" class="btn btn-light w-sm" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-success w-sm" id="confirmPayBtn">Oui, confirmer</button>
-              </div>
+              <form id="paymentForm" novalidate>
+                <div class="row g-3">
+                  <!-- Mode de paiement -->
+                  <div class="col-md-6">
+                    <label for="modalModePaiement" class="form-label fw-semibold text-dark">Mode de paiement <span class="text-danger">*</span></label>
+                    <select class="form-select border-2" id="modalModePaiement" required>
+                      <option value="esp" selected>Espèce</option>
+                      <option value="che">Chèque</option>
+                      <option value="vir">Virement Bancaire</option>
+                    </select>
+                  </div>
+                  
+                  <!-- Date de paiement effective -->
+                  <div class="col-md-6">
+                    <label for="modalDatePaiement" class="form-label fw-semibold text-dark">Date effective <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control border-2" id="modalDatePaiement" required>
+                  </div>
+                </div>
+
+                <!-- Référence de paiement pour les modes bancaires -->
+                <div class="mt-3" id="paymentReferenceContainer" style="display: none;">
+                  <label for="modalReferencePaiement" class="form-label fw-semibold text-dark">Référence de paiement <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control border-2" id="modalReferencePaiement" placeholder="Numéro de chèque, transaction de virement, etc.">
+                </div>
+
+                <!-- Facturation automatique section -->
+                <div class="mt-4 border-top pt-3">
+                  <div class="form-check form-switch form-switch-md mb-3 d-flex align-items-center justify-content-between px-0">
+                    <label class="form-check-label fw-bold text-dark cursor-pointer" for="modalGenerateInvoice">
+                      <i class="ri-article-line me-1 text-primary"></i> Générer une facture automatiquement
+                    </label>
+                    <input class="form-check-input ms-0 cursor-pointer" type="checkbox" id="modalGenerateInvoice" style="width: 40px; height: 20px;">
+                  </div>
+
+                  <!-- Dynamic Invoice Parameters Container -->
+                  <div id="invoiceParamsContainer" class="bg-light p-3 rounded-3 border">
+                    <div class="row g-3">
+                      <!-- TVA Selector -->
+                      <div class="col-12">
+                        <label for="modalTvaPercent" class="form-label fw-semibold text-muted small mb-1">Taux de TVA applicable</label>
+                        <select class="form-select" id="modalTvaPercent">
+                          {% for tva in tvas %}
+                            <option value="{{ tva.valeur }}">{{ tva.valeur }}%</option>
+                          {% empty %}
+                            <option value="19.00">19.00% (Défaut)</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+
+                      <!-- Checkboxes for Show TVA and Skip Timbre -->
+                      <div class="col-12">
+                        <div class="d-flex flex-column gap-2">
+                          <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="modalShowTva" checked>
+                            <label class="form-check-label fw-medium text-muted small" for="modalShowTva">
+                              Afficher la TVA sur la facture
+                            </label>
+                          </div>
+                          
+                          <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="modalSkipTimbre">
+                            <label class="form-check-label fw-medium text-muted small" for="modalSkipTimbre">
+                              Exclure le droit de timbre fiscal
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">
+                  <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                  <button type="submit" class="btn btn-success px-4" id="confirmPayBtn">Confirmer le paiement</button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
@@ -232,6 +595,9 @@
 </div>
 
 <script>
+  // ─── Global data cache for client-side filtering ───
+  var allDuePaiementsData = [];
+
   document.addEventListener('DOMContentLoaded', function() {
     loadDuePaiements();
     
@@ -246,11 +612,60 @@
         myModal.show();
     };
 
+    // Toggle automatic invoice options display
+    document.getElementById('modalGenerateInvoice').addEventListener('change', function() {
+        const container = document.getElementById('invoiceParamsContainer');
+        if (this.checked) {
+            container.classList.add('show');
+        } else {
+            container.classList.remove('show');
+        }
+    });
+
+    // Toggle payment reference dynamically
+    const modeSelect = document.getElementById('modalModePaiement');
+    const refContainer = document.getElementById('paymentReferenceContainer');
+    const refInput = document.getElementById('modalReferencePaiement');
+
+    modeSelect.addEventListener('change', function() {
+        if (this.value === 'che' || this.value === 'vir') {
+            refContainer.style.display = 'block';
+            refInput.required = true;
+        } else {
+            refContainer.style.display = 'none';
+            refInput.required = false;
+            refInput.value = '';
+        }
+    });
+
     window.payDuePaiement = function(id, amount) {
         payId = id;
         document.getElementById('paymentAmountDisplay').innerText = parseFloat(amount).toFixed(2);
-        var myModal = new bootstrap.Modal(document.getElementById('paymentConfirmationModal'));
-        myModal.show();
+        
+        // Prefill effective date with today's date in local YYYY-MM-DD
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        document.getElementById('modalDatePaiement').value = `${yyyy}-${mm}-${dd}`;
+        
+        // Reset form controls
+        document.getElementById('modalModePaiement').value = 'esp';
+        document.getElementById('modalGenerateInvoice').checked = false;
+        document.getElementById('modalShowTva').checked = true;
+        document.getElementById('modalSkipTimbre').checked = false;
+        
+        // Reset reference payment controls
+        refContainer.style.display = 'none';
+        refInput.value = '';
+        refInput.required = false;
+        
+        // Hide invoice settings container
+        document.getElementById('invoiceParamsContainer').classList.remove('show');
+        
+        var modalEl = document.getElementById('paymentConfirmationModal');
+        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
     };
 
     window.openReceiptModal = function(url) {
@@ -305,16 +720,24 @@
         });
     });
 
-    document.getElementById('confirmPayBtn').addEventListener('click', function() {
+    document.getElementById('paymentForm').addEventListener('submit', function(e) {
+        e.preventDefault();
         if(!payId) return;
         
-        var btn = this;
+        var btn = document.getElementById('confirmPayBtn');
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Traitement...';
 
         var formData = new FormData();
         formData.append('id', payId);
         formData.append('csrfmiddlewaretoken', csrfToken);
+        formData.append('mode_paiement', document.getElementById('modalModePaiement').value);
+        formData.append('date_paiement', document.getElementById('modalDatePaiement').value);
+        formData.append('reference_paiement', document.getElementById('modalReferencePaiement').value);
+        formData.append('generate_invoice', document.getElementById('modalGenerateInvoice').checked ? 'true' : 'false');
+        formData.append('tva_percent', document.getElementById('modalTvaPercent').value);
+        formData.append('show_tva', document.getElementById('modalShowTva').checked ? 'true' : 'false');
+        formData.append('skip_timbre', document.getElementById('modalSkipTimbre').checked ? 'true' : 'false');
 
         fetch("{% url 't_tresorerie:ApiPayDuePenalite' %}", {
             method: 'POST',
@@ -327,14 +750,14 @@
         .then(res => {
             if (res.status === 'success') {
                 alertify.success(res.message);
-                var modal = bootstrap.Modal.getInstance(document.getElementById('paymentConfirmationModal'));
+                var modalEl = document.getElementById('paymentConfirmationModal');
+                var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
                 modal.hide();
-                
-                // If payment creation returned an ID, we could auto-print here or just reload
                 loadDuePaiements();
             } else if (res.status === 'info') {
                 alertify.message(res.message);
-                var modal = bootstrap.Modal.getInstance(document.getElementById('paymentConfirmationModal'));
+                var modalEl = document.getElementById('paymentConfirmationModal');
+                var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
                 modal.hide();
                 loadDuePaiements(); 
             } else {
@@ -347,28 +770,194 @@
         })
         .finally(() => {
             btn.disabled = false;
-            btn.innerHTML = 'Oui, confirmer';
+            btn.innerHTML = 'Confirmer le paiement';
             payId = null;
         });
     });
   });
 
+  // ─── Render rows from a given data array ───
+  function renderPaiementRows(data) {
+    var rows = '';
+    if (!data || data.length === 0) {
+      rows = `
+        <tr>
+          <td colspan="8" class="text-center py-5">
+            <div class="avatar-lg mx-auto mb-3">
+              <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                <i class="ri-search-line"></i>
+              </div>
+            </div>
+            <h5 class="mb-2">Aucun résultat</h5>
+            <p class="text-muted mb-0">Aucun paiement ne correspond aux filtres sélectionnés.</p>
+          </td>
+        </tr>
+      `;
+    } else {
+      data.forEach(item => {
+        var statusBadge = item.is_done
+          ? '<span class="badge badge-soft-success">Payé</span>'
+          : '<span class="badge badge-soft-warning">En attente</span>';
+
+        var typeBadgeClass = 'badge-soft-info';
+        if (item.type === 'Rachât de crédit') typeBadgeClass = 'badge-soft-danger';
+        else if (item.type === 'Module en dette') typeBadgeClass = 'badge-soft-secondary';
+
+        var actionButtons = '';
+        if (!item.is_done) {
+          actionButtons = `
+            <button class="btn btn-edit-premium text-success" onclick="payDuePaiement(${item.id}, '${item.montant_due}')" title="Payer">
+              <i class="ri-money-dollar-circle-line"></i>
+            </button>
+            <button class="btn btn-edit-premium text-danger" onclick="deleteDuePaiement(${item.id})" title="Supprimer">
+              <i class="ri-delete-bin-line"></i>
+            </button>
+          `;
+        } else {
+          var printUrl = "{% url 't_tresorerie:PrintReceipt' 0 %}".replace('0', item.paiement_id || 0);
+          actionButtons = `
+            <button class="btn btn-edit-premium text-info" onclick="openReceiptModal('${printUrl}')" title="Imprimer le reçu">
+              <i class="ri-printer-line"></i>
+            </button>
+            <button class="btn btn-edit-premium text-danger" onclick="deleteDuePaiement(${item.id})" title="Supprimer">
+              <i class="ri-delete-bin-line"></i>
+            </button>
+          `;
+        }
+
+        rows += `
+          <tr>
+            <td class="ps-4 fw-semibold text-dark">${item.client}</td>
+            <td class="fw-medium">${item.label || '-'}</td>
+            <td><span class="badge ${typeBadgeClass}">${item.type || '-'}</span></td>
+            <td class="text-muted small">${item.date_echeance || '-'}</td>
+            <td class="text-muted small">${item.date_paiement || '-'}</td>
+            <td class="fw-bold text-dark">${parseFloat(item.montant_due).toFixed(2)} DZD</td>
+            <td class="text-center">${statusBadge}</td>
+            <td class="text-center pe-4">
+              <div class="d-flex justify-content-center gap-1">
+                ${actionButtons}
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+    }
+    document.getElementById('duePaiementsList').innerHTML = rows;
+    document.getElementById('filteredCount').textContent = data ? data.length : 0;
+  }
+
+  // ─── Update KPI cards from the FULL (unfiltered) dataset ───
+  function updateKPICards(data) {
+    var total   = data.length;
+    var pending = data.filter(function(i){ return !i.is_done; }).length;
+    var paid    = data.filter(function(i){ return  i.is_done; }).length;
+
+    var amtPending = data.reduce(function(acc, i) {
+      return !i.is_done ? acc + parseFloat(i.montant_due || 0) : acc;
+    }, 0);
+    var amtPaid = data.reduce(function(acc, i) {
+      return i.is_done ? acc + parseFloat(i.montant_due || 0) : acc;
+    }, 0);
+
+    function fmt(n) {
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + ' M';
+      if (n >= 1000)    return (n / 1000).toFixed(1) + ' K';
+      return n.toLocaleString('fr-DZ', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    document.getElementById('kpiTotal').textContent      = total;
+    document.getElementById('kpiPending').textContent    = pending;
+    document.getElementById('kpiPaid').textContent       = paid;
+    document.getElementById('kpiAmtPending').textContent = fmt(amtPending);
+    document.getElementById('kpiAmtPaid').textContent    = fmt(amtPaid);
+  }
+
+  // ─── Populate type filter from data ───
+  function populateTypeFilter(data) {
+    var types = [];
+    data.forEach(function(item) {
+      if (item.type && !types.includes(item.type)) types.push(item.type);
+    });
+    var sel = document.getElementById('filterType');
+    // Keep first option ("Tous les types")
+    while (sel.options.length > 1) sel.remove(1);
+    types.sort().forEach(function(t) {
+      var opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ─── Client-side filter logic ───
+  function applyFilters() {
+    var search   = (document.getElementById('filterSearch').value || '').toLowerCase().trim();
+    var type     = document.getElementById('filterType').value;
+    var statut   = document.getElementById('filterStatut').value;
+    var dateType = document.getElementById('filterDateType').value;
+    var dateFrom = document.getElementById('filterDateFrom').value;  // 'YYYY-MM-DD' or ''
+    var dateTo   = document.getElementById('filterDateTo').value;
+
+    var filtered = allDuePaiementsData.filter(function(item) {
+      // Text search
+      if (search) {
+        var haystack = ((item.client || '') + ' ' + (item.label || '')).toLowerCase();
+        if (!haystack.includes(search)) return false;
+      }
+      // Type filter
+      if (type && item.type !== type) return false;
+      // Statut filter
+      if (statut === 'paid'    && !item.is_done) return false;
+      if (statut === 'pending' &&  item.is_done) return false;
+      // Date range filter
+      var rawDate = dateType === 'paiement' ? item.date_paiement : item.date_echeance;
+      if (rawDate) {
+        // Dates arrive as string 'YYYY-MM-DD' or 'DD/MM/YYYY' depending on serialisation; handle both.
+        var d = rawDate.includes('/') 
+          ? rawDate.split('/').reverse().join('-')   // DD/MM/YYYY → YYYY-MM-DD
+          : rawDate.substring(0, 10);                // Keep first 10 chars (strip time if any)
+        if (dateFrom && d < dateFrom) return false;
+        if (dateTo   && d > dateTo)   return false;
+      } else {
+        // If filtering by date and item has no date, exclude it only if a range is set
+        if (dateFrom || dateTo) return false;
+      }
+      return true;
+    });
+
+    renderPaiementRows(filtered);
+  }
+
+  // ─── Reset all filters ───
+  function resetFilters() {
+    document.getElementById('filterSearch').value  = '';
+    document.getElementById('filterType').value    = '';
+    document.getElementById('filterStatut').value  = '';
+    document.getElementById('filterDateType').value = 'echeance';
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value   = '';
+    applyFilters();
+  }
+
   function loadDuePaiements() {
     // Show loader
-    var loaderHtml = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></td></tr>';
+    var loaderHtml = '<tr><td colspan="8" class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div></td></tr>';
     document.getElementById('duePaiementsList').innerHTML = loaderHtml;
+    document.getElementById('filteredCount').textContent = '–';
 
     fetch("{% url 't_tresorerie:ApiListeDuePenalite' %}")
       .then(response => {
-        if (!response.ok) {
-          throw new Error('Erreur réseau');
-        }
+        if (!response.ok) throw new Error('Erreur réseau');
         return response.json();
       })
       .then(data => {
-        var rows = '';
+        // Cache the raw data
+        allDuePaiementsData = data;
+
+        // Handle totally empty state
         if (data.length === 0) {
-          rows = `
+          document.getElementById('duePaiementsList').innerHTML = `
             <tr>
               <td colspan="8" class="text-center py-5">
                 <div class="avatar-lg mx-auto mb-3">
@@ -381,63 +970,42 @@
               </td>
             </tr>
           `;
-        } else {
-          data.forEach(item => {
-            var statusBadge = item.is_done 
-              ? '<span class="badge badge-soft-success">Payé</span>' 
-              : '<span class="badge badge-soft-warning">En attente</span>';
-            
-            var typeBadgeClass = 'badge-soft-info';
-            if (item.type === 'Rachât de crédit') typeBadgeClass = 'badge-soft-danger';
-            else if (item.type === 'Module en dette') typeBadgeClass = 'badge-soft-secondary';
-            
-            var actionButtons = '';
-            if(!item.is_done){
-                actionButtons = `
-                    <button class="btn btn-edit-premium text-success" onclick="payDuePaiement(${item.id}, '${item.montant_due}')" title="Payer">
-                        <i class="ri-money-dollar-circle-line"></i>
-                    </button>
-                    <button class="btn btn-edit-premium text-danger" onclick="deleteDuePaiement(${item.id})" title="Supprimer">
-                        <i class="ri-delete-bin-line"></i>
-                    </button>
-                `;
-            } else {
-                 var printUrl = "{% url 't_tresorerie:PrintReceipt' 0 %}".replace('0', item.paiement_id || 0);
-                 
-                actionButtons = `
-                    <button class="btn btn-edit-premium text-info" onclick="openReceiptModal('${printUrl}')" title="Imprimer le reçu">
-                        <i class="ri-printer-line"></i>
-                    </button>
-                    <button class="btn btn-edit-premium text-danger" onclick="deleteDuePaiement(${item.id})" title="Supprimer">
-                        <i class="ri-delete-bin-line"></i>
-                    </button>
-                `;
-            }
-
-            rows += `
-              <tr>
-                <td class="ps-4 fw-semibold text-dark">${item.client}</td>
-                <td class="fw-medium">${item.label || '-'}</td>
-                <td><span class="badge ${typeBadgeClass}">${item.type || '-'}</span></td>
-                <td class="text-muted small">${item.date_echeance || '-'}</td>
-                <td class="text-muted small">${item.date_paiement || '-'}</td>
-                <td class="fw-bold text-dark">${parseFloat(item.montant_due).toFixed(2)} DZD</td>
-                <td class="text-center">${statusBadge}</td>
-                <td class="text-center pe-4">
-                    <div class="d-flex justify-content-center gap-1">
-                        ${actionButtons}
-                    </div>
-                </td>
-              </tr>
-            `;
-          });
+          document.getElementById('filteredCount').textContent = '0';
+          updateKPICards([]);
+          return;
         }
-        document.getElementById('duePaiementsList').innerHTML = rows;
+
+        updateKPICards(data);
+        populateTypeFilter(data);
+        applyFilters();  // Render with any active filters
       })
       .catch(error => {
         console.error('Erreur:', error);
-        document.getElementById('duePaiementsList').innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Erreur lors du chargement des données.</td></tr>';
+        document.getElementById('duePaiementsList').innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">Erreur lors du chargement des données.</td></tr>';
+        document.getElementById('filteredCount').textContent = '!';
       });
+  }
+
+  // ─── Bind filter events (after DOM ready) ───
+  document.addEventListener('DOMContentLoaded', function() {
+    ['filterSearch', 'filterDateFrom', 'filterDateTo'].forEach(function(id) {
+      document.getElementById(id).addEventListener('input', applyFilters);
+    });
+    ['filterType', 'filterStatut', 'filterDateType'].forEach(function(id) {
+      document.getElementById(id).addEventListener('change', applyFilters);
+    });
+  });
+
+  // ─── Quick filter shortcut from KPI cards ───
+  function quickFilter(statut) {
+    document.getElementById('filterStatut').value = statut;
+    document.getElementById('filterSearch').value  = '';
+    document.getElementById('filterType').value    = '';
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value   = '';
+    applyFilters();
+    // Scroll smoothly to the table
+    document.getElementById('duePaiementsTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 </script>
 {% endblock %}

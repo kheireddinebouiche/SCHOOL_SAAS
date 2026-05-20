@@ -23,7 +23,9 @@ def ApiGenerateDuePaiements(request):
             return JsonResponse({"status":"error","message":"ID de la commission résultat manquant."})
 
         obj = CommisionResult.objects.get(id = commisison_result_id)
-        montant_paiement = obj.commission.promo.prix_rachat_credit
+        from t_tresorerie.models import PenaltyGlobalConfiguration
+        penalty_config = PenaltyGlobalConfiguration.get_solo()
+        montant_paiement = penalty_config.prix_rachat_credit
         promo = obj.commission.promo
         modules  = obj.modules.count()
         montant_total = modules * montant_paiement
@@ -38,8 +40,8 @@ def ApiGenerateDuePaiements(request):
                 date_echeance = obj.commission.updated_at,
                 promo = promo,
                 type = 'rach',
-                entite = obj.commission.promo.entite,
-                
+                entite = obj.commission.promo.entite if obj.commission.promo else None,
+                payment_type = penalty_config.prix_rachat_credit_payment_type,
             )
             nouveau_paiement.save()
 

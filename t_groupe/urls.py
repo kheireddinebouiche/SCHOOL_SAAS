@@ -49,6 +49,7 @@ urlpatterns = [
     path('ApiListePromo', ApiListePromo, name="ApiListePromo"),
     path('ApiCreateGroupe', ApiCreateGroupe, name="ApiCreateGroupe"),
     path('ApiDeleteGroupe', ApiDeleteGroupe, name="ApiDeleteGroupe"),
+    path('api-generate-payment/', ApiGenerateGroupPayment, name="ApiGenerateGroupPayment"),
 
     
     path('students/<int:pk>/print/<slug:template_slug>/', generate_student_pdf.as_view(), name='generate_student_pdf'),

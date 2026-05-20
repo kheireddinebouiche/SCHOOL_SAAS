@@ -312,8 +312,7 @@ def send_message_api(request):
         # Send Real-time Notifications
         try:
             config = GlobalConfiguration.get_solo()
-            # We use the same general notification toggle for now, or assume it's desired for communication
-            if config.crm_notifications_enabled: 
+            if config.messaging_realtime_enabled: 
                 link = reverse('t_communication:messages')
                 
                 chat_data = {

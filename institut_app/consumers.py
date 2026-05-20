@@ -8,7 +8,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         if self.user.is_anonymous:
             await self.close()
         else:
-            self.group_name = f"user_{self.user.id}"
+            self.schema_name = self.scope.get("schema_name", "public")
+            self.group_name = f"{self.schema_name}_user_{self.user.id}"
             await self.channel_layer.group_add(
                 self.group_name,
                 self.channel_name

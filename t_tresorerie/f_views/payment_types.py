@@ -21,7 +21,36 @@ def payment_type_list(request):
 @login_required
 def ApiListePaymentTypes(request):
     """
-    API endpoint to list all payment types in JSON format.
+    API endpoint to list all payment types in JSON format,
+    including any globally configured penalty/fee amounts.
     """
-    payment_types = PaymentType.objects.all().values('id', 'name')
-    return JsonResponse(list(payment_types), safe=False)
+    from ..models import PenaltyGlobalConfiguration
+    config = PenaltyGlobalConfiguration.get_solo()
+    
+    payment_types = PaymentType.objects.all()
+    results = []
+    for pt in payment_types:
+        matching_amounts = []
+        
+        if config.penalite_retard_payment_type_id == pt.id:
+            matching_amounts.append(float(config.penalite_retard))
+        if config.prix_rachat_credit_payment_type_id == pt.id:
+            matching_amounts.append(float(config.prix_rachat_credit))
+        if config.frais_duplicata_payment_type_id == pt.id:
+            matching_amounts.append(float(config.frais_duplicata))
+            
+        configured_amount = None
+        if matching_amounts:
+            non_zero_amounts = [amt for amt in matching_amounts if amt > 0]
+            if non_zero_amounts:
+                configured_amount = non_zero_amounts[0]
+            else:
+                configured_amount = matching_amounts[0]
+            
+        results.append({
+            'id': pt.id,
+            'name': pt.name,
+            'default_amount': configured_amount
+        })
+        
+    return JsonResponse(results, safe=False)

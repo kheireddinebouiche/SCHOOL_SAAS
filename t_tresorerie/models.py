@@ -72,6 +72,7 @@ class DuePaiements(models.Model):
     observation = models.CharField(max_length=1000, null=True, blank=True)
 
     entite = models.ForeignKey(Entreprise, on_delete=models.SET_NULL, null=True, blank=True)
+    payment_type = models.ForeignKey('PaymentType', on_delete=models.SET_NULL, null=True, blank=True)
 
     created_at = models.DateField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateField(auto_now=True, null=True, blank=True)
@@ -524,6 +525,33 @@ class PaymentType(models.Model):
 
     def __str__(self):
         return self.name
+
+class PenaltyGlobalConfiguration(models.Model):
+    # Penalite de retard
+    penalite_retard = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Pénalité de retard")
+    penalite_retard_payment_type = models.ForeignKey('PaymentType', on_delete=models.SET_NULL, null=True, blank=True, related_name='penalite_retard_configs')
+
+    # Rachat de credit
+    prix_rachat_credit = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Prix de rachat de crédit")
+    prix_rachat_credit_payment_type = models.ForeignKey('PaymentType', on_delete=models.SET_NULL, null=True, blank=True, related_name='prix_rachat_credit_configs')
+
+    # Frais de duplicata
+    frais_duplicata = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Frais de duplicata")
+    frais_duplicata_payment_type = models.ForeignKey('PaymentType', on_delete=models.SET_NULL, null=True, blank=True, related_name='frais_duplicata_configs')
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuration Globale des Pénalités"
+        verbose_name_plural = "Configurations Globales des Pénalités"
+
+    def __str__(self):
+        return "Configuration Globale des Pénalités"
+
+    @classmethod
+    def get_solo(cls):
+        obj, created = cls.objects.get_or_create(id=1)
+        return obj
 
 class SpecialiteCompte(models.Model):
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True)

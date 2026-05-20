@@ -239,7 +239,8 @@ def brouillard_banck_json(request):
         ),
         entite_name=F('entite__designation'),
         mapped_entite_id=F('entite__id'),
-        mode=F('mode_paiement')
+        mode=F('mode_paiement'),
+        reference=F('reference_paiement')
     )
 
     # ---- 1b. AutreProduit (Entrées en banque) ----
@@ -256,7 +257,8 @@ def brouillard_banck_json(request):
         ),
         entite_name=F('entite__designation'),
         mapped_entite_id=F('entite__id'),
-        mode=F('mode_paiement')
+        mode=F('mode_paiement'),
+        reference=F('reference')
     )
 
     # ---- 1c. Consulting Paiement (Entrées en banque) ----
@@ -275,7 +277,8 @@ def brouillard_banck_json(request):
             ),
             entite_name=F('facture__entreprise__designation'),
             mapped_entite_id=F('facture__entreprise__id'),
-            mode=F('mode_paiement')
+            mode=F('mode_paiement'),
+            reference=F('reference')
         )
 
     # ---- 2. Dépenses (Sorties en banque) ----
@@ -294,7 +297,8 @@ def brouillard_banck_json(request):
         ),
         entite_name=F('entite__designation'),
         mapped_entite_id=F('entite__id'),
-        mode=F('mode_paiement')
+        mode=F('mode_paiement'),
+        reference=F('reference')
     )
 
     # ---- 2b. Dépôts en Banque (Entrées) ----
@@ -308,7 +312,8 @@ def brouillard_banck_json(request):
         order_to=F('agent_remettant'),
         entite_name=F('entite__designation'),
         mapped_entite_id=F('entite__id'),
-        mode=Value('esp', output_field=CharField())
+        mode=Value('esp', output_field=CharField()),
+        reference=F('reference_bordereau')
     )
 
     # ---- 3. Fusion et tri chronologique ----
@@ -335,7 +340,10 @@ def brouillard_banck_json(request):
             "solde": solde,
             "order_to": mv['order_to'],
             "entite_name": mv.get('entite_name'),
-            "entite_id": mv.get('mapped_entite_id')
+            "entite_id": mv.get('mapped_entite_id'),
+            "ref": mv.get('ref'),
+            "mode": mv.get('mode'),
+            "reference": mv.get('reference')
         })
 
     return JsonResponse({
@@ -586,19 +594,30 @@ def ApiUpdateEffectiveDate(request):
             return JsonResponse({"status": "error", "message": "Informations manquantes"})
 
         try:
+            from t_tresorerie.models import OperationsBancaire
+            
             if p_type == 'standard':
                 paiement = Paiements.objects.get(id=paiement_id)
+                paiement.date_paiement = effective_date
+                paiement.is_done = True
+                paiement.save()
+                OperationsBancaire.objects.filter(paiement=paiement).update(date_operation=effective_date)
             elif p_type == 'autre':
                 paiement = AutreProduit.objects.get(id=paiement_id)
+                paiement.date_paiement = effective_date
+                paiement.is_done = True
+                paiement.save()
+                OperationsBancaire.objects.filter(autre_produit=paiement).update(date_operation=effective_date)
             elif p_type == 'conseil':
                 from t_conseil.models import Paiement as ConseilPaiement
                 paiement = ConseilPaiement.objects.get(id=paiement_id)
+                paiement.date_paiement = effective_date
+                paiement.is_done = True
+                paiement.save()
+                OperationsBancaire.objects.filter(conseil_paiement=paiement).update(date_operation=effective_date)
             else:
                 return JsonResponse({"status": "error", "message": "Type de paiement invalide"})
 
-            paiement.date_paiement = effective_date
-            paiement.is_done = True
-            paiement.save()
             return JsonResponse({"status": "success", "message": "Date effective mise à jour avec succès"})
         except (Paiements.DoesNotExist, AutreProduit.DoesNotExist, Exception) as e:
             return JsonResponse({"status": "error", "message": str(e)})

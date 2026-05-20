@@ -20,9 +20,10 @@ def send_notification_to_user(user, message, link=None, extra_data=None):
 
     channel_layer = get_channel_layer()
     if channel_layer:
-        print(f"DEBUG NOTIF: Sending to group user_{user.id}: {message}")
+        group_name = f"{schema_name}_user_{user.id}"
+        print(f"DEBUG NOTIF: Sending to group {group_name}: {message}")
         async_to_sync(channel_layer.group_send)(
-            f"user_{user.id}",
+            group_name,
             {
                 "type": "send_notification",
                 "message": message,

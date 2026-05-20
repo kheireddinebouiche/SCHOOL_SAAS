@@ -129,6 +129,7 @@ class BankAccount(models.Model):
 class GlobalConfiguration(models.Model):
     registration_validation_enabled = models.BooleanField(default=True, verbose_name=_("Validation des inscriptions active"))
     crm_notifications_enabled = models.BooleanField(default=True, verbose_name=_("Notifications CRM actives"))
+    messaging_realtime_enabled = models.BooleanField(default=True, verbose_name=_("Notifications Messagerie actives"))
     crm_tab_validation_enabled = models.BooleanField(default=True, verbose_name=_("Validation des onglets CRM active"))
     session_timeout_minutes = models.PositiveIntegerField(default=5, verbose_name=_("Délai d'inactivité (minutes)"))
     session_timeout_seconds = models.PositiveIntegerField(default=0, verbose_name=_("Délai d'inactivité (secondes)"))

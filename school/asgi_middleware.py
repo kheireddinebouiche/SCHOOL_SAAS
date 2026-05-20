@@ -30,6 +30,8 @@ def get_user(scope):
             
         # Set tenant on connection for this thread
         connection.set_tenant(tenant)
+        scope['tenant'] = tenant
+        scope['schema_name'] = tenant.schema_name
         print(f"DEBUG ASGI: Tenant resolved to {tenant.schema_name} for host {host}")
         
     except Exception as e:

@@ -267,6 +267,8 @@ urlpatterns = [
 
     path('penalite/liste/',PageConfPenalite,name="PageConfPenalite"),
     path('api/update-promo-config/', ApiUpdatePromoConfig, name='ApiUpdatePromoConfig'),
+    path('api/load-penalty-config/', ApiLoadPenaltyConfig, name='ApiLoadPenaltyConfig'),
+    path('api/update-penalty-config/', ApiUpdatePenaltyConfig, name='ApiUpdatePenaltyConfig'),
 
     path('penalite/demandes-paiements/',ListePenalite,name="ListePenalite"),
     path('api/liste-due-paiements/', ApiListeDuePenalite, name='ApiListeDuePenalite'),
