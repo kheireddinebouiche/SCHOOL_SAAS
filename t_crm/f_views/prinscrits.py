@@ -90,6 +90,7 @@ def ApiLoadPrinscrits(request):
     month_filter = request.GET.get('month')
     search_term = request.GET.get('search', '').strip().lower() if request.GET.get('search') else ''
     client_type = request.GET.get('client_type')
+    sort_order = request.GET.get('sort', 'nom_asc')
     page_number = request.GET.get('page', 1)
     page_size = 10
 
@@ -133,7 +134,15 @@ def ApiLoadPrinscrits(request):
         elif client_type == 'entreprise':
             qs = qs.exclude(Q(entreprise__isnull=True) | Q(entreprise=''))
 
-    qs = qs.order_by('nom', '-created_at')
+    # Dynamic sorting
+    if sort_order == 'nom_desc':
+        qs = qs.order_by('-nom', '-prenom', '-created_at')
+    elif sort_order == 'date_desc':
+        qs = qs.order_by('-created_at')
+    elif sort_order == 'date_asc':
+        qs = qs.order_by('created_at')
+    else:  # nom_asc is the default
+        qs = qs.order_by('nom', 'prenom', '-created_at')
     
     paginator = Paginator(qs, page_size)
     page_obj = paginator.get_page(page_number)

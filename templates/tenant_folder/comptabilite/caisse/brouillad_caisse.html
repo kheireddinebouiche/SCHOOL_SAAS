@@ -293,10 +293,27 @@
       }
       if (isNaN(amount)) return '0,00 DA';
       
-      return amount.toLocaleString('fr-FR', {
+      var formatted = amount.toLocaleString('fr-FR', {
         minimumFractionDigits: 2, 
         maximumFractionDigits: 2
-      }) + ' DA';
+      });
+      return formatted.replace(/[\u202f\u00a0\s]/g, ' ') + ' DA';
+    }
+
+    // Helper to format numeric values only, without ' DA' suffix, and allowing right alignment
+    function formatNumberOnly(amount, allowZero = false) {
+      if (amount === undefined || amount === null || amount === '') return '';
+      if (typeof amount === 'string') {
+        amount = parseFloat(amount);
+      }
+      if (isNaN(amount)) return '';
+      if (amount === 0 && !allowZero) return '';
+      
+      var formatted = amount.toLocaleString('fr-FR', {
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2
+      });
+      return formatted.replace(/[\u202f\u00a0\s]/g, ' ');
     }
 
     function loadItems(){
@@ -799,7 +816,7 @@
         });
 
         // Recalculate running balance for export
-        var runningBalance = 0;
+        var runningBalance = currentSoldeInitial;
         $.each(sortedExportData, function(i, transaction) {
           var montant = parseFloat(transaction.montant) || 0;
           if (transaction.type === 'entree') {
@@ -828,24 +845,23 @@
 
       // Create worksheet from filtered data
       var ws_data = [
-        ['Date', 'Libellé', 'Client/Fournisseur', 'Entité', 'Type', 'Montant', 'Solde']
+        ['Date', 'Libellé', 'Client/Fournisseur', 'Entité', 'Débit (DA)', 'Crédit (DA)', 'Solde (DA)']
       ];
 
       // Add filtered data to the worksheet
       $.each(exportData, function(i, transaction) {
-        var typeLabel = transaction.type === 'entree' ? 'Encaissement' : 'Décaissement';
-        var montantText = transaction.type === 'entree' ?
-          '+' + formatMoney(transaction.montant) :
-          '-' + formatMoney(transaction.montant);
+        var debitVal = transaction.type === 'entree' ? parseFloat(transaction.montant) : null;
+        var creditVal = transaction.type === 'sortie' ? parseFloat(transaction.montant) : null;
+        var soldeVal = parseFloat(transaction.solde);
 
         ws_data.push([
           transaction.date,
           transaction.nom,
-          transaction.order_to,
+          transaction.order_to || '',
           transaction.entite_name || 'N/A',
-          typeLabel,
-          montantText,
-          formatMoney(transaction.solde)
+          debitVal,
+          creditVal,
+          soldeVal
         ]);
       });
 
@@ -933,7 +949,7 @@
         });
 
         // Recalculate running balance for export
-        var runningBalance = 0;
+        var runningBalance = currentSoldeInitial;
         $.each(sortedExportData, function(i, transaction) {
           var montant = parseFloat(transaction.montant) || 0;
           if (transaction.type === 'entree') {
@@ -964,39 +980,41 @@
       doc.setFontSize(18);
       doc.text('Brouillard de caisse', 20, 20);
 
-      // Add date range if specified
+      // Add date range / export period
       var dateFrom = $('#dateFrom').val();
       var dateTo = $('#dateTo').val();
-      if (dateFrom || dateTo) {
-        doc.setFontSize(12);
-        var dateRangeText = 'Période: ';
-        if (dateFrom && dateTo) {
-          dateRangeText += 'Du ' + dateFrom + ' au ' + dateTo;
-        } else if (dateFrom) {
-          dateRangeText += 'À partir du ' + dateFrom;
-        } else if (dateTo) {
-          dateRangeText += 'Jusqu\'au ' + dateTo;
-        }
-        doc.text(dateRangeText, 20, 30);
+      var selectedYear = $('#yearFilter').val();
+      var yearInt = parseInt(selectedYear);
+      var nextYear = yearInt + 1;
+      
+      doc.setFontSize(11);
+      var dateRangeText = 'Période : ';
+      if (dateFrom && dateTo) {
+        dateRangeText += 'Du ' + dateFrom + ' au ' + dateTo;
+      } else if (dateFrom) {
+        dateRangeText += 'Du ' + dateFrom + ' au 31/07/' + nextYear;
+      } else if (dateTo) {
+        dateRangeText += 'Du 01/08/' + selectedYear + ' au ' + dateTo;
+      } else {
+        dateRangeText += 'Année Scolaire ' + selectedYear + '/' + nextYear + ' (Du 01/08/' + selectedYear + ' au 31/07/' + nextYear + ')';
       }
+      doc.text(dateRangeText, 20, 30);
 
       // Prepare data for the table
       var tableData = [];
       if (exportData.length > 0) {
         $.each(exportData, function(index, transaction) {
-          var typeLabel = transaction.type === 'entree' ? 'Encaissement' : 'Décaissement';
-          var montantText = transaction.type === 'entree' ?
-            '+' + formatMoney(transaction.montant) :
-            '-' + formatMoney(transaction.montant);
+          var debitText = transaction.type === 'entree' ? formatNumberOnly(transaction.montant, false) : '';
+          var creditText = transaction.type === 'sortie' ? formatNumberOnly(transaction.montant, false) : '';
 
           tableData.push([
             transaction.date,
             transaction.nom,
-            transaction.order_to,
+            transaction.order_to || '',
             transaction.entite_name || 'N/A',
-            typeLabel,
-            montantText,
-            formatMoney(transaction.solde)
+            debitText,
+            creditText,
+            formatNumberOnly(transaction.solde, true)
           ]);
         });
       }
@@ -1004,18 +1022,23 @@
       // Add the table using autoTable
       if (tableData.length > 0) {
         doc.autoTable({
-          head: [['Date', 'Libellé', 'Client/Fournisseur', 'Entité', 'Type', 'Montant', 'Solde']],
+          head: [['Date', 'Libellé', 'Client/Fournisseur', 'Entité', 'Débit (DA)', 'Crédit (DA)', 'Solde (DA)']],
           body: tableData,
           startY: 40,
           theme: 'grid',
           headStyles: {
-            fillColor: [0, 0, 0], // Black color
+            fillColor: [31, 41, 55], // Professional Dark slate gray
             textColor: [255, 255, 255],
             rowHeight: 12 // Reduced header row height
           },
           styles: {
             cellPadding: 3, // Reduced padding
             rowHeight: 15 // Reduced row height
+          },
+          columnStyles: {
+            4: { halign: 'right' }, // Débit
+            5: { halign: 'right' }, // Crédit
+            6: { halign: 'right' }  // Solde
           }
         });
       } else {

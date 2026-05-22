@@ -1258,23 +1258,42 @@ def detailFraisInscription(request):
     pass
 
 def listPromos(request):
-    
+    academic_years = Promos.objects.exclude(annee_academique__isnull=True).exclude(annee_academique='').values_list('annee_academique', flat=True).distinct().order_by('-annee_academique')
     context = {
-        
         'tenant' : request.tenant,
+        'academic_years': list(academic_years),
     }
     return render(request,'tenant_folder/formations/promos/list_promos.html',context)
 
 @login_required(login_url="institut_app:login")
 def ApiListePromos(request):
-    liste= Promos.objects.filter().values('id','label','session','etat','code','begin_year','end_year','annee_academique')
+    session = request.GET.get('session')
+    etat = request.GET.get('etat')
+    annee = request.GET.get('annee_academique')
+    search = request.GET.get('search')
 
-    for l in liste:
+    queryset = Promos.objects.all().order_by('-id')
+    if session:
+        queryset = queryset.filter(session=session)
+    if etat:
+        queryset = queryset.filter(etat=etat)
+    if annee:
+        queryset = queryset.filter(annee_academique=annee)
+    if search:
+        queryset = queryset.filter(
+            Q(label__icontains=search) | 
+            Q(code__icontains=search)
+        )
+
+    liste = queryset.values('id','label','session','etat','code','begin_year','end_year','annee_academique')
+    liste_list = list(liste)
+
+    for l in liste_list:
         l_obj = Promos.objects.get(id = l['id'])
         l['etat_label'] = l_obj.get_etat_display()
         l['session_label'] = l_obj.get_session_display()
 
-    return JsonResponse(list(liste), safe=False)
+    return JsonResponse(liste_list, safe=False)
 
 @login_required(login_url="institut_app:login")
 def ApiCheckPromoCode(request):

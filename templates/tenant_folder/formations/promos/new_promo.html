@@ -119,11 +119,11 @@
                             <div class="section-header">Identité de la Promotion</div>
                             <div class="row g-4 mb-4">
                                 <div class="col-md-12">
-                                    <div class="form-group-custom">
-                                        <label class="form-label-custom" for="{{ form.label.id_for_label }}">Libellé de la Promotion</label>
+                                    <div class="form-group-custom bg-light">
+                                        <label class="form-label-custom" for="{{ form.label.id_for_label }}">Libellé de la Promotion (Généré automatiquement)</label>
                                         <div class="d-flex align-items-center">
                                             <i class="ri-edit-box-line me-2 text-info"></i>
-                                            <input type="text" name="label" id="{{ form.label.id_for_label }}" class="form-control-custom" placeholder="Ex: Promotion Automne 2024" required style="text-transform: uppercase;">
+                                            <input type="text" name="label" id="{{ form.label.id_for_label }}" class="form-control-custom text-muted" placeholder="PR-SESSION-ANNEDEBUT" required style="text-transform: uppercase;" readonly>
                                         </div>
                                     </div>
                                 </div>
@@ -149,35 +149,19 @@
                             </div>
 
                             <!-- Période et Académie -->
-                            <div class="section-header">Période & Année Académique</div>
+                            <div class="section-header">Année Académique</div>
                             <div class="row g-4 mb-4">
-                                <div class="col-md-4">
-                                    <div class="form-group-custom">
-                                        <label class="form-label-custom" for="{{ form.begin_year.id_for_label }}">Année de début</label>
-                                        <div class="d-flex align-items-center">
-                                            <i class="ri-calendar-line me-2 text-info"></i>
-                                            <input type="number" name="begin_year" id="{{ form.begin_year.id_for_label }}" class="form-control-custom" placeholder="2024" required>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group-custom">
-                                        <label class="form-label-custom" for="{{ form.end_year.id_for_label }}">Année de fin</label>
-                                        <div class="d-flex align-items-center">
-                                            <i class="ri-calendar-check-line me-2 text-info"></i>
-                                            <input type="number" name="end_year" id="{{ form.end_year.id_for_label }}" class="form-control-custom" placeholder="2026" required>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
+                                <div class="col-md-12">
                                     <div class="form-group-custom">
                                         <label class="form-label-custom" for="{{ form.annee_academique.id_for_label }}">Année Académique</label>
                                         <div class="d-flex align-items-center">
                                             <i class="ri-graduation-cap-line me-2 text-info"></i>
-                                            <input type="text" name="annee_academique" id="id_annee_academique" class="form-control-custom" placeholder="2024/2025" required>
+                                            <input type="text" name="annee_academique" id="id_annee_academique" class="form-control-custom" placeholder="Ex: 2024/2025" required>
                                         </div>
                                     </div>
                                 </div>
+                                <input type="hidden" name="begin_year" id="{{ form.begin_year.id_for_label }}">
+                                <input type="hidden" name="end_year" id="{{ form.end_year.id_for_label }}">
                             </div>
 
                             <!-- Actions -->
@@ -218,9 +202,12 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Academic year format validation
+        // Academic year dynamic synchronization and format validation
         let anneeInput = document.getElementById("id_annee_academique");
-        anneeInput.addEventListener("input", function() {
+        let beginYearInput = document.getElementById("{{ form.begin_year.id_for_label }}");
+        let endYearInput = document.getElementById("{{ form.end_year.id_for_label }}");
+
+        function validateAcademicYearFormat() {
             let anneeFormat = /^\d{4}\/\d{4}$/;
             let valeur = anneeInput.value;
             
@@ -229,7 +216,71 @@
             } else {
                 anneeInput.closest('.form-group-custom').style.borderColor = '';
             }
+        }
+
+        let labelInput = document.getElementById("{{ form.label.id_for_label }}");
+        let sessionSelect = document.getElementById("id_session");
+
+        function updateGeneratedLabel() {
+            let sessionVal = sessionSelect.value.trim().toUpperCase();
+            let beginYearVal = beginYearInput.value.trim();
+            if (sessionVal && beginYearVal) {
+                labelInput.value = "PR-" + sessionVal + "-" + beginYearVal;
+            } else {
+                labelInput.value = "";
+            }
+        }
+
+        // Hook it to session selection changes
+        if (sessionSelect) {
+            sessionSelect.addEventListener("change", updateGeneratedLabel);
+        }
+
+        // 1. Sync from Academic Year to Begin/End Years
+        anneeInput.addEventListener("input", function() {
+            let valeur = anneeInput.value.trim();
+            let anneeFormat = /^\d{4}\/\d{4}$/;
+            if (anneeFormat.test(valeur)) {
+                let parts = valeur.split('/');
+                beginYearInput.value = parts[0];
+                endYearInput.value = parts[1];
+                updateGeneratedLabel();
+            } else {
+                labelInput.value = "";
+            }
+            validateAcademicYearFormat();
         });
+
+        // 2. Sync from Begin Year to End Year and Academic Year
+        beginYearInput.addEventListener("input", function() {
+            let val = beginYearInput.value.trim();
+            if (/^\d{4}$/.test(val)) {
+                let begin = parseInt(val, 10);
+                endYearInput.value = begin + 1;
+                anneeInput.value = begin + "/" + (begin + 1);
+                updateGeneratedLabel();
+                validateAcademicYearFormat();
+            }
+        });
+
+        // 3. Sync from End Year to Academic Year
+        endYearInput.addEventListener("input", function() {
+            let val = endYearInput.value.trim();
+            if (/^\d{4}$/.test(val)) {
+                let end = parseInt(val, 10);
+                let beginVal = beginYearInput.value.trim();
+                if (/^\d{4}$/.test(beginVal)) {
+                    anneeInput.value = beginVal + "/" + end;
+                } else {
+                    beginYearInput.value = end - 1;
+                    anneeInput.value = (end - 1) + "/" + end;
+                }
+                updateGeneratedLabel();
+                validateAcademicYearFormat();
+            }
+        });
+
+
 
         // Real-time code validation
         const codeInput = document.getElementById('id_code');
@@ -270,7 +321,6 @@
         });
 
         // Force uppercase for label and code
-        const labelInput = document.getElementById("{{ form.label.id_for_label }}");
         const codeInputUpper = document.getElementById("{{ form.code.id_for_label }}");
         
         [labelInput, codeInputUpper].forEach(el => {

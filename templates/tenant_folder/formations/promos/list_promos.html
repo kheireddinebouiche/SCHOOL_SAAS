@@ -130,13 +130,70 @@
                             </div>
                         </div>
                         <div class="mt-3 mt-sm-0 d-flex gap-2">
-                            <div class="search-input-group">
-                                <i class="ri-search-line"></i>
-                                <input type="text" id="table-filter" class="form-control" placeholder="Rechercher une promo..." style="width: 250px;">
-                            </div>
                             <a href="{% url 't_formations:AddPromo' %}" class="btn btn-primary d-flex align-items-center btn-rounded px-4">
                                 <i class="ri-add-line me-2 fs-5"></i> <span>Nouvelle Promotion</span>
                             </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters Section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-3 shadow-sm border-0">
+                        <div class="row g-3 align-items-center">
+                            <!-- Recherche -->
+                            <div class="col-xxl-3 col-lg-3 col-md-6">
+                                <div class="search-input-group">
+                                    <i class="ri-search-line"></i>
+                                    <input type="text" id="filter-search" class="form-control btn-rounded" placeholder="Rechercher par code ou libellé...">
+                                </div>
+                            </div>
+                            <!-- Session Filter -->
+                            <div class="col-xxl-3 col-lg-3 col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <label class="form-label mb-0 me-2 text-muted fw-semibold text-nowrap"><i class="ri-calendar-line me-1 text-primary"></i>Session:</label>
+                                    <select id="filter-session" class="form-select btn-rounded">
+                                        <option value="">Toutes</option>
+                                        <option value="janvier">Janvier</option>
+                                        <option value="fevrier">Février</option>
+                                        <option value="mars">Mars</option>
+                                        <option value="avril">Avril</option>
+                                        <option value="mai">Mai</option>
+                                        <option value="juin">Juin</option>
+                                        <option value="juillet">Juillet</option>
+                                        <option value="aout">Août</option>
+                                        <option value="septembre">Septembre</option>
+                                        <option value="octobre">Octobre</option>
+                                        <option value="novembre">Novembre</option>
+                                        <option value="decembre">Décembre</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Status Filter -->
+                            <div class="col-xxl-3 col-lg-3 col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <label class="form-label mb-0 me-2 text-muted fw-semibold text-nowrap"><i class="ri-toggle-line me-1 text-primary"></i>Statut:</label>
+                                    <select id="filter-status" class="form-select btn-rounded">
+                                        <option value="">Tous</option>
+                                        <option value="active">Active</option>
+                                        <option value="inactive">Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Academic Year Filter -->
+                            <div class="col-xxl-3 col-lg-3 col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <label class="form-label mb-0 me-2 text-muted fw-semibold text-nowrap"><i class="ri-graduation-cap-line me-1 text-primary"></i>Année:</label>
+                                    <select id="filter-annee" class="form-select btn-rounded">
+                                        <option value="">Toutes</option>
+                                        {% for year in academic_years %}
+                                            <option value="{{ year }}">{{ year }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -220,8 +277,8 @@
                 <form id="updatePromoForm">
                     <div class="row g-3">
                         <div class="col-md-12">
-                            <label class="form-label fw-semibold">Libellé</label>
-                            <input type="text" class="form-control btn-rounded" id="updated_label" name="label" style="text-transform: uppercase;">
+                            <label class="form-label fw-semibold">Libellé (Généré automatiquement)</label>
+                            <input type="text" class="form-control btn-rounded text-muted bg-light" id="updated_label" name="label" style="text-transform: uppercase;" placeholder="PR-SESSION-ANNEDEBUT" readonly>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Session</label>
@@ -233,14 +290,8 @@
                             <label class="form-label fw-semibold">Code</label>
                             <input type="text" class="form-control btn-rounded" id="updated_code" name="code" style="text-transform: uppercase;">
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Année de début</label>
-                            <input type="text" class="form-control btn-rounded" id="updated_begin_year" name="updated_begin_year">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Année de fin</label>
-                            <input type="text" class="form-control btn-rounded" id="updated_end_year" name="updated_end_year">
-                        </div>
+                        <input type="hidden" id="updated_begin_year" name="updated_begin_year">
+                        <input type="hidden" id="updated_end_year" name="updated_end_year">
                         <div class="col-md-12">
                             <label class="form-label fw-semibold">Année Académique</label>
                             <input type="text" class="form-control btn-rounded" id="updated_annee_academique" name="updated_annee_academique" placeholder="Ex: 2023/2024">
@@ -258,18 +309,34 @@
 <script>
     $(document).ready(function () {
         
-        // Client-side Filtering
-        $("#table-filter").on("keyup", function() {
-            var value = $(this).val().toLowerCase();
-            $("#listItem .col-xxl-3").filter(function() {
-                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
-            });
+        // Client-side Filtering & Debouncing for input search
+        var searchTimeout = null;
+        $('#filter-search').on('keyup input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function() {
+                loadItem();
+            }, 300);
+        });
+
+        $('#filter-session, #filter-status, #filter-annee').on('change', function() {
+            loadItem();
         });
 
         function loadItem(){
+            var search = $('#filter-search').val();
+            var session = $('#filter-session').val();
+            var status = $('#filter-status').val();
+            var annee = $('#filter-annee').val();
+
             $.ajax({
                 url : "{% url 't_formations:ApiListePromos' %}",
                 type : "GET",
+                data : {
+                    'search': search,
+                    'session': session,
+                    'etat': status,
+                    'annee_academique': annee
+                },
                 dataType: "JSON",
                 success : function(data){
                     var cards = "";
@@ -337,8 +404,7 @@
                                     <i class="ri-folder-info-line text-muted fs-1"></i>
                                 </div>
                                 <h5 class="fw-bold">Aucune promotion trouvée</h5>
-                                <p class="text-muted">Créez votre première promotion pour commencer la gestion académique.</p>
-                                <a href="{% url 't_formations:AddPromo' %}" class="btn btn-primary btn-rounded mt-3">Nouvelle Promotion</a>
+                                <p class="text-muted">Aucune promotion ne correspond à vos critères de filtrage ou de recherche.</p>
                             </div>`;
                     }
                     
@@ -494,16 +560,81 @@
             });
         });
 
-        // Validation format année académique
-        document.getElementById("updated_annee_academique").addEventListener("input", function() {
-            let anneeFormat = /^\d{4}\/\d{4}$/;
-            let valeur = this.value;
-            if (valeur && !anneeFormat.test(valeur)) {
-                this.classList.add("is-invalid");
+        // Validation format et synchronisation dynamique année académique dans le modal de modification
+        let updateAnneeInput = document.getElementById("updated_annee_academique");
+        let updateBeginYearInput = document.getElementById("updated_begin_year");
+        let updateEndYearInput = document.getElementById("updated_end_year");
+        let labelInputUpdate = document.getElementById("updated_label");
+        let sessionSelectUpdate = document.getElementById("updated_session");
+
+        function updateGeneratedLabelUpdate() {
+            let sessionVal = sessionSelectUpdate.value.trim().toUpperCase();
+            let beginYearVal = updateBeginYearInput.value.trim();
+            if (sessionVal && beginYearVal) {
+                labelInputUpdate.value = "PR-" + sessionVal + "-" + beginYearVal;
             } else {
-                this.classList.remove("is-invalid");
+                labelInputUpdate.value = "";
+            }
+        }
+
+        if (sessionSelectUpdate) {
+            sessionSelectUpdate.addEventListener("change", updateGeneratedLabelUpdate);
+        }
+
+        function validateUpdateAcademicYearFormat() {
+            let anneeFormat = /^\d{4}\/\d{4}$/;
+            let valeur = updateAnneeInput.value;
+            if (valeur && !anneeFormat.test(valeur)) {
+                updateAnneeInput.classList.add("is-invalid");
+            } else {
+                updateAnneeInput.classList.remove("is-invalid");
+            }
+        }
+
+        // 1. Sync from Academic Year to Begin/End Years
+        updateAnneeInput.addEventListener("input", function() {
+            let valeur = updateAnneeInput.value.trim();
+            let anneeFormat = /^\d{4}\/\d{4}$/;
+            if (anneeFormat.test(valeur)) {
+                let parts = valeur.split('/');
+                updateBeginYearInput.value = parts[0];
+                updateEndYearInput.value = parts[1];
+                updateGeneratedLabelUpdate();
+            } else {
+                labelInputUpdate.value = "";
+            }
+            validateUpdateAcademicYearFormat();
+        });
+
+        // 2. Sync from Begin Year to End Year and Academic Year
+        updateBeginYearInput.addEventListener("input", function() {
+            let val = updateBeginYearInput.value.trim();
+            if (/^\d{4}$/.test(val)) {
+                let begin = parseInt(val, 10);
+                updateEndYearInput.value = begin + 1;
+                updateAnneeInput.value = begin + "/" + (begin + 1);
+                updateGeneratedLabelUpdate();
+                validateUpdateAcademicYearFormat();
             }
         });
+
+        // 3. Sync from End Year to Academic Year
+        updateEndYearInput.addEventListener("input", function() {
+            let val = updateEndYearInput.value.trim();
+            if (/^\d{4}$/.test(val)) {
+                let end = parseInt(val, 10);
+                let beginVal = updateBeginYearInput.value.trim();
+                if (/^\d{4}$/.test(beginVal)) {
+                    updateAnneeInput.value = beginVal + "/" + end;
+                } else {
+                    updateBeginYearInput.value = end - 1;
+                    updateAnneeInput.value = (end - 1) + "/" + end;
+                }
+                updateGeneratedLabelUpdate();
+                validateUpdateAcademicYearFormat();
+            }
+        });
+
 
         // Real-time code validation for update modal
         const updateCodeInput = document.getElementById('updated_code');

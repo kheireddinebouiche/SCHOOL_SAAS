@@ -41,8 +41,15 @@ def ApiLoadConvertedProspects(request):
         
         total_paye = payments_qs.aggregate(total=Sum('montant_paye'))['total'] or 0
 
-        # Total remboursé pour cette promo
-        total_rembourse = PromoRembourssement.objects.filter(promo_id=promo['id']).aggregate(total=Sum('montant'))['total'] or 0
+        # Total remboursé pour cette promo calculé dynamiquement depuis les Rembourssements réels appliqués
+        prospect_ids = list(payments_qs.values_list('prospect_id', flat=True).distinct())
+        if prospect_ids:
+            total_rembourse = Rembourssements.objects.filter(
+                client_id__in=prospect_ids,
+                is_appliced=True
+            ).aggregate(total=Sum('allowed_amount'))['total'] or 0
+        else:
+            total_rembourse = 0
 
         # Montant payé effectif après remboursement
         promo['montant_paye'] = float(total_paye) - float(total_rembourse)
@@ -759,18 +766,24 @@ def ApiSaveRefundOperation(request):
             etat = True
         )
 
-        # Update or create cumulative refund for the promo
-        promo_refund, created = PromoRembourssement.objects.get_or_create(promo_id=promo.promo_id)
-        if created:
-            promo_refund.montant = Decimal(amount)
-        else:
-            promo_refund.montant = Decimal(promo_refund.montant or 0) + Decimal(amount)
-        promo_refund.save()
-
         depense.save()
 
         obj_refund.is_appliced = True
         obj_refund.save()
+
+        # Update or create cumulative refund for the promo dynamically to avoid out-of-sync issues
+        clients_in_promo_standard = FicheDeVoeux.objects.filter(promo_id=promo.promo_id).values_list('prospect_id', flat=True)
+        clients_in_promo_double = FicheVoeuxDouble.objects.filter(promo_id=promo.promo_id).values_list('prospect_id', flat=True)
+        all_client_ids = set(list(clients_in_promo_standard) + list(clients_in_promo_double))
+        
+        total_refunds_in_promo = Rembourssements.objects.filter(
+            client_id__in=all_client_ids,
+            is_appliced=True
+        ).aggregate(total=Sum('allowed_amount'))['total'] or 0
+        
+        promo_refund, created = PromoRembourssement.objects.get_or_create(promo_id=promo.promo_id)
+        promo_refund.montant = Decimal(total_refunds_in_promo)
+        promo_refund.save()
 
         cancel_enrollment = request.POST.get('cancel_enrollment') == 'true'
         if cancel_enrollment:

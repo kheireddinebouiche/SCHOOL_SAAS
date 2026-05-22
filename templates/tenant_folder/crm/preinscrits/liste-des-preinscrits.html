@@ -694,6 +694,13 @@
                     <!-- Other Filters -->
                     <div class="col-lg-7 col-xl-8">
                         <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-3">
+                            <select id="sort-order" class="form-select modern-select py-2 px-4 w-auto" title="Trier par">
+                                <option value="nom_asc">Trier par : Nom (A-Z)</option>
+                                <option value="nom_desc">Trier par : Nom (Z-A)</option>
+                                <option value="date_desc">Trier par : Date (Récent)</option>
+                                <option value="date_asc">Trier par : Date (Ancien)</option>
+                            </select>
+
                             <select id="filter-promo" class="form-select modern-select py-2 px-4 w-auto">
                                 <option value="">Toutes les promos</option>
                                 {% for promo in promos %}
@@ -1298,6 +1305,7 @@
         var monthFilter = $('#month-filter').val();
         var searchTerm = $('#table-filter').val().trim();
         var clientType = $('#filter-prospect').val();
+        var sortOrder = $('#sort-order').val() || 'nom_asc';
 
         $.ajax({
           url : '{% url "t_crm:ApiLoadPrinscrits" %}',
@@ -1309,6 +1317,7 @@
               'month': monthFilter,
               'search': searchTerm,
               'client_type': clientType,
+              'sort': sortOrder,
               'page': currentPage
           },
           beforeSend: function() {
@@ -1366,6 +1375,8 @@
 
       var row = "";
       var lastMonthYear = "";
+      var sortOrder = $('#sort-order').val();
+      var displayDateHeaders = (sortOrder === 'date_desc' || sortOrder === 'date_asc');
 
       if (data.length === 0) {
         row += '<tr><td colspan="8"><div class="text-center py-5 animate-up">';
@@ -1381,7 +1392,7 @@
           var itemDate = item.created_at ? new Date(item.created_at) : new Date();
           var currentMonthYear = itemDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
           
-          if (currentMonthYear !== lastMonthYear) {
+          if (displayDateHeaders && currentMonthYear !== lastMonthYear) {
               row += '<tr><td colspan="8" class="table-date-header"><i class="ri-calendar-event-line me-2"></i>' + currentMonthYear + '</td></tr>';
               lastMonthYear = currentMonthYear;
           }
@@ -1468,17 +1479,12 @@
 
     // Function to render data as cards
     function renderCardView(data) {
-      // Sort data by date (newest first)
-      data.sort(function(a, b) {
-         var dateA = a.created_at ? new Date(a.created_at) : new Date(0);
-         var dateB = b.created_at ? new Date(b.created_at) : new Date(0);
-         return dateB - dateA;
-      });
-
       var cards = "";
       var lastMonthYear = "";
       // Colors for avatars
       const avatarColors = ['primary', 'success', 'warning', 'danger', 'info', 'dark'];
+      var sortOrder = $('#sort-order').val();
+      var displayDateHeaders = (sortOrder === 'date_desc' || sortOrder === 'date_asc');
 
       if (data.length === 0) {
         cards = '<div class="d-flex flex-column align-items-center justify-content-center py-5 w-100 animate-up" style="grid-column: 1 / -1; min-height: 350px;">';
@@ -1494,7 +1500,7 @@
           var itemDate = item.created_at ? new Date(item.created_at) : new Date();
           var currentMonthYear = itemDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
           
-          if (currentMonthYear !== lastMonthYear) {
+          if (displayDateHeaders && currentMonthYear !== lastMonthYear) {
               cards += '<div class="date-group-header"><i class="ri-calendar-event-fill"></i>' + currentMonthYear + '</div>';
               lastMonthYear = currentMonthYear;
           }
@@ -1663,12 +1669,18 @@
         loadProspects(true);
     });
 
+    // Handle sort order change
+    $(document).on('change', '#sort-order', function() {
+        loadProspects(true);
+    });
+
     // Handle reset filters
     $(document).on('click', '#reset-filters', function() {
         $('#table-filter').val('');
         $('#filter-prospect').val('');
         $('#filter-promo').val('');
         $('#month-filter').val('');
+        $('#sort-order').val('nom_asc');
         $('.status-checkbox').prop('checked', true);
         
         loadProspects(true);

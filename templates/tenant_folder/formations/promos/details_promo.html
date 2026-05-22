@@ -659,11 +659,11 @@
             <div class="modal-body p-4">
                 <div class="row g-4">
                     <div class="col-md-12">
-                        <div class="form-group-custom">
-                            <label class="form-label-custom">Libellé de la Promotion</label>
+                        <div class="form-group-custom bg-light">
+                            <label class="form-label-custom">Libellé de la Promotion (Généré automatiquement)</label>
                             <div class="d-flex align-items-center">
                                 <i class="ri-text me-2 text-primary"></i>
-                                <input type="text" class="form-control-custom" id="updated_label" value="{{ promo.label }}" placeholder="Libellé" style="text-transform: uppercase;">
+                                <input type="text" class="form-control-custom text-muted" id="updated_label" value="{{ promo.label }}" placeholder="PR-SESSION-ANNEDEBUT" style="text-transform: uppercase;" readonly>
                             </div>
                         </div>
                     </div>
@@ -673,10 +673,18 @@
                             <div class="d-flex align-items-center">
                                 <i class="ri-list-settings-line me-2 text-primary"></i>
                                 <select class="form-select-custom" id="updated_session">
-                                    <option value="1" {% if promo.session == '1' %}selected{% endif %}>Session 1</option>
-                                    <option value="2" {% if promo.session == '2' %}selected{% endif %}>Session 2</option>
-                                    <option value="3" {% if promo.session == '3' %}selected{% endif %}>Session 3</option>
-                                    <option value="4" {% if promo.session == '4' %}selected{% endif %}>Session 4</option>
+                                    <option value="janvier" {% if promo.session == 'janvier' %}selected{% endif %}>Janvier</option>
+                                    <option value="fevrier" {% if promo.session == 'fevrier' %}selected{% endif %}>Février</option>
+                                    <option value="mars" {% if promo.session == 'mars' %}selected{% endif %}>Mars</option>
+                                    <option value="avril" {% if promo.session == 'avril' %}selected{% endif %}>Avril</option>
+                                    <option value="mai" {% if promo.session == 'mai' %}selected{% endif %}>Mai</option>
+                                    <option value="juin" {% if promo.session == 'juin' %}selected{% endif %}>Juin</option>
+                                    <option value="juillet" {% if promo.session == 'juillet' %}selected{% endif %}>Juillet</option>
+                                    <option value="aout" {% if promo.session == 'aout' %}selected{% endif %}>Août</option>
+                                    <option value="septembre" {% if promo.session == 'septembre' %}selected{% endif %}>Septembre</option>
+                                    <option value="octobre" {% if promo.session == 'octobre' %}selected{% endif %}>Octobre</option>
+                                    <option value="novembre" {% if promo.session == 'novembre' %}selected{% endif %}>Novembre</option>
+                                    <option value="decembre" {% if promo.session == 'decembre' %}selected{% endif %}>Décembre</option>
                                 </select>
                             </div>
                         </div>
@@ -691,24 +699,8 @@
                             <div id="update-code-feedback" class="mt-1 small"></div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-group-custom">
-                            <label class="form-label-custom">Année de début</label>
-                            <div class="d-flex align-items-center">
-                                <i class="ri-calendar-line me-2 text-primary"></i>
-                                <input type="number" class="form-control-custom" id="updated_begin_year" value="{{ promo.begin_year }}">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group-custom">
-                            <label class="form-label-custom">Année de fin</label>
-                            <div class="d-flex align-items-center">
-                                <i class="ri-calendar-check-line me-2 text-primary"></i>
-                                <input type="number" class="form-control-custom" id="updated_end_year" value="{{ promo.end_year }}">
-                            </div>
-                        </div>
-                    </div>
+                    <input type="hidden" id="updated_begin_year" value="{{ promo.begin_year }}">
+                    <input type="hidden" id="updated_end_year" value="{{ promo.end_year }}">
                     <div class="col-md-12">
                         <div class="form-group-custom">
                             <label class="form-label-custom">Année Académique</label>
@@ -783,6 +775,81 @@
                     }
                 });
             }, 500);
+        });
+
+        // Validation format et synchronisation dynamique année académique dans le modal de modification
+        let updateAnneeInput = document.getElementById("updated_annee_academique");
+        let updateBeginYearInput = document.getElementById("updated_begin_year");
+        let updateEndYearInput = document.getElementById("updated_end_year");
+        let labelInputUpdate = document.getElementById("updated_label");
+        let sessionSelectUpdate = document.getElementById("updated_session");
+
+        function updateGeneratedLabelUpdate() {
+            let sessionVal = sessionSelectUpdate.value.trim().toUpperCase();
+            let beginYearVal = updateBeginYearInput.value.trim();
+            if (sessionVal && beginYearVal) {
+                labelInputUpdate.value = "PR-" + sessionVal + "-" + beginYearVal;
+            } else {
+                labelInputUpdate.value = "";
+            }
+        }
+
+        if (sessionSelectUpdate) {
+            sessionSelectUpdate.addEventListener("change", updateGeneratedLabelUpdate);
+        }
+
+        function validateUpdateAcademicYearFormat() {
+            let anneeFormat = /^\d{4}\/\d{4}$/;
+            let valeur = updateAnneeInput.value;
+            if (valeur && !anneeFormat.test(valeur)) {
+                updateAnneeInput.closest('.form-group-custom').style.borderColor = '#ef4444';
+            } else {
+                updateAnneeInput.closest('.form-group-custom').style.borderColor = '';
+            }
+        }
+
+        // 1. Sync from Academic Year to Begin/End Years
+        updateAnneeInput.addEventListener("input", function() {
+            let valeur = updateAnneeInput.value.trim();
+            let anneeFormat = /^\d{4}\/\d{4}$/;
+            if (anneeFormat.test(valeur)) {
+                let parts = valeur.split('/');
+                updateBeginYearInput.value = parts[0];
+                updateEndYearInput.value = parts[1];
+                updateGeneratedLabelUpdate();
+            } else {
+                labelInputUpdate.value = "";
+            }
+            validateUpdateAcademicYearFormat();
+        });
+
+        // 2. Sync from Begin Year to End Year and Academic Year
+        updateBeginYearInput.addEventListener("input", function() {
+            let val = updateBeginYearInput.value.trim();
+            if (/^\d{4}$/.test(val)) {
+                let begin = parseInt(val, 10);
+                updateEndYearInput.value = begin + 1;
+                updateAnneeInput.value = begin + "/" + (begin + 1);
+                updateGeneratedLabelUpdate();
+                validateUpdateAcademicYearFormat();
+            }
+        });
+
+        // 3. Sync from End Year to Academic Year
+        updateEndYearInput.addEventListener("input", function() {
+            let val = updateEndYearInput.value.trim();
+            if (/^\d{4}$/.test(val)) {
+                let end = parseInt(val, 10);
+                let beginVal = updateBeginYearInput.value.trim();
+                if (/^\d{4}$/.test(beginVal)) {
+                    updateAnneeInput.value = beginVal + "/" + end;
+                } else {
+                    updateBeginYearInput.value = end - 1;
+                    updateAnneeInput.value = (end - 1) + "/" + end;
+                }
+                updateGeneratedLabelUpdate();
+                validateUpdateAcademicYearFormat();
+            }
         });
 
         $('#confirmUpdateButton').click(function() {

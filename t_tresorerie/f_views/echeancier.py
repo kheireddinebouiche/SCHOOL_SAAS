@@ -313,7 +313,6 @@ def ApiLoadFormations(request):
 @transaction.atomic
 def ApiSaveModeleEcheancier(request):
     if request.method == "POST":
-        libelle = request.POST.get('libelle')
         promo = request.POST.get('promo')
         description = request.POST.get('description')
         nbtranche = request.POST.get('nbtranche')
@@ -324,18 +323,21 @@ def ApiSaveModeleEcheancier(request):
         else:
             double = False
 
-
         try:
+            promo_obj = Promos.objects.get(id=promo)
+            generated_libelle = f"Modèle-{nbtranche}-T-{promo_obj.code or promo_obj.label}"
+
             ModelEcheancier.objects.create(
-                label = libelle,
-                promo = Promos.objects.get(id = promo),
+                label = generated_libelle,
+                promo = promo_obj,
                 nombre_tranche = nbtranche,
                 description = description,
                 is_double_diplomation = double
             )
 
             return JsonResponse({"status" : 'success'})
-        except:
+        except Exception as e:
+            print(f"Error creating ModelEcheancier: {e}")
             return JsonResponse({"status" : "error"})
     else:
         return JsonResponse({"status":"error"})
@@ -373,7 +375,6 @@ def ApiLoadModeleEcheancierDetails(request):
 @transaction.atomic
 def ApiUpdateModeleEcheancier(request):
     echeancierId = request.POST.get('id')
-    libelle = request.POST.get('libelle')
     promo = request.POST.get('promo')
     description = request.POST.get('description')
     nbtranche = request.POST.get('nbtranche')
@@ -381,17 +382,21 @@ def ApiUpdateModeleEcheancier(request):
 
     modelEcheance = ModelEcheancier.objects.get(id = echeancierId)
 
-    modelEcheance.label = libelle
-    modelEcheance.promo = Promos.objects.get(id = promo)
-    modelEcheance.description = description
-    modelEcheance.nombre_tranche = nbtranche
-    modelEcheance.is_double_diplomation = doubleDiplomation == "true"
-
     try:
+        promo_obj = Promos.objects.get(id=promo)
+        generated_libelle = f"Modèle-{nbtranche}-T-{promo_obj.code or promo_obj.label}"
+
+        modelEcheance.label = generated_libelle
+        modelEcheance.promo = promo_obj
+        modelEcheance.description = description
+        modelEcheance.nombre_tranche = nbtranche
+        modelEcheance.is_double_diplomation = doubleDiplomation == "true"
+
         modelEcheance.save()
 
         return JsonResponse({"status": "success"})
-    except:
+    except Exception as e:
+        print(f"Error updating ModelEcheancier: {e}")
         return JsonResponse({"status": "error"})
 
 
