@@ -223,6 +223,7 @@ urlpatterns = [
     ##### Facturation 
     path('facturation/liste/', facturation.PageFacturation, name="PageFacturation"),
     path('ApiListeDesFactures', facturation.ApiListeDesFactures, name="ApiListeDesFactures"),
+    path('ApiDemanderRemboursement', facturation.ApiDemanderRemboursement, name="ApiDemanderRemboursement"),
     path('details-facture/<str:pk>/', facturation.DetailsFactureTresorerie, name="DetailsFactureTresorerie"),
     path('ApiDeleteFacture', facturation.ApiDeleteFacture, name="ApiDeleteFacture"),
     path('ApiValidateFacture', facturation.ApiValidateFacture, name="ApiValidateFacture"),

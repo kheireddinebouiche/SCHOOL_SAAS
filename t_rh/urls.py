@@ -45,7 +45,10 @@ urlpatterns = [
 
     path('ApiCreateContrat', ApiCreateContrat, name="ApiCreateContrat"),
 
-    path('liste-des-contrats/', listeDesContrats, name="liste_des_contrats"),
+        path('imprimer-attestation/<int:employe_id>/<int:template_id>/', imprimerAttestation, name='imprimer_attestation'),
+    path('imprimer-badge/<int:employe_id>/<int:template_id>/', imprimerBadge, name='imprimer_badge'),
+    path('liste-des-contrats/', listeDesContrats, name='liste_des_contrats'),
+    path('imprimer-contrat/<int:contrat_id>/<int:template_id>/', imprimerContrat, name="imprimer_contrat"),
     path('nouveau-contrat/', nouveauContrat, name="nouveau_contrat"),
 
     path('liste-des-postes/', ListeDesPostes , name="ListeDesPostes"),

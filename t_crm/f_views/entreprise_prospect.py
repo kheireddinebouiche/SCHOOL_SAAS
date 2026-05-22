@@ -31,9 +31,9 @@ def ApiLoadEntrepriseProspectInfo(request):
     
     if prospect:
         obj = Prospets.objects.get(id= prospect['id'])
-        prospect['created_at'] = prospect['created_at'].strftime("%Y-%m-%d %H:%M")
+        prospect['created_at'] = prospect['created_at'].strftime("%Y-%m-%d %H:%M") if prospect.get('created_at') else "-"
         prospect['statut_label'] = obj.get_statut_display()
-        prospect['logo_entreprise_url'] = obj.logo_entreprise.url if obj.logo_entreprise else None
+        prospect['logo_entreprise_url'] = obj.logo_entreprise.url if obj.logo_entreprise and obj.logo_entreprise.name else None
 
     return JsonResponse(prospect, safe=False)
 

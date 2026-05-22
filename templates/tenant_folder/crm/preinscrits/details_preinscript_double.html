@@ -3893,6 +3893,36 @@
                         setTimeout(function(){
                             location.reload();
                         }, 2000);
+                    } else if (response.status === 'has_refund') {
+                        alertify.confirm("Remboursement détecté", response.message, 
+                        function() {
+                            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Duplication...');
+                            $.ajax({
+                                url: "{% url 't_crm:ApiReactivatePreinscrit' %}",
+                                type: 'POST',
+                                data: {
+                                    'id_preinscrit': id,
+                                    'force_duplicate': 'true',
+                                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                                },
+                                success: function(dup_response) {
+                                    if (dup_response.status === 'success_duplicate') {
+                                        $('#redirectionModalTitle').text('Duplication Réussie !');
+                                        $('#redirectionModalMessage').text(dup_response.message);
+                                        $('#redirectionModal').modal('show');
+                                        setTimeout(function(){
+                                            window.location.href = "/crm/details-prospect/" + dup_response.new_slug + "/";
+                                        }, 2000);
+                                    } else {
+                                        alertify.error(dup_response.message);
+                                        btn.prop('disabled', false).text('Confirmer la réactivation');
+                                    }
+                                }
+                            });
+                        }, 
+                        function() {
+                            btn.prop('disabled', false).text('Confirmer la réactivation');
+                        }).set('labels', {ok:'Oui, dupliquer le dossier', cancel:'Annuler'});
                     } else {
                         if (response.has_voeux === false) {
                             $('#reactivationNoVoeuxModal').modal('show');
@@ -4219,6 +4249,10 @@
                     btn.html(originalText);
                 }
             });              
+        });
+
+        $('#successFinalisationModal').on('hidden.bs.modal', function () {
+            window.location.href = "{% url 't_crm:ListeDesPrinscrits' %}";
         });
 
         $(document).on('click', '#editVoeuxBtn', function(){

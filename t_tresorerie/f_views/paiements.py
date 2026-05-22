@@ -21,13 +21,15 @@ def ApiListePaiements(request):
     data = []
     for i in liste:
         # Récupération de la spécialité associée au prospect
-        try:
-            fiche = FicheDeVoeux.objects.get(prospect_id=i.prospect_id)
-            specialite = fiche.specialite.label if fiche.specialite else None
-        except FicheDeVoeux.DoesNotExist:
-            
-            fiche = FicheVoeuxDouble.objects.get(prospect_id=i.prospect_id)
-            specialite = fiche.specialite.label
+        fiche_simple = FicheDeVoeux.objects.filter(prospect_id=i.prospect_id).first()
+        fiche_double = FicheVoeuxDouble.objects.filter(prospect_id=i.prospect_id).first()
+        
+        if fiche_simple and fiche_simple.specialite:
+            specialite = fiche_simple.specialite.label
+        elif fiche_double and fiche_double.specialite:
+            specialite = f"{fiche_double.specialite.specialite1.label} / {fiche_double.specialite.specialite2.label}"
+        else:
+            specialite = "Inconnue"
 
         data.append({
             'id': i.id,

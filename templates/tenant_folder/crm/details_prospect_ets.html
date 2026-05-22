@@ -84,6 +84,15 @@
         border-bottom: 1px solid #f1f5f9;
         vertical-align: middle;
     }
+
+    /* Refunded/Cancelled prospect restrictions */
+    .prospect-refunded button:not(#btnReactivatePreinscrit):not([data-bs-dismiss="modal"]):not(.nav-link):not([data-bs-toggle="tab"]),
+    .prospect-refunded a:not(#btnReactivatePreinscrit):not([href="/crm/liste-des-prospects/"]):not(.nav-link):not([data-bs-toggle="tab"]),
+    .prospect-refunded .btn:not(#btnReactivatePreinscrit):not([data-bs-dismiss="modal"]):not(.nav-link):not([data-bs-toggle="tab"]) {
+        pointer-events: none !important;
+        opacity: 0.5 !important;
+        cursor: not-allowed !important;
+    }
 </style>
 
 <div class="main-content">
@@ -1191,16 +1200,30 @@
                         // Hide action buttons for cancelled prospects
                         document.getElementById('validateProspectBtn').hidden = true;
                         if (document.getElementById('editVoeuxBtn')) {
-                            document.getElementById('editVoeuxBtn').disabled = false; // Allow editing even if cancelled
+                            document.getElementById('editVoeuxBtn').disabled = true;
+                            document.getElementById('editVoeuxBtn').hidden = true;
                         }
                         document.getElementById('udapteProspectDetailsBtn').hidden = true;
+                        if (document.getElementById('updateEtsDetails')) {
+                            document.getElementById('updateEtsDetails').hidden = true;
+                        }
+                        $('#addReminderBtn').hide();
+                        $('#addNoteModalBtn').hide();
+                        $('.page-content').addClass('prospect-refunded');
                     } else {
                         $('#cancellationBanner').prop('hidden', true);
                         document.getElementById('validateProspectBtn').hidden = false;
                         if (document.getElementById('editVoeuxBtn')) {
                             document.getElementById('editVoeuxBtn').disabled = false;
+                            document.getElementById('editVoeuxBtn').hidden = false;
                         }
                         document.getElementById('udapteProspectDetailsBtn').hidden = false;
+                        if (document.getElementById('updateEtsDetails')) {
+                            document.getElementById('updateEtsDetails').hidden = false;
+                        }
+                        $('#addReminderBtn').show();
+                        $('#addNoteModalBtn').show();
+                        $('.page-content').removeClass('prospect-refunded');
                     }
                 }
             });
@@ -1360,6 +1383,36 @@
                         setTimeout(function(){
                             location.reload();
                         }, 2000);
+                    } else if (response.status === 'has_refund') {
+                        alertify.confirm("Remboursement détecté", response.message, 
+                        function() {
+                            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Duplication...');
+                            $.ajax({
+                                url: "{% url 't_crm:ApiReactivatePreinscrit' %}",
+                                type: 'POST',
+                                data: {
+                                    'id_preinscrit': id,
+                                    'force_duplicate': 'true',
+                                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                                },
+                                success: function(dup_response) {
+                                    if (dup_response.status === 'success_duplicate') {
+                                        $('#redirectionModalTitle').text('Duplication Réussie !');
+                                        $('#redirectionModalMessage').text(dup_response.message);
+                                        $('#redirectionModal').modal('show');
+                                        setTimeout(function(){
+                                            window.location.href = "/crm/details-prospect/" + dup_response.new_slug + "/";
+                                        }, 2000);
+                                    } else {
+                                        alertify.error(dup_response.message);
+                                        btn.prop('disabled', false).text('Confirmer la réactivation');
+                                    }
+                                }
+                            });
+                        }, 
+                        function() {
+                            btn.prop('disabled', false).text('Confirmer la réactivation');
+                        }).set('labels', {ok:'Oui, dupliquer le dossier', cancel:'Annuler'});
                     } else {
                         if (response.has_voeux === false) {
                             $('#reactivationNoVoeuxModal').modal('show');

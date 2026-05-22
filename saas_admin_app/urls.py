@@ -21,7 +21,8 @@ from .views import (
     api_tenants_pedagogical_sync_list_view, api_master_formations_list_view,
     api_tenant_formations_list_view, api_tenant_delete_formation_view,
     api_tenant_delete_specialite_view,
-    saas_export_prospects_view
+    saas_export_prospects_view, saas_force_user_password_change_view,
+    saas_reset_tresorerie_view
 )
 
 app_name = 'saas_admin_app'
@@ -57,6 +58,7 @@ urlpatterns = [
     path('api/tenant/<int:tenant_id>/user/<int:user_id>/update/', saas_update_user_view, name='saas_update_user'),
     path('api/tenant/<int:tenant_id>/user/<int:user_id>/reset-password/', saas_reset_user_password_view, name='saas_reset_user_password'),
     path('api/tenant/<int:tenant_id>/user/<int:user_id>/reset-sessions/', saas_reset_user_sessions_view, name='saas_reset_user_sessions'),
+    path('api/tenant/<int:tenant_id>/user/<int:user_id>/force-password-change/', saas_force_user_password_change_view, name='saas_force_user_password_change'),
     path('api/tenant/<int:tenant_id>/force-password-change/', saas_force_tenant_password_change_view, name='saas_force_tenant_password_change'),
     path('api/tenant/<int:tenant_id>/files/browse/', saas_file_browser_view, name='saas_file_browser'),
     path('api/tenant/<int:tenant_id>/file-status/', api_tenant_file_status, name='api_tenant_file_status'),
@@ -85,4 +87,5 @@ urlpatterns = [
     path('api/tenant/<int:tenant_id>/formation/delete/', api_tenant_delete_formation_view, name='api_tenant_delete_formation'),
     path('api/tenant/<int:tenant_id>/specialite/delete/', api_tenant_delete_specialite_view, name='api_tenant_delete_specialite'),
     path('tenant/<int:tenant_id>/prospects/export/', saas_export_prospects_view, name='saas_export_prospects'),
+    path('api/tenant/<int:tenant_id>/reset-tresorerie/', saas_reset_tresorerie_view, name='saas_reset_tresorerie_action'),
 ]

@@ -245,6 +245,7 @@ def brouillard_banck_json(request):
 
     # ---- 1b. AutreProduit (Entrées en banque) ----
     autres_produits = AutreProduit.objects.filter(mode_paiement__in=['che', 'vir'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).values(
+        'reference',
         nom=F('label'),
         date=F('date_paiement'),
         mouvement_montant=Coalesce(F('montant_paiement'), Value(0, output_field=models.DecimalField())),
@@ -257,14 +258,14 @@ def brouillard_banck_json(request):
         ),
         entite_name=F('entite__designation'),
         mapped_entite_id=F('entite__id'),
-        mode=F('mode_paiement'),
-        reference=F('reference')
+        mode=F('mode_paiement')
     )
 
     # ---- 1c. Consulting Paiement (Entrées en banque) ----
     consulting_paiements = []
     if ConseilPaiement:
         consulting_paiements = ConseilPaiement.objects.filter(mode_paiement__in=['virement', 'cheque'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).values(
+            'reference',
             nom=Value('Paiement Facture', output_field=CharField()),
             date=F('date_paiement'),
             mouvement_montant=Coalesce(F('montant'), Value(0, output_field=models.DecimalField())),
@@ -277,12 +278,12 @@ def brouillard_banck_json(request):
             ),
             entite_name=F('facture__entreprise__designation'),
             mapped_entite_id=F('facture__entreprise__id'),
-            mode=F('mode_paiement'),
-            reference=F('reference')
+            mode=F('mode_paiement')
         )
 
     # ---- 2. Dépenses (Sorties en banque) ----
     depenses = Depenses.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date).order_by('date_paiement').exclude(date_paiement__isnull=True).values(
+        'reference',
         nom=F('label'),
         date=F('date_paiement'),
         mouvement_montant=Coalesce(F('montant_ttc'), F('montant_ht'), Value(0, output_field=models.DecimalField())),
@@ -297,8 +298,7 @@ def brouillard_banck_json(request):
         ),
         entite_name=F('entite__designation'),
         mapped_entite_id=F('entite__id'),
-        mode=F('mode_paiement'),
-        reference=F('reference')
+        mode=F('mode_paiement')
     )
 
     # ---- 2b. Dépôts en Banque (Entrées) ----

@@ -240,6 +240,7 @@
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" style="min-width: 180px;">
                                             <li><a class="dropdown-item" href="javascript:void(0)" onclick="resetPassword(this, {{ user.id }}, {{ tenant_data.institut.id }}, '{{ user.first_name }} {{ user.last_name }}', '{{ user.email }}')"><i class="ri-lock-password-line me-2 text-warning"></i>Réinitialiser MDP</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="forceUserPasswordChange(this, {{ user.id }}, {{ tenant_data.institut.id }}, '{{ user.username }}')"><i class="ri-shield-keyhole-line me-2 text-danger"></i>Forcer changement MDP</a></li>
                                             <li><a class="dropdown-item" href="javascript:void(0)" onclick="resetUserSessions(this, {{ user.id }}, {{ tenant_data.institut.id }}, '{{ user.username }}')"><i class="ri-logout-circle-line me-2 text-info"></i>Vider les sessions</a></li>
                                             <li><hr class="dropdown-divider opacity-50"></li>
                                             <li>
@@ -942,6 +943,28 @@
             },
             function() {}
         );
+    }
+
+    function forceUserPasswordChange(btn, userId, tenantId, userName) {
+        alertify.confirm(
+            'Forcer le changement de mot de passe',
+            `Voulez-vous vraiment forcer <strong>${userName}</strong> à changer son mot de passe lors de sa prochaine connexion ?<br><br><span class="text-danger small">L'utilisateur sera immédiatement déconnecté de ses sessions actives.</span>`,
+            function() {
+                fetch(`/saas-admin/api/tenant/${tenantId}/user/${userId}/force-password-change/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alertify.success(data.message);
+                    } else {
+                        alertify.error('Erreur: ' + data.error);
+                    }
+                });
+            },
+            function() {}
+        ).set('labels', {ok: 'Confirmer', cancel: 'Annuler'});
     }
     function toggleUserStatus(btn, userId, tenantId, currentStatus) {
         const action = currentStatus ? 'désactiver' : 'activer';

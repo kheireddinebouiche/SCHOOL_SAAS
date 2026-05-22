@@ -165,6 +165,7 @@ class Paiements(models.Model):
 class Rembourssements(models.Model):
     
     client = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
+    facture = models.ForeignKey('t_conseil.Facture', on_delete=models.SET_NULL, null=True, blank=True, related_name='remboursements')
     motif_rembourssement = models.CharField(max_length=100, null=True, blank=True)
     
     allowed_amount = models.DecimalField(decimal_places=2, max_digits=20, null=True, blank=True)

@@ -176,7 +176,7 @@ class Prospets(models.Model):
     telephone = models.CharField(max_length=14, null=True)
     type_prospect = models.CharField(max_length=255, null=True, choices=[('particulier', 'Particulier'), ('entreprise', 'Entreprise'), ('autre', 'Autre')])
     canal = models.CharField(max_length=255, null=True, choices=[('web', 'Recherche sur le web'),('recommandation', 'Recommandation'),('email', 'Email'), ('telephone', 'Téléphone'),('facebook', 'Facebook'),('linkedin', 'LinkedIn'),('instagram', 'Instagram' ),('tiktok', 'TikTok'),('bouche-a-oreille', 'Bouche à oreille'),('site','Site Web'),('prospectus','Prospectus'),('pub','Publicité'), ('autre', 'Autre')])
-    etat = models.CharField(max_length=255, null=True, blank=True, default='en_attente', choices=[('en_attente', 'En attente'), ('accepte', 'Accepté'), ('rejete', 'Rejeté')])
+    etat = models.CharField(max_length=255, null=True, blank=True, default='en_attente', choices=[('en_attente', 'En attente'), ('accepte', 'Accepté'), ('rejete', 'Rejeté'),('annuler','Annuler')])
     nationnalite = models.CharField(max_length=100, null=True, blank=True)
     num_secu = models.CharField(max_length=100, null=True, blank=True)
     entreprise = models.CharField(max_length=255, null=True, blank=True)

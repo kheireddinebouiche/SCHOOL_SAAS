@@ -712,10 +712,10 @@ def ListeDesPartenaires(request):
 @login_required(login_url="institut_app:login")
 def UpdatePartenaire(request, pk):
     partenaire = Partenaires.objects.get(id=pk)
-    form = NewPartenaireForm(instance=partenaire)
+    form = NewPartenaireForm(instance=partenaire, current_tenant=request.tenant)
 
     if request.method == "POST":
-        form = NewPartenaireForm(request.POST, request.FILES ,instance=partenaire)
+        form = NewPartenaireForm(request.POST, request.FILES, instance=partenaire, current_tenant=request.tenant)
         if form.is_valid():
             updated_partenaire = form.save()
             UserActionLog.objects.create(

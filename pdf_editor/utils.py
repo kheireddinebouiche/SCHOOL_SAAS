@@ -11,11 +11,14 @@ def validate_template_content(content):
     except TemplateSyntaxError as e:
         return False, f"Erreur de syntaxe: {str(e)}"
 
+from django.template import Engine, Context
+
 def render_template_with_context(template_content, context_data):
     """Rend un template avec un contexte"""
     try:
-        template = django_template.Template(template_content)
-        rendered = template.render(django_template.Context(context_data))
+        engine = Engine(string_if_invalid='<span style="background-color: #fef08a; color: #b45309; padding: 0 4px; border-radius: 2px; font-weight: bold; border: 1px dashed #b45309;">[MANQUANT : %s]</span>')
+        template = engine.from_string(template_content)
+        rendered = template.render(Context(context_data))
         return rendered, None
     except Exception as e:
         return None, str(e)

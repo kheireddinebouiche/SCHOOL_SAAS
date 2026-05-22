@@ -291,36 +291,27 @@
             <div class="modal-body p-4">
                 <form id="quickProspectForm">
                     
-                    <div class="segment-container">
-                        <label class="segment-option" for="typeParticulier">
-                            <input type="radio" class="segment-input check-type" name="type_prospect" id="typeParticulier" value="particulier" checked>
-                            <span>Particulier</span>
-                        </label>
-                        <label class="segment-option" for="typeEntreprise">
-                            <input type="radio" class="segment-input check-type" name="type_prospect" id="typeEntreprise" value="entreprise">
-                            <span>Entreprise</span>
-                        </label>
-                    </div>
+                    <input type="hidden" name="type_prospect" value="entreprise">
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label" for="prospectNom">Nom <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="prospectNom" name="nom" required placeholder="Nom">
+                            <label class="form-label" for="prospectNom">Nom du contact <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="prospectNom" name="nom" required placeholder="Nom du contact">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label" for="prospectPrenom">Prénom</label>
-                            <input type="text" class="form-control" id="prospectPrenom" name="prenom" placeholder="Prénom">
+                            <label class="form-label" for="prospectPrenom">Prénom du contact</label>
+                            <input type="text" class="form-control" id="prospectPrenom" name="prenom" placeholder="Prénom du contact">
                         </div>
                     </div>
                     
-                    <div id="entrepriseFields" class="d-none">
+                    <div id="entrepriseFields">
                         <div class="mb-3">
-                            <label class="form-label" for="prospectEntreprise">Entreprise <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="prospectEntreprise" name="entreprise" placeholder="Nom de l'entreprise">
+                            <label class="form-label" for="prospectEntreprise">Désignation de l'entreprise <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="prospectEntreprise" name="entreprise" required placeholder="Désignation ou Nom de l'entreprise">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label" for="prospectPoste">Poste</label>
-                            <input type="text" class="form-control" id="prospectPoste" name="poste" placeholder="Poste occupé">
+                            <label class="form-label" for="prospectPoste">Poste du contact</label>
+                            <input type="text" class="form-control" id="prospectPoste" name="poste" placeholder="Poste occupé dans l'entreprise">
                         </div>
                     </div>
 
@@ -396,7 +387,6 @@
         });
 
         // Modal Logic
-        const typeRadios = document.querySelectorAll('.check-type');
         const entrepriseFields = document.getElementById('entrepriseFields');
         const prospectNomInput = document.getElementById('prospectNom');
         
@@ -407,22 +397,6 @@
         const clientSelect = document.getElementById('{{ form.client.id_for_label }}');
         const modalEl = document.getElementById('newProspectModal');
         const modal = new bootstrap.Modal(modalEl);
-
-        const toggleFields = (type) => {
-             if (type === 'particulier') {
-                entrepriseFields.classList.add('d-none');
-                prospectNomInput.placeholder = "Nom";
-            } else {
-                entrepriseFields.classList.remove('d-none');
-                 prospectNomInput.placeholder = "Nom du contact";
-            }
-        };
-
-        typeRadios.forEach(radio => {
-            radio.addEventListener('change', function() {
-                toggleFields(this.value);
-            });
-        });
 
         saveProspectBtn.addEventListener('click', function() {
             if (!quickProspectForm.checkValidity()) {
@@ -449,14 +423,11 @@
             .then(data => {
                 if (data.status === 'success') {
                     modal.hide();
-                    const label = data.prospect.type === 'entreprise' ? `${data.prospect.entreprise} (Entreprise)` : `${data.prospect.nom} ${data.prospect.prenom || ''}`;
+                    const label = data.prospect.entreprise ? `${data.prospect.entreprise} (Entreprise)` : `${data.prospect.nom} ${data.prospect.prenom || ''}`;
                     const option = new Option(label, data.prospect.id, true, true);
                     clientSelect.add(option, undefined);
                     clientSelect.dispatchEvent(new Event('change'));
                     quickProspectForm.reset();
-                    // Reset to Particulier
-                    document.getElementById('typeParticulier').checked = true;
-                    document.getElementById('typeParticulier').dispatchEvent(new Event('change'));
                 } else {
                     errorText.textContent = data.message || 'Erreur inconnue.';
                     prospectError.classList.remove('d-none');

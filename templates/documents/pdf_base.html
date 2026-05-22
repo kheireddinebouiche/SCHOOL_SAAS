@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm 15mm 25mm 15mm;
+            
+            @top-center {
+                content: element(header);
+            }
+            
+            @bottom-center {
+                content: element(footer);
+            }
+        }
+        
+        header {
+            position: running(header);
+            width: 100%;
+            text-align: center;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        footer {
+            position: running(footer);
+            width: 100%;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+
+        /* Styles de base pour le PDF */
+        body {
+            font-family: 'Arial', system-ui, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            background-color: white;
+            color: #1e293b;
+        }
+
+        /* Styles Bootstrap simplifiés pour le PDF */
+        .container {
+            width: 100%;
+            padding-right: 1px;
+            padding-left: 1px;
+            margin-right: auto;
+            margin-left: auto;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-right: -15px;
+            margin-left: -15px;
+        }
+
+        .col-md-4, .col-md-6, .col-md-12 {
+            position: relative;
+            width: 100%;
+            padding-right: 15px;
+            padding-left: 15px;
+        }
+
+        .card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            word-wrap: break-word;
+            background-clip: border-box;
+            border: 1px solid rgba(0,0,0,.125);
+            border-radius: 0.25rem;
+            background-color: white;
+        }
+
+        /* ✅ CRITICAL : CSS pour les pagebreak (WeasyPrint) */
+        .pagebreak {
+            page-break-before: always;
+            break-before: page;
+            margin: 0;
+            padding: 0;
+            height: 0;
+            display: block;
+        }
+
+        .card-body {
+            flex: 1 1 auto;
+            min-height: 1px;
+            padding: 1.25rem;
+        }
+
+        /* Styles pour les boutons et éléments d'interface à cacher */
+        .btn, .no-print {
+            display: none !important;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .logo {
+            width: 120px;
+            height: auto;
+        }
+
+        .signature {
+            width: 200px;
+            margin-top: 20px;
+        }
+
+        /* Appliquer le CSS personnalisé du template */
+        {{ document.template.custom_css|default_if_none:""|safe }}
+    </style>
+</head>
+<body>
+    {% if entreprise %}
+    <header>
+        {% if entreprise.nom and entreprise.nom != "None" %}
+            <div style="font-weight: bold; font-size: 16px;">{{ entreprise.nom }}</div>
+        {% endif %}
+        {% if entreprise.adresse and entreprise.adresse != "None" %}
+            <div style="font-size: 12px; color: #666;">{{ entreprise.adresse }}</div>
+        {% endif %}
+    </header>
+
+    <footer>
+        {% if entreprise.rc and entreprise.rc != "None" %}RC: {{ entreprise.rc }} | {% endif %}
+        {% if entreprise.nif and entreprise.nif != "None" %}NIF: {{ entreprise.nif }} | {% endif %}
+        {% if entreprise.nis and entreprise.nis != "None" %}NIS: {{ entreprise.nis }} | {% endif %}
+        {% if entreprise.art and entreprise.art != "None" %}ART: {{ entreprise.art }}{% endif %}
+        <br>
+        Généré le {% now "d/m/Y H:i" %}
+    </footer>
+    {% endif %}
+
+    <main>
+        {{ document.rendered_content|safe }}
+    </main>
+</body>
+</html>

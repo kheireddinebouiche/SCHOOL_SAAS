@@ -443,9 +443,10 @@ def ApiLoadEcheanciersConfigures(request):
             lines = EcheancierPaiementLine.objects.filter(echeancier_id=echeancier['id']).order_by('id')
             tranches_sig = "|".join([f"{l.value}-{l.taux}-{l.montant_tranche}" for l in lines])
             
-            # Key for grouping: Model + Formation + Signature + Price + Base Tarif
+            # Key for grouping: Model + Promo + Formation + Signature + Price + Base Tarif
             key = (
                 echeancier['model__label'],
+                echeancier['model__promo_id'],
                 echeancier['formation__nom'] or '',
                 str(echeancier['frais_inscription'] or '0.00'),
                 str(echeancier['remise'] or '0.00'),

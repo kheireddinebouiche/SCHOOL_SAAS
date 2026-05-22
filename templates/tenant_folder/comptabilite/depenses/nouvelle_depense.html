@@ -86,6 +86,45 @@
         color: var(--primary-color);
         font-weight: 500;
     }
+    
+    /* Select2 overriding to match our custom styles */
+    .select2-container--default .select2-selection--single {
+        border: 1px solid var(--border-color);
+        height: auto;
+        padding: 9px 16px;
+        font-size: 14px;
+        border-radius: 8px;
+        transition: all 0.2s;
+        background-color: #fff;
+    }
+    
+    .select2-container--default.select2-container--focus .select2-selection--single,
+    .select2-container--default.select2-container--open .select2-selection--single {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px var(--primary-soft);
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 1.5;
+        padding-left: 0;
+        color: #495057;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 100%;
+        right: 12px;
+    }
+    
+    /* Select2 inside input-group */
+    .input-group .select2-container {
+        flex: 1 1 auto;
+        width: 1% !important;
+    }
+    
+    .input-group > .select2-container--default .select2-selection--single {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
 </style>
 
 <div class="main-content">
@@ -150,7 +189,7 @@
                                         </div>
                                     </div>
                                     <div class="row g-4 mt-1">
-                                        <div class="col-lg-6">
+                                        <div class="col-lg-4">
                                             <label class="form-label">Entité <span class="text-danger">*</span></label>
                                             <div class="input-group">
                                                 <span class="input-group-text"><i class="ri-community-line text-muted"></i></span>
@@ -163,7 +202,7 @@
                                             </div>
                                             <div class="invalid-feedback">Veuillez sélectionner l'entité</div>
                                         </div>
-                                        <div class="col-lg-6">
+                                        <div class="col-lg-4">
                                             <label class="form-label">Date <span class="text-danger">*</span></label>
                                             <div class="input-group">
                                                 <span class="input-group-text"><i class="ri-calendar-event-line text-muted"></i></span>
@@ -171,9 +210,7 @@
                                             </div>
                                             <div class="invalid-feedback">Veuillez sélectionner la date</div>
                                         </div>
-                                    </div>
-                                    <div class="row g-4 mt-1">
-                                        <div class="col-lg-6">
+                                        <div class="col-lg-4">
                                             <label class="form-label">Catégorie <span class="text-danger">*</span></label>
                                             <select class="form-select" id="typeSelect" name="type" required>
                                                 <!-- Loaded via JS -->
@@ -285,33 +322,44 @@
                     // We can sort them or group them. 
                     // Let's just list parents, then their children indented or with prefix
                     
-                    // Filter parents
-                    var parents = data.filter(c => c.parent_id === null);
-
-                    $.each(parents, function(index, p){
-                        option += `<option value="${p.id}" style="font-weight: bold;">${p.name}</option>`;
-                        
-                        // Find children for this parent
-                        var children = data.filter(c => c.parent_id === p.id);
-                        $.each(children, function(i, c){
-                             option += `<option value="${c.id}">&nbsp;&nbsp;&nbsp;↳ ${c.name}</option>`;
-                        });
-                    });
+                    // Build a tree and render it safely
+                    var renderedIds = new Set();
                     
-                    // Also handle orphans if any (shouldn't happen with strict logic but good for safety) or just append all others if logic above misses any? 
-                    // The above logic covers all if tree is max 2 levels deep as per standard usage.
-                    // If we want to be safe and just list all:
-                    /*
-                    $.each(data, function(index, cat){
-                         let label = cat.name;
-                         if(cat.parent_name) {
-                             label = `${cat.parent_name} > ${cat.name}`;
-                         }
-                         option += `<option value="${cat.id}">${label}</option>`;
+                    function renderCategory(parentId, level) {
+                        var children = data.filter(c => c.parent_id === parentId);
+                        $.each(children, function(index, cat) {
+                            if (renderedIds.has(cat.id)) return;
+                            renderedIds.add(cat.id);
+                            
+                            var indent = "&nbsp;&nbsp;&nbsp;".repeat(level);
+                            var prefix = level > 0 ? "↳ " : "";
+                            var style = level === 0 ? "font-weight: bold;" : "";
+                            option += `<option value="${cat.id}" style="${style}">${indent}${prefix}${cat.name}</option>`;
+                            renderCategory(cat.id, level + 1);
+                        });
+                    }
+                    
+                    renderCategory(null, 0);
+                    
+                    // Render any orphans that didn't get caught
+                    $.each(data, function(index, cat) {
+                        if (!renderedIds.has(cat.id)) {
+                            let label = cat.name;
+                            if (cat.parent_name) {
+                                label = `${cat.parent_name} > ${cat.name}`;
+                            }
+                            option += `<option value="${cat.id}">${label}</option>`;
+                        }
                     });
-                     */
 
                     $('#typeSelect').html(option);
+                    
+                    // Initialize Select2 to make it filterable
+                    $('#typeSelect').select2({
+                        placeholder: "Veuillez selectionner une catégorie",
+                        allowClear: true,
+                        width: '100%'
+                    });
                 },
                 error: function(err) {
                     console.error("Error loading categories", err);
@@ -358,6 +406,20 @@
                         option += "<option value="+p.id+">"+p.designation+"</option>";
                     });
                     $('#fournisseur').html(option);
+                    
+                    // Initialize Select2 to make it filterable
+                    $('#fournisseur').select2({
+                        placeholder: "Veuillez sélectionner un fournisseur",
+                        allowClear: true,
+                        width: '100%'
+                    });
+                    
+                    // Also initialize entite select
+                    $('#entite').select2({
+                        placeholder: "Sélectionner une entité",
+                        allowClear: true,
+                        width: '100%'
+                    });
                 }
             })
         }

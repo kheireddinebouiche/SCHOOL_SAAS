@@ -574,6 +574,7 @@ def ChangePasswordForce(request):
             # Update last_password_change in profile
             profile, created = Profile.objects.get_or_create(user=user)
             profile.last_password_change = timezone.now()
+            profile.force_password_change = False
             profile.save()
             
             # Update UserSession to prevent logout from other middlewares if any

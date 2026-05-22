@@ -708,6 +708,7 @@ def ApiSaveRefundOperation(request):
     if request.method == "POST":
         id_client = request.POST.get('id_client')
         amount = request.POST.get('refund_amount')
+        amount = amount if amount else 0
         mode_rembourssement = request.POST.get('mode_rembourssement')
         id_refund = request.POST.get('id_refund')
         entite_select = request.POST.get('entite_select')
@@ -749,9 +750,13 @@ def ApiSaveRefundOperation(request):
             client_id=id_client,
             label = "Remboursement",
             montant_ht = amount,
+            montant_ttc = amount,
+            tva = 0,
             mode_paiement = mode_rembourssement,
             entite_id = entite_select,
             category_id = category_id,
+            date_paiement = datetime.now(),
+            etat = True
         )
 
         # Update or create cumulative refund for the promo
@@ -767,11 +772,41 @@ def ApiSaveRefundOperation(request):
         obj_refund.is_appliced = True
         obj_refund.save()
 
-        change_client = Prospets.objects.get(id = id_client)
-        change_client.statut = "annuler"
-        change_client.save()
+        cancel_enrollment = request.POST.get('cancel_enrollment') == 'true'
+        if cancel_enrollment:
+            prospect.statut = "annuler"
+            prospect.etat = "annuler"
+            prospect.motif_annulation = "rembourssement"
+            prospect.save()
+            DuePaiements.objects.filter(client_id=prospect.id, type="frais_f").update(is_annulated=True)
+            ClientPaiementsRequest.objects.filter(client_id=prospect.id).update(etat='annulation_approuver')
+            
+            # Archiver les demandes de dérogation en attente
+            derogations = Derogations.objects.filter(demandeur=prospect, etat=False)
+            for derog in derogations:
+                derog.etat = True
+                derog.statut = 'rejetee'
+                derog.observation = "Archivée automatiquement suite à l'annulation de l'inscription."
+                derog.save()
 
-        DuePaiements.objects.filter(client_id = change_client, type="frais_f").update(is_annulated=True)
+        # Mettre à jour l'observation du prospect et supprimer la fiche de voeux
+        if prospect.is_double:
+            specialty_text = f"{promo.specialite.specialite1.label} / {promo.specialite.specialite2.label}" if promo.specialite else "Inconnue"
+        else:
+            specialty_text = promo.specialite.label if promo.specialite else "Inconnue"
+        
+        promo_text = promo.promo.code if promo.promo else "Inconnue"
+        obs_text = f" Ancienne spécialité demandée : {specialty_text} (Promo : {promo_text})."
+        
+        if prospect.observation:
+            prospect.observation += f"\n{obs_text}"
+        else:
+            prospect.observation = obs_text
+        prospect.save()
+        
+        # Annuler toutes les fiches de voeux (standard et double) sans les supprimer
+        FicheDeVoeux.objects.filter(prospect=prospect).update(is_confirmed=False)
+        FicheVoeuxDouble.objects.filter(prospect=prospect).update(is_confirmed=False)
 
         UserActionLog.objects.create(
             user=request.user,

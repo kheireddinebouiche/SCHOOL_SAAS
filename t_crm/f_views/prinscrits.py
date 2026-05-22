@@ -133,7 +133,7 @@ def ApiLoadPrinscrits(request):
         elif client_type == 'entreprise':
             qs = qs.exclude(Q(entreprise__isnull=True) | Q(entreprise=''))
 
-    qs = qs.order_by('-created_at')
+    qs = qs.order_by('nom', '-created_at')
     
     paginator = Paginator(qs, page_size)
     page_obj = paginator.get_page(page_number)
@@ -1114,6 +1114,41 @@ def ApiCancelPreinscrit(request):
             req.etat = 'annulation'
             req.save()
 
+        # Rapatrier les informations de la fiche de voeux avant suppression
+        voeux_details = []
+        if preinscrit.is_double:
+            fiches = FicheVoeuxDouble.objects.filter(prospect=preinscrit)
+            for f in fiches:
+                spec_info = ""
+                if f.specialite:
+                    sp1 = f.specialite.specialite1.label if f.specialite.specialite1 else None
+                    sp2 = f.specialite.specialite2.label if f.specialite.specialite2 else None
+                    if sp1 and sp2:
+                        spec_info = f"Double Spécialité : {sp1} & {sp2}"
+                    else:
+                        spec_info = f"Option : {f.specialite.label or '-'}"
+                else:
+                    spec_info = "Option : -"
+                
+                promo_info = f"Promo : {f.promo.label} ({f.promo.code})" if f.promo else "Promo : -"
+                comm_info = f" | Commentaire : {f.commentaire}" if f.commentaire else ""
+                voeux_details.append(f"[Fiche Vœux Double originale] {spec_info} | {promo_info}{comm_info}")
+        else:
+            fiches = FicheDeVoeux.objects.filter(prospect=preinscrit)
+            for f in fiches:
+                spec_info = f"Spécialité : {f.specialite.label} ({f.specialite.code})" if (f.specialite and f.specialite.label) else f"Spécialité : {f.specialite.label if f.specialite else '-'}"
+                promo_info = f"Promo : {f.promo.label} ({f.promo.code})" if f.promo else "Promo : -"
+                comm_info = f" | Commentaire : {f.commentaire}" if f.commentaire else ""
+                voeux_details.append(f"[Fiche Vœux originale] {spec_info} | {promo_info}{comm_info}")
+
+        if voeux_details:
+            history_text = "\n".join(voeux_details)
+            if preinscrit.observation:
+                preinscrit.observation = f"{preinscrit.observation}\n\n{history_text}"
+            else:
+                preinscrit.observation = history_text
+            preinscrit.save()
+
         # Supprimer les fiches de voeux associées
         if preinscrit.is_double:
             FicheVoeuxDouble.objects.filter(prospect=preinscrit).delete()
@@ -1162,8 +1197,57 @@ def ApiUpdateNotePr(request):
 def ApiReactivatePreinscrit(request):
     if request.method == 'POST':
         id_preinscrit = request.POST.get('id_preinscrit')
+        force_duplicate = request.POST.get('force_duplicate') == 'true'
         try:
             preinscrit = Prospets.objects.get(id=id_preinscrit)
+
+            if not force_duplicate:
+                has_refund = Rembourssements.objects.filter(client=preinscrit, etat='acp').exists()
+                if has_refund:
+                    return JsonResponse({
+                        'status': 'has_refund',
+                        'message': 'Ce prospect a bénéficié d\'un remboursement. La réactivation se fera via une nouvelle inscription (duplication des informations personnelles) afin de garantir une séparation logique des dossiers.'
+                    })
+
+            if force_duplicate:
+                old_id = preinscrit.id
+                new_prospect = Prospets.objects.get(id=id_preinscrit)
+                new_prospect.pk = None
+                if hasattr(new_prospect, 'slug'):
+                    new_prospect.slug = None
+                new_prospect.statut = 'visiteur'
+                new_prospect.etat = 'en_attente'
+                new_prospect.motif_annulation = ''
+                new_prospect.profile_completed = False
+                new_prospect.has_completed_doc = False
+                new_prospect.has_derogation = False
+                new_prospect.has_second_wish = False
+                new_prospect.save()
+
+                preinscrit.statut = 'annuler'
+                preinscrit.etat = 'annuler'
+                preinscrit.motif_annulation = 'rembourssement'
+                preinscrit.observation = f"{preinscrit.observation or ''}\n[Dossier dupliqué suite à un remboursement, ID du nouveau dossier : {new_prospect.id}]".strip()
+                preinscrit.save()
+                
+                # Annuler toutes les fiches de voeux (standard et double) sans les supprimer
+                FicheDeVoeux.objects.filter(prospect=preinscrit).update(is_confirmed=False)
+                FicheVoeuxDouble.objects.filter(prospect=preinscrit).update(is_confirmed=False)
+
+                UserActionLog.objects.create(
+                    user=request.user,
+                    action_type='CREATE',
+                    target_model='Prospets',
+                    target_id=str(new_prospect.id),
+                    details=f"Création par duplication suite à remboursement. Ancien dossier ID : {old_id}",
+                    ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+                )
+
+                return JsonResponse({
+                    'status': 'success_duplicate',
+                    'message': 'Le dossier a été dupliqué avec succès. Redirection vers la nouvelle fiche...',
+                    'new_slug': new_prospect.slug if hasattr(new_prospect, 'slug') else new_prospect.id
+                })
 
             # [NOUVEAU] Vérification STRICTE AVANT réactivation
             if preinscrit.is_double:

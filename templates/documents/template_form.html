@@ -5,40 +5,105 @@
 {% endblock %}
 
 {% block content %}
+<style>
+    /* Premium Design System */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        overflow: hidden;
+    }
+    
+    .glass-header {
+        background: rgba(248, 250, 252, 0.8);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 1.25rem 1.5rem;
+    }
+
+    .form-control, .form-select {
+        border-radius: 0.75rem;
+        border: 1px solid #e2e8f0;
+        padding: 0.75rem 1rem;
+        transition: all 0.2s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+
+    .btn-rounded {
+        border-radius: 0.75rem;
+        padding: 0.6rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .btn-primary-soft {
+        background-color: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+        border: none;
+    }
+    
+    .btn-primary-soft:hover {
+        background-color: rgba(59, 130, 246, 0.2);
+        color: #2563eb;
+    }
+
+    .input-group-text {
+        border-radius: 0.75rem 0 0 0.75rem;
+        border: 1px solid #e2e8f0;
+        background-color: #f8fafc;
+    }
+    
+    .input-group .form-control {
+        border-radius: 0 0.75rem 0.75rem 0;
+    }
+    
+    /* TinyMCE wrapper */
+    .editor-wrapper {
+        border-radius: 0 0 1.25rem 1.25rem;
+        overflow: hidden;
+    }
+</style>
+
 <div class="row justify-content-center">
     <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="h3 mb-1">
-                    {% if form.instance.pk %}
-                    <i class="fas fa-edit text-primary me-2"></i>Édition du Template
-                    {% else %}
-                    <i class="fas fa-plus-circle text-primary me-2"></i>Créer un Template
-                    {% endif %}
-                </h1>
-                <p class="text-muted mb-0">Configuration et contenu du document</p>
+        <div class="d-flex justify-content-between align-items-center mb-4 glass-card p-4">
+            <div class="d-flex align-items-center">
+                <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                    <i class="fas {% if form.instance.pk %}fa-edit{% else %}fa-plus-circle{% endif %} text-primary fs-3"></i>
+                </div>
+                <div>
+                    <h4 class="mb-1 fw-bold">
+                        {% if form.instance.pk %}
+                        Édition du Template
+                        {% else %}
+                        Créer un Template
+                        {% endif %}
+                    </h4>
+                    <p class="text-muted mb-0">Configuration et contenu du document</p>
+                </div>
             </div>
-            {% if form.instance.pk %}
             <div class="d-flex gap-2">
-                <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#cssModal">
-                    <i class="fab fa-css3-alt me-1"></i> CSS Personnalisé
+                <button type="button" class="btn btn-primary-soft btn-rounded d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#cssModal">
+                    <i class="fab fa-css3-alt me-2"></i> CSS Personnalisé
                 </button>
-                <a href="{% url 'pdf_editor:template-detail' form.instance.slug %}" class="btn btn-outline-secondary btn-sm">
-                    <i class="fas fa-eye me-1"></i> Voir détails
+                {% if form.instance.pk %}
+                <a href="{% url 'pdf_editor:template-detail' form.instance.slug %}" class="btn btn-light btn-rounded border d-flex align-items-center">
+                    <i class="fas fa-eye me-2 text-secondary"></i> Voir détails
                 </a>
+                {% endif %}
             </div>
-            {% else %}
-            <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#cssModal">
-                <i class="fab fa-css3-alt me-1"></i> CSS Personnalisé
-            </button>
-            {% endif %}
         </div>
 
         <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
             {% csrf_token %}
 
             {% if form.non_field_errors %}
-            <div class="alert alert-danger shadow-sm border-0 mb-4">
+            <div class="alert alert-danger shadow-sm border-0 mb-4 rounded-3">
                 <i class="fas fa-exclamation-circle me-2"></i>
                 {% for error in form.non_field_errors %}
                     {{ error }}
@@ -47,21 +112,21 @@
             {% endif %}
 
             <!-- Configuration Générale -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold"><i class="fas fa-sliders-h me-2 text-primary"></i>Configuration</h5>
+            <div class="glass-card mb-4">
+                <div class="glass-header">
+                    <h5 class="mb-0 fw-bold text-dark"><i class="fas fa-sliders-h me-2 text-primary"></i>Configuration</h5>
                 </div>
-                <div class="card-body">
-                    <div class="row g-3">
+                <div class="card-body p-4">
+                    <div class="row g-4">
                         <div class="col-md-8">
-                            <label for="{{ form.title.id_for_label }}" class="form-label fw-medium">{{ form.title.label }}</label>
+                            <label for="{{ form.title.id_for_label }}" class="form-label fw-medium text-secondary">{{ form.title.label }}</label>
                             {{ form.title }}
                             {% if form.title.errors %}
                                 <div class="invalid-feedback d-block">{{ form.title.errors.0 }}</div>
                             {% endif %}
                         </div>
                         <div class="col-md-4">
-                            <label for="{{ form.template_type.id_for_label }}" class="form-label fw-medium">{{ form.template_type.label }}</label>
+                            <label for="{{ form.template_type.id_for_label }}" class="form-label fw-medium text-secondary">{{ form.template_type.label }}</label>
                             {{ form.template_type }}
                             {% if form.template_type.errors %}
                                 <div class="invalid-feedback d-block">{{ form.template_type.errors.0 }}</div>
@@ -69,30 +134,30 @@
                         </div>
                         
                         <div class="col-md-8">
-                            <label for="{{ form.slug.id_for_label }}" class="form-label fw-medium">{{ form.slug.label }}</label>
+                            <label for="{{ form.slug.id_for_label }}" class="form-label fw-medium text-secondary">{{ form.slug.label }}</label>
                             <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0 text-muted">/templates/</span>
+                                <span class="input-group-text text-muted">/templates/</span>
                                 {{ form.slug }}
                             </div>
-                            <div class="form-text small">Identifiant unique pour l'URL. Généré automatiquement.</div>
+                            <div class="form-text small mt-1">Identifiant unique pour l'URL. Généré automatiquement.</div>
                             {% if form.slug.errors %}
                                 <div class="invalid-feedback d-block">{{ form.slug.errors.0 }}</div>
                             {% endif %}
                         </div>
 
-                        <div class="col-md-4 d-flex align-items-end">
-                            <div class="form-check form-switch mb-2">
+                        <div class="col-md-4 d-flex align-items-center mt-auto">
+                            <div class="form-check form-switch form-switch-md mb-2">
                                 {{ form.is_active }}
-                                <label class="form-check-label fw-medium" for="{{ form.is_active.id_for_label }}">
+                                <label class="form-check-label fw-medium ms-2" for="{{ form.is_active.id_for_label }}">
                                     {{ form.is_active.label }}
                                 </label>
                             </div>
                         </div>
 
                         <div class="col-12">
-                            <label for="{{ form.description.id_for_label }}" class="form-label fw-medium">{{ form.description.label }}</label>
+                            <label for="{{ form.description.id_for_label }}" class="form-label fw-medium text-secondary">{{ form.description.label }}</label>
                             {{ form.description }}
-                            <div class="form-text">Une brève description pour identifier ce template.</div>
+                            <div class="form-text mt-1">Une brève description pour identifier ce template.</div>
                             {% if form.description.errors %}
                                 <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
                             {% endif %}
@@ -102,21 +167,21 @@
             </div>
 
             <!-- Éditeur de Contenu -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 fw-bold"><i class="fas fa-file-alt me-2 text-primary"></i>Contenu du Document</h5>
-                    <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-10">HTML / TinyMCE</span>
+            <div class="glass-card mb-4">
+                <div class="glass-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-dark"><i class="fas fa-file-alt me-2 text-primary"></i>Contenu du Document</h5>
+                    <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-3 py-2 rounded-pill">HTML / TinyMCE</span>
                 </div>
-                <div class="card-body p-0">
+                <div class="editor-wrapper p-0">
                     {{ form.content }}
                     {% if form.content.errors %}
                         <div class="p-3 invalid-feedback d-block">{{ form.content.errors.0 }}</div>
                     {% endif %}
                 </div>
-                <div class="card-footer bg-light">
-                    <div class="small text-muted">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Utilisez le menu <strong>Variables</strong> dans l'éditeur pour insérer des champs dynamiques comme <code>Nom</code>, <code>Date</code>, etc.
+                <div class="card-footer bg-light border-0 px-4 py-3">
+                    <div class="small text-muted d-flex align-items-center">
+                        <i class="fas fa-info-circle text-primary me-2 fs-5"></i>
+                        <span>Utilisez le menu <strong class="text-dark">Variables</strong> dans l'éditeur pour insérer des champs dynamiques comme <code>Nom</code>, <code>Date</code>, etc.</span>
                     </div>
                 </div>
             </div>
@@ -124,36 +189,41 @@
             <!-- Modal CSS (Replacing Accordion) -->
             <div class="modal fade" id="cssModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-xl modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title"><i class="fab fa-css3-alt me-2 text-primary"></i>Personnalisation CSS</h5>
+                    <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem; overflow: hidden;">
+                        <div class="modal-header bg-light border-bottom-0 p-4">
+                            <h5 class="modal-title fw-bold"><i class="fab fa-css3-alt me-2 text-primary"></i>Personnalisation CSS</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body">
-                            <div class="alert alert-info border-0 shadow-sm mb-3">
-                                <i class="fas fa-info-circle me-2"></i> Ces règles CSS seront appliquées uniquement lors de la génération du PDF.
+                        <div class="modal-body p-4">
+                            <div class="alert alert-info border-0 shadow-sm mb-4 rounded-3 d-flex align-items-center">
+                                <i class="fas fa-info-circle me-3 fs-4"></i> 
+                                <div>Ces règles CSS seront appliquées uniquement lors de la génération du PDF (WeasyPrint).</div>
                             </div>
-                            <label for="{{ form.custom_css.id_for_label }}" class="form-label fw-bold">Code CSS</label>
+                            <label for="{{ form.custom_css.id_for_label }}" class="form-label fw-bold text-secondary">Code CSS</label>
                             {{ form.custom_css }}
                             <style>
                                 #{{ form.custom_css.id_for_label }} {
-                                    height: 500px !important;
+                                    height: 400px !important;
                                     font-family: 'Consolas', 'Monaco', monospace;
                                     font-size: 14px;
+                                    border-radius: 0.75rem;
+                                    background-color: #1e293b;
+                                    color: #f8fafc;
+                                    padding: 1rem;
                                 }
                             </style>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        <div class="modal-footer border-top-0 p-4 pt-0">
+                            <button type="button" class="btn btn-light btn-rounded border" data-bs-dismiss="modal">Fermer</button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="d-flex gap-3 justify-content-end mb-5">
-                <a href="{% url 'pdf_editor:template-list' %}" class="btn btn-light border shadow-sm px-4">Annuler</a>
-                <button type="submit" class="btn btn-primary shadow-sm px-4 icon-link">
-                    <i class="fas fa-save"></i>
+                <a href="{% url 'pdf_editor:template-list' %}" class="btn btn-light btn-rounded border shadow-sm px-4">Annuler</a>
+                <button type="submit" class="btn btn-primary btn-rounded shadow-sm px-4 d-flex align-items-center">
+                    <i class="fas fa-save me-2"></i>
                     {% if form.instance.pk %}Enregistrer les modifications{% else %}Créer le template{% endif %}
                 </button>
             </div>
@@ -177,6 +247,37 @@
         convert_urls: false,
         setup: function(editor) {
             editor.on('init', function() {
+                {% if template_variables %}
+                const menuItems = [
+                    {% for cat in template_variables %}
+                    {
+                        type: 'nestedmenuitem',
+                        text: '{{ cat.category|escapejs }}',
+                        getSubmenuItems: function() {
+                            return [
+                                {% for variable in cat.vars %}
+                                {
+                                    type: 'menuitem',
+                                    text: '{{ variable.desc|escapejs }}',
+                                    onAction: function() {
+                                        editor.insertContent('{{ variable.tag|escapejs }} ');
+                                    }
+                                }{% if not forloop.last %},{% endif %}
+                                {% endfor %}
+                            ];
+                        }
+                    }{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ];
+                
+                editor.ui.registry.addMenuButton('templatevars', {
+                    text: 'Insérer Variable',
+                    icon: 'template',
+                    fetch: function(callback) {
+                        callback(menuItems);
+                    }
+                });
+                {% else %}
                 const templateVariables = [
                     { title: 'Nom du Destinataire', value: '{{ recipient_name }}' },
                     { title: 'Email du Destinataire', value: '{{ recipient_email }}' },
@@ -201,6 +302,7 @@
                         callback(items);
                     }
                 });
+                {% endif %}
             });
         }
     });

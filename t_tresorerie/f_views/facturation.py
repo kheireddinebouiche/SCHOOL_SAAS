@@ -43,7 +43,8 @@ def ApiListeDesFactures(request):
                     'mode_paiement': f.mode_paiement,
                     'created_at': f.created_at.strftime("%Y-%m-%d") if hasattr(f, 'created_at') else "",
                     'entreprise_id': ent_id,
-                    'entreprise_name': ent_name
+                    'entreprise_name': ent_name,
+                    'has_refund': f.remboursements.exists()
                 })
             
             return JsonResponse({'status': 'success', 'data': data, 'enterprises': enterprises})
@@ -299,3 +300,43 @@ def ApiGetDraftInvoiceDetails(request):
             })
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+@login_required(login_url="institut_app:login")
+@require_http_methods(["POST"])
+def ApiDemanderRemboursement(request):
+    try:
+        facture_id = request.POST.get('facture_id')
+        montant = request.POST.get('montant')
+        motif = request.POST.get('motif')
+        mode_paiement = request.POST.get('mode_paiement')
+
+        if not all([facture_id, montant, motif, mode_paiement]):
+            return JsonResponse({'status': 'error', 'message': 'Informations manquantes'})
+
+        facture = Facture.objects.get(id=facture_id)
+        
+        if not facture.client:
+            return JsonResponse({'status': 'error', 'message': 'Cette facture n\'est pas associée à un client (prospect).'})
+
+        existing_request = Rembourssements.objects.filter(facture=facture, is_done=False).exists()
+        if existing_request:
+            return JsonResponse({'status': 'error', 'message': 'Une demande de remboursement est déjà en cours pour cette facture.'})
+
+        Rembourssements.objects.create(
+            client=facture.client,
+            facture=facture,
+            motif_rembourssement=motif,
+            allowed_amount=Decimal(montant),
+            mode_rembourssement=mode_paiement,
+            entite=facture.entreprise,
+            etat='enc',
+            is_done=False,
+            is_appliced=False
+        )
+
+        return JsonResponse({'status': 'success', 'message': 'Demande de remboursement initiée avec succès.'})
+    except Facture.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Facture introuvable'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})

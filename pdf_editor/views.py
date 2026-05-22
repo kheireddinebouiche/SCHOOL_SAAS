@@ -142,6 +142,12 @@ class TemplateUpdateView(LoginRequiredMixin, UpdateView):
     slug_field = 'slug'
     success_url = reverse_lazy('pdf_editor:template-list')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from .variables import get_variables_for_type
+        context['template_variables'] = get_variables_for_type(self.object.template_type)
+        return context
+
 
 class TemplateDeleteView(LoginRequiredMixin, DeleteView):
     """Supprime un template"""
@@ -180,8 +186,12 @@ class DocumentGenerationView(LoginRequiredMixin, View):
             
             # Rendre le template Django
             try:
-                django_template = Template(template_obj.content)
-                rendered_content = django_template.render(Context(context_data))
+                from .utils import render_template_with_context
+                rendered_content, error = render_template_with_context(template_obj.content, context_data)
+                
+                if error:
+                    form.add_error(None, f"Erreur lors du rendu: {error}")
+                    return render(request, 'documents/generate_document.html', {'template': template_obj, 'form': form})
                 
                 # Enregistrer la génération
                 doc_gen = DocumentGeneration.objects.create(
@@ -227,112 +237,23 @@ class DocumentExportView(LoginRequiredMixin, View):
             from weasyprint import HTML, CSS
             from io import BytesIO
             import os
+            from django.template.loader import render_to_string
             from django.conf import settings
+            
+            entreprise = None
+            if hasattr(request, 'tenant'):
+                entreprise = request.tenant
 
-            # Inclure le CSS personnalisé du template et les styles de base dans le PDF
-            html_content = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <style>
-                    /* Styles de base pour le PDF */
-                    body {{
-                        font-family: 'Arail', system-ui, sans-serif;
-                        margin: 0;
-                        padding: 0mm;
-                        line-height: 1.6;
-                        background-color: white;
-                        color: #1e293b;
-                    }}
-
-                    /* Styles Bootstrap simplifiés pour le PDF */
-                    .container {{
-                        width: 100%;
-                        padding-right: 1px;
-                        padding-left: 1px;
-                        margin-right: auto;
-                        margin-left: auto;
-                    }}
-
-                    .row {{
-                        display: flex;
-                        flex-wrap: wrap;
-                        margin-right: -15px;
-                        margin-left: -15px;
-                    }}
-
-                    .col-md-4, .col-md-6, .col-md-12 {{
-                        position: relative;
-                        width: 100%;
-                        padding-right: 15px;
-                        padding-left: 15px;
-                    }}
-
-                    .card {{
-                        position: relative;
-                        display: flex;
-                        flex-direction: column;
-                        min-width: 0;
-                        word-wrap: break-word;
-                        background-clip: border-box;
-                        border: 1px solid rgba(0,0,0,.125);
-                        border-radius: 0.25rem;
-                        background-color: white;
-                    }}
-
-                    /* ✅ CRITICAL : CSS pour les pagebreak (WeasyPrint) */
-                    .pagebreak {{
-                        page-break-before: always;
-                        break-before: page;
-                        margin: 0;
-                        padding: 0;
-                        height: 0;
-                        display: block;
-                    }}
-
-                    .card-body {{
-                        flex: 1 1 auto;
-                        min-height: 1px;
-                        padding: 1.25rem;
-                    }}
-
-                    /* Styles pour les boutons et éléments d'interface à cacher */
-                    .btn, .no-print {{
-                        display: none !important;
-                    }}
-
-                    img {{
-                        
-                        max-width: 100%;
-                        height: auto;
-                        
-                    }}
-
-                    .logo {{
-                        width: 120px;
-                        height: auto;
-                    }}
-
-                    .signature {{
-                        width: 200px;
-                        margin-top: 20px;
-                    }}
-
-                    /* Appliquer le CSS personnalisé du template */
-                    {document.template.custom_css}
-                </style>
-            </head>
-            <body>
-                {document.rendered_content}
-            </body>
-            </html>
-            """
+            context = {
+                'document': document,
+                'entreprise': entreprise,
+            }
+            html_content = render_to_string('documents/pdf_base.html', context)
 
             pdf_file = BytesIO()
 
             # Créer le PDF avec le contenu HTML et les styles
-            HTML(string=html_content,base_url=request.build_absolute_uri('/')).write_pdf(pdf_file)
+            HTML(string=html_content, base_url=request.build_absolute_uri('/')).write_pdf(pdf_file)
             pdf_file.seek(0)
 
             response = HttpResponse(pdf_file.read(), content_type='application/pdf')

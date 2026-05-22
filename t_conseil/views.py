@@ -757,12 +757,12 @@ def ApiQuickCreateProspect(request):
     prenom = request.POST.get('prenom')
     email = request.POST.get('email')
     telephone = request.POST.get('telephone')
-    type_prospect = request.POST.get('type_prospect', 'particulier')
+    type_prospect = 'entreprise'
     entreprise_nom = request.POST.get('entreprise')
     poste = request.POST.get('poste')
     
-    if not nom or not telephone:
-         return JsonResponse({'status': 'error', 'message': 'Nom et TÃ©lÃ©phone sont obligatoires.'})
+    if not nom or not telephone or not entreprise_nom:
+         return JsonResponse({'status': 'error', 'message': "Le nom, le téléphone et le nom de l'entreprise sont obligatoires."})
          
     try:
         # Check for duplicates? For now, we assume standard creation.
@@ -775,9 +775,9 @@ def ApiQuickCreateProspect(request):
             type_prospect=type_prospect,
             context='con', # Conseil
             indic='+213', # Default
-            # Enterprise specific fields - only populated for entreprise type
-            entreprise=entreprise_nom if type_prospect == 'entreprise' else None,
-            poste_dans_entreprise=poste if type_prospect == 'entreprise' else None,
+            # Enterprise specific fields - always populated as type_prospect is entreprise
+            entreprise=entreprise_nom,
+            poste_dans_entreprise=poste,
         )
         
         return JsonResponse({
@@ -922,11 +922,11 @@ def PipelineConseil(request):
     
     stages = [
         ('entrant', 'Entrant'),
-        ('contacte', 'ContactÃ©'),
-        ('negociation', 'NÃ©gociation'),
-        ('devis_envoye', 'Devis envoyÃ©'),
-        ('facture', 'FacturÃ©'),
-        ('recouvrement', 'RECOUVREMENT'),
+        ('contacte', 'Contacté'),
+        ('negociation', 'Négociation'),
+        ('devis_envoye', 'Devis envoyé'),
+        ('facture', 'Facturé'),
+        ('recouvrement', 'Recouvrement'),
     ]
     
     view_type = request.GET.get('view', 'stage')  # 'stage' or 'closing'
@@ -989,7 +989,7 @@ def PipelineConseil(request):
     commercials = User.objects.filter(opportunites_conseil__isnull=False).distinct()
     
     # Get all active prospects for "New Opportunity" dropdown
-    all_prospects = Prospets.objects.filter(context='con', conseil_is_active=True).order_by('nom')
+    all_prospects = Prospets.objects.filter(context='con', type_prospect='entreprise', conseil_is_active=True).order_by('nom')
 
     context = {
         'tenant': request.tenant,
@@ -1029,7 +1029,7 @@ def ExportPipelineCsv(request):
     response['Content-Disposition'] = 'attachment; filename="pipeline_conseil.csv"'
     
     writer = csv.writer(response)
-    writer.writerow(['Nom', 'PrÃ©nom', 'Entreprise', 'Ã‰tape', 'Budget', 'ProbabilitÃ©', 'Date Closing'])
+    writer.writerow(['Nom', 'Prénom', 'Entreprise', 'Étape', 'Budget', 'Probabilité', 'Date Closing'])
     
     for p in prospects:
         writer.writerow([p.nom, p.prenom, p.entreprise, p.get_conseil_pipeline_stage_display(), p.conseil_budget, p.conseil_probability, p.conseil_closing_date])
@@ -1066,11 +1066,11 @@ def ApiConvertProspectToDevis(request):
         
         return JsonResponse({
             'status': 'success', 
-            'message': 'OpportunitÃ© convertie en devis avec succÃ¨s.',
+            'message': 'Opportunité convertie en devis avec succès.',
             'redirect_url': redirect_url
         })
     except Opportunite.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'OpportunitÃ© non trouvÃ©e.'})
+        return JsonResponse({'status': 'error', 'message': 'Opportunité non trouvée.'})
 
 @login_required(login_url="institut_app:login")
 @ajax_required
@@ -1096,9 +1096,9 @@ def ApiUpdatePipelineStage(request):
             opp = Opportunite.objects.get(id=opp_id)
             opp.stage = new_stage
             opp.save()
-            return JsonResponse({'status': 'success', 'message': 'Statut mis Ã  jour.'})
+            return JsonResponse({'status': 'success', 'message': 'Statut mis à jour.'})
         except Opportunite.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'OpportunitÃ© non trouvÃ©e.'})
+            return JsonResponse({'status': 'error', 'message': 'Opportunité non trouvée.'})
     return JsonResponse({'status': 'error', 'message': 'MÃ©thode non autorisÃ©e.'})
 
 @login_required(login_url="institut_app:login")
@@ -1130,7 +1130,7 @@ def ApiCreateOpportunite(request):
 
             return JsonResponse({
                 'status': 'success', 
-                'message': 'OpportunitÃ© crÃ©Ã©e avec succÃ¨s.', 
+                'message': 'Opportunité créée avec succès.', 
                 'id': opp.id,
                 'slug': prospect.slug,
                 'initials': initials,
@@ -1139,7 +1139,7 @@ def ApiCreateOpportunite(request):
             })
             
         except Prospets.DoesNotExist:
-             return JsonResponse({'status': 'error', 'message': 'Prospect non trouvÃ©.'})
+             return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
              
     return JsonResponse({'status': 'error', 'message': 'MÃ©thode non autorisÃ©e.'})
 
@@ -1161,7 +1161,7 @@ def ApiGetOpportunite(request):
             }
         })
     except Opportunite.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'OpportunitÃ© non trouvÃ©e.'})
+        return JsonResponse({'status': 'error', 'message': 'Opportunité non trouvée.'})
 
 @login_required(login_url="institut_app:login")
 @ajax_required
@@ -1184,9 +1184,9 @@ def ApiUpdateOpportunite(request):
                 opp.closing_date = None
             
             opp.save()
-            return JsonResponse({'status': 'success', 'message': 'OpportunitÃ© mise Ã  jour.'})
+            return JsonResponse({'status': 'success', 'message': 'Opportunité mise à jour.'})
         except Opportunite.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'OpportunitÃ© non trouvÃ©e.'})
+            return JsonResponse({'status': 'error', 'message': 'Opportunité non trouvée.'})
             
     return JsonResponse({'status': 'error', 'message': 'MÃ©thode non autorisÃ©e.'})
 

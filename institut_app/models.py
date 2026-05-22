@@ -29,6 +29,7 @@ class Profile(models.Model):
     role = models.CharField(max_length=100, null=True, blank=True, choices=[('admin', 'Admin'), ('user', 'User'),('tresorier', 'Trésorier'),('rh', 'Ressources Humaines'),('crm', 'Chargé(e) clientèle')])
     image = models.ImageField(upload_to='profile_images', null=True, blank=True, default='profile_images/default1.png')
     last_password_change = models.DateTimeField(null=True, blank=True, verbose_name=_("Dernier changement de mot de passe"))
+    force_password_change = models.BooleanField(default=False, verbose_name=_("Forcer le changement de mot de passe"))
     class Meta:
         verbose_name="Profile"
         verbose_name_plural="Profiles"

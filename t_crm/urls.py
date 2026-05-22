@@ -23,7 +23,7 @@ from .f_views.prospects import (
     ApiLoadSpecialiteProspect, ApiUpdateVoeux, ApiCreateVoeux,
     ApiLoadNote, ApiStoreNote, ApiDeleteNote, ApiUpdateNote,
     ApiStoreRappel, ApiDeleteRappel, ApiUpdateRappel,
-    ApiLoadFormation
+    ApiLoadFormation, ApiLoadProspectFinancialHistory
 )
 from .f_views.prinscrits import (
     ListeDesPrinscrits, ApiLoadPrinscrits, DetailsPrinscrit,
@@ -128,6 +128,7 @@ urlpatterns = [
     
 
     path('ApiLoadProspectPerosnalInfos', ApiLoadProspectPerosnalInfos, name="ApiLoadProspectPerosnalInfos"),
+    path('ApiLoadProspectFinancialHistory', ApiLoadProspectFinancialHistory, name="ApiLoadProspectFinancialHistory"),
 
     path('ApiLoadProspectRendezVous', ApiLoadProspectRendezVous, name="ApiLoadProspectRendezVous"),
     path('ApiLoadRendezVousDetails', ApiLoadRendezVousDetails, name="ApiLoadRendezVousDetails"),

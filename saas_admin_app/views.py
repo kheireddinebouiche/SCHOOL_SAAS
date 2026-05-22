@@ -309,6 +309,10 @@ def saas_tenant_data_explorer_view(request, tenant_id):
         'promos': [],
         'due_paiements': [],
         'paiements': [],
+        'operations_bancaire': [],
+        'demande_paiements': [],
+        'remboursements': [],
+        'autres_produits': [],
         'stats': {},
     }
     
@@ -322,6 +326,10 @@ def saas_tenant_data_explorer_view(request, tenant_id):
     s_page_num = request.GET.get('s_page', 1)
     dp_page_num = request.GET.get('dp_page', 1)
     pa_page_num = request.GET.get('pa_page', 1)
+    ob_page_num = request.GET.get('ob_page', 1)
+    dmp_page_num = request.GET.get('dmp_page', 1)
+    rem_page_num = request.GET.get('rem_page', 1)
+    ap_page_num = request.GET.get('ap_page', 1)
     
     context['active_tab'] = request.GET.get('tab', 'prospects')
     
@@ -434,6 +442,50 @@ def saas_tenant_data_explorer_view(request, tenant_id):
             except:
                 context['paiements'] = []
                 context['stats']['paiements'] = 0
+
+            # Operations Bancaire
+            try:
+                from t_tresorerie.models import OperationsBancaire
+                ob_qs = OperationsBancaire.objects.all().order_by('-id')
+                context['stats']['operations_bancaire'] = ob_qs.count()
+                ob_paginator = Paginator(ob_qs, items_per_page)
+                context['operations_bancaire'] = ob_paginator.get_page(ob_page_num)
+            except:
+                context['operations_bancaire'] = []
+                context['stats']['operations_bancaire'] = 0
+
+            # Demande de Remboursement
+            try:
+                from t_tresorerie.models import ClientPaiementsRequest
+                dmp_qs = ClientPaiementsRequest.objects.all().order_by('-id')
+                context['stats']['demande_paiements'] = dmp_qs.count()
+                dmp_paginator = Paginator(dmp_qs, items_per_page)
+                context['demande_paiements'] = dmp_paginator.get_page(dmp_page_num)
+            except:
+                context['demande_paiements'] = []
+                context['stats']['demande_paiements'] = 0
+
+            # Remboursements
+            try:
+                from t_tresorerie.models import Rembourssements
+                rem_qs = Rembourssements.objects.all().order_by('-id')
+                context['stats']['remboursements'] = rem_qs.count()
+                rem_paginator = Paginator(rem_qs, items_per_page)
+                context['remboursements'] = rem_paginator.get_page(rem_page_num)
+            except:
+                context['remboursements'] = []
+                context['stats']['remboursements'] = 0
+
+            # Autres Produits
+            try:
+                from t_tresorerie.models import AutreProduit
+                ap_qs = AutreProduit.objects.all().order_by('-id')
+                context['stats']['autres_produits'] = ap_qs.count()
+                ap_paginator = Paginator(ap_qs, items_per_page)
+                context['autres_produits'] = ap_paginator.get_page(ap_page_num)
+            except:
+                context['autres_produits'] = []
+                context['stats']['autres_produits'] = 0
             
     except Exception as e:
         context['error'] = str(e)
@@ -717,6 +769,46 @@ def saas_bulk_delete_action_view(request, tenant_id):
                         p.delete()
                         deleted_count += 1
                     except Paiements.DoesNotExist:
+                        continue
+                        
+            elif model_name == 'operation_bancaire':
+                from t_tresorerie.models import OperationsBancaire
+                for ob_id in ids:
+                    try:
+                        ob = OperationsBancaire.objects.get(id=ob_id)
+                        ob.delete()
+                        deleted_count += 1
+                    except OperationsBancaire.DoesNotExist:
+                        continue
+                        
+            elif model_name == 'demande_paiement':
+                from t_tresorerie.models import ClientPaiementsRequest
+                for dmp_id in ids:
+                    try:
+                        dmp = ClientPaiementsRequest.objects.get(id=dmp_id)
+                        dmp.delete()
+                        deleted_count += 1
+                    except ClientPaiementsRequest.DoesNotExist:
+                        continue
+                        
+            elif model_name == 'remboursement':
+                from t_tresorerie.models import Rembourssements
+                for rem_id in ids:
+                    try:
+                        rem = Rembourssements.objects.get(id=rem_id)
+                        rem.delete()
+                        deleted_count += 1
+                    except Rembourssements.DoesNotExist:
+                        continue
+                        
+            elif model_name == 'autre_produit':
+                from t_tresorerie.models import AutreProduit
+                for ap_id in ids:
+                    try:
+                        ap = AutreProduit.objects.get(id=ap_id)
+                        ap.delete()
+                        deleted_count += 1
+                    except AutreProduit.DoesNotExist:
                         continue
             
             return JsonResponse({
@@ -2706,6 +2798,50 @@ def saas_force_tenant_password_change_view(request, tenant_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_force_user_password_change_view(request, tenant_id, user_id):
+    """
+    Force le changement de mot de passe pour un utilisateur spécifique d'un tenant et le déconnecte.
+    """
+    from django.contrib.sessions.models import Session
+    from django.contrib.auth.models import User
+    from app.models import Institut
+    from django_tenants.utils import tenant_context
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+        
+    try:
+        institut = Institut.objects.get(id=tenant_id)
+        
+        with tenant_context(institut):
+            from institut_app.models import Profile, UserSession
+            
+            user = User.objects.get(id=user_id)
+            profile, _ = Profile.objects.get_or_create(user=user)
+            
+            profile.force_password_change = True
+            profile.save()
+            
+            # Déconnecter l'utilisateur
+            try:
+                user_session = UserSession.objects.get(user=user)
+                if user_session.last_session_key:
+                    Session.objects.filter(session_key=user_session.last_session_key).delete()
+                    user_session.last_session_key = None
+                    user_session.save(update_fields=['last_session_key'])
+            except UserSession.DoesNotExist:
+                pass
+                
+        message = f"Le forçage de changement de mot de passe a été activé pour l'utilisateur {user.username}."
+        
+        return JsonResponse({
+            'success': True, 
+            'message': message,
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
 from django.shortcuts import get_object_or_404
 
 @user_passes_test(superadmin_only, login_url='/saas-admin/login/')
@@ -2904,3 +3040,40 @@ def saas_clear_tenant_logs_view(request):
         messages.success(request, f"Nettoyage terminé : {total_deleted} entrées supprimées au total.")
         
     return redirect('saas_admin_app:saas_audit_logs')
+
+
+from django.views.decorators.http import require_POST
+
+@require_POST
+def saas_reset_tresorerie_view(request, tenant_id):
+    """
+    Rinitialise les donnes financires d'un locataire (tenant).
+    Purge les tables: Rembourssements, PaiementRemboursement, Depenses, OperationsBancaire, DepotBanque
+    """
+    from django.http import JsonResponse
+    from app.models import Institut
+    from django.shortcuts import get_object_or_404
+    from django_tenants.utils import tenant_context
+    
+    institut = get_object_or_404(Institut, id=tenant_id)
+    
+    try:
+        with tenant_context(institut):
+            from t_tresorerie.models import (
+                Rembourssements, PaiementRemboursement, 
+                Depenses, OperationsBancaire, DepotBanque
+            )
+            from t_conseil.models import Facture
+            
+            # Delete in reverse dependency order if any, though Django's CASCADE handles most.
+            # We explicitly delete from all 5 models to clear them out.
+            PaiementRemboursement.objects.all().delete()
+            Rembourssements.objects.all().delete()
+            Depenses.objects.all().delete()
+            OperationsBancaire.objects.all().delete()
+            DepotBanque.objects.all().delete()
+            Facture.objects.filter(module_source='tresorerie').delete()
+            
+            return JsonResponse({'status': 'success', 'message': 'La trsorerie a t rinitialise avec succs.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

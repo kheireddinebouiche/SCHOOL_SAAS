@@ -116,6 +116,100 @@
         align-items: center;
         justify-content: center;
     }
+
+    /* Workflow Stepper Styles */
+    .workflow-stepper {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+        padding: 1rem 0;
+        margin-top: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .workflow-stepper::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: #e2e8f0;
+        z-index: 1;
+        transform: translateY(-50%);
+        border-radius: 2px;
+    }
+
+    .step-item {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: transparent;
+    }
+
+    .step-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #f8fafc;
+        border: 4px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        margin-bottom: 0.5rem;
+    }
+
+    .step-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        transition: color 0.3s ease;
+    }
+
+    /* Completed Step */
+    .step-item.completed .step-icon {
+        background: #10b981;
+        border-color: #d1fae5;
+        color: white;
+    }
+    .step-item.completed .step-label {
+        color: #10b981;
+    }
+    .step-item.completed ~ .step-item::before {
+        display: none;
+    }
+
+    /* Active Step */
+    .step-item.active .step-icon {
+        background: #3b82f6;
+        border-color: #dbeafe;
+        color: white;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+    }
+    .step-item.active .step-label {
+        color: #3b82f6;
+    }
+
+    /* Progress Line logic */
+    .workflow-progress-line {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        height: 4px;
+        background: #10b981;
+        z-index: 1;
+        transform: translateY(-50%);
+        border-radius: 2px;
+        transition: width 0.5s ease;
+    }
 </style>
 
 <div class="main-content">
@@ -207,6 +301,47 @@
                                     <p class="text-muted small mb-1">Solde Restant</p>
                                     <h5 class="fw-bold mb-0 text-warning" id="totalBalance">0.00 DA</h5>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workflow Stepper -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-4">
+                        <h6 class="text-uppercase fw-bold text-muted mb-4">Progression du Pipeline (Conseil)</h6>
+                        <div class="workflow-stepper" id="workflowStepper" data-stage="{{ client.conseil_pipeline_stage|default:'entrant' }}">
+                            <div class="workflow-progress-line" id="workflowProgressLine"></div>
+                            
+                            <div class="step-item" data-step="entrant">
+                                <div class="step-icon"><i class="ri-login-circle-line"></i></div>
+                                <div class="step-label">Entrant</div>
+                            </div>
+                            <div class="step-item" data-step="contacte">
+                                <div class="step-icon"><i class="ri-phone-line"></i></div>
+                                <div class="step-label">Contacté</div>
+                            </div>
+                            <div class="step-item" data-step="negociation">
+                                <div class="step-icon"><i class="ri-discuss-line"></i></div>
+                                <div class="step-label">Négociation</div>
+                            </div>
+                            <div class="step-item" data-step="devis_envoye">
+                                <div class="step-icon"><i class="ri-file-list-3-line"></i></div>
+                                <div class="step-label">Devis Envoyé</div>
+                            </div>
+                            <div class="step-item" data-step="en_negociation">
+                                <div class="step-icon"><i class="ri-chat-check-line"></i></div>
+                                <div class="step-label">En Négociation</div>
+                            </div>
+                            <div class="step-item" data-step="facture">
+                                <div class="step-icon"><i class="ri-bill-line"></i></div>
+                                <div class="step-label">Facturé</div>
+                            </div>
+                            <div class="step-item" data-step="recouvrement">
+                                <div class="step-icon"><i class="ri-money-dollar-circle-line"></i></div>
+                                <div class="step-label">Recouvrement</div>
                             </div>
                         </div>
                     </div>
@@ -1160,6 +1295,43 @@ $(document).ready(function(){
             }, null
         ).set('labels', {ok:'Supprimer', cancel:'Annuler'});
     });
+
+    // Workflow Stepper Logic
+    function initWorkflowStepper() {
+        const stepper = $('#workflowStepper');
+        if (!stepper.length) return;
+
+        const currentStage = stepper.data('stage');
+        const steps = stepper.find('.step-item');
+        let activeIndex = 0;
+
+        // Find active index
+        steps.each(function(index) {
+            if ($(this).data('step') === currentStage) {
+                activeIndex = index;
+            }
+        });
+
+        // Apply classes
+        steps.each(function(index) {
+            $(this).removeClass('completed active');
+            if (index < activeIndex) {
+                $(this).addClass('completed');
+            } else if (index === activeIndex) {
+                $(this).addClass('active');
+            }
+        });
+
+        // Set progress line width
+        const progressLine = $('#workflowProgressLine');
+        if (steps.length > 1) {
+            const progress = (activeIndex / (steps.length - 1)) * 100;
+            progressLine.css('width', progress + '%');
+        }
+    }
+
+    initWorkflowStepper();
+
 });
 </script>
 {% endblock content %}

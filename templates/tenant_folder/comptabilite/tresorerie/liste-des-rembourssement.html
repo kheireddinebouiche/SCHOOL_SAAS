@@ -204,6 +204,7 @@
                                             <th>Promotion</th>
                                             <th>Montant à rembourser</th>
                                             <th>Date de remboursement</th>
+                                            <th>Facture Liée</th>
                                             <th>Méthode</th>
                                             <th class="text-center pe-4">Action</th>
                                         </tr>
@@ -452,22 +453,86 @@
                 $.each(data, function(index, item){
                     
                     var remboursementId = item.remboursement_id || item.id || item.pk || item._id;
-                    html += '<tr class="remboursement-row" data-remboursement-id="' + remboursementId + '" data-prospect-name="' + item.nom + ' ' + item.prenom + '">';
-                    html += '<td class="ps-4 fw-semibold text-dark">' + item.nom + ' ' + item.prenom + '</td>';
-                    html += '<td class="fw-medium text-muted">' + item.formation + '/' + item.specialite + '</td>';
-                    html += '<td class="text-muted">' + item.promotion_session + '</td>';
-                    html += '<td class="fw-bold text-danger">' + formatComptable(item.allowed_amount) + ' DA</td>';
-                    html += '<td class="text-muted small">' + item.updated_at + '</td>'; 
-                    html += '<td><span class="badge badge-soft-info">' + item.mode_rembourssement + '</span></td>'; 
-                    html += '<td class="text-center pe-4">';
-                    html += '<a href="' + remboursementUrlBase + remboursementId + '" class="btn-action-premium" data-bs-toggle="tooltip" data-bs-placement="top" title="Détails" onclick="event.stopPropagation();">';
-                    html += '<i class="ri-eye-line"></i>';
-                    html += '</a>';
+                    
+                    // Generate Initials
+                    var initials = "";
+                    if (item.prenom) initials += item.prenom.charAt(0).toUpperCase();
+                    if (item.nom) initials += item.nom.charAt(0).toUpperCase();
+                    if (!initials) initials = "R";
+
+                    // Design the Formation / Specialite cell
+                    var formationHtml = '<div class="fw-bold text-dark" style="font-size: 0.9rem;">' + (item.formation || '-') + '</div>' +
+                                        '<div class="text-muted small text-truncate" style="max-width: 250px;" title="' + (item.specialite || '-') + '">' + 
+                                            '<i class="ri-git-branch-line text-primary me-1"></i>' + (item.specialite || '-') + 
+                                        '</div>';
+
+                    // Design the Promotion cell: Code + Label
+                    var promoHtml = '<div class="fw-semibold text-dark" style="font-size: 0.85rem;">' + (item.promotion_label || '-') + '</div>' +
+                                     '<div class="d-flex align-items-center gap-1 mt-1">' +
+                                         '<span class="badge font-monospace" style="font-size: 0.7rem; padding: 0.15rem 0.4rem; background-color: rgba(100, 116, 139, 0.12); color: #475569; border: 1px solid rgba(100, 116, 139, 0.15); font-weight: 600;">' + (item.promotion || '-') + '</span>' +
+                                         '<span class="text-muted small" style="font-size: 0.75rem;">(' + (item.promotion_session || '-') + ')</span>' +
+                                     '</div>';
+                    
+                    // Design the Financials (Montant) cell
+                    var formatAmount = formatComptable(item.allowed_amount) + ' DA';
+                    var totalPaye = formatComptable(item.total_paye) + ' DA';
+                    var financialHtml = '<div class="d-flex flex-column">' +
+                                            '<span class="fw-bold text-danger" style="font-size: 0.95rem;">' + formatAmount + '</span>' +
+                                            '<span class="text-muted small" style="font-size: 0.75rem;">Total payé: ' + totalPaye + '</span>' +
+                                        '</div>';
+
+                    // Design Date
+                    var dateHtml = '<div class="d-flex align-items-center text-muted small">' +
+                                       '<i class="ri-calendar-event-line text-secondary me-1"></i>' +
+                                       '<span>' + (item.updated_at || '-') + '</span>' +
+                                   '</div>';
+
+                    // Design Invoice
+                    var invoiceHtml = item.facture_num ? 
+                        '<span class="badge badge-soft-primary d-inline-flex align-items-center gap-1 py-1.5 px-2.5 rounded-pill fw-semibold" style="font-size: 0.75rem;">' +
+                            '<i class="ri-file-text-line"></i> ' + item.facture_num +
+                        '</span>' : 
+                        '<span class="text-muted small">-</span>';
+
+                    // Design Payment Method
+                    var methodHtml = '<span class="badge badge-soft-info d-inline-flex align-items-center gap-1 py-1.5 px-2.5 rounded-pill fw-semibold" style="font-size: 0.75rem;">' +
+                                         '<i class="ri-wallet-3-line"></i>' + (item.mode_rembourssement || '-') +
+                                     '</span>';
+
+                    // Row HTML
+                    html += '<tr class="remboursement-row align-middle" data-remboursement-id="' + remboursementId + '" data-prospect-name="' + item.nom + ' ' + item.prenom + '">';
+                    
+                    // Avatar + Nom column
+                    html += '<td class="ps-4">';
+                    html += '  <div class="d-flex align-items-center py-1">';
+                    html += '    <div class="avatar-xs d-inline-flex align-items-center justify-content-center bg-soft-primary text-primary rounded-circle fw-bold me-3" style="width: 38px; height: 38px; font-size: 0.85rem; flex-shrink: 0; box-shadow: 0 2px 5px rgba(59, 130, 246, 0.15);">';
+                    html += '      ' + initials;
+                    html += '    </div>';
+                    html += '    <div>';
+                    html += '      <h6 class="mb-0 fw-semibold text-dark" style="font-size: 0.9rem;">' + item.nom + ' ' + item.prenom + '</h6>';
+                    html += '      <span class="text-muted small" style="font-size: 0.75rem;"><i class="ri-phone-line me-1"></i>' + (item.telephone || '-') + '</span>';
+                    html += '    </div>';
+                    html += '  </div>';
                     html += '</td>';
+
+                    html += '<td class="fw-medium">' + formationHtml + '</td>';
+                    html += '<td>' + promoHtml + '</td>';
+                    html += '<td>' + financialHtml + '</td>';
+                    html += '<td>' + dateHtml + '</td>'; 
+                    html += '<td>' + invoiceHtml + '</td>';
+                    html += '<td>' + methodHtml + '</td>'; 
+                    
+                    // Action Column
+                    html += '<td class="text-center pe-4">';
+                    html += '  <a href="' + remboursementUrlBase + remboursementId + '" class="btn-action-premium" data-bs-toggle="tooltip" data-bs-placement="top" title="Détails" onclick="event.stopPropagation();">';
+                    html += '    <i class="ri-eye-line"></i>';
+                    html += '  </a>';
+                    html += '</td>';
+                    
                     html += '</tr>';   
                 });
             }else{
-                html = "<tr><td colspan='7' class='text-muted text-center'>"+
+                html = "<tr><td colspan='8' class='text-muted text-center'>"+
                         "<div class='d-flex flex-column align-items-center justify-content-center py-5'>"+
                     "<div class='avatar-sm mb-4'>"+
                        " <div class='avatar-title bg-light text-muted rounded-circle fs-1'>"+
@@ -488,13 +553,18 @@
             const searchFilterValue = $('#table-filter').val().toLowerCase();
 
             const filteredData = allRemboursementsData.filter(item => {
-                const matchesPromo = !promoFilterValue || item.promotion_session.toLowerCase().includes(promoFilterValue);
+                const matchesPromo = !promoFilterValue || (item.promotion_session && item.promotion_session.toLowerCase().includes(promoFilterValue));
                 const matchesSearch = !searchFilterValue ||
                     (item.nom && item.nom.toLowerCase().includes(searchFilterValue)) ||
                     (item.prenom && item.prenom.toLowerCase().includes(searchFilterValue)) ||
                     (item.promotion_session && item.promotion_session.toLowerCase().includes(searchFilterValue)) ||
+                    (item.promotion && item.promotion.toLowerCase().includes(searchFilterValue)) ||
+                    (item.promotion_label && item.promotion_label.toLowerCase().includes(searchFilterValue)) ||
+                    (item.formation && item.formation.toLowerCase().includes(searchFilterValue)) ||
+                    (item.specialite && item.specialite.toLowerCase().includes(searchFilterValue)) ||
                     (item.allowed_amount && item.allowed_amount.toString().includes(searchFilterValue)) ||
-                    (item.mode_rembourssement && item.mode_rembourssement.toLowerCase().includes(searchFilterValue));
+                    (item.mode_rembourssement && item.mode_rembourssement.toLowerCase().includes(searchFilterValue)) ||
+                    (item.facture_num && item.facture_num.toLowerCase().includes(searchFilterValue));
 
                 return matchesPromo && matchesSearch;
             });

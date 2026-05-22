@@ -96,12 +96,16 @@ def detailsEmploye(request, pk):
             payroll_id = payroll_contract.id
             primes = RubriqueContrat.objects.filter(contrat=payroll_contract, actif=True).select_related('rubrique')
 
+    from pdf_editor.models import DocumentTemplate
+    templates_contrat = DocumentTemplate.objects.filter(template_type='contract', is_active=True)
+
     context = {
         'employe' : employe,
         'contrats' : employe.contrats.all(),
         'active_contract': active_contract,
         'primes': primes,
         'payroll_id': payroll_id,
+        'templates_contrat': templates_contrat,
     }
     return render(request,'tenant_folder/rh/details_employe.html', context)
 
@@ -658,11 +662,105 @@ def ApiGetEntite(request):
 
 def listeDesContrats(request):
     contrats = Contrats.objects.select_related('employee', 'type_contrat', 'poste').all().order_by('-created_at')
+    from pdf_editor.models import DocumentTemplate
+    templates_contrat = DocumentTemplate.objects.filter(template_type='contract', is_active=True)
     context = {
         'liste': contrats,
+        'templates_contrat': templates_contrat,
         'tenant': request.tenant,
     }
     return render(request, 'tenant_folder/rh/contrats/liste_des_contrats.html', context)
+
+def imprimerContrat(request, contrat_id, template_id):
+    from pdf_editor.models import DocumentTemplate, DocumentGeneration
+    from django.template import Template, Context
+    from django.utils import timezone
+    from django.shortcuts import get_object_or_404, redirect
+    
+    contrat = get_object_or_404(Contrats, id=contrat_id)
+    template_obj = get_object_or_404(DocumentTemplate, id=template_id, is_active=True)
+    
+    context_data = {
+        'employe': contrat.employee,
+        'contrat': contrat,
+        'entreprise': 'SALDAE SYSTEMS',
+        'current_user': request.user.get_full_name() or request.user.username,
+        'date_impression': timezone.now().strftime('%d/%m/%Y'),
+    }
+    
+    try:
+        from pdf_editor.utils import render_template_with_context
+        rendered_content, error = render_template_with_context(template_obj.content, context_data)
+        
+        if error:
+            messages.error(request, f"Erreur lors du rendu du contrat: {error}")
+            return redirect('t_rh:liste_des_contrats')
+        
+        doc_gen = DocumentGeneration.objects.create(
+            template=template_obj,
+            context_data={'type': 'impression_contrat', 'contrat_id': contrat.id},
+            rendered_content=rendered_content,
+            generated_by=request.user
+        )
+        
+        return redirect('pdf_editor:document-export', pk=doc_gen.pk)
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la génération du contrat: {str(e)}")
+        return redirect('t_rh:liste_des_contrats')
+
+def imprimerAttestation(request, employe_id, template_id):
+    """Generate attestation document via pdf_editor."""
+    from django.shortcuts import get_object_or_404, redirect
+    from django.contrib import messages
+    from django.utils import timezone
+    from pdf_editor.models import DocumentTemplate, DocumentGeneration
+    from pdf_editor.utils import render_template_with_context
+    employe = get_object_or_404(Employees, id=employe_id)
+    template_obj = get_object_or_404(DocumentTemplate, id=template_id, is_active=True)
+    context_data = {
+        'employe': employe,
+        'company': 'SALDAE SYSTEMS',
+        'current_user': request.user.get_full_name() or request.user.username,
+        'date_impression': timezone.now().strftime('%d/%m/%Y'),
+    }
+    rendered_content, error = render_template_with_context(template_obj.content, context_data)
+    if error:
+        messages.error(request, f"Erreur lors du rendu de l'attestation: {error}")
+        return redirect('t_rh:detailsEmploye', employe_id)
+    doc_gen = DocumentGeneration.objects.create(
+        template=template_obj,
+        context_data={'type': 'attestation', 'employe_id': employe.id},
+        rendered_content=rendered_content,
+        generated_by=request.user,
+    )
+    return redirect('pdf_editor:document-export', pk=doc_gen.pk)
+
+def imprimerBadge(request, employe_id, template_id):
+    """Generate badge document via pdf_editor."""
+    from django.shortcuts import get_object_or_404, redirect
+    from django.contrib import messages
+    from django.utils import timezone
+    from pdf_editor.models import DocumentTemplate, DocumentGeneration
+    from pdf_editor.utils import render_template_with_context
+    employe = get_object_or_404(Employees, id=employe_id)
+    template_obj = get_object_or_404(DocumentTemplate, id=template_id, is_active=True)
+    context_data = {
+        'employe': employe,
+        'company': 'SALDAE SYSTEMS',
+        'current_user': request.user.get_full_name() or request.user.username,
+        'date_impression': timezone.now().strftime('%d/%m/%Y'),
+    }
+    rendered_content, error = render_template_with_context(template_obj.content, context_data)
+    if error:
+        messages.error(request, f"Erreur lors du rendu du badge: {error}")
+        return redirect('t_rh:detailsEmploye', employe_id)
+    doc_gen = DocumentGeneration.objects.create(
+        template=template_obj,
+        context_data={'type': 'badge', 'employe_id': employe.id},
+        rendered_content=rendered_content,
+        generated_by=request.user,
+    )
+    return redirect('pdf_editor:document-export', pk=doc_gen.pk)
 
 def nouveauContrat(request):
     employes = Employees.objects.all().order_by('nom', 'prenom')

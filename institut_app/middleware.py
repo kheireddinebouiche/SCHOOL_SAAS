@@ -87,21 +87,21 @@ class ForcePasswordChangeMiddleware:
             if settings.MEDIA_URL and request.path.startswith(settings.MEDIA_URL):
                 return self.get_response(request)
 
-            # Check if tenant has force password change enabled
-            if hasattr(request, 'tenant') and request.tenant.force_password_change:
-                from .models import Profile
-                profile, created = Profile.objects.get_or_create(user=request.user)
-                
-                # Check if user needs to change password
-                # 1. Never changed password
-                # 2. Changed password before the last reset date
-                needs_change = False
+            # Check if user needs to change password
+            from .models import Profile
+            profile, created = Profile.objects.get_or_create(user=request.user)
+            
+            needs_change = False
+            
+            if getattr(profile, 'force_password_change', False):
+                needs_change = True
+            elif hasattr(request, 'tenant') and request.tenant.force_password_change:
                 if not profile.last_password_change:
                     needs_change = True
                 elif request.tenant.password_reset_date and profile.last_password_change < request.tenant.password_reset_date:
                     needs_change = True
                     
-                if needs_change:
-                    return redirect('institut_app:ChangePasswordForce')
+            if needs_change:
+                return redirect('institut_app:ChangePasswordForce')
                     
         return self.get_response(request)

@@ -447,16 +447,23 @@ def ApiRequestRefundPaiement(request):
     if request.method == "POST":
         id_client = request.POST.get('client_id')
         reason = request.POST.get('reason')
+        client_obj = Prospets.objects.get(id=id_client)
+        
+        # Look for a paid invoice associated with this client
+        from t_conseil.models import Facture
+        latest_facture = Facture.objects.filter(client=client_obj, etat='paye').order_by('-created_at').first()
+
         Rembourssements.objects.create(
-            client = Prospets.objects.get(id = id_client),
-            motif_rembourssement = reason,
-            etat = 'enc',
-            is_done = False
+            client=client_obj,
+            motif_rembourssement=reason,
+            etat='enc',
+            is_done=False,
+            facture=latest_facture
         )
        
-        return JsonResponse({"status" : "success"})
+        return JsonResponse({"status": "success"})
     else:
-        return JsonResponse({"status" : "error"})
+        return JsonResponse({"status": "error"})
     
 @login_required(login_url="institut_app:login")
 @transaction.atomic

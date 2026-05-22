@@ -501,6 +501,7 @@ def ApiGetDetailsDemandePaiement(request):
                 "mode_rembourssement_label" : refund.get_mode_rembourssement_display(),
                 'observation' : refund.observation, 
                 'montant_paye' : paiements,
+                'facture_numero': refund.facture.num_facture if refund.facture else None,
             }
         else:
             has_pending_refund = False
@@ -824,6 +825,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
                 "mode_rembourssement_label" : refund.get_mode_rembourssement_display(),
                 'observation' : refund.observation, 
                 'montant_paye' : paiements,
+                'facture_numero': refund.facture.num_facture if refund.facture else None,
             }
         else:
             has_pending_refund = False

@@ -830,6 +830,20 @@
         color: #065f46;
         font-weight: 600;
     }
+
+    /* Style Select2 inside the confirmation modal */
+    .select2-container--default .select2-selection--single {
+        border: 1px solid #ced4da;
+        height: 38px;
+        border-radius: 6px;
+        padding-top: 5px;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+    .select2-container {
+        z-index: 99999 !important; /* Ensure it is above the modal */
+    }
 </style>
 
 <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
@@ -3311,6 +3325,10 @@
                                         <td class="text-muted">Motif du remboursement</td>
                                         <td id="remboursementMotif">-</td>
                                     </tr>
+                                    <tr id="tr_remboursement_facture_avant" style="display:none;">
+                                        <td class="text-muted">Facture liée</td>
+                                        <td id="remboursementFactureAvant" class="fw-bold text-primary">-</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -3377,6 +3395,10 @@
                                         <td class="text-muted">Observations</td>
                                         <td id="remboursementTraiteObservations">-</td>
                                     </tr>
+                                    <tr id="tr_remboursement_facture_traite" style="display:none;">
+                                        <td class="text-muted">Facture liée</td>
+                                        <td id="remboursementFactureTraite" class="fw-bold text-primary">-</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -3391,9 +3413,10 @@
                 <button type="button" class="btn btn-sm btn-light px-2 py-1" data-bs-dismiss="modal">
                     <i class="ri-close-line me-1"></i>Fermer
                 </button>
-                <button type="button" class="btn btn-sm btn-success px-2 py-1" data-bs-toggle="modal" data-bs-target="#confirmationRemboursementModal">
+                <button type="button" id="btnEffectuerRemboursement" class="btn btn-sm btn-success px-2 py-1" data-bs-toggle="modal" data-bs-target="#confirmationRemboursementModal">
                     <i class="ri-refund-line me-1"></i>Effectuer le remboursement
                 </button>
+                <span id="refundAlreadyTriggeredMsg" class="badge bg-success ms-2" style="display:none;">Dépense déclenchée</span>
             </div>
         </div>
     </div>
@@ -3454,9 +3477,15 @@
                     
                 </select>
                 <label for="category_select">Catégorie de dépense :</label>
-                <select id="category_select" class="form-control">
+                <select id="category_select" class="form-control mb-3">
                     
                 </select>
+                <div class="form-check form-switch mb-3 mt-3">
+                    <input class="form-check-input" type="checkbox" id="cancelEnrollmentCheckbox" checked>
+                    <label class="form-check-label fw-bold text-danger" for="cancelEnrollmentCheckbox">
+                        Annuler l'inscription de l'étudiant
+                    </label>
+                </div>
             </div>
             <div class="modal-footer border-0 bg-light px-4 py-3">
                 <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">
@@ -4265,6 +4294,8 @@
                             data.refund_data.observation || '',
                             data.refund_data.allowed_amount,
                             data.refund_data.etat,
+                            data.refund_data.facture_numero,
+                            data.is_appliced
                         );
 
                          $('#confirmationRemboursementModal').data('amount', data.refund_data.allowed_amount);
@@ -4281,13 +4312,31 @@
                         
                     }
 
-                    RefundState = data.refund_data.etat_key
+                    if(data.refund_data && data.refund_data.id) {
+                        RefundState = data.refund_data.etat_key;
                         if(RefundState === "ref"){
                             $('#remboursementStatut').text(data.refund_data.etat);
                             $('#remboursementDateValidation').text(data.refund_data.date_de_traitement);
                             $('#remboursementMotifDanger').text(data.refund_data.motif_rembourssement);
                             $('#remboursementObservations').text(data.refund_data.observation);
                         }
+                        
+                        DetailsRembourssementAvantTraitement(data.refund_data.date_de_demande, data.refund_data.montant_paye, data.refund_data.motif_rembourssement, data.refund_data.facture_numero);
+                        if (data.has_processed_refund) {
+                            DetailsRefundTraite(data.refund_data.date_de_traitement, data.refund_data.motif_rembourssement, data.refund_data.observation, data.refund_data.allowed_amount, data.refund_data.etat, data.refund_data.facture_numero, data.is_appliced);
+
+                            var allowedAmt = data.refund_data.allowed_amount || 0;
+                            $('#confirmationRemboursementModal').data('amount', allowedAmt);
+                            $('#confirmationRemboursementModal').data('mode_paiement', data.refund_data.mode_rembourssement);
+                            $('#confirmationRemboursementModal').data('id_refund', data.refund_data.id);
+                            $('#confirmMontantRemboursement').text(allowedAmt + " DA");
+
+                            $('#_allowed_amount').val(allowedAmt);
+                            $('#_total_paid').val(data.refund_data.montant_paye);
+                            $('#_motif_remboursement').val(data.refund_data.motif_rembourssement);
+                            document.getElementById('btnConfirmInscription').disabled = true;
+                        }
+                    }
 
                     ShowClientDetails(
                         data.user_data.demandeur_email,
@@ -4530,19 +4579,37 @@
             $('#clientRegistrationDate').text(clientRegistrationDate);
         }
 
-        function DetailsRembourssementAvantTraitement(date_demande,montant_paye,motif){
+        function DetailsRembourssementAvantTraitement(date_demande, montant_paye, motif, facture_numero){
             $('#remboursementDate').text(date_demande);
             $('#remboursementMontant').text(montant_paye +" DA");
             $('#remboursementMotif').text(motif);
+            if (facture_numero) {
+                $('#tr_remboursement_facture_avant').show();
+                $('#remboursementFactureAvant').text(facture_numero);
+            } else {
+                $('#tr_remboursement_facture_avant').hide();
+            }
         }
 
-        function DetailsRefundTraite(remboursementDate = '', remboursementMotif, observations = '', montantAutoriser, etat){
-            $('#remboursementTraiteDateValidation').text(remboursementDate);
-            $('#remboursementTraiteMotif').text(remboursementMotif);
+        function DetailsRefundTraite(remboursementDate, remboursementMotif, observations, montantAutoriser, etat, facture_numero, is_appliced){
+            $('#remboursementTraiteDateValidation').text(remboursementDate || '');
+            $('#remboursementTraiteMotif').text(remboursementMotif || '');
             $('#remboursementTraiteObservations').text(observations || 'Aucune observation');
             $('#remboursementTraiteMontant').text(montantAutoriser+" DA");
             $('#texte_statut_refund').text(etat);   
-            
+            if (facture_numero) {
+                $('#tr_remboursement_facture_traite').show();
+                $('#remboursementFactureTraite').text(facture_numero);
+            } else {
+                $('#tr_remboursement_facture_traite').hide();
+            }
+            if (is_appliced) {
+                $('#btnEffectuerRemboursement').hide();
+                $('#refundAlreadyTriggeredMsg').show();
+            } else {
+                $('#btnEffectuerRemboursement').show();
+                $('#refundAlreadyTriggeredMsg').hide();
+            }
         }
 
         $(document).on("click", '#btnShowRefundResult', function(){
@@ -4580,10 +4647,25 @@
                     $.each(data, function(index, p){
                         option += "<option value='"+p.id+"'>"+p.name+"</option>";
                     });
-                    $('#category_select').html(option);
+                    $('#category_select').html(option).trigger('change');
+                    $('#category_select').select2({
+                        dropdownParent: $('#confirmationRemboursementModal'),
+                        placeholder: "Veuillez sélectionner une catégorie",
+                        allowClear: true,
+                        width: '100%'
+                    });
                 }
             });
         }
+
+        $('#confirmationRemboursementModal').on('shown.bs.modal', function () {
+            $('#category_select').select2({
+                dropdownParent: $('#confirmationRemboursementModal'),
+                placeholder: "Veuillez sélectionner une catégorie",
+                allowClear: true,
+                width: '100%'
+            });
+        });
 
         $(document).on('click', '#confirmerRemboursementBtn', function(){
             var amount = $('#confirmationRemboursementModal').data('amount');
@@ -4606,8 +4688,9 @@
                     'refund_amount' : amount,
                     'mode_rembourssement' : mode_rembourssement,
                     'id_refund' : id_refund,
-                    'entite_select' :entite_select,
+                    'entite_select' : entite_select,
                     'category_select' : category_select,
+                    'cancel_enrollment' : $('#cancelEnrollmentCheckbox').is(':checked'),
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
                 success : function(response){

@@ -21,7 +21,10 @@ def ApiCreateProspect(request):
         indicatif = request.POST.get('indicatif')
         canal = request.POST.get('canal')
         observation = request.POST.get('observation')
-        type_prospect = request.POST.get('type_prospect', 'entreprise')
+        type_prospect = 'entreprise'
+        
+        if not nom or not telephone or not entreprise:
+            return JsonResponse({'status': 'error', 'message': "Le nom, le téléphone et le nom de l'entreprise sont obligatoires."}, status=400)
         
         adresse = request.POST.get('adresse')
         wilaya = request.POST.get('wilaya')

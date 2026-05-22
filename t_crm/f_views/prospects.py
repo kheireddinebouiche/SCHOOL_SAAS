@@ -440,8 +440,8 @@ def ApiValidateProspect(request):
         try:
             prospect = Prospets.objects.get(id=id_prospect)
 
-            # Vérification de la fiche de vœux
-            if not id_fiche_voeux:
+            # Vérification de la fiche de vœux (Uniquement si on n'est pas dans le contexte Conseil)
+            if prospect.context != 'con' and not id_fiche_voeux:
                 fiche_existe = FicheDeVoeux.objects.filter(prospect=prospect, is_confirmed=True).exists()
                 if not fiche_existe:
                     # On vérifie aussi s'il y a une fiche non confirmée qu'on pourrait confirmer automatiquement ? 
@@ -510,7 +510,8 @@ def ApiCheckStatutProspect(request):
     data = {
         'id': prospect.id,
         'etat': prospect.etat,
-        'statut': prospect.statut
+        'statut': prospect.statut,
+        'motif_annulation': prospect.motif_annulation
     }
     return JsonResponse({'data': data})
 
@@ -657,3 +658,69 @@ def ApiConfirmeDoubleDiplome(request):
         pass
     else:
         return JsonResponse({"status":"error"})
+
+@login_required(login_url='institut_app:login')
+def ApiLoadProspectFinancialHistory(request):
+    id_prospect = request.GET.get('id_prospect')
+    if not id_prospect:
+        return JsonResponse({'status': 'error', 'message': 'ID prospect manquant'}, status=400)
+        
+    try:
+        prospect = Prospets.objects.get(id=id_prospect)
+    except Prospets.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Prospect introuvable'}, status=404)
+
+    # 1. Query DuePaiements (Echéances prévues)
+    due_paiements = DuePaiements.objects.filter(client=prospect).order_by('date_echeance', 'id')
+    due_list = []
+    for dp in due_paiements:
+        due_list.append({
+            'id': dp.id,
+            'label': dp.label or 'N/A',
+            'montant_due': float(dp.montant_due) if dp.montant_due is not None else 0.0,
+            'montant_restant': float(dp.montant_restant) if dp.montant_restant is not None else 0.0,
+            'date_echeance': dp.date_echeance.strftime('%d/%m/%Y') if dp.date_echeance else 'N/A',
+            'is_done': dp.is_done,
+            'is_annulated': dp.is_annulated,
+            'type': dp.get_type_display() if hasattr(dp, 'get_type_display') and dp.type else (dp.type or 'N/A'),
+            'observation': dp.observation or '',
+        })
+
+    # 2. Query Paiements (Paiements effectués)
+    paiements = Paiements.objects.filter(prospect=prospect).order_by('-date_paiement', '-id')
+    paiements_list = []
+    for p in paiements:
+        paiements_list.append({
+            'id': p.id,
+            'num': p.num or 'N/A',
+            'paiement_label': p.paiement_label or p.observation or 'Paiement',
+            'montant_paye': float(p.montant_paye) if p.montant_paye is not None else 0.0,
+            'date_paiement': p.date_paiement.strftime('%d/%m/%Y') if p.date_paiement else 'N/A',
+            'mode_paiement': p.get_mode_paiement_display() if hasattr(p, 'get_mode_paiement_display') and p.mode_paiement else (p.mode_paiement or 'N/A'),
+            'is_done': p.is_done,
+            'is_refund': p.is_refund,
+            'refund_id': p.refund_id.id if p.refund_id else None,
+        })
+
+    # 3. Query Remboursements
+    refunds = Rembourssements.objects.filter(client=prospect).order_by('-created_at')
+    refunds_list = []
+    for r in refunds:
+        refunds_list.append({
+            'id': r.id,
+            'motif_rembourssement': r.motif_rembourssement or 'N/A',
+            'allowed_amount': float(r.allowed_amount) if r.allowed_amount is not None else 0.0,
+            'created_at': r.created_at.strftime('%d/%m/%Y %H:%M') if r.created_at else 'N/A',
+            'mode_rembourssement': r.get_mode_rembourssement_display() if hasattr(r, 'get_mode_rembourssement_display') and r.mode_rembourssement else (r.mode_rembourssement or 'N/A'),
+            'etat': r.get_etat_display() if hasattr(r, 'get_etat_display') and r.etat else (r.etat or 'N/A'),
+            'etat_key': r.etat,
+            'is_done': r.is_done,
+            'observation': r.observation or '',
+        })
+
+    return JsonResponse({
+        'status': 'success',
+        'due_paiements': due_list,
+        'paiements': paiements_list,
+        'remboursements': refunds_list
+    })

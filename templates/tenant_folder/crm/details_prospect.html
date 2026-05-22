@@ -15,6 +15,15 @@
         #procespectVoeuxDetails .col-md-8 { width: 100%; }
         .btn-软-success { background-color: rgba(16, 185, 129, 0.1); color: #10b981; border: none; }
         .btn-软-success:hover { background-color: #10b981; color: #fff; }
+
+        /* Refunded/Cancelled prospect restrictions */
+        .prospect-refunded button:not(#btnReactivatePreinscrit):not([data-bs-dismiss="modal"]):not(.nav-link):not([data-bs-toggle="tab"]),
+        .prospect-refunded a:not(#btnReactivatePreinscrit):not([href="/crm/liste-des-prospects/"]):not(.nav-link):not([data-bs-toggle="tab"]),
+        .prospect-refunded .btn:not(#btnReactivatePreinscrit):not([data-bs-dismiss="modal"]):not(.nav-link):not([data-bs-toggle="tab"]) {
+            pointer-events: none !important;
+            opacity: 0.5 !important;
+            cursor: not-allowed !important;
+        }
     </style>
 
 <div class="main-content">
@@ -130,6 +139,9 @@
                         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-tracking">
                             <i class="ri-exchange-funds-line"></i> <span>Suivi & Tâches</span>
                         </button>
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-financial" id="tab-financial-btn" style="display: none;">
+                            <i class="ri-bank-card-line"></i> <span>Historique Financier</span>
+                        </button>
                     </nav>
 
                     <div class="tab-content">
@@ -222,6 +234,93 @@
                                 </div>
                                 <div id="ListeDesNotes" class="vstack gap-3">
                                     <!-- Injected via AJAX -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: FINANCIAL HISTORY -->
+                        <div class="tab-pane fade" id="tab-financial">
+                            <!-- 1. Echéancier Prévu -->
+                            <div class="premium-card p-4 border-0 shadow-sm mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold mb-0 text-dark d-flex align-items-center">
+                                        <i class="ri-calendar-todo-line me-2 text-primary"></i> Échéancier Prévu
+                                    </h5>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle">
+                                        <thead>
+                                            <tr class="text-muted small text-uppercase">
+                                                <th class="border-0">Libellé</th>
+                                                <th class="border-0">Montant Dû</th>
+                                                <th class="border-0">Montant Restant</th>
+                                                <th class="border-0">Date d'échéance</th>
+                                                <th class="border-0">Statut</th>
+                                                <th class="border-0">Observations</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="financial-due-body">
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted py-4">Aucune échéance prévue.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- 2. Paiements Effectués -->
+                            <div class="premium-card p-4 border-0 shadow-sm mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold mb-0 text-dark d-flex align-items-center">
+                                        <i class="ri-checkbox-circle-line me-2 text-success"></i> Paiements Effectués
+                                    </h5>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle">
+                                        <thead>
+                                            <tr class="text-muted small text-uppercase">
+                                                <th class="border-0">N° Reçu</th>
+                                                <th class="border-0">Libellé / Objet</th>
+                                                <th class="border-0">Montant Payé</th>
+                                                <th class="border-0">Date de paiement</th>
+                                                <th class="border-0">Mode</th>
+                                                <th class="border-0">Statut</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="financial-payments-body">
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted py-4">Aucun paiement effectué.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- 3. Remboursements -->
+                            <div class="premium-card p-4 border-0 shadow-sm mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold mb-0 text-dark d-flex align-items-center">
+                                        <i class="ri-refund-2-line me-2 text-danger"></i> Remboursements Enregistrés
+                                    </h5>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle">
+                                        <thead>
+                                            <tr class="text-muted small text-uppercase">
+                                                <th class="border-0">Date & Heure</th>
+                                                <th class="border-0">Motif</th>
+                                                <th class="border-0">Montant Autorisé</th>
+                                                <th class="border-0">Mode</th>
+                                                <th class="border-0">Statut</th>
+                                                <th class="border-0">Observations</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="financial-refunds-body">
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted py-4">Aucun remboursement enregistré.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -1827,6 +1926,81 @@
             })
         }
 
+        function applyProspectRestrictions(statut, motif_annulation, etat) {
+            console.log("Applying prospect restrictions - Statut:", statut, "Motif:", motif_annulation, "Etat:", etat);
+
+            const isRefundCancelled = (statut === "annuler" && motif_annulation === "rembourssement");
+            const isSimpleCancelled = (statut === "annuler" && motif_annulation !== "rembourssement");
+            const isAccepted = (etat === "accepte");
+
+            // 1. Manage the page-content class 'prospect-refunded' which disables pointer events
+            if (isRefundCancelled) {
+                $('.page-content').addClass('prospect-refunded');
+            } else {
+                $('.page-content').removeClass('prospect-refunded');
+            }
+
+            // 2. Manage the Financial History tab
+            if (isRefundCancelled) {
+                $('#tab-financial-btn').show();
+                if (typeof loadFinancialHistory === "function") {
+                    loadFinancialHistory();
+                }
+            } else {
+                $('#tab-financial-btn').hide();
+                if ($('#tab-financial-btn').hasClass('active')) {
+                    $('.nav-glass-tabs button').first().tab('show');
+                }
+            }
+
+            // 3. Manage action buttons visibility and attributes
+            if (isAccepted) {
+                $('#validateProspectBtn').prop('hidden', true).hide();
+                $('#udapteProspectDetailsBtn').prop('hidden', true).hide();
+                if ($('#editVoeuxBtn').length) {
+                    $('#editVoeuxBtn').prop('disabled', true).prop('hidden', true).hide();
+                }
+                if ($('#inscriptionDoubleDiplomation').length) {
+                    $('#inscriptionDoubleDiplomation').prop('hidden', true).hide();
+                }
+                $('#addReminderBtn').show();
+                $('#addNoteModalBtn').show();
+            } else if (isRefundCancelled) {
+                $('#validateProspectBtn').prop('hidden', true).hide();
+                $('#udapteProspectDetailsBtn').prop('hidden', true).hide();
+                if ($('#editVoeuxBtn').length) {
+                    $('#editVoeuxBtn').prop('disabled', true).prop('hidden', true).hide();
+                }
+                if ($('#inscriptionDoubleDiplomation').length) {
+                    $('#inscriptionDoubleDiplomation').prop('hidden', true).hide();
+                }
+                $('#addReminderBtn').hide();
+                $('#addNoteModalBtn').hide();
+            } else if (isSimpleCancelled) {
+                $('#validateProspectBtn').prop('hidden', false).show();
+                $('#udapteProspectDetailsBtn').prop('hidden', false).show();
+                if ($('#editVoeuxBtn').length) {
+                    $('#editVoeuxBtn').prop('disabled', false).prop('hidden', false).show();
+                }
+                if ($('#inscriptionDoubleDiplomation').length) {
+                    $('#inscriptionDoubleDiplomation').prop('hidden', false).show();
+                }
+                $('#addReminderBtn').show();
+                $('#addNoteModalBtn').show();
+            } else {
+                $('#validateProspectBtn').prop('hidden', false).show();
+                $('#udapteProspectDetailsBtn').prop('hidden', false).show();
+                if ($('#editVoeuxBtn').length) {
+                    $('#editVoeuxBtn').prop('disabled', false).prop('hidden', false).show();
+                }
+                if ($('#inscriptionDoubleDiplomation').length) {
+                    $('#inscriptionDoubleDiplomation').prop('hidden', false).show();
+                }
+                $('#addReminderBtn').show();
+                $('#addNoteModalBtn').show();
+            }
+        }
+
         function loadPersonalInfos(){
             return $.ajax({
                 url : "{% url 't_crm:ApiLoadProspectPerosnalInfos' %}",
@@ -1860,6 +2034,9 @@
                     } else {
                         $('#cancellationBanner').prop('hidden', true);
                     }
+
+                    // Apply unified prospect restrictions
+                    applyProspectRestrictions(data.statut_key, data.motif_annulation, data.etat);
 
                     if(data.statut_key === "annuler"){
                         document.getElementById('idAffichageVoeuxSpu').style.setProperty('display' , "block", 'important');
@@ -2002,6 +2179,104 @@
             });
         }
 
+        function loadFinancialHistory() {
+            $.ajax({
+                url: "{% url 't_crm:ApiLoadProspectFinancialHistory' %}",
+                dataType: 'JSON',
+                type: 'GET',
+                data: { 'id_prospect': id },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // 1. Render Planned Schedules (DuePaiements)
+                        var dueHtml = '';
+                        if (response.due_paiements && response.due_paiements.length > 0) {
+                            $.each(response.due_paiements, function(index, item) {
+                                var badge = '';
+                                if (item.is_annulated) {
+                                    badge = '<span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="ri-close-circle-line me-1"></i>Annulé</span>';
+                                } else if (item.is_done) {
+                                    badge = '<span class="badge bg-success-subtle text-success px-2 py-1"><i class="ri-checkbox-circle-line me-1"></i>Payé</span>';
+                                } else {
+                                    badge = '<span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="ri-time-line me-1"></i>En attente</span>';
+                                }
+                                
+                                dueHtml += '<tr>';
+                                dueHtml += '    <td><div class="fw-semibold text-dark">' + item.label + '</div><small class="text-muted">' + item.type + '</small></td>';
+                                dueHtml += '    <td class="fw-bold">' + item.montant_due.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' DA</td>';
+                                dueHtml += '    <td class="text-secondary">' + item.montant_restant.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' DA</td>';
+                                dueHtml += '    <td><i class="ri-calendar-line text-muted me-1"></i>' + item.date_echeance + '</td>';
+                                dueHtml += '    <td>' + badge + '</td>';
+                                dueHtml += '    <td><small class="text-muted">' + (item.observation || '-') + '</small></td>';
+                                dueHtml += '</tr>';
+                            });
+                        } else {
+                            dueHtml = '<tr><td colspan="6" class="text-center text-muted py-4"><i class="ri-information-line me-1"></i>Aucune échéance prévue.</td></tr>';
+                        }
+                        $('#financial-due-body').html(dueHtml);
+
+                        // 2. Render Payments Made (Paiements)
+                        var paymentsHtml = '';
+                        if (response.paiements && response.paiements.length > 0) {
+                            $.each(response.paiements, function(index, item) {
+                                var badge = '';
+                                if (item.is_refund) {
+                                    badge = '<span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="ri-refund-2-line me-1"></i>Remboursé</span>';
+                                } else if (item.is_done) {
+                                    badge = '<span class="badge bg-success-subtle text-success px-2 py-1"><i class="ri-checkbox-circle-line me-1"></i>Validé</span>';
+                                } else {
+                                    badge = '<span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="ri-time-line me-1"></i>Non validé</span>';
+                                }
+
+                                paymentsHtml += '<tr>';
+                                paymentsHtml += '    <td><span class="badge bg-light text-dark font-monospace">' + item.num + '</span></td>';
+                                paymentsHtml += '    <td><div class="fw-semibold text-dark">' + item.paiement_label + '</div></td>';
+                                paymentsHtml += '    <td class="fw-bold text-success">+' + item.montant_paye.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' DA</td>';
+                                paymentsHtml += '    <td><i class="ri-calendar-check-line text-muted me-1"></i>' + item.date_paiement + '</td>';
+                                paymentsHtml += '    <td><span class="badge bg-info-subtle text-info">' + item.mode_paiement + '</span></td>';
+                                paymentsHtml += '    <td>' + badge + '</td>';
+                                paymentsHtml += '</tr>';
+                            });
+                        } else {
+                            paymentsHtml = '<tr><td colspan="6" class="text-center text-muted py-4"><i class="ri-information-line me-1"></i>Aucun paiement effectué.</td></tr>';
+                        }
+                        $('#financial-payments-body').html(paymentsHtml);
+
+                        // 3. Render Refunds (Rembourssements)
+                        var refundsHtml = '';
+                        if (response.remboursements && response.remboursements.length > 0) {
+                            $.each(response.remboursements, function(index, item) {
+                                var badge = '';
+                                if (item.is_done || item.etat_key === 'valider' || item.etat_key === 'validé') {
+                                    badge = '<span class="badge bg-success-subtle text-success px-2 py-1"><i class="ri-checkbox-circle-line me-1"></i>Effectué</span>';
+                                } else if (item.etat_key === 'annuler' || item.etat_key === 'annulé') {
+                                    badge = '<span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="ri-close-circle-line me-1"></i>Annulé</span>';
+                                } else {
+                                    badge = '<span class="badge bg-warning-subtle text-warning px-2 py-1"><i class="ri-time-line me-1"></i>' + item.etat + '</span>';
+                                }
+
+                                refundsHtml += '<tr>';
+                                refundsHtml += '    <td><i class="ri-time-line text-muted me-1"></i>' + item.created_at + '</td>';
+                                refundsHtml += '    <td><div class="fw-semibold text-dark">' + item.motif_rembourssement + '</div></td>';
+                                refundsHtml += '    <td class="fw-bold text-danger">-' + item.allowed_amount.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' DA</td>';
+                                refundsHtml += '    <td><span class="badge bg-secondary-subtle text-dark">' + item.mode_rembourssement + '</span></td>';
+                                refundsHtml += '    <td>' + badge + '</td>';
+                                refundsHtml += '    <td><small class="text-muted">' + (item.observation || '-') + '</small></td>';
+                                refundsHtml += '</tr>';
+                            });
+                        } else {
+                            refundsHtml = '<tr><td colspan="6" class="text-center text-muted py-4"><i class="ri-information-line me-1"></i>Aucun remboursement enregistré.</td></tr>';
+                        }
+                        $('#financial-refunds-body').html(refundsHtml);
+                    } else {
+                        alertify.error("Erreur lors du chargement de l'historique financier.");
+                    }
+                },
+                error: function() {
+                    alertify.error("Impossible de se connecter au serveur pour l'historique financier.");
+                }
+            });
+        }
+
         function loadVoeuxSupplementairesCount(){
 
             $.ajax({
@@ -2110,27 +2385,9 @@
                 type: 'GET',
                 data: {'id_prospect' : id},
                 success : function(response){
-                    console.log(response.data.etat);
-                    if (response.data.etat === "accepte") {
-                        // cacher et désactiver pour les acceptés
-                        document.getElementById('validateProspectBtn').hidden = true;
-                        document.getElementById('editVoeuxBtn').disabled = true;
-                        document.getElementById('udapteProspectDetailsBtn').hidden = true;
-                    } else if (response.data.statut === "annuler") {
-                        // Pour les annulés, on cache la validation mais on laisse l'édition des vœux possible
-                        document.getElementById('validateProspectBtn').hidden = true;
-                        document.getElementById('editVoeuxBtn').disabled = false; 
-                        document.getElementById('udapteProspectDetailsBtn').hidden = true;
-                    } else if (response.data.etat === "en_attente") {
-                        // afficher et activer
-                        document.getElementById('validateProspectBtn').hidden = false;
-                        document.getElementById('editVoeuxBtn').disabled = false;
-                        document.getElementById('udapteProspectDetailsBtn').hidden = false;
-                    }
+                    applyProspectRestrictions(response.data.statut, response.data.motif_annulation, response.data.etat);
                 }
-                
             });
-
         }
 
         function loadFormations(){
@@ -2218,6 +2475,36 @@
                         setTimeout(function(){
                             location.reload();
                         }, 2000);
+                    } else if (response.status === 'has_refund') {
+                        alertify.confirm("Remboursement détecté", response.message, 
+                        function() {
+                            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Duplication...');
+                            $.ajax({
+                                url: "{% url 't_crm:ApiReactivatePreinscrit' %}",
+                                type: 'POST',
+                                data: {
+                                    'id_preinscrit': id,
+                                    'force_duplicate': 'true',
+                                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                                },
+                                success: function(dup_response) {
+                                    if (dup_response.status === 'success_duplicate') {
+                                        $('#redirectionModalTitle').text('Duplication Réussie !');
+                                        $('#redirectionModalMessage').text(dup_response.message);
+                                        $('#redirectionModal').modal('show');
+                                        setTimeout(function(){
+                                            window.location.href = "/crm/details-prospect/" + dup_response.new_slug + "/";
+                                        }, 2000);
+                                    } else {
+                                        alertify.error(dup_response.message);
+                                        btn.prop('disabled', false).text('Confirmer la réactivation');
+                                    }
+                                }
+                            });
+                        }, 
+                        function() {
+                            btn.prop('disabled', false).text('Confirmer la réactivation');
+                        }).set('labels', {ok:'Oui, dupliquer le dossier', cancel:'Annuler'});
                     } else {
                         if (response.has_voeux === false) {
                             $('#reactivationNoVoeuxModal').modal('show');
