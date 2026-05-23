@@ -449,7 +449,7 @@ def ApiReturnUndonePaiament(request):
                 if i.depense:
                     liste_depenses.append({
                         'id' : i.id,
-                        'fournisseur' : i.depense.fournisseur.designation if i.depense.fournisseur else "Divers",
+                        'fournisseur' : i.depense.fournisseur.designation if i.depense.fournisseur else (f"{i.depense.client.nom} {i.depense.client.prenom or ''}".strip() if i.depense.client else "Divers"),
                         'montant' : float(i.montant),
                         'categorie' : i.depense.category.name if i.depense.category else "Autre",
                         'date' : i.date_operation.strftime('%Y-%m-%d') if i.date_operation else None,

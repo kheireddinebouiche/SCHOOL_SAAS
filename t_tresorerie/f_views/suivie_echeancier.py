@@ -768,6 +768,13 @@ def ApiSaveRefundOperation(request):
 
         depense.save()
 
+        if mode_rembourssement in ["che", "vir"]:
+            OperationsBancaire.objects.create(
+                operation_type="sortie",
+                depense=depense,
+                montant=amount,
+            )
+
         obj_refund.is_appliced = True
         obj_refund.save()
 
