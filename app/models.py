@@ -10,6 +10,7 @@ class Institut(TenantMixin):
     date_creation = models.DateTimeField(auto_now_add=True)
 
     tenant_type = models.CharField(max_length=255, null=True, blank=True, choices=[('associe','Associe'),('master','Compte maitre'),('second','Compte standard')])
+    code_tenant = models.CharField(max_length=50, null=True, blank=True, verbose_name=_("Code Tenant"))
     is_visible = models.BooleanField(default=True, verbose_name=_("Visible dans la sélection"))
     is_active = models.BooleanField(default=True, verbose_name=_("Compte actif"))
     crm_notifications_enabled = models.BooleanField(default=True, verbose_name=_("Notifications CRM actives"))

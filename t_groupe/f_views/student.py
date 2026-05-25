@@ -236,6 +236,30 @@ def ApiUpdate_etudiant(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+def ApiUpdateStudentPassword(request):
+    """Mise à jour du mot de passe de l'étudiant via AJAX"""
+    if request.method == 'POST':
+        student_id = request.POST.get('id_etudiant')
+        password = request.POST.get('password')
+        
+        if not student_id or not password:
+            return JsonResponse({'status': 'error', 'message': 'Données manquantes'})
+            
+        try:
+            student = Prospets.objects.get(id=student_id)
+            student.password = password
+            student.save()
+            return JsonResponse({'status': 'success', 'message': 'Mot de passe mis à jour'})
+        except Prospets.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Étudiant introuvable'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+            
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiUpdateStudentPhoto(request):
     """Mise à jour de la photo de l'étudiant via AJAX"""
     if request.method == 'POST':

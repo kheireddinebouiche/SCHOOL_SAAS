@@ -568,3 +568,4 @@ def tenant_comm_global(request):
 
     return render(request, 'tenant_folder/communication/inter_tenant_hub.html', context)
     
+

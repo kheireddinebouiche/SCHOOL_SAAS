@@ -171,6 +171,7 @@ class Prospets(models.Model):
     photo = models.ImageField(upload_to=tenant_directory_path_for_image, null=True, blank=True)
     
     prenom = models.CharField(max_length=255, null=True)
+    password = models.CharField(max_length=255, null=True, blank=True)
     email = models.EmailField(null=True)
     indic = models.CharField(max_length=10, null=True, choices=INDICATIF)
     telephone = models.CharField(max_length=14, null=True)

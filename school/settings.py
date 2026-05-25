@@ -30,7 +30,7 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 SAAS_SYSTEM_PIN = env("SAAS_SYSTEM_PIN", default="1234")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 ALLOWED_HOSTS = ['.insim360.com', 'localhost', '127.0.0.1', '.localhost']
 
 CSRF_TRUSTED_ORIGINS = [
@@ -52,6 +52,7 @@ SHARED_APPS = [
     'daphne',
     'channels',
     'django_tenants',
+    'corsheaders',
     'app',
    
     'django.contrib.auth',
@@ -98,8 +99,16 @@ TENANT_APPS = [
 
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
 
+# Autorisez votre portail React
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+# Pour plus tard sur le VPS, vous ajouterez l'adresse de votre portail :
+# CORS_ALLOWED_ORIGINS += ["https://mon-portail-etudiant.com"]
+
 MIDDLEWARE = [
-    
+    'corsheaders.middleware.CorsMiddleware',  # Ajoutez ceci EN HAUT
     'django_tenants.middleware.main.TenantMainMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'saas_admin_app.middleware.SaaSMaintenanceMiddleware',

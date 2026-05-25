@@ -917,6 +917,7 @@ def saas_create_tenant_view(request):
         admin_email = request.POST.get('admin_email')
         admin_password = request.POST.get('admin_password')
         tenant_type = request.POST.get('tenant_type', 'second')
+        code_tenant = request.POST.get('code_tenant', '')
         
         if not all([nom, schema_name, domain_name, admin_username, admin_email, admin_password]):
             messages.error(request, "Tous les champs sont obligatoires.")
@@ -934,7 +935,8 @@ def saas_create_tenant_view(request):
             tenant = Institut(
                 nom=nom,
                 schema_name=schema_name,
-                tenant_type=tenant_type
+                tenant_type=tenant_type,
+                code_tenant=code_tenant
             )
             tenant.save() # Déclenche la création du schéma via django-tenants
             
@@ -1839,6 +1841,7 @@ def saas_tenant_detail_view(request, tenant_id):
         try:
             limit = request.POST.get('max_upload_size')
             is_visible = request.POST.get('is_visible') == 'on'
+            code_tenant = request.POST.get('code_tenant')
             
             if limit:
                 institut.max_upload_size = int(limit)
@@ -1846,6 +1849,8 @@ def saas_tenant_detail_view(request, tenant_id):
                 institut.max_upload_size = None
             
             institut.is_visible = is_visible
+            if code_tenant is not None:
+                institut.code_tenant = code_tenant if code_tenant.strip() else None
             institut.save()
             
             from django.contrib import messages
