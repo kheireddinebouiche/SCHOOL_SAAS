@@ -131,6 +131,7 @@ urlpatterns = [
     path('liste-des-rembourssements/', listeDesRembourssement, name="listeDesRembourssement"),
     path('rembourssement/details/<int:pk>/',DetailsRembourssement, name="DetailsRembourssement"),
     path('ApiLoadRemboursements/', ApiLoadRemboursements, name="ApiLoadRemboursements"),
+    path('api/search-prospect-refund/', ApiSearchProspectForRefund, name="ApiSearchProspectForRefund"),
 
     path('ApiCheckEcheancierState', ApiCheckEcheancierState, name="ApiCheckEcheancierState"),
     path('ApiCheckStateModel', ApiCheckStateModel, name="ApiCheckStateModel"),
