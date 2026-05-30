@@ -134,6 +134,15 @@
                     <a href="{% url 't_conseil:DownloadFacturePDF' facture.num_facture %}" class="btn btn-primary px-4 shadow">
                         <i class="ri-file-pdf-line me-2"></i> Télécharger PDF
                     </a>
+                    
+                    {% if facture.etat != 'brouillon' and facture.etat != 'annule' %}
+                        {% if facture.type_facture != 'avoir' %}
+                            <button class="btn btn-outline-danger px-4" onclick="createAvoir()">
+                                <i class="ri-arrow-go-back-line me-2"></i> Créer un avoir
+                            </button>
+                        {% endif %}
+                    {% endif %}
+
                     {% if facture.etat == 'envoye' %}
                     <button class="btn btn-warning px-4" id="btnRevertFacture">
                         <i class="ri-refresh-line me-2"></i> Rendre en brouillon
@@ -160,11 +169,19 @@
                         <!-- Header Section -->
                         <div class="invoice-header-premium d-flex justify-content-between align-items-start">
                             <div>
+                                {% if facture.type_facture == 'avoir' %}
+                                <span class="premium-badge mb-3 d-inline-block bg-danger text-white border-danger">Note de Crédit / Avoir</span>
+                                <h1 class="text-white fw-bold mb-1 display-5">FACTURE D'AVOIR</h1>
+                                <h4 class="text-white opacity-75 mb-1">#{{ facture.num_facture }}</h4>
+                                <p class="mb-0 opacity-75 fw-medium mt-1"><i class="ri-refund-2-line me-1"></i>Annule la facture N° {{ facture.facture_source.num_facture|default:"-" }}</p>
+                                <p class="mb-0 opacity-75 fw-medium">Émise le {{ facture.date_emission|date:"d F Y" }}</p>
+                                {% else %}
                                 <span class="premium-badge mb-3 d-inline-block">Facture Client</span>
                                 <h1 class="text-white fw-bold mb-1 display-5">FACTURE #{{ facture.num_facture }}</h1>
                                 <p class="mb-0 opacity-75 fw-medium">Émise le {{ facture.date_emission|date:"d F Y" }}</p>
                                 {% if facture.devis_source %}
                                 <p class="mb-0 opacity-75 fw-medium mt-1"><i class="ri-file-list-3-line me-1"></i>Ref. Devis: {{ facture.devis_source.num_devis }}</p>
+                                {% endif %}
                                 {% endif %}
                             </div>
                             <div class="text-end">
@@ -298,10 +315,15 @@
                                         
                                         <div class="total-main-bold">
                                             <div>
+                                                {% if facture.type_facture == 'avoir' %}
+                                                <span class="premium-badge mb-1 bg-danger-subtle text-danger border-0">NET À DÉDUIRE</span>
+                                                <p class="text-muted small mb-0">Montant total TTC (Crédit)</p>
+                                                {% else %}
                                                 <span class="premium-info-label mb-1">NET À PAYER</span>
                                                 <p class="text-muted small mb-0">Montant total TTC</p>
+                                                {% endif %}
                                             </div>
-                                            <div class="total-amount-display">{{ facture.total_ttc|floatformat:2 }} DZA</div>
+                                            <div class="total-amount-display">{% if facture.type_facture == 'avoir' %}- {% endif %}{{ facture.total_ttc|floatformat:2 }} DZA</div>
                                         </div>
                                     </div>
                                 </div>
@@ -534,6 +556,33 @@
             });
         }
     });
+
+    function createAvoir() {
+        alertify.confirm("Créer un avoir", "Êtes-vous sûr de vouloir générer un avoir pour cette facture ?", 
+        function() {
+            const formData = new FormData();
+            formData.append('facture_id', "{{ facture.num_facture }}");
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            fetch("{% url 't_conseil:ApiCreateAvoir' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            }).then(r => r.json()).then(d => {
+                if(d.status === 'success') {
+                    alertify.success(d.message);
+                    setTimeout(() => {
+                        location.href = d.redirect_url;
+                    }, 800);
+                } else {
+                    alertify.error(d.message);
+                }
+            });
+        }, null).set('labels', {ok:'Confirmer', cancel:'Annuler'});
+    }
 
     function openPaymentModal() {
         // Calculate remaining balance roughly (can be refined)

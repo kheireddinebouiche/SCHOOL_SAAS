@@ -21,6 +21,7 @@ from .f_views.type_depense import *
 from .f_views.payment_types import *
 from .f_views.suivi_paiements import *
 
+from t_conseil.views import ListeDesFactures, ListeDesDevis, ListeDesClients
 
 app_name="t_tresorerie"
 
@@ -307,4 +308,9 @@ urlpatterns = [
 
     path('suivi-des-paiements/', PageSuiviPaiements, name="PageSuiviPaiements"),
     path('ApiSuiviPaiements', ApiSuiviPaiements, name="ApiSuiviPaiements"),
+
+    # Vues de consultation pour Executive Education
+    path('factures-executive/', ListeDesFactures, name="tresorerie_factures_conseil"),
+    path('devis-executive/', ListeDesDevis, name="tresorerie_devis_conseil"),
+    path('clients-executive/', ListeDesClients, name="tresorerie_clients_conseil"),
 ]

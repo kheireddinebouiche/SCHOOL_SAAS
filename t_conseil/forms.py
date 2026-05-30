@@ -4,8 +4,7 @@ from .models import *
 class NewDevisForms(forms.ModelForm):
     class Meta:
         model = Devis
-        fields = '__all__'
-        exclude = ['num_devis','montant','etat']
+        fields = ['client', 'entreprise', 'date_emission', 'date_echeance']
 
         widgets = {
             'date_emission': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
@@ -28,8 +27,7 @@ class NewDevisForms(forms.ModelForm):
 class NewFactureForms(forms.ModelForm):
     class Meta:
         model = Facture
-        fields = '__all__'
-        exclude = ['num_facture','etat']
+        fields = ['client', 'entreprise', 'date_emission', 'date_echeance']
 
         widgets = {
             'date_emission': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),

@@ -110,10 +110,15 @@ def ApiLoadProspectFinancials(request):
     total_paye = 0
     
     for f in factures:
-        total_facture += f.total_ttc()
-        # Sum payments for this facture
-        payments_sum = f.paiements.filter(is_done=True).aggregate(Sum('montant'))['montant__sum'] or 0
-        total_paye += payments_sum
+        if getattr(f, 'type_facture', 'standard') == 'avoir':
+            total_facture -= f.total_ttc()
+            payments_sum = f.paiements.filter(is_done=True).aggregate(Sum('montant'))['montant__sum'] or 0
+            total_paye -= payments_sum
+        else:
+            total_facture += f.total_ttc()
+            # Sum payments for this facture
+            payments_sum = f.paiements.filter(is_done=True).aggregate(Sum('montant'))['montant__sum'] or 0
+            total_paye += payments_sum
         
     return JsonResponse({
         'total_invoiced': float(total_facture),
@@ -721,7 +726,7 @@ def ApiRevertDevisToDraft(request):
 
 @login_required(login_url="institut_app:login")
 def ListeDesFactures(request):
-    factures = Facture.objects.filter(module_source='conseil').order_by('-created_at')
+    factures = Facture.objects.filter(module_source='conseil').exclude(type_facture='avoir').order_by('-created_at')
     
     # Calculate stats
     stats = {
@@ -744,6 +749,34 @@ def ListeDesFactures(request):
         "config": config,
         "tvas": tvas,
         "enterprises": enterprises,
+    }
+    return render(request, 'tenant_folder/conseil/liste_des_factures.html', context)
+
+@login_required(login_url="institut_app:login")
+def ListeDesAvoirs(request):
+    factures = Facture.objects.filter(module_source='conseil', type_facture='avoir').order_by('-created_at')
+    
+    # Calculate stats
+    stats = {
+        'total': factures.count(),
+        'payee': factures.filter(etat='payee').count(),
+        'envoye': factures.filter(etat='envoye').count(),
+        'brouillon': factures.filter(etat='brouillon').count(),
+    }
+    
+    config, _ = ConseilConfiguration.objects.get_or_create(id=1)
+    tvas = TvaConseil.objects.all().order_by('valeur')
+    
+    enterprises = Entreprise.objects.all()
+
+    context = {
+        "tenant": request.tenant,
+        "factures": factures,
+        "stats": stats,
+        "config": config,
+        "tvas": tvas,
+        "enterprises": enterprises,
+        "is_avoir_list": True,
     }
     return render(request, 'tenant_folder/conseil/liste_des_factures.html', context)
 
@@ -832,7 +865,7 @@ def ApiAddPaiement(request):
                 is_done=(mode == 'esp' or mode == 'espece')
             )
 
-            if mode in ['virement', 'cheque']:
+            if mode in ['vir', 'che']:
                 OperationsBancaire.objects.create(
                     operation_type='entree',
                     conseil_paiement=paiement,
@@ -1351,17 +1384,19 @@ def configure_facture(request, pk):
         config, _ = ConseilConfiguration.objects.get_or_create(entreprise=None)
         
     tvas = TvaConseil.objects.all().order_by('valeur')
-    if facture.entreprise:
-        tvas = tvas.filter(entreprise=facture.entreprise)
         
     # Check if we can edit
     can_edit = (facture.etat == 'brouillon')
+    
+    from t_tresorerie.models import ParametreFinancier
+    fin_config = ParametreFinancier.get_instance()
     
     context = {
         "tenant": request.tenant,
         "facture": facture,
         "lignes_facture": lignes_facture,
         "config": config,
+        "fin_config": fin_config,
         "tvas": tvas,
         "enterprises": Entreprise.objects.all(),
         "can_edit": can_edit
@@ -1444,6 +1479,67 @@ def ApiSaveFactureItems(request):
             total_ttc += (montant_ht + tva_amount)
             
         facture.total_ttc = total_ttc
+        
+        # --- Timbre Calculation ---
+        montant_timbre = 0
+        from t_tresorerie.models import ParametreFinancier
+        config_fin = ParametreFinancier.get_instance()
+        
+        apply_timbre = False
+        if config_fin.activer_timbre or mode_paiement == 'esp':
+            if not config_fin.timbre_cash_only or mode_paiement == 'esp':
+                apply_timbre = True
+                
+        if apply_timbre:
+            import math
+            import json
+            try:
+                bareme = json.loads(config_fin.timbre_bareme)
+            except Exception:
+                bareme = [
+                    {"min_ttc": 0, "max_ttc": 300, "rate": 0.0, "is_exempt": True},
+                    {"min_ttc": 301, "max_ttc": 30000, "rate": 1.0, "is_exempt": False},
+                    {"min_ttc": 30001, "max_ttc": 100000, "rate": 1.5, "is_exempt": False},
+                    {"min_ttc": 100001, "max_ttc": None, "rate": 2.0, "is_exempt": False}
+                ]
+            bareme = sorted(bareme, key=lambda b: b.get('min_ttc', 0))
+            
+            def calculate_timbre_for_bracket(ttc_val, bracket_rate, is_ex):
+                if is_ex or bracket_rate == 0:
+                    return 0
+                nb_t = math.ceil(ttc_val / 100)
+                raw_timbre = nb_t * float(bracket_rate)
+                min_stamp = max(float(config_fin.timbre_min), 5.0)
+                if raw_timbre < min_stamp:
+                    raw_timbre = min_stamp
+                return math.ceil(raw_timbre)
+                
+            selected_bracket = None
+            for b in bareme:
+                min_ttc = float(b.get('min_ttc', 0))
+                max_ttc = b.get('max_ttc')
+                rate_val = float(b.get('rate', 0.0))
+                
+                if max_ttc is not None:
+                    if min_ttc <= float(total_ttc) <= float(max_ttc):
+                        selected_bracket = b
+                        break
+                else:
+                    if float(total_ttc) >= min_ttc:
+                        selected_bracket = b
+                        break
+                        
+            if not selected_bracket:
+                selected_bracket = bareme[-1]
+                
+            bracket_rate = float(selected_bracket.get('rate', 0.0))
+            is_ex_bracket = selected_bracket.get('is_exempt', bracket_rate == 0.0)
+            
+            montant_timbre = calculate_timbre_for_bracket(float(total_ttc), bracket_rate, is_ex_bracket)
+            
+        facture.montant_timbre = montant_timbre
+        # ---------------------------
+
         facture.save()
         
         return JsonResponse({'status': 'success', 'message': 'Facture enregistrÃ©e avec succÃ¨s.'})
@@ -1462,21 +1558,40 @@ def ApiValidateFacture(request):
             facture.etat = 'battente'
             facture.save()
             
-            # Update Related Prospect Pipeline Stage
-            if facture.client:
-                facture.client.conseil_pipeline_stage = 'recouvrement'
-                facture.client.save()
+            if getattr(facture, 'type_facture', 'standard') == 'avoir':
+                from t_tresorerie.models import Depenses
+                # Calculate total HT and TTC for Depense
+                total_ht = sum(l.montant_ht for l in facture.lignes_facture.all())
+                total_ttc = facture.total_ttc()
+                source_num = facture.facture_source.num_facture if facture.facture_source else ''
+                
+                Depenses.objects.create(
+                    label=f"Avoir sur facture {source_num}",
+                    client=facture.client,
+                    date_depense=facture.date_emission,
+                    montant_ht=total_ht,
+                    montant_ttc=total_ttc,
+                    etat=False,
+                    description=f"Généré automatiquement suite à la validation de l'avoir {facture.num_facture}",
+                    entite=facture.entreprise,
+                    reference=facture.num_facture
+                )
+            else:
+                # Update Related Prospect Pipeline Stage
+                if facture.client:
+                    facture.client.conseil_pipeline_stage = 'recouvrement'
+                    facture.client.save()
 
-            # Update Linked Opportunity Stage to 'recouvrement'
-            if facture.devis_source and hasattr(facture.devis_source, 'opportunite'):
-                opp = facture.devis_source.opportunite
-                if opp:
-                    opp.stage = 'recouvrement'
-                    opp.save()
+                # Update Linked Opportunity Stage to 'recouvrement'
+                if facture.devis_source and hasattr(facture.devis_source, 'opportunite'):
+                    opp = facture.devis_source.opportunite
+                    if opp:
+                        opp.stage = 'recouvrement'
+                        opp.save()
             
-            return JsonResponse({'status': 'success', 'message': 'Facture validÃ©e et en attente de paiement.'})
+            return JsonResponse({'status': 'success', 'message': 'Facture validée et en attente de paiement.'})
         except Facture.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Facture non trouvÃ©e.'}, status=404)
+            return JsonResponse({'status': 'error', 'message': 'Facture non trouvée.'}, status=404)
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
 
 @login_required(login_url='institut_app:login')
@@ -1499,11 +1614,57 @@ def ApiDeleteFacture(request):
     try:
         facture = Facture.objects.get(num_facture=facture_id)
         if facture.etat != 'brouillon':
-            return JsonResponse({'status': 'error', 'message': 'Seules les factures en brouillon peuvent Ãªtre supprimÃ©es.'})
+            return JsonResponse({'status': 'error', 'message': 'Seules les factures en brouillon peuvent être supprimées.'})
         facture.delete()
-        return JsonResponse({'status': 'success', 'message': 'Facture supprimÃ©e avec succÃ¨s.'})
+        return JsonResponse({'status': 'success', 'message': 'Facture supprimée avec succès.'})
     except Facture.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'Facture non trouvÃ©e.'})
+        return JsonResponse({'status': 'error', 'message': 'Facture non trouvée.'})
+
+@login_required(login_url='institut_app:login')
+@ajax_required
+def ApiCreateAvoir(request):
+    facture_id = request.POST.get('facture_id')
+    try:
+        facture = Facture.objects.get(num_facture=facture_id)
+        if getattr(facture, 'type_facture', 'standard') == 'avoir':
+            return JsonResponse({'status': 'error', 'message': 'Impossible de créer un avoir depuis un avoir.'})
+        
+        avoir = Facture.objects.create(
+            client=facture.client,
+            devis_source=facture.devis_source,
+            date_emission=timezone.now().date(),
+            tva=facture.tva,
+            show_tva=facture.show_tva,
+            show_remise=facture.show_remise,
+            mode_paiement=facture.mode_paiement,
+            etat='brouillon',
+            conditions_commerciales=facture.conditions_commerciales,
+            module_source=facture.module_source,
+            entreprise=facture.entreprise,
+            type_facture='avoir',
+            facture_source=facture
+        )
+        
+        for ligne in facture.lignes_facture.all():
+            LignesFacture.objects.create(
+                facture=avoir,
+                thematique=ligne.thematique,
+                description=ligne.description,
+                long_description=ligne.long_description,
+                quantite=ligne.quantite,
+                prix_unitaire=ligne.prix_unitaire,
+                montant_ht=ligne.montant_ht,
+                remise_percent=ligne.remise_percent,
+                tva_percent=ligne.tva_percent,
+                specialite=ligne.specialite
+            )
+            
+        from django.urls import reverse
+        redirect_url = reverse('t_conseil:configure-facture', kwargs={'pk': avoir.num_facture})
+        
+        return JsonResponse({'status': 'success', 'message': 'Facture d\'avoir générée avec succès.', 'redirect_url': redirect_url})
+    except Facture.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Facture non trouvée.'})
 
 @ajax_required
 def ApiFetchEnterpriseTvas(request):
@@ -2128,3 +2289,14 @@ def ApiRejectDevis(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     return JsonResponse({'status': 'error', 'message': 'Mauvaise méthode.'}, status=405)
+
+@login_required(login_url="institut_app:login")
+def PaiementsConseilListe(request):
+    # Fetch all payments related to t_conseil
+    paiements = Paiement.objects.all().order_by('-date_paiement', '-created_at')
+    
+    context = {
+        'paiements': paiements,
+    }
+    return render(request, 'tenant_folder/conseil/liste_des_paiements.html', context)
+

@@ -104,7 +104,7 @@ def brouillard_caisse_json(request):
     # ---- 1c. Consulting Paiement (Entrées en espèce) ----
     consulting_paiements = []
     if ConseilPaiement:
-        consulting_paiements = ConseilPaiement.objects.filter(mode_paiement='espece', date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
+        consulting_paiements = ConseilPaiement.objects.filter(mode_paiement='esp', date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
             nom=Value('Paiement Facture', output_field=CharField()),
             date=F('date_paiement'),
             mouvement_montant=Coalesce(F('montant'), Value(0, output_field=models.DecimalField())),
@@ -264,7 +264,7 @@ def brouillard_banck_json(request):
     # ---- 1c. Consulting Paiement (Entrées en banque) ----
     consulting_paiements = []
     if ConseilPaiement:
-        consulting_paiements = ConseilPaiement.objects.filter(mode_paiement__in=['virement', 'cheque'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).values(
+        consulting_paiements = ConseilPaiement.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).values(
             'reference',
             nom=Value('Paiement Facture', output_field=CharField()),
             date=F('date_paiement'),
