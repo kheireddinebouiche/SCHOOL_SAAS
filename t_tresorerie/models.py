@@ -319,6 +319,7 @@ class Depenses(models.Model):
     fournisseur = models.ForeignKey(Fournisseur, null=True, blank=True, on_delete=models.CASCADE)
     client = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     category = models.ForeignKey("DepensesCategory", null=True, blank=True, on_delete=models.SET_NULL)
+    date_depense = models.DateField(null=True, blank=True)
     date_paiement = models.DateField(null=True, blank=True)
     montant_ht = models.DecimalField(decimal_places=2, max_digits=10, null=True, blank=True)
     tva = models.CharField(max_length=10, null=True, blank=True)

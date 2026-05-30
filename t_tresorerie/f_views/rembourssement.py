@@ -182,18 +182,31 @@ def ApiLoadPaiements(request):
 def ApiSearchProspectForRefund(request):
     if request.method == "GET":
         query = request.GET.get('q', '').strip()
-        if not query:
+        promo_id = request.GET.get('promo_id', '').strip()
+        
+        if not query and not promo_id:
             return JsonResponse({'prospects': []})
             
         excluded_prospect_ids = Rembourssements.objects.filter(
             etat__in=['enc', 'acp']
         ).values_list('client_id', flat=True)
         
-        prospects = Prospets.objects.filter(
-            Q(nom__icontains=query) | 
-            Q(prenom__icontains=query) | 
-            Q(email__icontains=query)
-        ).filter(statut__in=['instance', 'convertit']).exclude(id__in=excluded_prospect_ids).distinct()[:10] # Limit to 10 results
+        prospects = Prospets.objects.filter(statut__in=['instance', 'convertit']).exclude(id__in=excluded_prospect_ids)
+        
+        if query:
+            prospects = prospects.filter(
+                Q(nom__icontains=query) | 
+                Q(prenom__icontains=query) | 
+                Q(email__icontains=query)
+            )
+            
+        if promo_id:
+            p_ids1 = FicheDeVoeux.objects.filter(promo_id=promo_id).values_list('prospect_id', flat=True)
+            p_ids2 = FicheVoeuxDouble.objects.filter(promo_id=promo_id).values_list('prospect_id', flat=True)
+            prospect_ids = list(p_ids1) + list(p_ids2)
+            prospects = prospects.filter(id__in=prospect_ids)
+            
+        prospects = prospects.distinct()[:20] # Limit to 20 results
         
         data = []
         for prospect in prospects:

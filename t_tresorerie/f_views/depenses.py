@@ -145,7 +145,7 @@ def ApiStoreDepense(request):
             label = label,
             fournisseur_id = fournisseur,
             category_id = categoryId,
-            date_paiement = date,
+            date_depense = date,
             montant_ht = montant_ht,
             tva = tva,
             montant_ttc = montant_ttc,
@@ -156,13 +156,6 @@ def ApiStoreDepense(request):
             entite_id = request.POST.get('entite')
         )
 
-        if mode_paiement == "che" or mode_paiement == "vir":
-            OperationsBancaire.objects.create(
-                operation_type = "sortie",
-                depense = depense,
-                montant = montant_ttc,
-                reference_bancaire = reference_paiement,
-            )
 
         messages.success(request, 'Les informations ont été enregistrer avec succès')
         return JsonResponse({"status":"success"})
@@ -182,7 +175,8 @@ def ApiGetDepenseDetails(request):
             'fournisseur_designation' : obj.fournisseur.designation if obj.fournisseur else None,
             'client_nom' : obj.client.nom if obj.client else None,
             'client_prenom' : obj.client.prenom if obj.client else None,
-            'date' : obj.date_paiement,
+            'date' : obj.date_depense,
+            'date_paiement' : obj.date_paiement,
             'category': obj.category.id if obj.category else None,
             'category_name': obj.category.name if obj.category else None,
             'category_parent_name': obj.category.parent.name if obj.category and obj.category.parent else None,
@@ -192,6 +186,9 @@ def ApiGetDepenseDetails(request):
             'description' : obj.description,
             'tva'  : obj.tva,
             'entite' : obj.entite.id if obj.entite else None,
+            'mode_paiement' : obj.mode_paiement,
+            'reference' : obj.reference,
+            'etat': obj.etat,
         }
         return JsonResponse(data)
     else:
@@ -213,6 +210,8 @@ def ApiUpdateDepense(request):
         edit_description = request.POST.get('edit_description')
         edit_piece = request.FILES.get('edit_piece')
         edit_entite = request.POST.get('edit_entite')
+        edit_mode_paiement = request.POST.get('edit_mode_paiement')
+        edit_reference = request.POST.get('edit_reference')
         obj = Depenses.objects.get(id = id)
 
         if request.POST.get('edit_category'):
@@ -220,7 +219,7 @@ def ApiUpdateDepense(request):
         
         obj.label = edit_label
         obj.fournisseur_id = edit_fournisseur
-        obj.date_paiement = edit_date # Adjusted field name match model
+        obj.date_depense = edit_date
         obj.montant_ht = edit_montant_ht
         obj.tva = edit_tva
         obj.montant_ttc = edit_montant_ttc
@@ -228,10 +227,25 @@ def ApiUpdateDepense(request):
             obj.piece = edit_piece
         obj.description = edit_description
         obj.entite_id = edit_entite
+        if edit_mode_paiement:
+            obj.mode_paiement = edit_mode_paiement
+        obj.reference = edit_reference
 
         obj.save()
+        
+        # Update OperationsBancaire if it exists
+        from t_tresorerie.models import OperationsBancaire
+        op = OperationsBancaire.objects.filter(depense=obj).first()
+        if op:
+            if obj.mode_paiement in ['che', 'vir']:
+                op.montant = obj.montant_ttc
+                op.reference_bancaire = obj.reference
+                op.save()
+            else:
+                # If mode_paiement changed to something else (e.g. esp), delete the bank operation
+                op.delete()
+
         return JsonResponse({"status":"success"})
-                
 
     else:
         return JsonResponse({"status":"error"})
@@ -267,14 +281,43 @@ def ApiRecordExpensePayment(request):
         try:
             id = request.POST.get('id')
             payment_date = request.POST.get('payment_date')
+            payment_mode = request.POST.get('payment_mode')
+            payment_reference = request.POST.get('payment_reference')
             
             if not id or not payment_date:
                 return JsonResponse({"status":"error", "message":"ID et date de paiement requis"})
             
             obj = Depenses.objects.get(id=id)
             obj.date_paiement = payment_date
+            if payment_mode:
+                obj.mode_paiement = payment_mode
+            if payment_reference is not None:
+                obj.reference = payment_reference
+                
             obj.etat = True  # Mark as validated when payment is recorded
             obj.save()
+            
+            # Ensure OperationsBancaire exists for bank payments so it shows up in Imputation Bancaire
+            if obj.mode_paiement in ['che', 'vir']:
+                from t_tresorerie.models import OperationsBancaire
+                op, created = OperationsBancaire.objects.get_or_create(
+                    operation_type="sortie",
+                    depense=obj,
+                    defaults={
+                        'montant': obj.montant_ttc,
+                        'reference_bancaire': obj.reference,
+                        'date_operation': payment_date
+                    }
+                )
+                if not created:
+                    op.montant = obj.montant_ttc
+                    op.reference_bancaire = obj.reference
+                    op.date_operation = payment_date
+                    op.save()
+            else:
+                # If changed to esp and a bank operation existed, remove it
+                from t_tresorerie.models import OperationsBancaire
+                OperationsBancaire.objects.filter(operation_type="sortie", depense=obj).delete()
             
             return JsonResponse({"status":"success", "message":"Paiement enregistré avec succès"})
         except Depenses.DoesNotExist:

@@ -638,9 +638,17 @@
                         '<span class="text-muted small">-</span>';
 
                     // Design Payment Method
-                    var methodHtml = '<span class="badge badge-soft-info d-inline-flex align-items-center gap-1 py-1.5 px-2.5 rounded-pill fw-semibold" style="font-size: 0.75rem;">' +
+                    var methodHtml = '<div class="d-flex flex-column align-items-start gap-1"><span class="badge badge-soft-info d-inline-flex align-items-center gap-1 py-1.5 px-2.5 rounded-pill fw-semibold" style="font-size: 0.75rem;">' +
                                          '<i class="ri-wallet-3-line"></i>' + (item.mode_rembourssement || '-') +
                                      '</span>';
+                    if (item.is_appliced) {
+                        methodHtml += '<span class="badge badge-soft-success d-inline-flex align-items-center gap-1 py-1 px-2 rounded-pill fw-semibold" style="font-size: 0.70rem;" title="La dépense a été déclenchée pour ce remboursement">' +
+                                      '<i class="ri-checkbox-circle-line"></i>Dépense déclenchée</span>';
+                    } else if (item.is_done) {
+                        methodHtml += '<span class="badge badge-soft-warning d-inline-flex align-items-center gap-1 py-1 px-2 rounded-pill fw-semibold" style="font-size: 0.70rem;" title="En attente de déclenchement de la dépense">' +
+                                      '<i class="ri-time-line"></i>Attente dépense</span>';
+                    }
+                    methodHtml += '</div>';
 
                     // Row HTML
                     html += '<tr class="remboursement-row align-middle" data-remboursement-id="' + remboursementId + '" data-prospect-name="' + item.nom + ' ' + item.prenom + '">';
@@ -672,7 +680,7 @@
                     html += '      <i class="ri-eye-line"></i>';
                     html += '    </a>';
                     
-                    if (item.etat_key === 'enc' || item.etat_key === 'acp') {
+                    if ((item.etat_key === 'acp' || item.etat_key === 'enc') && !item.is_done) {
                         html += '    <button class="btn-action-premium btn-premium-success btn-effectuer-remboursement" ';
                         html += '      data-bs-toggle="tooltip" data-bs-placement="top" title="Effectuer le remboursement" ';
                         html += '      data-amount="' + item.allowed_amount + '" ';
@@ -989,9 +997,18 @@
             </div>
             <div class="modal-body p-4 bg-light">
                 <div class="mb-4">
-                    <div class="search-input-group">
-                        <i class="ri-search-2-line text-muted"></i>
-                        <input type="text" class="form-control form-control-lg" id="searchProspectInput" placeholder="Rechercher par nom, prénom ou email..." autocomplete="off">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <div class="search-input-group">
+                                <i class="ri-search-2-line text-muted"></i>
+                                <input type="text" class="form-control form-control-lg" id="searchProspectInput" placeholder="Rechercher par nom, prénom ou email..." autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select form-select-lg" id="searchPromoFilterModal">
+                                <option value="">Toutes les promotions...</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 
@@ -1023,45 +1040,104 @@
     </div>
 </div>
 
+<!-- Modal Demande de Remboursement -->
+<div class="modal fade refundModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0 overflow-hidden">
+            <div class="modal-body p-4 p-md-5">
+                <div class="d-flex align-items-center">
+                    <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-refund-line text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-warning mb-1">Demande de remboursement</h5>
+                        <p class="text-muted small mb-0">Soumettre une demande de remboursement</p>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h4 class="mb-3">Vous êtes sur le point de faire une demande de remboursement</h4>
+                    <p class="text-muted mb-4">La demande de remboursement doit être validée par un compte de niveau supérieur. Veuillez indiquer le motif du remboursement.</p>
+                    
+                    <div class="mb-4">
+                        <label for="refundReason" class="form-label fw-medium">Motif du remboursement <span class="text-danger">*</span></label>
+                        <textarea class="form-control border-0 bg-light py-2" id="refundReason" rows="3" placeholder="Veuillez indiquer la raison du remboursement..."></textarea>
+                    </div>
+                    
+                    <div class="alert alert-warning d-flex align-items-center mt-4" role="alert">
+                        <i class="ri-alert-line me-2"></i>
+                        <div>
+                            <span>Le remboursement ne sera traité qu'après validation par un responsable.</span>
+                        </div>
+                    </div>
+                    
+                    <div class="hstack gap-2 justify-content-center mt-3">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button type="button" class="btn btn-warning" id="confirmRefundBtn">Demander le remboursement</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div><!-- /.modal -->
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         let searchTimeout = null;
         const searchInput = document.getElementById('searchProspectInput');
+        const searchPromoSelect = document.getElementById('searchPromoFilterModal');
         const resultsBody = document.getElementById('searchProspectResults');
 
-        if(searchInput) {
-            searchInput.addEventListener('input', function() {
-                clearTimeout(searchTimeout);
-                const query = this.value.trim();
-                
-                if(query.length < 2) {
-                    resultsBody.innerHTML = `
-                        <tr>
-                            <td colspan="5" class="text-center py-5">
-                                <div class="text-muted">
-                                    <i class="ri-keyboard-line fs-1 mb-3 d-block text-warning opacity-50"></i>
-                                    <p class="mb-0">Saisissez au moins 2 caractères.</p>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                    return;
-                }
+        if(searchPromoSelect) {
+            fetch("{% url 't_tresorerie:ApiLoadPromo' %}")
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(promo => {
+                    const option = document.createElement('option');
+                    option.value = promo.id;
+                    option.textContent = (promo.code ? promo.code : promo.label) + (promo.session_label ? ' - ' + promo.session_label : '');
+                    searchPromoSelect.appendChild(option);
+                });
+            })
+            .catch(err => console.error("Error loading promos:", err));
+        }
 
+        function triggerSearch() {
+            clearTimeout(searchTimeout);
+            const query = searchInput ? searchInput.value.trim() : '';
+            const promo_id = searchPromoSelect ? searchPromoSelect.value : '';
+            
+            if(query.length < 2 && !promo_id) {
                 resultsBody.innerHTML = `
                     <tr>
                         <td colspan="5" class="text-center py-5">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Chargement...</span>
+                            <div class="text-muted">
+                                <i class="ri-keyboard-line fs-1 mb-3 d-block text-warning opacity-50"></i>
+                                <p class="mb-0">Saisissez au moins 2 caractères ou sélectionnez une promotion.</p>
                             </div>
-                            <p class="text-muted mt-2 mb-0">Recherche en cours...</p>
                         </td>
                     </tr>
                 `;
+                return;
+            }
 
-                searchTimeout = setTimeout(() => {
-                    fetch(`{% url 't_tresorerie:ApiSearchProspectForRefund' %}?q=${encodeURIComponent(query)}`)
-                    .then(response => response.json())
+            resultsBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                        <p class="text-muted mt-2 mb-0">Recherche en cours...</p>
+                    </td>
+                </tr>
+            `;
+
+            searchTimeout = setTimeout(() => {
+                const params = new URLSearchParams();
+                if(query) params.append('q', query);
+                if(promo_id) params.append('promo_id', promo_id);
+                
+                fetch(`{% url 't_tresorerie:ApiSearchProspectForRefund' %}?${params.toString()}`)
+                .then(response => response.json())
                     .then(data => {
                         resultsBody.innerHTML = '';
                         if(data.prospects && data.prospects.length > 0) {
@@ -1107,10 +1183,10 @@
                                             ${badgeFacture}
                                         </td>
                                         <td class="text-end">
-                                            <a href="{% url 't_tresorerie:PageRemboursement' %}?client_id=${p.id}" class="btn btn-primary rounded-pill btn-sm px-3 shadow-sm d-inline-flex align-items-center">
+                                            <button type="button" class="btn btn-primary rounded-pill btn-sm px-3 shadow-sm d-inline-flex align-items-center btn-demander-rembourssement" data-client="${p.id}">
                                                 <span>Demander</span>
                                                 <i class="ri-arrow-right-s-line ms-1 fs-16"></i>
-                                            </a>
+                                            </button>
                                         </td>
                                     </tr>
                                 `;
@@ -1134,8 +1210,14 @@
                         console.error(err);
                         resultsBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">Erreur lors de la recherche.</td></tr>';
                     });
-                }, 500);
-            });
+            }, 500);
+        }
+
+        if(searchInput) {
+            searchInput.addEventListener('input', triggerSearch);
+        }
+        if(searchPromoSelect) {
+            searchPromoSelect.addEventListener('change', triggerSearch);
         }
         
         // --- LOGIQUE D'EXECUTION DU REMBOURSEMENT ---
@@ -1206,6 +1288,51 @@
             loadDepensesCategories();
             
             $('#confirmationRemboursementModal').modal('show');
+        });
+
+        // Demande de remboursement modal via liste-des-rembourssement
+        $(document).on('click', '.btn-demander-rembourssement', function(){
+            var clientId = $(this).data('client');
+            $('#confirmRefundBtn').data('clientId', clientId);
+            $('#searchProspectModal').modal('hide'); // Close the search modal
+            $('.refundModal').modal('show'); // Open the refund reason modal
+        });
+
+        // Confirmation de remboursement
+        $(document).on('click', '#confirmRefundBtn', function(){
+            var clientId = $(this).data('clientId');
+            var reason = $('#refundReason').val();
+            
+            if (!reason.trim()) {
+                alertify.error("Veuillez indiquer le motif du remboursement.");
+                return;
+            }
+            
+            if (!clientId) {
+                alertify.error("Aucun client sélectionné pour la demande de remboursement.");
+                return;
+            }
+            
+            $.ajax({
+                url : "{% url 't_tresorerie:ApiRequestRefundPaiement' %}",
+                dataType : "JSON",
+                type : "POST",
+                data : {
+                    'client_id' : clientId,
+                    'reason' : reason,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success : function(response){
+                    if(response.status === "success"){
+                        alertify.success("La demande de remboursement à été envoyée avec succès");
+                        loadRemboursementsData();
+                        $('.refundModal').modal('hide');
+                        $('#refundReason').val(''); // Clear the reason field
+                    }else{
+                        alertify.error("Une erreur c'est produite lors du traitement de la requete");
+                    }
+                }
+            });
         });
 
         $(document).on('click', '#confirmerRemboursementBtn', function(){

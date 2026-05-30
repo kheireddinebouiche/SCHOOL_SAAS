@@ -282,7 +282,7 @@ def brouillard_banck_json(request):
         )
 
     # ---- 2. Dépenses (Sorties en banque) ----
-    depenses = Depenses.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date).order_by('date_paiement').exclude(date_paiement__isnull=True).values(
+    depenses = Depenses.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date, etat=True).order_by('date_paiement').exclude(date_paiement__isnull=True).values(
         'reference',
         nom=F('label'),
         date=F('date_paiement'),
@@ -506,7 +506,7 @@ def ApiImputeBankPaiment(request):
                     action_type='UPDATE',
                     target_model='OperationsBancaire',
                     target_id=str(operationId),
-                    details=f"Imputation bancaire de l'opération {operation.ref or operationId} sur le compte {compte.bank_name}. Montant: {operation.montant} DA.",
+                    details=f"Imputation bancaire de l'opération {operation.reference_bancaire or operationId} sur le compte {compte.bank_name}. Montant: {operation.montant} DA.",
                     ip_address=request.META.get('REMOTE_ADDR')
                 )
 
@@ -549,22 +549,72 @@ from institut_app.decorators import *
 def ApiDetailsPaiement(request):
     if request.method == "GET":
         id = request.GET.get('id')
-        
-        obj=OperationsBancaire.objects.get(id = id)
-        data = {
-            'id' : obj.id,
-            'operation_type' : obj.get_operation_type_display(),
-            'paiement' : obj.paiement.id if obj.paiement.id else None,
-            'montant' : obj.montant if obj.montant else None,
-            'date_operation' : obj.date_operation if obj.date_operation else None,
-            'reference_bancaire' : obj.reference_bancaire if obj.reference_bancaire else None,
-            'justification' : obj.justification if obj.justification else None,
-            'is_rapproche' : obj.is_rapproche if obj.is_rapproche else None,
-            'is_paid' : obj.is_paid if obj.is_paid else None,
-            'date_paiement' : obj.date_paiement if obj.date_paiement else None,
-
-        }
-        return JsonResponse(data, safe=False)
+        try:
+            obj=OperationsBancaire.objects.get(id = id)
+            
+            client_name = "N/A"
+            fournisseur_name = "N/A"
+            email = "N/A"
+            phone = "N/A"
+            categorie = "N/A"
+            mode_paiement_label = "N/A"
+            compte_name = obj.compte_bancaire.bank_name if obj.compte_bancaire else "N/A"
+            observations = obj.justification or "Aucune observation"
+            
+            if obj.paiement:
+                if obj.paiement.prospect:
+                    client_name = f"{obj.paiement.prospect.nom or ''} {obj.paiement.prospect.prenom or ''}".strip()
+                    email = obj.paiement.prospect.email or "N/A"
+                    phone = getattr(obj.paiement.prospect, 'telephone', "N/A") or getattr(obj.paiement.prospect, 'phone', "N/A")
+                mode_paiement_label = obj.paiement.get_mode_paiement_display()
+            elif obj.autre_produit:
+                if obj.autre_produit.client:
+                    client_name = f"{obj.autre_produit.client.nom or ''} {obj.autre_produit.client.prenom or ''}".strip()
+                    email = obj.autre_produit.client.email or "N/A"
+                    phone = getattr(obj.autre_produit.client, 'telephone', "N/A") or getattr(obj.autre_produit.client, 'phone', "N/A")
+                mode_paiement_label = obj.autre_produit.get_mode_paiement_display()
+            elif obj.conseil_paiement:
+                if obj.conseil_paiement.facture and obj.conseil_paiement.facture.client:
+                    client_name = f"{obj.conseil_paiement.facture.client.nom or ''} {obj.conseil_paiement.facture.client.prenom or ''}".strip()
+                    email = obj.conseil_paiement.facture.client.email or "N/A"
+                    phone = getattr(obj.conseil_paiement.facture.client, 'telephone', "N/A") or getattr(obj.conseil_paiement.facture.client, 'phone', "N/A")
+                mode_paiement_label = obj.conseil_paiement.get_mode_paiement_display()
+            elif obj.depense:
+                if obj.depense.fournisseur:
+                    fournisseur_name = obj.depense.fournisseur.designation
+                    email = getattr(obj.depense.fournisseur, 'email', "N/A") or "N/A"
+                    phone = getattr(obj.depense.fournisseur, 'telephone', "N/A") or getattr(obj.depense.fournisseur, 'phone', "N/A")
+                elif obj.depense.client:
+                    fournisseur_name = f"{obj.depense.client.nom or ''} {obj.depense.client.prenom or ''}".strip()
+                    email = obj.depense.client.email or "N/A"
+                    phone = getattr(obj.depense.client, 'telephone', "N/A") or getattr(obj.depense.client, 'phone', "N/A")
+                if obj.depense.category:
+                    categorie = obj.depense.category.name
+                mode_paiement_label = obj.depense.get_mode_paiement_display()
+                observations = obj.depense.description or observations
+            
+            data = {
+                'id' : obj.id,
+                'operation_type' : obj.get_operation_type_display(),
+                'type_code' : obj.operation_type,
+                'montant' : float(obj.montant) if obj.montant else 0,
+                'date_operation' : obj.date_operation.strftime('%Y-%m-%d') if obj.date_operation else None,
+                'reference_bancaire' : obj.reference_bancaire if obj.reference_bancaire else None,
+                'is_rapproche' : obj.is_rapproche,
+                'is_paid' : obj.is_paid,
+                'date_paiement' : obj.date_paiement.strftime('%Y-%m-%d') if obj.date_paiement else None,
+                'client_name': client_name,
+                'fournisseur_name': fournisseur_name,
+                'email': email,
+                'phone': str(phone),
+                'categorie': categorie,
+                'mode_paiement_label': mode_paiement_label,
+                'compte_name': compte_name,
+                'observations': observations,
+            }
+            return JsonResponse(data, safe=False)
+        except Exception as e:
+            return JsonResponse({"status" : "error", "message": str(e)})
 
     else:
         return JsonResponse({"status" : "error"})
