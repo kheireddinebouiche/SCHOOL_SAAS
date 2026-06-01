@@ -65,7 +65,10 @@ class Employees(models.Model):
         return last_contract.date_embauche if last_contract else None
 
     def __str__(self):
-        return f"{self.nom} {self.prenom}"
+        nom = self.nom or ""
+        prenom = self.prenom or ""
+        res = f"{nom} {prenom}".strip()
+        return res if res else f"Employé #{self.id}"
 
 class HRConfig(models.Model):
     # Horaires de travail
@@ -79,7 +82,11 @@ class HRConfig(models.Model):
     
     # Paramètres Heures Sup
     taux_heure_sup_standard = models.DecimalField(max_digits=5, decimal_places=2, default=1.5) # +50%
+    taux_heure_sup_75 = models.DecimalField(max_digits=5, decimal_places=2, default=1.75) # +75%
     taux_heure_sup_nuit = models.DecimalField(max_digits=5, decimal_places=2, default=2.0) # +100%
+    
+    # Majorations
+    jours_supplementaires_sud = models.IntegerField(default=10, help_text="Jours de congé supplémentaires pour le Sud")
     
     updated_at = models.DateTimeField(auto_now=True)
 

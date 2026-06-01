@@ -64,7 +64,9 @@ class PaieEngine:
         Calcule la fiche de paie complète.
         """
         config = ParametresPaie.get_config(entreprise=getattr(contrat, 'entreprise', None))
-        taux_ss = config.taux_ss
+        taux_ss = Decimal(str(config.taux_ss))
+        taux_ss_patronal = Decimal(str(getattr(config, 'taux_ss_patronal', '0.26')))
+        snmg_valeur = Decimal(str(getattr(config, 'snmg_valeur', '20000.00')))
         jours_std = config.jours_travailles_standard
         heures_std = config.heures_mensuelles_standard
         
@@ -84,6 +86,11 @@ class PaieEngine:
         else:
             # Base mensualisée
             salaire_base = Decimal(salaire_base_attr)
+            
+            # Vérification SNMG (si temps plein et jours standard)
+            if salaire_base > 0 and salaire_base < snmg_valeur:
+                salaire_base = snmg_valeur
+
             if jours_travailles < jours_std:
                  # Prorata temporis (Base * Jours / Standard)
                  salaire_base = (salaire_base * Decimal(jours_travailles)) / Decimal(jours_std)
@@ -124,6 +131,16 @@ class PaieEngine:
                 # Calculate Montant based on Mode
                 if rubrique.mode_calcul == 'PERCENT':
                     montant = (valeur * salaire_base) / Decimal('100')
+                elif rubrique.mode_calcul == 'ANCIENNETE':
+                    date_recrutement = getattr(contrat.employee, 'date_recrutement', None) if contrat.employee else None
+                    if date_recrutement:
+                        from datetime import date
+                        today = date.today()
+                        annees = today.year - date_recrutement.year - ((today.month, today.day) < (date_recrutement.month, date_recrutement.day))
+                        pourcentage_total = valeur * Decimal(annees)
+                        montant = (pourcentage_total * salaire_base) / Decimal('100')
+                    else:
+                        montant = Decimal('0.00')
                 elif rubrique.mode_calcul == 'HOURS':
                     # Use hourly rate
                     if 'VACATION' in type_c or (not salaire_base_attr and salaire_horaire > 0):
@@ -153,6 +170,7 @@ class PaieEngine:
         
         # 4. Montant SS
         montant_ss = base_ss * taux_ss
+        montant_ss_patronal = base_ss * taux_ss_patronal
         
         # 5. Imposable (Base SS - SS + Primes Imposables Non Cotisables)
         salaire_imposable = (base_ss - montant_ss) + total_gains_imposables_non_cotisables
@@ -168,6 +186,7 @@ class PaieEngine:
             'retenue_absences_montant': retenue_absences_montant,
             'base_ss': base_ss,
             'montant_ss': montant_ss,
+            'montant_ss_patronal': montant_ss_patronal,
             'salaire_imposable': salaire_imposable,
             'irg': irg,
             'net_a_payer': net_a_payer,

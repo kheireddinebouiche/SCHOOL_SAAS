@@ -645,6 +645,46 @@ DEFAULT_RELANCE_CORPS = """<!DOCTYPE html>
 
 class ParametreFinancier(models.Model):
     """Singleton model for global financial parameters."""
+    
+    compte_tva_collectee = models.ForeignKey(
+        'PaymentCategory', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='param_tva_collectee', 
+        verbose_name="Catégorie Recette TVA Collectée",
+        help_text="Catégorie de recette utilisée pour la TVA sur les factures clients"
+    )
+    
+    compte_tva_deductible = models.ForeignKey(
+        'DepensesCategory', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='param_tva_deductible', 
+        verbose_name="Type Dépense TVA Déductible",
+        help_text="Type de dépense utilisé pour la TVA sur les achats fournisseurs"
+    )
+    
+    compte_timbre_collecte = models.ForeignKey(
+        'PaymentCategory', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='param_timbre_collecte', 
+        verbose_name="Catégorie Recette Droit de Timbre",
+        help_text="Catégorie de recette utilisée pour les droits de timbre collectés"
+    )
+    
+    compte_timbre_charge = models.ForeignKey(
+        'DepensesCategory', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='param_timbre_charge', 
+        verbose_name="Type Dépense Droit de Timbre",
+        help_text="Type de dépense utilisé pour les droits de timbre payés"
+    )
 
     bloquer_date_paiement = models.BooleanField(
         default=True,

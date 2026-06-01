@@ -131,6 +131,7 @@ urlpatterns = [
 
     path('liste-des-rembourssements/', listeDesRembourssement, name="listeDesRembourssement"),
     path('rembourssement/details/<int:pk>/',DetailsRembourssement, name="DetailsRembourssement"),
+    path('rembourssement/cancel/<int:pk>/', ApiCancelRefund, name="ApiCancelRefund"),
     path('ApiLoadRemboursements/', ApiLoadRemboursements, name="ApiLoadRemboursements"),
     path('api/search-prospect-refund/', ApiSearchProspectForRefund, name="ApiSearchProspectForRefund"),
 
@@ -224,6 +225,7 @@ urlpatterns = [
 
     ##### Facturation 
     path('facturation/liste/', facturation.PageFacturation, name="PageFacturation"),
+    path('facturation/avoir/liste/', facturation.PageFacturesAvoir, name="PageFacturesAvoir"),
     path('ApiListeDesFactures', facturation.ApiListeDesFactures, name="ApiListeDesFactures"),
     path('ApiDemanderRemboursement', facturation.ApiDemanderRemboursement, name="ApiDemanderRemboursement"),
     path('details-facture/<str:pk>/', facturation.DetailsFactureTresorerie, name="DetailsFactureTresorerie"),
@@ -231,6 +233,7 @@ urlpatterns = [
     path('ApiValidateFacture', facturation.ApiValidateFacture, name="ApiValidateFacture"),
     path('ApiGetDraftInvoiceDetails', facturation.ApiGetDraftInvoiceDetails, name="ApiGetDraftInvoiceDetails"),
     path('ApiUpdateDraftInvoice', ApiUpdateDraftInvoice, name="ApiUpdateDraftInvoice"),
+    path('ApiUpdateReferencePaiement', ApiUpdateReferencePaiement, name="ApiUpdateReferencePaiement"),
 
 
     path('categorie-produits/liste/', PageProduits, name="PageProduits"),

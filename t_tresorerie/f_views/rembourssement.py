@@ -131,6 +131,7 @@ def DetailsRembourssement(request, pk):
     last_paiements = Paiements.objects.filter(prospect=obj.client, is_refund=False).last()
 
     groupe_line = GroupeLine.objects.filter(student=obj.client)
+    has_factured_payments = paiements.filter(facture__isnull=False).exists()
 
     context = {
         'obj': obj,
@@ -143,6 +144,7 @@ def DetailsRembourssement(request, pk):
         'entreprise' : entreprise,
         'last_payment' : last_paiements,
         'groupe' : groupe_line,
+        'has_factured_payments': has_factured_payments,
     }
     return render(request, 'tenant_folder/comptabilite/rembourssement/details_rembourssement.html', context)
 
@@ -170,6 +172,8 @@ def ApiLoadPaiements(request):
                 'mode_paiement_label' : i.get_mode_paiement_display(),
                 'paiement_label' : i.paiement_label,
                 'is_refund' : i.is_refund,
+                'is_factured' : bool(i.facture),
+                'facture_num' : i.facture.num_facture if i.facture else None,
             })
 
         return JsonResponse(data, safe=False)
@@ -259,4 +263,29 @@ def ApiSearchProspectForRefund(request):
             })
             
         return JsonResponse({'prospects': data})
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+@login_required(login_url="institut_app:login")
+@require_http_methods(["POST"])
+def ApiCancelRefund(request, pk):
+    try:
+        obj = Rembourssements.objects.get(id=pk)
+        if obj.is_appliced:
+            return JsonResponse({'status': 'error', 'message': "Impossible d'annuler un remboursement déjà déclenché (dépense générée)."}, status=400)
+        
+        # Log action before deletion
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='Rembourssements',
+            target_id=str(obj.id),
+            details=f"Annulation/Suppression de la demande de remboursement de {obj.allowed_amount} DA pour {obj.client.nom} {obj.client.prenom}.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        obj.delete()
+        return JsonResponse({'status': 'success', 'message': "La demande de remboursement a été annulée et réinitialisée."})
+    except Rembourssements.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': "Demande de remboursement introuvable."}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

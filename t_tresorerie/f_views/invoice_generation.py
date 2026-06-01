@@ -150,7 +150,7 @@ def create_invoice_from_payment_object(paiement, tva_percent, show_tva, skip_tim
         montant_ht = montant_paye / (Decimal('1') + (tva_decimal / Decimal('100')))
     
     # Round HT to 2 decimal places as it's stored in DecimalField(10, 2)
-    montant_ht = montant_ht.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+    montant_ht = montant_ht.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
     
     if apply_timbre:
         facture.montant_timbre = timbre
@@ -329,10 +329,10 @@ def generate_consolidated_invoice(request):
                 
                 timbre_final = calculate_timbre_for_bracket(base_ttc, bracket_rate, is_ex_bracket)
                 montant_ht = base_ttc / (Decimal('1') + (tva_decimal / Decimal('100')))
-                return montant_ht.quantize(Decimal('1'), rounding=ROUND_HALF_UP), timbre_final
+                return montant_ht.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP), timbre_final
             else:
                 montant_ht = montant_paye / (Decimal('1') + (tva_decimal / Decimal('100')))
-                return montant_ht.quantize(Decimal('1'), rounding=ROUND_HALF_UP), Decimal('0')
+                return montant_ht.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP), Decimal('0')
 
         total_timbre = Decimal('0')
 
@@ -542,10 +542,10 @@ def ApiUpdateDraftInvoice(request):
                     
                     timbre_final = calculate_timbre_for_bracket(base_ttc, bracket_rate, is_ex_bracket)
                     montant_ht = base_ttc / (Decimal('1') + (tva_decimal / Decimal('100')))
-                    return montant_ht.quantize(Decimal('1'), rounding=ROUND_HALF_UP), timbre_final
+                    return montant_ht.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP), timbre_final
                 else:
                     montant_ht = montant_paye / (Decimal('1') + (tva_decimal / Decimal('100')))
-                    return montant_ht.quantize(Decimal('1'), rounding=ROUND_HALF_UP), Decimal('0')
+                    return montant_ht.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP), Decimal('0')
 
             total_timbre = Decimal('0')
 

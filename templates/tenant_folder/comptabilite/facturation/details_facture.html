@@ -137,7 +137,11 @@
                     </button>
                     {% endif %}
                     {% if facture.etat == 'paye' %}
-                        {% if not facture.remboursements.exists %}
+                        {% if facture_avoir %}
+                        <button type="button" class="btn btn-secondary px-4 shadow text-white" disabled title="Une facture d'avoir ({{ facture_avoir.num_facture }}) a été générée pour cette facture.">
+                            <i class="ri-refund-2-line me-2"></i> Remboursement (Avoir: {{ facture_avoir.num_facture }})
+                        </button>
+                        {% elif not facture.remboursements.exists %}
                         <button type="button" class="btn btn-warning px-4 shadow text-white" data-bs-toggle="modal" data-bs-target="#refundInvoiceModal">
                             <i class="ri-refund-2-line me-2"></i> Demander un remboursement
                         </button>
@@ -176,7 +180,11 @@
                                     <div class="badge bg-white {% if facture.etat == 'brouillon' %}text-warning{% elif facture.etat == 'paye' %}text-success{% else %}text-secondary{% endif %} px-3 py-2 rounded-pill fw-bold">
                                         {{ facture.get_etat_display|upper }}
                                     </div>
-                                    {% if facture.remboursements.exists %}
+                                    {% if facture_avoir %}
+                                    <div class="badge bg-danger text-white px-3 py-2 rounded-pill fw-bold shadow-sm" title="Remboursée (Avoir généré)">
+                                        <i class="ri-refund-line"></i> AVOIR: {{ facture_avoir.num_facture }}
+                                    </div>
+                                    {% elif facture.remboursements.exists %}
                                     <div class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold shadow-sm" title="Sujet à un remboursement">
                                         <i class="ri-refund-line"></i> REMBOURSSEMENT
                                     </div>
@@ -247,14 +255,14 @@
                                                 {% endif %}
                                             </td>
                                             <td class="text-center fw-bold text-dark">{{ item.quantite|floatformat:0 }}</td>
-                                            <td class="text-end text-muted">{{ item.prix_unitaire|floatformat:2 }}</td>
+                                            <td class="text-end text-muted">{% if facture.type_facture == 'avoir' %}-{% endif %}{{ item.prix_unitaire|floatformat:2 }}</td>
                                             {% if facture.show_remise %}
                                             <td class="text-center text-danger fw-medium">{{ item.remise_percent|floatformat:0 }}%</td>
                                             {% endif %}
                                             {% if facture.show_tva %}
                                             <td class="text-center"><span class="badge bg-light text-dark">{{ item.tva_percent|floatformat:0 }}%</span></td>
                                             {% endif %}
-                                            <td class="text-end fw-bold text-dark">{{ item.montant_ht|floatformat:2 }}</td>
+                                            <td class="text-end fw-bold text-dark">{% if facture.type_facture == 'avoir' %}-{% endif %}{{ item.montant_ht|floatformat:2 }}</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>

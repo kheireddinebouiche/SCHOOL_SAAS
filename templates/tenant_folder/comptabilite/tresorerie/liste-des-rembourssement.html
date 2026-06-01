@@ -431,8 +431,43 @@
                 <div class="card border border-info mb-3">
                     <div class="card-body p-3">
                         <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted">Montant:</span>
+                            <span class="text-muted">Montant Autorisé:</span>
                             <span class="fw-bold text-success" id="confirmMontantRemboursement">0.00 DA</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card border border-primary mb-3">
+                    <div class="card-header bg-primary bg-opacity-10 py-2">
+                        <h6 class="mb-0 text-primary"><i class="ri-pie-chart-line me-2"></i>Ventilation du Remboursement</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-0" id="allocationPaymentsTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>N° / Label</th>
+                                        <th>Facturé ?</th>
+                                        <th>Montant Payé</th>
+                                        <th style="width: 150px;">À Rembourser</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted"><i class="ri-loader-4-line spin"></i> Chargement des paiements...</td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="bg-light fw-bold">
+                                        <td colspan="4" class="text-end">Total Alloué:</td>
+                                        <td class="text-danger" id="totalAllocatedAmount">0.00 DA</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div class="p-2 text-danger small d-none" id="allocationErrorMsg">
+                            <i class="ri-error-warning-line me-1"></i> Le total alloué doit être exactement égal au montant autorisé.
                         </div>
                     </div>
                 </div>
@@ -1058,6 +1093,10 @@
                     <h4 class="mb-3">Vous êtes sur le point de faire une demande de remboursement</h4>
                     <p class="text-muted mb-4">La demande de remboursement doit être validée par un compte de niveau supérieur. Veuillez indiquer le motif du remboursement.</p>
                     
+                    <div id="refundModalPaymentInfo" class="mb-4 p-3 bg-light rounded-3 border">
+                        <!-- Content will be injected here -->
+                    </div>
+                    
                     <div class="mb-4">
                         <label for="refundReason" class="form-label fw-medium">Motif du remboursement <span class="text-danger">*</span></label>
                         <textarea class="form-control border-0 bg-light py-2" id="refundReason" rows="3" placeholder="Veuillez indiquer la raison du remboursement..."></textarea>
@@ -1183,7 +1222,7 @@
                                             ${badgeFacture}
                                         </td>
                                         <td class="text-end">
-                                            <button type="button" class="btn btn-primary rounded-pill btn-sm px-3 shadow-sm d-inline-flex align-items-center btn-demander-rembourssement" data-client="${p.id}">
+                                            <button type="button" class="btn ${p.total_paye > 0 ? 'btn-primary' : 'btn-secondary'} rounded-pill btn-sm px-3 shadow-sm d-inline-flex align-items-center btn-demander-rembourssement" data-client="${p.id}" data-has-invoice="${p.has_invoice}" data-total-paye="${p.total_paye}" ${p.total_paye <= 0 ? 'disabled title="Aucun paiement effectué"' : ''}>
                                                 <span>Demander</span>
                                                 <i class="ri-arrow-right-s-line ms-1 fs-16"></i>
                                             </button>
@@ -1277,6 +1316,7 @@
             var mode_paiement = $(this).data('mode_paiement');
 
             $('#confirmMontantRemboursement').text(formatComptable(amount) + ' DA');
+            $('#totalAllocatedAmount').text('0.00 DA');
             
             // Attacher les data à la modale pour le bouton de confirmation
             $('#confirmationRemboursementModal').data('amount', amount);
@@ -1287,13 +1327,97 @@
             loadEntites();
             loadDepensesCategories();
             
+            // Charger les paiements pour la ventilation
+            $('#allocationPaymentsTable tbody').html('<tr><td colspan="5" class="text-center text-muted"><i class="ri-loader-4-line spin"></i> Chargement des paiements...</td></tr>');
+            $('#allocationErrorMsg').addClass('d-none');
+            $('#confirmerRemboursementBtn').prop('disabled', false);
+
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiLoadPaiements' %}",
+                type: "GET",
+                dataType: "JSON",
+                data: { 'remboursement_id': id_refund },
+                success: function(data) {
+                    var html = '';
+                    if (data && data.length > 0) {
+                        $.each(data, function(index, p) {
+                            if (!p.is_refund) {
+                                // Assume it's invoiced if facturé info is true or not, we might not have `facture` in this endpoint. Wait, does ApiLoadPaiements return facture status?
+                                // We'll add an input for allocation
+                                var is_facture = p.is_factured ? '<span class="badge bg-primary">Oui</span>' : '<span class="badge bg-secondary">Non</span>';
+                                html += '<tr>';
+                                html += '<td>' + (p.date_paiement || '-') + '</td>';
+                                html += '<td><b>#' + (p.num || '-') + '</b><br><small class="text-muted">' + (p.paiement_label || '-') + '</small></td>';
+                                html += '<td>' + is_facture + '</td>';
+                                html += '<td class="payment-amount" data-max="' + parseFloat(p.montant_paye) + '">' + formatComptable(p.montant_paye) + ' DA</td>';
+                                html += '<td><input type="number" class="form-control form-control-sm allocation-input" data-payment-id="' + p.id + '" min="0" max="' + parseFloat(p.montant_paye) + '" step="0.01" value="0"></td>';
+                                html += '</tr>';
+                            }
+                        });
+                    }
+                    if (html === '') {
+                        html = '<tr><td colspan="5" class="text-center text-muted">Aucun paiement disponible pour le remboursement.</td></tr>';
+                    }
+                    $('#allocationPaymentsTable tbody').html(html);
+                },
+                error: function() {
+                    $('#allocationPaymentsTable tbody').html('<tr><td colspan="5" class="text-center text-danger">Erreur de chargement.</td></tr>');
+                }
+            });
+
             $('#confirmationRemboursementModal').modal('show');
+        });
+
+        // Calculer le total alloué en temps réel
+        $(document).on('input', '.allocation-input', function() {
+            var totalAllocated = 0;
+            var maxAllowed = parseFloat($('#confirmationRemboursementModal').data('amount'));
+
+            $('.allocation-input').each(function() {
+                var val = parseFloat($(this).val()) || 0;
+                var max = parseFloat($(this).closest('tr').find('.payment-amount').data('max'));
+                if (val > max) {
+                    $(this).val(max);
+                    val = max;
+                }
+                totalAllocated += val;
+            });
+
+            $('#totalAllocatedAmount').text(formatComptable(totalAllocated) + ' DA');
+
+            if (Math.abs(totalAllocated - maxAllowed) > 0.01) {
+                $('#totalAllocatedAmount').removeClass('text-success').addClass('text-danger');
+                $('#allocationErrorMsg').removeClass('d-none');
+            } else {
+                $('#totalAllocatedAmount').removeClass('text-danger').addClass('text-success');
+                $('#allocationErrorMsg').addClass('d-none');
+            }
         });
 
         // Demande de remboursement modal via liste-des-rembourssement
         $(document).on('click', '.btn-demander-rembourssement', function(){
             var clientId = $(this).data('client');
+            var hasInvoice = $(this).data('has-invoice') === true || $(this).data('has-invoice') === "true";
+            var totalPaye = parseFloat($(this).data('total-paye') || 0);
+            
             $('#confirmRefundBtn').data('clientId', clientId);
+            
+            var invoiceHtml = hasInvoice 
+                ? '<span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill"><i class="ri-checkbox-circle-fill me-1 align-middle"></i>Paiements Facturés</span>' 
+                : '<span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill"><i class="ri-error-warning-fill me-1 align-middle"></i>Non facturés</span>';
+                
+            $('#refundModalPaymentInfo').html(`
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small d-block text-uppercase fw-semibold mb-1" style="letter-spacing: 0.5px;">Montants déjà payés</span>
+                        <strong class="text-dark fs-5">${totalPaye.toLocaleString('fr-FR')} DA</strong>
+                    </div>
+                    <div>
+                        ${invoiceHtml}
+                    </div>
+                </div>
+            `);
+            
             $('#searchProspectModal').modal('hide'); // Close the search modal
             $('.refundModal').modal('show'); // Open the refund reason modal
         });
@@ -1336,7 +1460,7 @@
         });
 
         $(document).on('click', '#confirmerRemboursementBtn', function(){
-            var amount = $('#confirmationRemboursementModal').data('amount');
+            var amount = parseFloat($('#confirmationRemboursementModal').data('amount'));
             var mode_rembourssement = $('#confirmationRemboursementModal').data('mode_paiement');
             var id_refund = $('#confirmationRemboursementModal').data('id_refund');
             var client_id = $('#confirmationRemboursementModal').data('client_id');
@@ -1348,6 +1472,27 @@
                     alertify.error("Veuillez sélectionner une catégorie de dépense");
                 } else {
                     alert("Veuillez sélectionner une catégorie de dépense");
+                }
+                return;
+            }
+
+            // Collecter et valider la ventilation
+            var allocations = {};
+            var totalAllocated = 0;
+            $('.allocation-input').each(function() {
+                var paymentId = $(this).data('payment-id');
+                var val = parseFloat($(this).val()) || 0;
+                if (val > 0) {
+                    allocations[paymentId] = val;
+                    totalAllocated += val;
+                }
+            });
+
+            if (Math.abs(totalAllocated - amount) > 0.01) {
+                if (typeof alertify !== 'undefined') {
+                    alertify.error("Le total alloué (" + totalAllocated.toFixed(2) + " DA) ne correspond pas au montant autorisé (" + amount.toFixed(2) + " DA).");
+                } else {
+                    alert("Le total alloué ne correspond pas au montant autorisé.");
                 }
                 return;
             }
@@ -1389,9 +1534,10 @@
                     'refund_amount' : amount,
                     'mode_rembourssement' : mode_rembourssement,
                     'id_refund' : id_refund,
-                    'entite_select' :entite_select,
+                    'entite_select' : entite_select,
                     'category_select' : category_select,
                     'cancel_enrollment' : $('#cancelEnrollmentCheckbox').is(':checked'),
+                    'allocations' : JSON.stringify(allocations),
                     'csrfmiddlewaretoken': '{{ csrf_token }}'
                 },
                 success : function(response){

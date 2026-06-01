@@ -64,6 +64,7 @@ class FichePaie(models.Model):
     
     base_ss = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     montant_ss = models.DecimalField(max_digits=12, decimal_places=2, default=0) # 9%
+    montant_ss_patronal = models.DecimalField(max_digits=12, decimal_places=2, default=0) # 26%
     
     salaire_imposable = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     irg = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -82,9 +83,11 @@ class FichePaie(models.Model):
 class ParametresPaie(models.Model):
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name='parametres_paie')
     taux_ss = models.DecimalField(max_digits=5, decimal_places=4, default=0.09, help_text="Taux de sécurité sociale (ex: 0.09 pour 9%)")
+    taux_ss_patronal = models.DecimalField(max_digits=5, decimal_places=4, default=0.26, help_text="Taux de sécurité sociale patronal (ex: 0.26 pour 26%)")
     jours_travailles_standard = models.IntegerField(default=22, help_text="Nombre de jours travaillés standard par mois")
     heures_mensuelles_standard = models.DecimalField(max_digits=6, decimal_places=2, default=173.33, help_text="Nombre d'heures travaillés standard par mois (ex: 173.33)")
     seuil_exoneration_irg = models.DecimalField(max_digits=12, decimal_places=2, default=30000, help_text="Seuil d'exonération IRG")
+    snmg_valeur = models.DecimalField(max_digits=12, decimal_places=2, default=20000.00, help_text="Valeur du Salaire National Minimum Garanti (SNMG)")
     
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -124,6 +127,7 @@ class Rubrique(models.Model):
         ('FIXE', 'Montant Fixe (DA)'),
         ('PERCENT', 'Pourcentage du Salaire de Base (%)'),
         ('HOURS', 'Nombre d\'heures (h)'),
+        ('ANCIENNETE', 'Ancienneté (IEP)'),
     ]
     
     libelle = models.CharField(max_length=100)

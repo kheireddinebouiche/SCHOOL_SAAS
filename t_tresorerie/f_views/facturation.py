@@ -14,7 +14,13 @@ from django.db.models import Q, Sum, F, Case, When, Value, CharField, Count
 
 @login_required(login_url="institut_app:login")
 def PageFacturation(request):
-    return render(request, "tenant_folder/comptabilite/facturation/liste_des_factures.html")
+    if request.method == "GET":
+        return render(request, "tenant_folder/comptabilite/facturation/liste_des_factures.html", {"filter_type": "all"})
+
+@login_required(login_url="institut_app:login")
+def PageFacturesAvoir(request):
+    if request.method == "GET":
+        return render(request, "tenant_folder/comptabilite/facturation/liste_des_factures.html", {"filter_type": "avoir"})
 
 
 @login_required(login_url="institut_app:login")
@@ -25,6 +31,9 @@ def ApiListeDesFactures(request):
             
             all_enterprises = Entreprise.objects.all()
             enterprises = [{'id': ent.id, 'name': ent.designation} for ent in all_enterprises]
+            
+            avoir_invoices = Facture.objects.filter(type_facture='avoir', module_source='tresorerie')
+            avoir_dict = {a.facture_source_id: a.num_facture for a in avoir_invoices if a.facture_source_id}
             
             data = []
             for f in factures:
@@ -37,14 +46,18 @@ def ApiListeDesFactures(request):
                     'client': str(f.client) if f.client else "Client Inconnu",
                     'date': f.date_emission.strftime("%Y-%m-%d") if f.date_emission else "",
                     'echeance': f.date_echeance.strftime("%Y-%m-%d") if f.date_echeance else "",
-                    'montant': float(f.total_ttc()) if hasattr(f, 'total_ttc') else 0.0,
+                    'montant': -float(f.total_ttc()) if f.type_facture == 'avoir' and hasattr(f, 'total_ttc') else (float(f.total_ttc()) if hasattr(f, 'total_ttc') else 0.0),
                     'timbre': float(f.get_timbre()),
                     'etat': f.etat,
                     'mode_paiement': f.mode_paiement,
                     'created_at': f.created_at.strftime("%Y-%m-%d") if hasattr(f, 'created_at') else "",
                     'entreprise_id': ent_id,
                     'entreprise_name': ent_name,
-                    'has_refund': f.remboursements.exists()
+                    'has_refund': f.remboursements.exists(),
+                    'type_facture': f.type_facture,
+                    'is_avoir': f.type_facture == 'avoir',
+                    'has_avoir_generated': f.id in avoir_dict,
+                    'avoir_ref': avoir_dict.get(f.id, None),
                 })
             
             return JsonResponse({'status': 'success', 'data': data, 'enterprises': enterprises})
@@ -85,8 +98,19 @@ def DetailsFactureTresorerie(request, pk):
     total_tva = sum(tva_breakdown.values())
     timbre = facture.get_timbre()
     total_ttc = facture.total_ttc()
+    
+    if facture.type_facture == 'avoir':
+        total_ht = -total_ht
+        total_tva = -total_tva
+        timbre = -timbre
+        total_ttc = -total_ttc
+        for k in tva_breakdown:
+            tva_breakdown[k] = -tva_breakdown[k]
+            
     sorted_tva = sorted([{'rate': r, 'amount': a} for r, a in tva_breakdown.items()], key=lambda x: x['rate'], reverse=True)
     paiements_lies = facture.tresorerie_paiements.all().order_by('-date_paiement')
+    
+    facture_avoir = Facture.objects.filter(facture_source=facture, type_facture='avoir').first()
 
     context = {
         "tenant": request.tenant,
@@ -99,7 +123,8 @@ def DetailsFactureTresorerie(request, pk):
         "timbre": timbre,
         "total_ttc": total_ttc,
         "tva_breakdown": sorted_tva,
-        "paiements_lies": paiements_lies
+        "paiements_lies": paiements_lies,
+        "facture_avoir": facture_avoir
     }
     return render(request, 'tenant_folder/comptabilite/facturation/details_facture.html', context)
 

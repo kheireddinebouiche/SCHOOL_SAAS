@@ -1486,9 +1486,10 @@ def ApiSaveFactureItems(request):
         config_fin = ParametreFinancier.get_instance()
         
         apply_timbre = False
-        if config_fin.activer_timbre or mode_paiement == 'esp':
-            if not config_fin.timbre_cash_only or mode_paiement == 'esp':
-                apply_timbre = True
+        if getattr(facture, 'type_facture', 'standard') != 'avoir':
+            if config_fin.activer_timbre or mode_paiement == 'esp':
+                if not config_fin.timbre_cash_only or mode_paiement == 'esp':
+                    apply_timbre = True
                 
         if apply_timbre:
             import math

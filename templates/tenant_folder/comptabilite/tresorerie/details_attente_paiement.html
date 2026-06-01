@@ -1337,7 +1337,7 @@
                                             <button id="btnNewPaiementModal" class="btn btn-premium-action btn-premium-primary" data-bs-toggle="modal" data-bs-target="#nouveauPaiementModal" title="Nouveau paiement">
                                                 <i class="ri-add-line"></i>
                                             </button>
-                                            <button id="btnRefundRequestModal" class="btn btn-premium-action btn-premium-warning" data-bs-toggle="modal" data-bs-target="#refundModal" title="Demander un remboursement">
+                                            <button id="btnRefundRequestModal" class="btn btn-premium-action btn-premium-warning d-none" data-bs-toggle="modal" data-bs-target="#refundModal" title="Demander un remboursement">
                                                 <i class="ri-refund-line"></i>
                                             </button>
                                         </div>
@@ -1950,6 +1950,10 @@
                     <div class="mb-4">
                         <label for="refundReason" class="form-label fw-medium">Motif du remboursement <span class="text-danger">*</span></label>
                         <textarea class="form-control border-0 bg-light py-2" id="refundReason" rows="3" placeholder="Veuillez indiquer la raison du remboursement..."></textarea>
+                    </div>
+                    
+                    <div id="refundModalPaymentInfo" class="mb-4 p-3 bg-light rounded-3 border">
+                        <!-- Content injected dynamically -->
                     </div>
                     
                     <div class="alert alert-warning d-flex align-items-center mt-4" role="alert">
@@ -4303,6 +4307,9 @@
                             document.getElementById('btnConfirmInscription').disabled = true;
                         }
                     }
+
+                    $('#btnRefundRequestModal').data('has-invoice', data.has_invoice);
+                    $('#btnRefundRequestModal').data('total-paye', data.total_paiement);
                 },
                 error: function(jqXHR, textStatus, errorThrown) {
                     console.error("AJAX Error in loadDatas:", textStatus, errorThrown);
@@ -6931,7 +6938,25 @@
         
         // Demande de remboursement (nouveau bouton)
         $(document).on('click', '#btnRefundRequestModal', function(){
+            var hasInvoice = $(this).data('has-invoice') === true || $(this).data('has-invoice') === "true";
+            var totalPaye = parseFloat($(this).data('total-paye') || 0);
             
+            var invoiceHtml = hasInvoice 
+                ? '<span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill"><i class="ri-checkbox-circle-fill me-1 align-middle"></i>Paiements Facturés</span>' 
+                : '<span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill"><i class="ri-error-warning-fill me-1 align-middle"></i>Non facturés</span>';
+                
+            $('#refundModalPaymentInfo').html(`
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small d-block text-uppercase fw-semibold mb-1" style="letter-spacing: 0.5px;">Montants déjà payés</span>
+                        <strong class="text-dark fs-5">${totalPaye.toLocaleString('fr-FR')} DA</strong>
+                    </div>
+                    <div>
+                        ${invoiceHtml}
+                    </div>
+                </div>
+            `);
+
             checkForPaiements();
             
         });
