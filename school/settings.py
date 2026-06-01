@@ -30,7 +30,7 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 SAAS_SYSTEM_PIN = env("SAAS_SYSTEM_PIN", default="1234")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 ALLOWED_HOSTS = ['.insim360.com', 'localhost', '127.0.0.1', '.localhost']
 
 CSRF_TRUSTED_ORIGINS = [
