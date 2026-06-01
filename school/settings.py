@@ -103,6 +103,7 @@ INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://app.saldaesystems.dz",
 ]
 # Pour plus tard sur le VPS, vous ajouterez l'adresse de votre portail :
 # CORS_ALLOWED_ORIGINS += ["https://mon-portail-etudiant.com"]

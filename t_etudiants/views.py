@@ -12,8 +12,49 @@ def ListeStudents(request):
 
 @login_required(login_url="institut_app:login")
 def ApiListeDesEtudiants(request):
-    liste = Prospets.objects.filter(statut="convertit").values('id','nom','prenom','email','indic','telephone','date_naissance','nin','groupe_line_student__groupe__nom','groupe_line_student__groupe__specialite__label','groupe_line_student__groupe__id', 'photo', 'context', 'is_double')
-    return JsonResponse(list(liste), safe=False)
+    raw_liste = Prospets.objects.filter(statut="convertit").values(
+        'id','nom','prenom','email','indic','telephone','date_naissance','nin',
+        'groupe_line_student__groupe__nom','groupe_line_student__groupe__specialite__label',
+        'groupe_line_student__groupe__id', 'photo', 'context', 'is_double'
+    )
+    
+    students_dict = {}
+    for item in raw_liste:
+        s_id = item['id']
+        if s_id not in students_dict:
+            students_dict[s_id] = {
+                'id': s_id,
+                'nom': item['nom'],
+                'prenom': item['prenom'],
+                'email': item['email'],
+                'indic': item['indic'],
+                'telephone': item['telephone'],
+                'date_naissance': item['date_naissance'],
+                'nin': item['nin'],
+                'photo': item['photo'],
+                'context': item['context'],
+                'is_double': item['is_double'],
+                'groupe_line_student__groupe__nom': item['groupe_line_student__groupe__nom'],
+                'groupe_line_student__groupe__specialite__label': item['groupe_line_student__groupe__specialite__label'],
+                'groupe_line_student__groupe__id': item['groupe_line_student__groupe__id'],
+            }
+        else:
+            existing = students_dict[s_id]
+            if item['groupe_line_student__groupe__nom']:
+                if existing['groupe_line_student__groupe__nom']:
+                    if item['groupe_line_student__groupe__nom'] not in existing['groupe_line_student__groupe__nom']:
+                        existing['groupe_line_student__groupe__nom'] += f" / {item['groupe_line_student__groupe__nom']}"
+                else:
+                    existing['groupe_line_student__groupe__nom'] = item['groupe_line_student__groupe__nom']
+            
+            if item['groupe_line_student__groupe__specialite__label']:
+                if existing['groupe_line_student__groupe__specialite__label']:
+                    if item['groupe_line_student__groupe__specialite__label'] not in existing['groupe_line_student__groupe__specialite__label']:
+                        existing['groupe_line_student__groupe__specialite__label'] += f" / {item['groupe_line_student__groupe__specialite__label']}"
+                else:
+                    existing['groupe_line_student__groupe__specialite__label'] = item['groupe_line_student__groupe__specialite__label']
+                    
+    return JsonResponse(list(students_dict.values()), safe=False)
 
 @login_required(login_url='institut_app:login')
 def StudentDetails(request):
