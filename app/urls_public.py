@@ -48,6 +48,7 @@ urlpatterns = [
     path('api/v1/instructors/exams/', get_instructor_exams_api, name='get_instructor_exams_api'),
     path('api/v1/instructors/pv/', get_instructor_pv_api, name='get_instructor_pv_api'),
     path('api/v1/instructors/submit_notes/', submit_instructor_notes_api, name='submit_instructor_notes_api'),
+    path('api/v1/instructors/submit_plan_cours/', submit_instructor_plan_cours_api, name='submit_instructor_plan_cours_api'),
 
     # path('login/',LoginView.as_view(), name="login"),
     # path('logout/',LogoutView.as_view(), name="logout"),

@@ -606,3 +606,81 @@ def delete_availability(request):
             return JsonResponse({'status': 'error', 'message': str(e)})
     else:
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+
+@login_required(login_url="institut_app:login")
+def get_formateur_assignments(request):
+    formateur_id = request.GET.get('formateur_id')
+    if not formateur_id:
+        return JsonResponse({'status': 'error', 'message': 'ID formateur requis'})
+    try:
+        formateur = Formateurs.objects.get(id=formateur_id)
+        assignments = EnseignantModule.objects.filter(formateur=formateur).select_related('module', 'module__specialite')
+        
+        assignments_data = []
+        for ass in assignments:
+            has_plan = PlansCours.objects.filter(assignment=ass).exists()
+            assignments_data.append({
+                'assignment_id': ass.id,
+                'module_code': ass.module.code if ass.module else 'N/A',
+                'module_label': ass.module.label if ass.module else 'N/A',
+                'specialite': ass.module.specialite.label if ass.module and ass.module.specialite else 'N/A',
+                'has_plan': has_plan,
+            })
+            
+        return JsonResponse({
+            'status': 'success',
+            'formateur_name': f"{formateur.nom} {formateur.prenom}",
+            'assignments': assignments_data
+        })
+    except Formateurs.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Formateur introuvable'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+@login_required(login_url="institut_app:login")
+def demand_plan_cours(request):
+    if request.method == "POST":
+        assignment_id = request.POST.get('assignment_id')
+        if not assignment_id:
+            return JsonResponse({'status': 'error', 'message': 'ID d\'affectation requis'})
+        try:
+            assignment = EnseignantModule.objects.get(id=assignment_id)
+            assignment.demande_plan_cours = True
+            assignment.save()
+            
+            formateur = assignment.formateur
+            return JsonResponse({'status': 'success', 'message': f'Demande envoyée à {formateur.nom} {formateur.prenom}.'})
+        except EnseignantModule.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Affectation introuvable'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
+
+@login_required(login_url="institut_app:login")
+def get_plan_cours_details(request):
+    assignment_id = request.GET.get('assignment_id')
+    if not assignment_id:
+        return JsonResponse({'status': 'error', 'message': 'ID d\'affectation requis'})
+    try:
+        assignment = EnseignantModule.objects.get(id=assignment_id)
+        plan_cours = PlansCours.objects.filter(assignment=assignment).first()
+        if not plan_cours:
+            return JsonResponse({'status': 'error', 'message': 'Plan de cours non rédigé.'})
+        
+        return JsonResponse({
+            'status': 'success',
+            'module_label': assignment.module.label if assignment.module else '',
+            'module_code': assignment.module.code if assignment.module else '',
+            'formateur_name': f"{assignment.formateur.nom} {assignment.formateur.prenom}" if assignment.formateur else '',
+            'general': plan_cours.general or {},
+            'deroulment': plan_cours.deroulment or [],
+            'evaluation': plan_cours.evaluation or [],
+            'autres': plan_cours.autres or {}
+        })
+    except EnseignantModule.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Affectation introuvable'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})

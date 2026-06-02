@@ -121,7 +121,7 @@ MIDDLEWARE = [
     'institut_app.middleware.ForcePasswordChangeMiddleware',
     't_crm.middleware.CurrentUserMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     
     
