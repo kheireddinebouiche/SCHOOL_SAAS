@@ -10,7 +10,7 @@ from .views import (
     ApiLoadProspects, ApiDeleteProspect, ApiFilterProspect,
     ApiLoadProspectDetails, ApiUpdatePropectDetails, ApiUpdateProspectEtsDetails,
     ApiCheckIfVoeuxExiste, ApiCheckIfVoeuxDoubleExiste, ApiCheckDuplicateProspect, ApiCreateVoeuxDouble,
-    ApiFilterPrinscrit, ApiLoadSpecialite, ApiQuickSearchExistingContact,
+    ApiFilterPrinscrit, ApiLoadSpecialite, ApiQuickSearchExistingContact, MasterListeEtudiants
 )
 from .f_views.prospects import (
     ApiLoadProspectPerosnalInfos,
@@ -95,6 +95,7 @@ urlpatterns = [
     path('inscription-particulier/', InscriptionParticulier, name="inscription_particulier"),
     path('inscription-entreprise/', InscriptionEntreprise, name="inscription_entreprise"),
     path('liste-des-prospects/',ListeDesProspects, name="ListeDesProspects"),
+    path('liste-des-etudiants-master/',MasterListeEtudiants, name="MasterListeEtudiants"),
     path('ApiLoadProspects',ApiLoadProspects, name="ApiLoadProspects" ),
     path('ApiDeleteProspect', ApiDeleteProspect, name="ApiDeleteProspect"),
     path('ApiFilterProspect', ApiFilterProspect, name="ApiFilterProspect"),

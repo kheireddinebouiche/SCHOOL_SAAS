@@ -911,3 +911,42 @@ def ApiQuickSearchExistingContact(request):
             seen_identities.add(identity)
 
     return JsonResponse({'status': 'success', 'results': results})
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('crm','view')
+def MasterListeEtudiants(request):
+    if request.tenant.tenant_type != 'master':
+        raise PermissionDenied("Seul le compte maître peut accéder à cette page.")
+        
+    from django_tenants.utils import schema_context
+    from app.models import Institut
+    from t_etudiants.models import Etudiant
+    
+    etudiants_par_tenant = []
+    
+    tenants = Institut.objects.exclude(schema_name='public')
+    for tenant in tenants:
+        with schema_context(tenant.schema_name):
+            etudiants = Etudiant.objects.all().select_related('relation')
+            for etu in etudiants:
+                if etu.relation:
+                    nom = etu.relation.nom
+                    prenom = etu.relation.prenom
+                else:
+                    nom = etu.nom_arabe or ""
+                    prenom = etu.prenom_arabe or ""
+                
+                etudiants_par_tenant.append({
+                    'tenant_nom': tenant.nom,
+                    'nom': nom,
+                    'prenom': prenom,
+                    'email': etu.email,
+                    'telephone': etu.telephone,
+                    'date_inscription': etu.date_inscription
+                })
+                
+    context = {
+        'etudiants': etudiants_par_tenant,
+        'tenant': request.tenant
+    }
+    return render(request, 'tenant_folder/crm/master_liste_etudiants.html', context)

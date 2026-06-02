@@ -197,6 +197,7 @@ class Formateurs(models.Model):
     email = models.CharField(max_length=100, null=True, blank=True)
     diplome = models.CharField(max_length=100, null=True, blank=True)
     nin = models.CharField(max_length=100, null=True, blank=True)
+    password = models.CharField(max_length=255, null=True, blank=True)
     dispo = models.JSONField(default=dict, blank=True, null=True)
 
 

@@ -118,6 +118,7 @@ def get_exam_planifications(request):
             "est_valide": plan.pv.est_valide if hasattr(plan, 'pv') else False,
             "pv_existe": hasattr(plan, 'pv'),
             "pv_id": plan.pv.id if hasattr(plan, 'pv') else None,
+            "soumis_par_formateur": plan.pv.soumis_par_formateur if hasattr(plan, 'pv') else False,
         })
     context = {
         'data' : data,

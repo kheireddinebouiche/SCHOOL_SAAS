@@ -112,6 +112,25 @@ def PageFormateurs(request):
     return render(request, 'tenant_folder/formateur/liste_des_formateur.html', context)
 
 @login_required(login_url="institut_app:login")
+def request_formateur_dispo(request):
+    if request.method == "POST":
+        formateur_id = request.POST.get("id")
+        try:
+            formateur = Formateurs.objects.get(id=formateur_id)
+            if not isinstance(formateur.dispo, dict):
+                formateur.dispo = {}
+            
+            formateur.dispo["demande_dispo"] = True
+            formateur.save()
+            
+            return JsonResponse({"status": "success", "message": f"Demande envoyée à {formateur.nom} {formateur.prenom}."})
+        except Formateurs.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Formateur introuvable."}, status=404)
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)}, status=500)
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée."}, status=405)
+
+@login_required(login_url="institut_app:login")
 @transaction.atomic
 def create_formateur(request):
     if request.method == "POST":
@@ -121,6 +140,7 @@ def create_formateur(request):
         email = request.POST.get('email')
         diplome = request.POST.get('diplome')
         nin = request.POST.get('nin')
+        password = request.POST.get('password')
 
         Formateurs.objects.create(
             nom = nom,
@@ -129,6 +149,7 @@ def create_formateur(request):
             email = email,
             diplome = diplome,
             nin = nin,
+            password = password,
         )
         messages.success(request,'Les données du formateur ont été sauvegarder avec succès.')
         return JsonResponse({'status': 'success'})
@@ -147,6 +168,7 @@ def update_formateur(request):
         email = request.POST.get('email')
         diplome = request.POST.get('diplome')
         nin = request.POST.get('nin')
+        password = request.POST.get('password')
 
         try:
             formateur = Formateurs.objects.get(id=formateur_id)
@@ -156,6 +178,8 @@ def update_formateur(request):
             formateur.email = email
             formateur.diplome = diplome
             formateur.nin = nin
+            if password:
+                formateur.password = password
 
             formateur.save()
             messages.success(request,'Les données du formateur ont été mises à jour avec succès.')

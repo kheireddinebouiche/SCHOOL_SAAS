@@ -2971,6 +2971,28 @@ def saas_toggle_tenant_active_view(request, tenant_id):
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_toggle_tenant_portail_view(request, tenant_id):
+    """Bascule l'accès au portail (étudiants/formateurs) d'un tenant."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+        
+    try:
+        institut = Institut.objects.get(id=tenant_id)
+        institut.is_portail_active = not getattr(institut, 'is_portail_active', True)
+        institut.save()
+        
+        status_text = "activé" if institut.is_portail_active else "désactivé"
+        message = f"L'accès au portail pour l'institution '{institut.nom}' est désormais {status_text}."
+        
+        return JsonResponse({
+            'success': True, 
+            'message': message,
+            'is_portail_active': institut.is_portail_active
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 @user_passes_test(superadmin_only, login_url='/saas-admin/login/')
 def saas_audit_logs_view(request):
     """Affiche les logs d'audit (UserActionLog) de tous les tenants."""

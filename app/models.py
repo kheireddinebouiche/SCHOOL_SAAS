@@ -13,6 +13,7 @@ class Institut(TenantMixin):
     code_tenant = models.CharField(max_length=50, null=True, blank=True, verbose_name=_("Code Tenant"))
     is_visible = models.BooleanField(default=True, verbose_name=_("Visible dans la sélection"))
     is_active = models.BooleanField(default=True, verbose_name=_("Compte actif"))
+    is_portail_active = models.BooleanField(default=True, verbose_name=_("Accès Portail (Étudiants/Formateurs)"))
     crm_notifications_enabled = models.BooleanField(default=True, verbose_name=_("Notifications CRM actives"))
     max_upload_size = models.PositiveIntegerField(null=True, blank=True, verbose_name=_("Taille max upload (KB)"), help_text=_("Laissez vide pour utiliser la limite globale du SaaS"))
     

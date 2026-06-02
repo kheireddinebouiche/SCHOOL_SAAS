@@ -207,6 +207,7 @@ class PvExamen(models.Model):
     exam_planification = models.OneToOneField(ExamPlanification,on_delete=models.CASCADE,related_name="pv")
     est_valide = models.BooleanField(default=False)
     date_validation = models.DateTimeField(null=True, blank=True)
+    soumis_par_formateur = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
