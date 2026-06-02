@@ -799,3 +799,4 @@ def get_student_notifications_api(request):
             'status': 'success',
             'notifications': notifications_list
         })
+        })
