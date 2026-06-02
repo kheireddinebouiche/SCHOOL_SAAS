@@ -34,21 +34,43 @@ def get_monthly_payroll_variables(employee, month, year):
             heures_sup_totales += hs
             
     # 3. Absences from Leaves (Conges)
-    # Only count leaves that are "VALIDE" and "SANS_SOLDE" or "MALADIE" (if not fully paid)
-    # For now, let's just count all validated days as "paid" or "unpaid"
-    # Logic: worked_days = presences.count()
-    # But what if they don't point every day?
-    # Usually: days_to_pay = Standard_Days (22) - Unjustified_Absences
+    from t_rh.utils import calculate_leave_duration
     
-    # Let's count unjustified absences
+    conges_valides = Conges.objects.filter(
+        employee=employee,
+        status=Conges.StatusConge.VALIDE,
+        date_debut__lte=date_end,
+        date_fin__gte=date_start
+    )
+    
+    jours_conges_payes = 0
+    for conge in conges_valides:
+        # Ne compter que les congés payés pour le maintien de salaire
+        # La maternité est payée à 100% par la CNAS, l'entreprise ne paie pas ce salaire
+        if conge.type_conge not in [Conges.TypeConge.SANS_SOLDE, Conges.TypeConge.MATERNITE]:
+            overlap_start = max(date_start, conge.date_debut)
+            overlap_end = min(date_end, conge.date_fin)
+            
+            # On calcule toujours en jours ouvrables pour l'intégration paie 
+            # (afin de matcher avec le standard de 22 jours)
+            jours = calculate_leave_duration(overlap_start, overlap_end, is_working_days=True)
+            
+            if conge.type_conge == Conges.TypeConge.MALADIE:
+                # Les 3 premiers jours de l'arrêt maladie sont des jours de carence (non rémunérés)
+                if overlap_start == conge.date_debut:
+                    jours = max(0, jours - 3)
+                    
+            jours_conges_payes += jours
+            
+    # Ajout des congés payés aux jours travaillés pour ne pas pénaliser le salaire
+    jours_travailles += jours_conges_payes
+    
+    # Absences injustifiées (basé sur le pointage)
     absences_injustifiees = presences.filter(status='absent', note__icontains='injustifié').count()
-    
-    # Also check if there are gaps (days without presence nor approved leave)
-    # This is more complex. Let's stick to a simpler approach for now:
-    # Worked Days = presences where status in ['present', 'half_day']
     
     return {
         'jours_travailles': jours_travailles,
         'heures_sup': heures_sup_totales,
         'absences_jours': absences_injustifiees,
+        'jours_conges_payes': jours_conges_payes,
     }

@@ -72,6 +72,7 @@ def ApiLoadRemboursements(request):
             "allowed_amount": float(r.allowed_amount) if r.allowed_amount else 0,
             "updated_at": r.updated_at.strftime("%Y-%m-%d") if r.updated_at else None,
             "mode_rembourssement" : r.get_mode_rembourssement_display(),
+            "mode_rembourssement_key" : r.mode_rembourssement,
             "motif_rembourssement" : r.motif_rembourssement,
             "observation" : r.observation,
             'promotion' : promo_code,
@@ -130,6 +131,7 @@ def DetailsRembourssement(request, pk):
     last_paiements = Paiements.objects.filter(prospect=obj.client, is_refund=False).last()
 
     groupe_line = GroupeLine.objects.filter(student=obj.client)
+    has_factured_payments = paiements.filter(facture__isnull=False).exists()
 
     context = {
         'obj': obj,
@@ -142,6 +144,7 @@ def DetailsRembourssement(request, pk):
         'entreprise' : entreprise,
         'last_payment' : last_paiements,
         'groupe' : groupe_line,
+        'has_factured_payments': has_factured_payments,
     }
     return render(request, 'tenant_folder/comptabilite/rembourssement/details_rembourssement.html', context)
 
@@ -169,6 +172,8 @@ def ApiLoadPaiements(request):
                 'mode_paiement_label' : i.get_mode_paiement_display(),
                 'paiement_label' : i.paiement_label,
                 'is_refund' : i.is_refund,
+                'is_factured' : bool(i.facture),
+                'facture_num' : i.facture.num_facture if i.facture else None,
             })
 
         return JsonResponse(data, safe=False)
@@ -176,3 +181,111 @@ def ApiLoadPaiements(request):
 
     else:
         return JsonResponse({"status":"error"})
+
+@login_required(login_url="institut_app:login")
+def ApiSearchProspectForRefund(request):
+    if request.method == "GET":
+        query = request.GET.get('q', '').strip()
+        promo_id = request.GET.get('promo_id', '').strip()
+        
+        if not query and not promo_id:
+            return JsonResponse({'prospects': []})
+            
+        excluded_prospect_ids = Rembourssements.objects.filter(
+            etat__in=['enc', 'acp']
+        ).values_list('client_id', flat=True)
+        
+        prospects = Prospets.objects.filter(statut__in=['instance', 'convertit']).exclude(id__in=excluded_prospect_ids)
+        
+        if query:
+            prospects = prospects.filter(
+                Q(nom__icontains=query) | 
+                Q(prenom__icontains=query) | 
+                Q(email__icontains=query)
+            )
+            
+        if promo_id:
+            p_ids1 = FicheDeVoeux.objects.filter(promo_id=promo_id).values_list('prospect_id', flat=True)
+            p_ids2 = FicheVoeuxDouble.objects.filter(promo_id=promo_id).values_list('prospect_id', flat=True)
+            prospect_ids = list(p_ids1) + list(p_ids2)
+            prospects = prospects.filter(id__in=prospect_ids)
+            
+        prospects = prospects.distinct()[:20] # Limit to 20 results
+        
+        data = []
+        for prospect in prospects:
+            # Academics
+            if prospect.is_double:
+                voeux = FicheVoeuxDouble.objects.filter(prospect=prospect, is_confirmed=True).last()
+                if not voeux:
+                    voeux = FicheVoeuxDouble.objects.filter(prospect=prospect).last()
+                formation_label = "Double Diplomation"
+                specialite_label = f"{voeux.specialite.specialite1.label} / {voeux.specialite.specialite2.label}" if voeux and voeux.specialite else "Inconnue"
+                promo_label = voeux.promo.code if voeux and voeux.promo else "Inconnue"
+            else:
+                voeux = FicheDeVoeux.objects.filter(prospect=prospect, is_confirmed=True).last()
+                if not voeux:
+                    voeux = FicheDeVoeux.objects.filter(prospect=prospect).last()
+                formation_label = voeux.specialite.formation.nom if voeux and voeux.specialite and voeux.specialite.formation else "Inconnue"
+                specialite_label = voeux.specialite.label if voeux and voeux.specialite else "Inconnue"
+                promo_label = voeux.promo.code if voeux and voeux.promo else "Inconnue"
+
+            # Groupe
+            groupe_line = GroupeLine.objects.filter(student=prospect).last()
+            groupe_label = groupe_line.groupe.nom if groupe_line and groupe_line.groupe else "Non assigné"
+
+            # Financials
+            due_paiements_qs = DuePaiements.objects.filter(client=prospect, is_annulated=False)
+            total_due = due_paiements_qs.aggregate(total=Sum('montant_due'))['total'] or Decimal('0.0')
+            
+            paiements_qs = Paiements.objects.filter(prospect=prospect, is_refund=False)
+            total_paye = paiements_qs.aggregate(total=Sum('montant_paye'))['total'] or Decimal('0.0')
+
+            # Invoice
+            has_invoice = paiements_qs.filter(facture__isnull=False).exists()
+            invoice_status = "Facture générée" if has_invoice else "Non facturé"
+
+            data.append({
+                'id': prospect.id,
+                'nom': prospect.nom,
+                'prenom': prospect.prenom,
+                'email': prospect.email,
+                'telephone': prospect.telephone,
+                'nin': prospect.nin,
+                'formation': formation_label,
+                'specialite': specialite_label,
+                'promo': promo_label,
+                'groupe': groupe_label,
+                'total_due': float(total_due),
+                'total_paye': float(total_paye),
+                'invoice_status': invoice_status,
+                'has_invoice': has_invoice,
+            })
+            
+        return JsonResponse({'prospects': data})
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+@login_required(login_url="institut_app:login")
+@require_http_methods(["POST"])
+def ApiCancelRefund(request, pk):
+    try:
+        obj = Rembourssements.objects.get(id=pk)
+        if obj.is_appliced:
+            return JsonResponse({'status': 'error', 'message': "Impossible d'annuler un remboursement déjà déclenché (dépense générée)."}, status=400)
+        
+        # Log action before deletion
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='Rembourssements',
+            target_id=str(obj.id),
+            details=f"Annulation/Suppression de la demande de remboursement de {obj.allowed_amount} DA pour {obj.client.nom} {obj.client.prenom}.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        obj.delete()
+        return JsonResponse({'status': 'success', 'message': "La demande de remboursement a été annulée et réinitialisée."})
+    except Rembourssements.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': "Demande de remboursement introuvable."}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

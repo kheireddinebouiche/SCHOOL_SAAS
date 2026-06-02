@@ -141,8 +141,11 @@ class Facture(models.Model):
     
     MODE_PAIEMENT_CHOICES = [
         ('virement', 'Virement Bancaire'),
+        ('vir', 'Virement Bancaire'),
         ('cheque', 'Chèque'),
+        ('che', 'Chèque'),
         ('espece', 'Espèces'),
+        ('esp', 'Espèces'),
         ('autre', 'Autre'),
     ]
     mode_paiement = models.CharField(max_length=20, choices=MODE_PAIEMENT_CHOICES, default='virement', help_text="Mode de paiement attendu")
@@ -154,6 +157,9 @@ class Facture(models.Model):
         ('paye', 'Payée'),
         ('annule', 'Annulée'),
     ], default='brouillon')
+    
+    type_facture = models.CharField(max_length=20, choices=[('standard', 'Standard'), ('avoir', 'Avoir')], default='standard', help_text="Type de document")
+    facture_source = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name="avoirs_lies", help_text="Facture d'origine si c'est un avoir")
     
     conditions_commerciales = models.TextField(null=True, blank=True, help_text="Conditions spécifiques à cette facture")
     montant_timbre = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Droit de timbre (fixé à la création)")
@@ -176,8 +182,12 @@ class Facture(models.Model):
             if not config:
                 config = ConseilConfiguration.objects.first()
 
-            prefix = config.facture_prefix if config else "FAC"
-            width = config.facture_counter_width if config else 4
+            if getattr(self, 'type_facture', 'standard') == 'avoir':
+                prefix = config.avoir_prefix if config else "AV"
+                width = config.avoir_counter_width if config else 4
+            else:
+                prefix = config.facture_prefix if config else "FAC"
+                width = config.facture_counter_width if config else 4
 
             # Filter by prefix to have a global counter for that prefix
             qs = Facture.objects.all()
@@ -210,6 +220,10 @@ class Facture(models.Model):
         # Priority 1: Stored value
         if self.montant_timbre > 0:
             return self.montant_timbre
+
+        # Priority 1.5: Les factures d'avoir ne sont pas soumises au droit de timbre fiscal
+        if getattr(self, 'type_facture', 'standard') == 'avoir':
+            return Decimal('0')
 
         # Priority 2: Dynamic calculation based on settings
         config = ParametreFinancier.get_instance()
@@ -344,6 +358,9 @@ class ConseilConfiguration(models.Model):
     
     facture_prefix = models.CharField(max_length=20, default="FAC", help_text="Préfixe pour les factures")
     facture_counter_width = models.PositiveIntegerField(default=4, help_text="Longueur du compteur (ex: 4 pour 0001)")
+
+    avoir_prefix = models.CharField(max_length=20, default="AV", help_text="Préfixe pour les avoirs")
+    avoir_counter_width = models.PositiveIntegerField(default=4, help_text="Longueur du compteur pour avoir (ex: 4 pour 0001)")
 
     # Droits de Timbre (Stamp Duty) - Algerian Legislation
     enable_stamp_duty = models.BooleanField(default=False, help_text="Activer les droits de timbre (Algérie)")

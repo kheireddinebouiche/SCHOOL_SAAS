@@ -419,13 +419,20 @@
 document.addEventListener('DOMContentLoaded', function() {
     let allFactures = [];
     let currentEntity = 'all';
+    let pageType = '{{ filter_type|default:"all" }}';
 
     function loadFactures() {
         fetch("{% url 't_tresorerie:ApiListeDesFactures' %}")
             .then(response => response.json())
             .then(data => {
                 if(data.status === 'success'){
-                    allFactures = data.data;
+                    if (pageType === 'avoir') {
+                        allFactures = data.data.filter(f => f.is_avoir);
+                        document.querySelector('h4.text-dark').textContent = "Liste des Factures d'Avoir";
+                        document.querySelector('.text-muted.mb-0').textContent = "Gestion des factures liées aux remboursements";
+                    } else {
+                        allFactures = data.data;
+                    }
                     renderEntityTabs(data.enterprises);
                     updateStats(allFactures);
                     filterAndDisplay();
@@ -469,6 +476,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function filterAndDisplay() {
         let filtered = allFactures;
+        
+        // 0. Filter Avoirs from standard list unless filter_type === 'avoir'
+        const globalFilterType = '{{ filter_type }}';
+        if (globalFilterType !== 'avoir') {
+            filtered = filtered.filter(f => f.type_facture !== 'avoir');
+        } else {
+            filtered = filtered.filter(f => f.type_facture === 'avoir');
+        }
         
         // 1. Filter by Entity (currentEntity)
         if (currentEntity !== 'all') {
@@ -587,10 +602,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     etatBadge = `<span class="status-badge status-brouillon">${facture.etat}</span>`;
             }
 
-            let refundBadge = facture.has_refund ? '<span class="ms-1 badge bg-warning text-dark" title="Sujet à un remboursement"><i class="ri-refund-line"></i> Rembourssement</span>' : '';
+            let refundBadge = facture.has_refund && !facture.has_avoir_generated ? '<span class="ms-1 badge bg-warning text-dark" title="A fait l\'objet d\'un remboursement"><i class="ri-refund-line"></i> Remboursée</span>' : '';
+            let avoirBadge = facture.is_avoir ? '<span class="ms-1 badge bg-info text-white" title="Cette facture est un avoir de remboursement"><i class="ri-file-damage-line"></i> Facture d\'Avoir</span>' : '';
+            let generatedAvoirBadge = facture.has_avoir_generated ? `<span class="ms-1 badge bg-danger text-white" title="Une facture d'avoir a été générée"><i class="ri-refund-line"></i> Avoir: ${facture.avoir_ref}</span>` : '';
 
             row.innerHTML = `
-                <td class="fw-semibold text-primary">#${facture.numero}</td>
+                <td class="fw-semibold text-primary">#${facture.numero} ${avoirBadge} ${generatedAvoirBadge} ${refundBadge}</td>
                 <td>
                     <div class="d-flex align-items-center">
                         <div class="avatar-xs bg-light rounded-circle d-flex align-items-center justify-content-center me-2 text-primary fw-bold">
@@ -603,7 +620,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </td>
                 <td>${facture.date}</td>
                 <td>${facture.echeance || '-'}</td>
-                <td>${etatBadge}${refundBadge}</td>
+                <td>${etatBadge}${refundBadge}${avoirBadge}</td>
                 <td class="text-end text-muted fs-13">${facture.timbre > 0 ? facture.timbre.toLocaleString('fr-FR', {minimumFractionDigits: 2}) + ' DA' : '-'}</td>
                 <td class="text-end fw-bold">${facture.montant.toLocaleString('fr-FR', {minimumFractionDigits: 2})} DA</td>
                 <td class="text-center">

@@ -9,7 +9,7 @@ from django.contrib import messages
 from itertools import chain
 from datetime import datetime
 from django.db import models
-from django.db.models import F, Value, CharField, Q, Case, When, Sum, Max
+from django.db.models import F, Value, CharField, Q, Case, When, Sum, Max, OuterRef, Exists
 from django.db.models.functions import Coalesce
 from django.db.models.functions import Concat
 from django.contrib.humanize.templatetags.humanize import intcomma
@@ -71,22 +71,31 @@ def brouillard_caisse_json(request):
 
     # ---- 1. Paiements (Entrées en espèce) ----
     paiements = Paiements.objects.filter(mode_paiement='esp', date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
+        item_id=F('pk'),
+        model_type=Value('paiement', output_field=CharField()),
         nom=F('paiement_label'),
         date=F('date_paiement'),
         mouvement_montant=Coalesce(F('montant_paye'), Value(0, output_field=models.DecimalField())),
         type=Value('entree', output_field=CharField()),
         descri=Coalesce('paiement_label', Value('')),
         ref=F('num'),
+        reference=F('reference_paiement'),
         order_to=Concat(
             F('prospect__nom'), Value(' '), F('prospect__prenom'),
             output_field=CharField()
         ),
         entite_name=F('entite__designation'),
-        mapped_entite_id=F('entite__id')
+        mapped_entite_id=F('entite__id'),
+        fact_ref=F('facture__num_facture'),
+        fact_type=F('facture__type_facture'),
+        refunded=Exists(PaiementRemboursement.objects.filter(paiement=OuterRef('pk')))
     )
 
     # ---- 1b. AutreProduit (Entrées en espèce) ----
     autres_produits = AutreProduit.objects.filter(mode_paiement='esp', date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
+        'reference',
+        item_id=F('pk'),
+        model_type=Value('autre_produit', output_field=CharField()),
         nom=F('label'),
         date=F('date_paiement'),
         mouvement_montant=Coalesce(F('montant_paiement'), Value(0, output_field=models.DecimalField())),
@@ -104,7 +113,10 @@ def brouillard_caisse_json(request):
     # ---- 1c. Consulting Paiement (Entrées en espèce) ----
     consulting_paiements = []
     if ConseilPaiement:
-        consulting_paiements = ConseilPaiement.objects.filter(mode_paiement='espece', date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
+        consulting_paiements = ConseilPaiement.objects.filter(mode_paiement='esp', date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
+            'reference',
+            item_id=F('pk'),
+            model_type=Value('conseil_paiement', output_field=CharField()),
             nom=Value('Paiement Facture', output_field=CharField()),
             date=F('date_paiement'),
             mouvement_montant=Coalesce(F('montant'), Value(0, output_field=models.DecimalField())),
@@ -121,6 +133,9 @@ def brouillard_caisse_json(request):
 
     # ---- 2. Dépenses (Sorties en espèce) ----
     depenses = Depenses.objects.filter(mode_paiement='esp', date_paiement__gte=start_date, date_paiement__lte=end_date).order_by('date_paiement').exclude(date_paiement__isnull=True).values(
+        'reference',
+        item_id=F('pk'),
+        model_type=Value('depense', output_field=CharField()),
         nom=F('label'),
         date=F('date_paiement'),
         mouvement_montant=Coalesce(F('montant_ttc'), F('montant_ht'), Value(0, output_field=models.DecimalField())),
@@ -139,12 +154,15 @@ def brouillard_caisse_json(request):
 
     # ---- 2b. Dépôts en Banque (Sorties de caisse) ----
     depots_banque = DepotBanque.objects.filter(date_depot__gte=start_date, date_depot__lte=end_date).values(
+        item_id=F('pk'),
+        model_type=Value('depot_banque', output_field=CharField()),
         nom=Value('Dépôt en Banque', output_field=CharField()),
         date=F('date_depot'),
         mouvement_montant=Coalesce(F('montant'), Value(0, output_field=models.DecimalField())),
         type=Value('sortie', output_field=CharField()),
         descri=F('observation'),
         ref=F('num'),
+        reference=F('reference_bordereau'),
         order_to=F('agent_remettant'),
         entite_name=F('entite__designation'),
         mapped_entite_id=F('entite__id')
@@ -178,6 +196,8 @@ def brouillard_caisse_json(request):
             solde -= montant
 
         results.append({
+            "item_id": mv.get('item_id'),
+            "model_type": mv.get('model_type'),
             "date": mv['date'],
             "type": mv['type'],
             "nom": mv['nom'],
@@ -185,7 +205,12 @@ def brouillard_caisse_json(request):
             "solde": solde,
             "order_to": mv['order_to'],
             "entite_name": mv.get('entite_name'),
-            "entite_id": mv.get('mapped_entite_id')
+            "entite_id": mv.get('mapped_entite_id'),
+            "ref": mv.get('ref'),
+            "reference": mv.get('reference'),
+            "fact_ref": mv.get('fact_ref'),
+            "fact_type": mv.get('fact_type'),
+            "refunded": mv.get('refunded', False)
         })
 
     return JsonResponse({
@@ -240,7 +265,10 @@ def brouillard_banck_json(request):
         entite_name=F('entite__designation'),
         mapped_entite_id=F('entite__id'),
         mode=F('mode_paiement'),
-        reference=F('reference_paiement')
+        reference=F('reference_paiement'),
+        fact_ref=F('facture__num_facture'),
+        fact_type=F('facture__type_facture'),
+        refunded=Exists(PaiementRemboursement.objects.filter(paiement=OuterRef('pk')))
     )
 
     # ---- 1b. AutreProduit (Entrées en banque) ----
@@ -264,7 +292,7 @@ def brouillard_banck_json(request):
     # ---- 1c. Consulting Paiement (Entrées en banque) ----
     consulting_paiements = []
     if ConseilPaiement:
-        consulting_paiements = ConseilPaiement.objects.filter(mode_paiement__in=['virement', 'cheque'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).values(
+        consulting_paiements = ConseilPaiement.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).values(
             'reference',
             nom=Value('Paiement Facture', output_field=CharField()),
             date=F('date_paiement'),
@@ -282,7 +310,7 @@ def brouillard_banck_json(request):
         )
 
     # ---- 2. Dépenses (Sorties en banque) ----
-    depenses = Depenses.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date).order_by('date_paiement').exclude(date_paiement__isnull=True).values(
+    depenses = Depenses.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date, etat=True).order_by('date_paiement').exclude(date_paiement__isnull=True).values(
         'reference',
         nom=F('label'),
         date=F('date_paiement'),
@@ -343,7 +371,10 @@ def brouillard_banck_json(request):
             "entite_id": mv.get('mapped_entite_id'),
             "ref": mv.get('ref'),
             "mode": mv.get('mode'),
-            "reference": mv.get('reference')
+            "reference": mv.get('reference'),
+            "fact_ref": mv.get('fact_ref'),
+            "fact_type": mv.get('fact_type'),
+            "refunded": mv.get('refunded', False)
         })
 
     return JsonResponse({
@@ -506,7 +537,7 @@ def ApiImputeBankPaiment(request):
                     action_type='UPDATE',
                     target_model='OperationsBancaire',
                     target_id=str(operationId),
-                    details=f"Imputation bancaire de l'opération {operation.ref or operationId} sur le compte {compte.bank_name}. Montant: {operation.montant} DA.",
+                    details=f"Imputation bancaire de l'opération {operation.reference_bancaire or operationId} sur le compte {compte.bank_name}. Montant: {operation.montant} DA.",
                     ip_address=request.META.get('REMOTE_ADDR')
                 )
 
@@ -549,22 +580,72 @@ from institut_app.decorators import *
 def ApiDetailsPaiement(request):
     if request.method == "GET":
         id = request.GET.get('id')
-        
-        obj=OperationsBancaire.objects.get(id = id)
-        data = {
-            'id' : obj.id,
-            'operation_type' : obj.get_operation_type_display(),
-            'paiement' : obj.paiement.id if obj.paiement.id else None,
-            'montant' : obj.montant if obj.montant else None,
-            'date_operation' : obj.date_operation if obj.date_operation else None,
-            'reference_bancaire' : obj.reference_bancaire if obj.reference_bancaire else None,
-            'justification' : obj.justification if obj.justification else None,
-            'is_rapproche' : obj.is_rapproche if obj.is_rapproche else None,
-            'is_paid' : obj.is_paid if obj.is_paid else None,
-            'date_paiement' : obj.date_paiement if obj.date_paiement else None,
-
-        }
-        return JsonResponse(data, safe=False)
+        try:
+            obj=OperationsBancaire.objects.get(id = id)
+            
+            client_name = "N/A"
+            fournisseur_name = "N/A"
+            email = "N/A"
+            phone = "N/A"
+            categorie = "N/A"
+            mode_paiement_label = "N/A"
+            compte_name = obj.compte_bancaire.bank_name if obj.compte_bancaire else "N/A"
+            observations = obj.justification or "Aucune observation"
+            
+            if obj.paiement:
+                if obj.paiement.prospect:
+                    client_name = f"{obj.paiement.prospect.nom or ''} {obj.paiement.prospect.prenom or ''}".strip()
+                    email = obj.paiement.prospect.email or "N/A"
+                    phone = getattr(obj.paiement.prospect, 'telephone', "N/A") or getattr(obj.paiement.prospect, 'phone', "N/A")
+                mode_paiement_label = obj.paiement.get_mode_paiement_display()
+            elif obj.autre_produit:
+                if obj.autre_produit.client:
+                    client_name = f"{obj.autre_produit.client.nom or ''} {obj.autre_produit.client.prenom or ''}".strip()
+                    email = obj.autre_produit.client.email or "N/A"
+                    phone = getattr(obj.autre_produit.client, 'telephone', "N/A") or getattr(obj.autre_produit.client, 'phone', "N/A")
+                mode_paiement_label = obj.autre_produit.get_mode_paiement_display()
+            elif obj.conseil_paiement:
+                if obj.conseil_paiement.facture and obj.conseil_paiement.facture.client:
+                    client_name = f"{obj.conseil_paiement.facture.client.nom or ''} {obj.conseil_paiement.facture.client.prenom or ''}".strip()
+                    email = obj.conseil_paiement.facture.client.email or "N/A"
+                    phone = getattr(obj.conseil_paiement.facture.client, 'telephone', "N/A") or getattr(obj.conseil_paiement.facture.client, 'phone', "N/A")
+                mode_paiement_label = obj.conseil_paiement.get_mode_paiement_display()
+            elif obj.depense:
+                if obj.depense.fournisseur:
+                    fournisseur_name = obj.depense.fournisseur.designation
+                    email = getattr(obj.depense.fournisseur, 'email', "N/A") or "N/A"
+                    phone = getattr(obj.depense.fournisseur, 'telephone', "N/A") or getattr(obj.depense.fournisseur, 'phone', "N/A")
+                elif obj.depense.client:
+                    fournisseur_name = f"{obj.depense.client.nom or ''} {obj.depense.client.prenom or ''}".strip()
+                    email = obj.depense.client.email or "N/A"
+                    phone = getattr(obj.depense.client, 'telephone', "N/A") or getattr(obj.depense.client, 'phone', "N/A")
+                if obj.depense.category:
+                    categorie = obj.depense.category.name
+                mode_paiement_label = obj.depense.get_mode_paiement_display()
+                observations = obj.depense.description or observations
+            
+            data = {
+                'id' : obj.id,
+                'operation_type' : obj.get_operation_type_display(),
+                'type_code' : obj.operation_type,
+                'montant' : float(obj.montant) if obj.montant else 0,
+                'date_operation' : obj.date_operation.strftime('%Y-%m-%d') if obj.date_operation else None,
+                'reference_bancaire' : obj.reference_bancaire if obj.reference_bancaire else None,
+                'is_rapproche' : obj.is_rapproche,
+                'is_paid' : obj.is_paid,
+                'date_paiement' : obj.date_paiement.strftime('%Y-%m-%d') if obj.date_paiement else None,
+                'client_name': client_name,
+                'fournisseur_name': fournisseur_name,
+                'email': email,
+                'phone': str(phone),
+                'categorie': categorie,
+                'mode_paiement_label': mode_paiement_label,
+                'compte_name': compte_name,
+                'observations': observations,
+            }
+            return JsonResponse(data, safe=False)
+        except Exception as e:
+            return JsonResponse({"status" : "error", "message": str(e)})
 
     else:
         return JsonResponse({"status" : "error"})
@@ -620,6 +701,46 @@ def ApiUpdateEffectiveDate(request):
 
             return JsonResponse({"status": "success", "message": "Date effective mise à jour avec succès"})
         except (Paiements.DoesNotExist, AutreProduit.DoesNotExist, Exception) as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+@login_required(login_url="institut_app:login")
+def ApiUpdateReferencePaiement(request):
+    if request.method == "POST":
+        item_id = request.POST.get('item_id')
+        model_type = request.POST.get('model_type')
+        reference = request.POST.get('reference')
+
+        if not item_id or not model_type:
+            return JsonResponse({"status": "error", "message": "Informations manquantes"})
+
+        try:
+            if model_type == 'paiement':
+                obj = Paiements.objects.get(pk=item_id)
+                obj.reference_paiement = reference
+                obj.save()
+            elif model_type == 'autre_produit':
+                obj = AutreProduit.objects.get(pk=item_id)
+                obj.reference = reference
+                obj.save()
+            elif model_type == 'conseil_paiement':
+                from t_conseil.models import Paiement as ConseilPaiement
+                obj = ConseilPaiement.objects.get(pk=item_id)
+                obj.reference = reference
+                obj.save()
+            elif model_type == 'depense':
+                obj = Depenses.objects.get(pk=item_id)
+                obj.reference = reference
+                obj.save()
+            elif model_type == 'depot_banque':
+                obj = DepotBanque.objects.get(pk=item_id)
+                obj.reference_bordereau = reference
+                obj.save()
+            else:
+                return JsonResponse({"status": "error", "message": "Type d'opération invalide"})
+
+            return JsonResponse({"status": "success", "message": "Référence mise à jour avec succès"})
+        except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)})
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 

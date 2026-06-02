@@ -21,6 +21,7 @@ from .f_views.type_depense import *
 from .f_views.payment_types import *
 from .f_views.suivi_paiements import *
 
+from t_conseil.views import ListeDesFactures, ListeDesDevis, ListeDesClients
 
 app_name="t_tresorerie"
 
@@ -130,7 +131,9 @@ urlpatterns = [
 
     path('liste-des-rembourssements/', listeDesRembourssement, name="listeDesRembourssement"),
     path('rembourssement/details/<int:pk>/',DetailsRembourssement, name="DetailsRembourssement"),
+    path('rembourssement/cancel/<int:pk>/', ApiCancelRefund, name="ApiCancelRefund"),
     path('ApiLoadRemboursements/', ApiLoadRemboursements, name="ApiLoadRemboursements"),
+    path('api/search-prospect-refund/', ApiSearchProspectForRefund, name="ApiSearchProspectForRefund"),
 
     path('ApiCheckEcheancierState', ApiCheckEcheancierState, name="ApiCheckEcheancierState"),
     path('ApiCheckStateModel', ApiCheckStateModel, name="ApiCheckStateModel"),
@@ -222,6 +225,7 @@ urlpatterns = [
 
     ##### Facturation 
     path('facturation/liste/', facturation.PageFacturation, name="PageFacturation"),
+    path('facturation/avoir/liste/', facturation.PageFacturesAvoir, name="PageFacturesAvoir"),
     path('ApiListeDesFactures', facturation.ApiListeDesFactures, name="ApiListeDesFactures"),
     path('ApiDemanderRemboursement', facturation.ApiDemanderRemboursement, name="ApiDemanderRemboursement"),
     path('details-facture/<str:pk>/', facturation.DetailsFactureTresorerie, name="DetailsFactureTresorerie"),
@@ -229,6 +233,7 @@ urlpatterns = [
     path('ApiValidateFacture', facturation.ApiValidateFacture, name="ApiValidateFacture"),
     path('ApiGetDraftInvoiceDetails', facturation.ApiGetDraftInvoiceDetails, name="ApiGetDraftInvoiceDetails"),
     path('ApiUpdateDraftInvoice', ApiUpdateDraftInvoice, name="ApiUpdateDraftInvoice"),
+    path('ApiUpdateReferencePaiement', ApiUpdateReferencePaiement, name="ApiUpdateReferencePaiement"),
 
 
     path('categorie-produits/liste/', PageProduits, name="PageProduits"),
@@ -306,4 +311,9 @@ urlpatterns = [
 
     path('suivi-des-paiements/', PageSuiviPaiements, name="PageSuiviPaiements"),
     path('ApiSuiviPaiements', ApiSuiviPaiements, name="ApiSuiviPaiements"),
+
+    # Vues de consultation pour Executive Education
+    path('factures-executive/', ListeDesFactures, name="tresorerie_factures_conseil"),
+    path('devis-executive/', ListeDesDevis, name="tresorerie_devis_conseil"),
+    path('clients-executive/', ListeDesClients, name="tresorerie_clients_conseil"),
 ]

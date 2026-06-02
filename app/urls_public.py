@@ -35,6 +35,20 @@ urlpatterns = [
     path('api/v1/students/finances/', get_student_finances_api, name='get_student_finances_api'),
     path('api/v1/students/notifications/', get_student_notifications_api, name='get_student_notifications_api'),
 
+    path('api/v1/instructors/verify/', verify_formateur, name='verify_formateur'),
+    path('api/v1/instructors/login/', login_formateur, name='login_formateur'),
+    path('api/v1/instructors/assignments/', get_instructor_assignments_api, name='get_instructor_assignments_api'),
+    path('api/v1/instructors/planning/', get_instructor_planning_api, name='get_instructor_planning_api'),
+    path('api/v1/instructors/groups/', get_instructor_groups_api, name='get_instructor_groups_api'),
+    path('api/v1/instructors/registers/', get_instructor_registers_api, name='get_instructor_registers_api'),
+    path('api/v1/instructors/register_students/', get_register_students_api, name='get_register_students_api'),
+    path('api/v1/instructors/submit_attendance/', submit_instructor_attendance_api, name='submit_instructor_attendance_api'),
+    path('api/v1/instructors/submit_dispo/', submit_instructor_dispo_api, name='submit_instructor_dispo_api'),
+    path('api/v1/instructors/notifications/', get_instructor_notifications_api, name='get_instructor_notifications_api'),
+    path('api/v1/instructors/exams/', get_instructor_exams_api, name='get_instructor_exams_api'),
+    path('api/v1/instructors/pv/', get_instructor_pv_api, name='get_instructor_pv_api'),
+    path('api/v1/instructors/submit_notes/', submit_instructor_notes_api, name='submit_instructor_notes_api'),
+
     # path('login/',LoginView.as_view(), name="login"),
     # path('logout/',LogoutView.as_view(), name="logout"),
 

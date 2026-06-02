@@ -52,6 +52,7 @@ urlpatterns = [
 
   
   path('liste-des-factures/', ListeDesFactures, name="ListeDesFactures"),
+  path('liste-des-avoirs/', ListeDesAvoirs, name="ListeDesAvoirs"),
   path('nouvelle-facture/', AddNewFacture, name="AddNewFacture"),
   path('configuration-facture/<str:pk>/', configure_facture, name="configure-facture"),
   path('details-facture/<str:pk>/', DetailsFacture, name="DetailsFacture"),
@@ -75,6 +76,7 @@ urlpatterns = [
   path('api/facture/validate/', ApiValidateFacture, name="ApiValidateFacture"),
   path('api/facture/revert-to-draft/', ApiRevertFactureToDraft, name="ApiRevertFactureToDraft"),
   path('api/facture/delete/', ApiDeleteFacture, name="ApiDeleteFacture"),
+  path('api/facture/create-avoir/', ApiCreateAvoir, name="ApiCreateAvoir"),
   
   path('das/', ListeDAS, name="ListeDAS"),
   path('api/das/save/', ApiSaveDAS, name="ApiSaveDAS"),
@@ -119,4 +121,6 @@ urlpatterns = [
     path('groupes/planning/session-pdf/<int:session_id>/', SessionAttendancePDF, name="SessionAttendancePDF"),
     path('api/participants/confirm-scolarite/', ApiConfirmParticipantForScolarite, name="ApiConfirmParticipantForScolarite"),
     path('api/participants/cancel-scolarite-confirmation/', ApiCancelParticipantConfirmationForScolarite, name="ApiCancelParticipantConfirmationForScolarite"),
+    
+    path('liste-des-paiements/', PaiementsConseilListe, name="PaiementsConseilListe"),
 ]

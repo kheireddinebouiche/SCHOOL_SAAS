@@ -171,13 +171,15 @@ def ApiLoadRefundDetails(request):
         echeancier_list = []
         for due in due_query:
             paid_amount = Paiements.objects.filter(due_paiements=due).aggregate(total=Sum('montant_paye'))['total'] or 0
+            is_factured = Paiements.objects.filter(due_paiements=due, facture__isnull=False).exists()
             echeancier_list.append({
                 'label': due.label or 'N/A',
                 'montant_due': float(due.montant_due) if due.montant_due else 0.0,
                 'montant_paye': float(paid_amount),
                 'montant_restant': float(due.montant_restant) if due.montant_restant is not None else float((due.montant_due or 0) - paid_amount),
                 'date_echeance': due.date_echeance.strftime("%d/%m/%Y") if due.date_echeance else "N/A",
-                'is_done': due.is_done
+                'is_done': due.is_done,
+                'is_factured': is_factured
             })
 
         data= {
@@ -577,6 +579,7 @@ def ApiGetDetailsDemandePaiement(request):
             'special_echeancier_frais_inscription_entite_id' : special_echeancier_frais_inscription_entite_id,
             'special_echeancier_frais_inscription_entite_nom' : special_echeancier_frais_inscription_entite_nom,
             'annee_academique' : voeux.promo.annee_academique,
+            "has_invoice": done_paiements.filter(is_refund=False, facture__isnull=False).exists() if has_paiement else False,
 
         }
 
@@ -907,6 +910,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
             "total_paiement" : total_paiement if has_paiement else 0,
             'id_echeancier' : echeancierId.id,
             'available_echeanciers': list(available_echeanciers),
+            "has_invoice": done_paiements.filter(is_refund=False, facture__isnull=False).exists() if has_paiement else False,
             "refund_data" : refund_data,
             "has_pending_refund" : has_pending_refund,
             'has_processed_refund'  : has_processed_refund,
@@ -977,10 +981,15 @@ def PageConfigPaiementSeuil(request):
 def PageConfigPaiementFacturation(request):
     try:
         from t_conseil.models import ConseilConfiguration, TvaConseil
+        from t_tresorerie.models import PlanComptable
         from django.contrib import messages
         from django.shortcuts import redirect
         
         config, created = ConseilConfiguration.objects.get_or_create(entreprise=None)
+        
+        from t_tresorerie.models import PaymentCategory, DepensesCategory
+        recettes_categories = PaymentCategory.objects.all().order_by('name')
+        depenses_categories = DepensesCategory.objects.all().order_by('name')
         
         if request.method == "POST":
             action = request.POST.get('action')
@@ -1022,11 +1031,14 @@ def PageConfigPaiementFacturation(request):
     except ImportError:
         config = None
         tvas = []
+        comptes_comptables = []
         
     return render(request, 'tenant_folder/comptabilite/tresorerie/config_paiement_facturation.html', {
         'tenant': request.tenant,
         'config': config,
-        'tvas': tvas
+        'tvas': tvas,
+        'recettes_categories': recettes_categories,
+        'depenses_categories': depenses_categories
     })
 
 def ApiListSeuilPaiement(request):
@@ -1432,6 +1444,10 @@ def ApiGetParametreFinancier(request):
         'timbre_bareme': bareme_json,
         'relance_echeancier_sujet': params.relance_echeancier_sujet,
         'relance_echeancier_corps': params.relance_echeancier_corps,
+        'compte_tva_collectee_id': params.compte_tva_collectee_id,
+        'compte_tva_deductible_id': params.compte_tva_deductible_id,
+        'compte_timbre_collecte_id': params.compte_timbre_collecte_id,
+        'compte_timbre_charge_id': params.compte_timbre_charge_id,
     })
 
 @login_required(login_url="institut_app:login")
@@ -1471,12 +1487,29 @@ def ApiUpdateParametreFinancier(request):
                 # Validate JSON structure
                 json.loads(bareme)
                 params.timbre_bareme = bareme
-            except ValueError:
-                return JsonResponse({'status': 'error', 'message': 'Le barème fourni est invalide.'})
+            except json.JSONDecodeError:
+                pass
+                
+        compte_tva_collectee_id = request.POST.get('compte_tva_collectee_id')
+        if compte_tva_collectee_id is not None:
+            params.compte_tva_collectee_id = compte_tva_collectee_id if compte_tva_collectee_id else None
+            
+        compte_tva_deductible_id = request.POST.get('compte_tva_deductible_id')
+        if compte_tva_deductible_id is not None:
+            params.compte_tva_deductible_id = compte_tva_deductible_id if compte_tva_deductible_id else None
+            
+        compte_timbre_collecte_id = request.POST.get('compte_timbre_collecte_id')
+        if compte_timbre_collecte_id is not None:
+            params.compte_timbre_collecte_id = compte_timbre_collecte_id if compte_timbre_collecte_id else None
+            
+        compte_timbre_charge_id = request.POST.get('compte_timbre_charge_id')
+        if compte_timbre_charge_id is not None:
+            params.compte_timbre_charge_id = compte_timbre_charge_id if compte_timbre_charge_id else None
 
-        relance_sujet = request.POST.get('relance_echeancier_sujet')
-        if relance_sujet is not None:
-            params.relance_echeancier_sujet = relance_sujet
+        # Relance Echeancier
+        sujet = request.POST.get('relance_echeancier_sujet')
+        if sujet is not None:
+            params.relance_echeancier_sujet = sujet
 
         relance_corps = request.POST.get('relance_echeancier_corps')
         if relance_corps is not None:

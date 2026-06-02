@@ -881,7 +881,7 @@ def fichesMensuelles(request):
         report.append({
             'employee': emp,
             'stats': stats,
-            'service': emp.contrats.last().service.label if emp.contrats.exists() else "N/A"
+            'service': emp.contrats.last().service.label if emp.contrats.exists() and emp.contrats.last().service else "N/A"
         })
 
     # Services for filter
@@ -952,6 +952,10 @@ def demandeConge(request):
         date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date()
         
         employee = get_object_or_404(Employees, id=employee_id)
+
+        if not employee.has_contract:
+            messages.error(request, "Erreur: L'employé ne possède pas de contrat actif, il n'a donc pas droit aux congés.")
+            return redirect('t_rh:demande_conge')
         
         # Validation: Date de début ne peut pas être avant la date de recrutement
         if employee.date_recrutement and date_debut < employee.date_recrutement:
@@ -974,6 +978,13 @@ def demandeConge(request):
         # Special leaves and Recuperation are in working days (excluding Fri/Sat)
         is_working_days = type_conge in [Conges.TypeConge.EXCEPTIONNEL, Conges.TypeConge.RECUPERATION]
         duree = calculate_leave_duration(date_debut, date_fin, is_working_days=is_working_days)
+        
+        # Validation du solde pour les congés annuels
+        if type_conge == Conges.TypeConge.ANNUEL:
+            if duree > employee.solde_conge:
+                messages.error(request, f"Erreur: Solde de congé insuffisant. Demandé: {duree} jours, Solde disponible: {employee.solde_conge} jours.")
+                return redirect('t_rh:demande_conge')
+        
         
         Conges.objects.create(
             employee_id=employee_id,
@@ -1151,7 +1162,7 @@ def configFiscalite(request):
 from t_ressource_humaine.models import FichePaie
 
 def listeFichesPaie(request):
-    fiches = FichePaie.objects.all().order_by('-annee', '-mois', 'contrat__employee__nom')
+    fiches = FichePaie.objects.filter(contrat__employee__isnull=False).order_by('-annee', '-mois', 'contrat__employee__nom')
     
     # Filter by month/year if provided
     month = request.GET.get('month')

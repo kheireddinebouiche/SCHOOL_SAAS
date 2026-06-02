@@ -42,7 +42,7 @@ def enregistrer_fournisseur(request):
         site_web = request.POST.get('site_web','').strip()
 
         # Create a new Fournisseur instance
-        Fournisseur.objects.create(
+        fournisseur = Fournisseur.objects.create(
             designation=designation,
             adresse=adresse,
             commune=commune,
@@ -59,7 +59,7 @@ def enregistrer_fournisseur(request):
         )
         
         # Return success response
-        return JsonResponse({"status": "success","message": "Le fournisseur a été enregistré avec succès."})
+        return JsonResponse({"status": "success","message": "Le fournisseur a été enregistré avec succès.", "id": fournisseur.id})
         
     except Exception as e:
         # Handle any errors during creation

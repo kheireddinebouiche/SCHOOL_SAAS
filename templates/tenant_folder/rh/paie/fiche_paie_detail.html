@@ -105,10 +105,18 @@
                     <p class="mb-0 small">Cotisation SS: {{ entreprise.nis|default:"-" }}</p>
                 </div>
                 <div class="info-box">
-                    <p class="text-muted small text-uppercase fw-bold mb-2">Salarié</p>
-                    <h5 class="fw-bold mb-1">{{ fiche.contrat.employee.nom }} {{ fiche.contrat.employee.prenom }}</h5>
-                    <p class="mb-0 small">Poste: {{ fiche.contrat.employee.poste|default:"-" }}</p>
-                    <p class="mb-0 small">CCP: {{ fiche.contrat.employee.ccp|default:"-" }}</p>
+                    <p class="text-muted small text-uppercase fw-bold mb-2">Salarié / Formateur</p>
+                    {% if fiche.contrat.employee %}
+                        <h5 class="fw-bold mb-1">{{ fiche.contrat.employee.nom }} {{ fiche.contrat.employee.prenom }}</h5>
+                        <p class="mb-0 small">Poste: {{ fiche.contrat.employee.poste|default:"-" }}</p>
+                        <p class="mb-0 small">CCP: {{ fiche.contrat.employee.ccp|default:"-" }}</p>
+                    {% elif fiche.contrat.formateur %}
+                        <h5 class="fw-bold mb-1">{{ fiche.contrat.formateur.nom }} {{ fiche.contrat.formateur.prenom }}</h5>
+                        <p class="mb-0 small">Poste: Formateur</p>
+                        <p class="mb-0 small">CCP: {{ fiche.contrat.formateur.ccp|default:"-" }}</p>
+                    {% else %}
+                        <h5 class="fw-bold mb-1">Inconnu</h5>
+                    {% endif %}
                 </div>
             </div>
 
@@ -131,24 +139,28 @@
                         <td>{{ fiche.salaire_base_calcule|floatformat:2 }}</td>
                         <td>-</td>
                     </tr>
-                    {% if fiche.prime_panier > 0 %}
+                    
+                    {% for ligne in fiche.lignes.all %}
                     <tr>
-                        <td>Indemnité de Panier</td>
-                        <td>Forfait</td>
-                        <td>-</td>
-                        <td>{{ fiche.prime_panier|floatformat:2 }}</td>
-                        <td>-</td>
+                        <td>{{ ligne.rubrique.nom }}</td>
+                        <td>{{ ligne.nombre|default:"-" }}</td>
+                        <td>{{ ligne.taux|default:"-" }}</td>
+                        <td>
+                            {% if ligne.rubrique.type_rubrique == 'GAIN' %}
+                                {{ ligne.montant|floatformat:2 }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if ligne.rubrique.type_rubrique == 'RETENUE' %}
+                                <span class="text-danger">{{ ligne.montant|floatformat:2 }}</span>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
                     </tr>
-                    {% endif %}
-                    {% if fiche.prime_transport > 0 %}
-                    <tr>
-                        <td>Indemnité de Transport</td>
-                        <td>Forfait</td>
-                        <td>-</td>
-                        <td>{{ fiche.prime_transport|floatformat:2 }}</td>
-                        <td>-</td>
-                    </tr>
-                    {% endif %}
+                    {% endfor %}
                     
                     <!-- Cotisations -->
                     <tr class="table-light">

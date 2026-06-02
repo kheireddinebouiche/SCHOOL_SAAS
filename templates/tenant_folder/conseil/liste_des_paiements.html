@@ -1,0 +1,220 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block content %}
+
+<!-- Custom Styles for Table -->
+<style>
+    /* Premium Table Styling */
+    .table-premium {
+        border-collapse: separate;
+        border-spacing: 0 10px;
+        background-color: transparent;
+    }
+    
+    .table-premium thead th {
+        background-color: transparent;
+        color: #64748b;
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: none;
+        padding-bottom: 0px;
+    }
+    
+    .table-premium tbody tr {
+        background-color: #ffffff;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+    
+    .table-premium tbody tr:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    
+    .table-premium tbody td {
+        border: none;
+        padding: 16px 20px;
+        vertical-align: middle;
+    }
+    
+    .table-premium tbody td:first-child {
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+    }
+    
+    .table-premium tbody td:last-child {
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+    }
+
+    /* Status Badges */
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    /* Actions buttons */
+    .btn-rounded {
+        border-radius: 50%;
+        width: 35px;
+        height: 35px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        transition: all 0.2s ease;
+    }
+    .btn-rounded:hover {
+        transform: scale(1.1);
+    }
+
+    /* Layout enhancements */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        border-radius: 20px;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+
+            <!-- Page Title & Breadcrumb -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h4 class="mb-1 text-dark fw-bold">Liste des Paiements / Recouvrements</h4>
+                            <p class="text-muted mb-0">Suivez tous les encaissements liés aux factures d'Executive Education.</p>
+                        </div>
+                        <div>
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0">
+                                    <li class="breadcrumb-item"><a href="javascript: void(0);">Executive Education</a></li>
+                                    <li class="breadcrumb-item"><a href="javascript: void(0);">Factures</a></li>
+                                    <li class="breadcrumb-item active" aria-current="page">Paiements</li>
+                                </ol>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card glass-card border-0">
+                        <div class="card-body p-4">
+                            
+                            <div class="table-responsive">
+                                <table class="table table-premium align-middle table-nowrap mb-0" id="paiementsTable">
+                                    <thead>
+                                        <tr>
+                                            <th class="ps-4">Référence</th>
+                                            <th>Facture Liée</th>
+                                            <th>Client</th>
+                                            <th>Date de Paiement</th>
+                                            <th>Mode</th>
+                                            <th class="text-end">Montant</th>
+                                            <th class="text-center">Statut (Caisse)</th>
+                                            <th class="text-end pe-4">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for paiement in paiements %}
+                                            <tr style="transition: all 0.2s ease;" onmouseover="this.style.backgroundColor='#f8fafc';" onmouseout="this.style.backgroundColor='transparent';">
+                                                <td class="ps-4">
+                                                    <div class="fw-bold text-primary fs-14">{{ paiement.reference|default:'-' }}</div>
+                                                    <div class="text-muted small mt-1">Créé le {{ paiement.created_at|date:"d/m/Y" }}</div>
+                                                </td>
+                                                <td>
+                                                    <a href="{% url 't_conseil:DetailsFacture' paiement.facture.num_facture %}" class="fw-bold text-info fs-14 text-decoration-none">
+                                                        <i class="ri-file-list-3-line align-middle"></i> #{{ paiement.facture.num_facture }}
+                                                    </a>
+                                                    <div class="text-muted small mt-1">{{ paiement.facture.entreprise.designation }}</div>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="avatar-sm me-3">
+                                                            <div class="avatar-title bg-primary-subtle text-primary rounded-circle fw-bold fs-16 shadow-sm">
+                                                                {% if paiement.facture.client.entreprise %}{{ paiement.facture.client.entreprise|slice:":1"|upper }}{% else %}{{ paiement.facture.client.nom|slice:":1"|upper }}{% endif %}
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div class="fw-bold text-dark fs-14">{% if paiement.facture.client.entreprise %}{{ paiement.facture.client.entreprise }}{% else %}{{ paiement.facture.client.nom }} {{ paiement.facture.client.prenom }}{% endif %}</div>
+                                                            {% if paiement.facture.client.entreprise %}
+                                                                <div class="text-muted small d-flex align-items-center mt-1"><i class="ri-user-line me-1 opacity-75"></i>{{ paiement.facture.client.nom }} {{ paiement.facture.client.prenom }}</div>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="text-dark fw-medium fs-13">
+                                                        {{ paiement.date_paiement|date:"d M Y" }}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    {% if paiement.mode_paiement == 'esp' %}
+                                                    <span class="badge bg-success-subtle text-success px-3 py-1 rounded-pill fw-medium border border-success border-opacity-25"><i class="ri-money-dollar-circle-line align-middle me-1"></i>Espèce</span>
+                                                    {% elif paiement.mode_paiement == 'che' %}
+                                                    <span class="badge bg-info-subtle text-info px-3 py-1 rounded-pill fw-medium border border-info border-opacity-25"><i class="ri-bank-card-line align-middle me-1"></i>Chèque</span>
+                                                    {% elif paiement.mode_paiement == 'vir' %}
+                                                    <span class="badge bg-primary-subtle text-primary px-3 py-1 rounded-pill fw-medium border border-primary border-opacity-25"><i class="ri-exchange-dollar-line align-middle me-1"></i>Virement</span>
+                                                    {% else %}
+                                                    <span class="badge bg-secondary-subtle text-secondary px-3 py-1 rounded-pill fw-medium border border-secondary border-opacity-25"><i class="ri-more-2-line align-middle me-1"></i>Autre</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-end">
+                                                    <span class="fw-bold fs-15 text-success">
+                                                        + {{ paiement.montant|floatformat:2 }} <span class="fs-12 text-muted fw-normal">DZA</span>
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if paiement.is_done %}
+                                                    <span class="badge bg-success-subtle text-success rounded-pill px-2"><i class="ri-check-line align-middle"></i> Encaissé</span>
+                                                    {% else %}
+                                                    <span class="badge bg-warning-subtle text-warning rounded-pill px-2"><i class="ri-time-line align-middle"></i> En attente</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-end pe-4">
+                                                    <div class="d-flex justify-content-end gap-1">
+                                                        <a href="{% url 't_conseil:DetailsFacture' paiement.facture.num_facture %}" class="btn btn-soft-info btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Voir la facture">
+                                                            <i class="ri-file-text-line"></i>
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="8" class="text-center py-5">
+                                                <div class="avatar-md mx-auto mb-3">
+                                                    <div class="avatar-title bg-light text-muted rounded-circle fs-24">
+                                                        <i class="ri-file-list-3-line"></i>
+                                                    </div>
+                                                </div>
+                                                <h5 class="mt-2 text-dark">Aucun paiement enregistré</h5>
+                                                <p class="text-muted mb-0">Les paiements liés aux factures apparaîtront ici.</p>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

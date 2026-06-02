@@ -310,7 +310,86 @@
                 </div>
             </div>
 
-            <!-- Modal pour les tranches de Droit de Timbre -->
+            <!-- =============== IMPUTATION COMPTABLE =============== -->
+            <div class="row mb-4 g-3">
+                <div class="col-12">
+                    <div class="glass-card p-4 h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-book-read-line text-info fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold mb-0">Imputation Comptable (Plan Comptable)</h5>
+                                    <p class="text-muted mb-0 small">Affectation des comptes pour la TVA et les Droits de Timbre</p>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-primary rounded-pill px-3" id="btnSaveImputationConfig">
+                                <i class="ri-save-line me-1"></i> Enregistrer l'affectation
+                            </button>
+                        </div>
+                        <hr class="my-3">
+                        
+                        <div class="row g-4">
+                            <!-- Recettes -->
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded border border-light-subtle h-100">
+                                    <h6 class="fw-bold text-primary mb-3"><i class="ri-arrow-right-down-line me-1"></i>Recettes (Encaissements)</h6>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold text-muted text-uppercase">TVA Collectée (Factures Clients)</label>
+                                        <select class="form-select select2" id="selectCompteTvaCollectee" data-placeholder="Choisir un compte comptable (ex: 4457)">
+                                            <option value=""></option>
+                                            {% for cat in recettes_categories %}
+                                                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="form-label small fw-bold text-muted text-uppercase">Timbre Collecté (Clients)</label>
+                                        <select class="form-select select2" id="selectCompteTimbreCollecte" data-placeholder="Choisir une catégorie de recette">
+                                            <option value=""></option>
+                                            {% for cat in recettes_categories %}
+                                                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Dépenses -->
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded border border-light-subtle h-100">
+                                    <h6 class="fw-bold text-danger mb-3"><i class="ri-arrow-right-up-line me-1"></i>Dépenses (Décaissements)</h6>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold text-muted text-uppercase">TVA Déductible (Achats Fournisseurs)</label>
+                                        <select class="form-select select2" id="selectCompteTvaDeductible" data-placeholder="Choisir un compte comptable (ex: 4456)">
+                                            <option value=""></option>
+                                            {% for cat in depenses_categories %}
+                                                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="form-label small fw-bold text-muted text-uppercase">Timbre Payé (Charge)</label>
+                                        <select class="form-select select2" id="selectCompteTimbreCharge" data-placeholder="Choisir un type de dépense">
+                                            <option value=""></option>
+                                            {% for cat in depenses_categories %}
+                                                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
             <div class="modal fade" id="bracketModal" tabindex="-1" aria-labelledby="bracketModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content glass-card border border-light-subtle" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);">
@@ -367,6 +446,13 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
+    // Initialize select2
+    $('.select2').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        allowClear: true
+    });
+
     let currentBareme = [];
 
     // Render bareme table rows
@@ -421,6 +507,20 @@ $(document).ready(function() {
                 $('#toggleActiverTimbre').prop('checked', data.activer_timbre);
                 $('#inputTimbreMin').val(data.timbre_min);
                 $('#checkTimbreCashOnly').prop('checked', data.timbre_cash_only);
+                
+                // Imputation Comptable Fields
+                if(data.compte_tva_collectee_id) {
+                    $('#selectCompteTvaCollectee').val(data.compte_tva_collectee_id).trigger('change');
+                }
+                if(data.compte_tva_deductible_id) {
+                    $('#selectCompteTvaDeductible').val(data.compte_tva_deductible_id).trigger('change');
+                }
+                if(data.compte_timbre_collecte_id) {
+                    $('#selectCompteTimbreCollecte').val(data.compte_timbre_collecte_id).trigger('change');
+                }
+                if(data.compte_timbre_charge_id) {
+                    $('#selectCompteTimbreCharge').val(data.compte_timbre_charge_id).trigger('change');
+                }
                 
                 currentBareme = data.timbre_bareme || [];
                 renderBaremeTable();
@@ -563,6 +663,18 @@ $(document).ready(function() {
             'timbre_min': $('#inputTimbreMin').val(),
             'timbre_cash_only': $('#checkTimbreCashOnly').is(':checked'),
             'timbre_bareme': JSON.stringify(currentBareme),
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        };
+        saveParametreFinancier(data);
+    });
+
+    // Save imputation comptable
+    $('#btnSaveImputationConfig').on('click', function() {
+        var data = {
+            'compte_tva_collectee_id': $('#selectCompteTvaCollectee').val(),
+            'compte_tva_deductible_id': $('#selectCompteTvaDeductible').val(),
+            'compte_timbre_collecte_id': $('#selectCompteTimbreCollecte').val(),
+            'compte_timbre_charge_id': $('#selectCompteTimbreCharge').val(),
             'csrfmiddlewaretoken': '{{ csrf_token }}'
         };
         saveParametreFinancier(data);

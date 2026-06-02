@@ -48,6 +48,7 @@
                                     <th>Statut / Type</th>
                                     <th>Visibilité</th>
                                     <th>Accès URL</th>
+                                    <th>Portail (Étudiant/Formateur)</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -129,6 +130,17 @@
                                         </div>
                                     </td>
                                     <td>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input portail-toggle" type="checkbox" role="switch" 
+                                                   data-tenant-id="{{ metric.institut.id }}"
+                                                   id="portailSwitch{{ metric.institut.id }}"
+                                                   {% if metric.institut.is_portail_active %}checked{% endif %}>
+                                            <label class="form-check-label fs-11 text-muted" for="portailSwitch{{ metric.institut.id }}">
+                                                {% if metric.institut.is_portail_active %}Autorisé{% else %}Bloqué{% endif %}
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
                                         <div class="dropdown">
                                             <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                                 <i class="ri-more-fill"></i>
@@ -161,7 +173,7 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="6" class="text-center py-5">
+                                    <td colspan="8" class="text-center py-5">
                                         <div class="text-muted">
                                             <i class="ri-inbox-line fs-1 d-block mb-2"></i>
                                             Aucun tenant trouvé.
@@ -377,6 +389,41 @@
             success: function(response) {
                 if (response.success) {
                     label.text(isChecked ? 'Actif' : 'Suspendu');
+                    if (typeof alertify !== 'undefined') {
+                        alertify.success(response.message);
+                    }
+                } else {
+                    self.prop('checked', !isChecked);
+                    if (typeof alertify !== 'undefined') {
+                        alertify.error(response.error || 'Une erreur est survenue');
+                    }
+                }
+            },
+            error: function() {
+                self.prop('checked', !isChecked);
+                if (typeof alertify !== 'undefined') {
+                    alertify.error('Erreur de communication avec le serveur');
+                }
+            }
+        });
+    });
+
+    // Gestion de l'état du portail des tenants
+    $('.portail-toggle').on('change', function() {
+        const tenantId = $(this).data('tenant-id');
+        const isChecked = $(this).is(':checked');
+        const label = $(this).siblings('label');
+        const self = $(this);
+
+        $.ajax({
+            url: `/saas-admin/api/tenant/${tenantId}/toggle-portail/`,
+            type: 'POST',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    label.text(isChecked ? 'Autorisé' : 'Bloqué');
                     if (typeof alertify !== 'undefined') {
                         alertify.success(response.message);
                     }

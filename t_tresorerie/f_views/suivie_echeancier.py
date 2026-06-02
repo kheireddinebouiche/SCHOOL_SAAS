@@ -452,6 +452,7 @@ def ApiGetClientEcheancier(request):
             'has_processed_refund'  : has_processed_refund,
             'is_appliced' : is_appliced,
             "refund_data" : refund_data,
+            "has_invoice": done_paiements.filter(is_refund=False, facture__isnull=False).exists() if has_paiement else False,
         }
 
         return JsonResponse(data, safe=False)
@@ -704,6 +705,7 @@ def ApiGetClientEcheancierDouble(request):
             'has_processed_refund'  : has_processed_refund,
             'is_appliced' : is_appliced,
             "refund_data" : refund_data,
+            "has_invoice": done_paiements.filter(is_refund=False, facture__isnull=False).exists() if has_paiement else False,
         }
 
         return JsonResponse(data, safe=False)
@@ -721,9 +723,11 @@ def ApiSaveRefundOperation(request):
         entite_select = request.POST.get('entite_select')
         category_id = request.POST.get('category_select')
 
-        if not entite_select:
-            return JsonResponse({"status":"error",'message':"Entité prenant en charge le rembourssement manquante"})
+        allocations_str = request.POST.get('allocations')
+        allocations = json.loads(allocations_str) if allocations_str else {}
 
+        if not entite_select and not allocations:
+            return JsonResponse({"status":"error",'message':"Entité prenant en charge le rembourssement manquante"})
         prospect = Prospets.objects.get(id=id_client)
         if prospect.is_double:
             promo = FicheVoeuxDouble.objects.filter(prospect=prospect, is_confirmed=True).last()
@@ -736,8 +740,12 @@ def ApiSaveRefundOperation(request):
         print(f"DEBUG REFUND: id_client={id_client}, fiche_id={promo.id}, promo_id={promo.promo_id}")
 
         obj_refund = Rembourssements.objects.get(id = id_refund)
-        obj_refund.entite = Entreprise.objects.get(id = entite_select)
-        obj_refund.save()
+        
+        # Determine the primary entity for the refund object
+        # If there are allocations, we'll try to find the entity with the max amount later or just use entite_select if available
+        if entite_select:
+            obj_refund.entite = Entreprise.objects.get(id = entite_select)
+            obj_refund.save()
 
         # refund_paiement = Paiements(
         #     prospect = Prospets.objects.get(id = id_client),
@@ -753,27 +761,125 @@ def ApiSaveRefundOperation(request):
 
         # refund_paiement.save()
 
-        depense = Depenses(
-            client_id=id_client,
-            label = "Remboursement",
-            montant_ht = amount,
-            montant_ttc = amount,
-            tva = 0,
-            mode_paiement = mode_rembourssement,
-            entite_id = entite_select,
-            category_id = category_id,
-            date_paiement = datetime.now(),
-            etat = True
-        )
+        from collections import defaultdict
+        
+        # Build a mapping of entite_id -> amount
+        entite_amounts = defaultdict(float)
+        entite_amounts_for_depense = defaultdict(float)
+        
+        if allocations:
+            for p_id_str, p_amount in allocations.items():
+                try:
+                    p = Paiements.objects.get(id=int(p_id_str))
+                    # Use payment's entity, fallback to entite_select
+                    e_id = p.entite_id if p.entite else entite_select
+                    if e_id:
+                        entite_amounts[e_id] += float(p_amount)
 
-        depense.save()
+                    is_cashed = True
+                    if p.mode_paiement in ['che', 'vir']:
+                        op_bancaire = OperationsBancaire.objects.filter(paiement=p, operation_type='entree').first()
+                        if op_bancaire and not op_bancaire.is_paid:
+                            is_cashed = False
+                            # It's an annulation of an uncashed payment!
+                            if float(p_amount) >= float(op_bancaire.montant):
+                                # Full annulment
+                                op_bancaire.delete()
+                                p.is_done = True
+                                p.is_refund = True
+                                p.save()
+                            else:
+                                # Partial annulment
+                                op_bancaire.montant = float(op_bancaire.montant) - float(p_amount)
+                                op_bancaire.save()
+                                p.montant_paye = float(p.montant_paye) - float(p_amount)
+                                p.save()
 
-        if mode_rembourssement in ["che", "vir"]:
-            OperationsBancaire.objects.create(
-                operation_type="sortie",
-                depense=depense,
-                montant=amount,
-            )
+                    if is_cashed or p.mode_paiement not in ['che', 'vir']:
+                        if e_id:
+                            entite_amounts_for_depense[e_id] += float(p_amount)
+
+                except Paiements.DoesNotExist:
+                    continue
+        else:
+            # Fallback if no allocations are provided (legacy behavior)
+            if entite_select:
+                entite_amounts[entite_select] = float(amount)
+                entite_amounts_for_depense[entite_select] = float(amount)
+            
+        # Update obj_refund entite to the one with the highest refund amount if not set
+        if not obj_refund.entite and entite_amounts:
+            max_entite_id = max(entite_amounts, key=entite_amounts.get)
+            obj_refund.entite = Entreprise.objects.get(id=max_entite_id)
+            obj_refund.save()
+
+        # Create distinct expenses ONLY for cashed amounts
+        for e_id, e_amount in entite_amounts_for_depense.items():
+            if e_amount > 0:
+                depense = Depenses(
+                    client_id=id_client,
+                    label="Remboursement partiel (Multi-Entité)" if len(entite_amounts_for_depense) > 1 else "Remboursement",
+                    montant_ht=e_amount,
+                    montant_ttc=e_amount,
+                    tva=0,
+                    mode_paiement=mode_rembourssement,
+                    entite_id=e_id,
+                    category_id=category_id,
+                    date_paiement=datetime.now(),
+                    etat=True
+                )
+                depense.save()
+
+                if mode_rembourssement in ["che", "vir"]:
+                    OperationsBancaire.objects.create(
+                        operation_type="sortie",
+                        depense=depense,
+                        montant=e_amount,
+                    )
+
+        from t_conseil.models import Facture
+        
+        for p_id_str, p_amount in allocations.items():
+            try:
+                paiement = Paiements.objects.get(id=int(p_id_str))
+                
+                PaiementRemboursement.objects.create(
+                    client=prospect,
+                    remboursement=obj_refund,
+                    paiement=paiement,
+                    montant=p_amount,
+                    mode_paiement=mode_rembourssement,
+                    date_remboursement=now()
+                )
+
+                if paiement.facture:
+                    # Créer une Facture d'Avoir Partielle
+                    facture_avoir = Facture.objects.create(
+                        client=prospect,
+                        facture_source=paiement.facture,
+                        type_facture='avoir',
+                        tva=paiement.facture.tva,
+                        show_tva=paiement.facture.show_tva,
+                        entreprise=paiement.facture.entreprise,
+                        mode_paiement=mode_rembourssement,
+                        module_source='tresorerie',
+                        conditions_commerciales=f"Avoir sur la facture N°{paiement.facture.num_facture} généré suite au remboursement partiel/total de {p_amount} DA."
+                    )
+                    
+                    from t_conseil.models import LignesFacture
+                    LignesFacture.objects.create(
+                        facture=facture_avoir,
+                        description=f"Remboursement partiel/total sur paiement {paiement.id}",
+                        quantite=1,
+                        prix_unitaire=p_amount,
+                        montant_ht=p_amount,
+                        tva_percent=0
+                    )
+                    
+                    # On attache la facture d'avoir au remboursement
+                    obj_refund.facture = facture_avoir
+            except Paiements.DoesNotExist:
+                continue
 
         obj_refund.is_appliced = True
         obj_refund.save()
