@@ -950,14 +950,23 @@ def ApiSendCustomExamEmail(request):
                 connection=connection
             )
             
-            # Read the uploaded file
+            # Read the uploaded file synchronously while we have it
             file_data = attachment.read()
             email.attach(attachment.name, file_data, attachment.content_type)
             
-            email.send(fail_silently=False)
+            def send_email_in_background(email_msg):
+                try:
+                    email_msg.send(fail_silently=True)
+                except Exception as e:
+                    print(f"Erreur en arrière-plan lors de l'envoi d'e-mail : {str(e)}")
+
+            import threading
+            thread = threading.Thread(target=send_email_in_background, args=(email,))
+            thread.daemon = True
+            thread.start()
             
-            return JsonResponse({"status": "success", "message": f"E-mail envoyé avec succès à {len(emails)} formateur(s)."})
+            return JsonResponse({"status": "success", "message": f"L'e-mail est en cours d'envoi à {len(emails)} formateur(s)."})
         except Exception as e:
-            return JsonResponse({"status": "error", "message": f"Erreur lors de l'envoi : {str(e)}"})
+            return JsonResponse({"status": "error", "message": f"Erreur lors de la préparation de l'envoi : {str(e)}"})
             
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
