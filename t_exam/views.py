@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse, Http404
 from .models import *
@@ -15,11 +16,13 @@ from t_crm.models import UserActionLog
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ListeSession(request):
     return render(request, 'tenant_folder/exams/liste-session.html')
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'add')
 def NewSession(request):
     if request.method == "POST":
         form = SessionForm(request.POST)
@@ -52,6 +55,7 @@ def NewSession(request):
         return render(request, 'tenant_folder/exams/template-session-form.html', {'form': form})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiListSession(request):
     session = SessionExam.objects.all()
     data = []
@@ -69,6 +73,7 @@ def ApiListSession(request):
     return JsonResponse(data, safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiGetSessionDetailsById(request):
     session_id = request.GET.get("id")
 
@@ -87,6 +92,7 @@ def ApiGetSessionDetailsById(request):
     except SessionExam.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Session non trouvée'})
 
+@module_permission_required('exa', 'delete')
 def ApiDeleteSession(request):
     id = request.GET.get('id')
     obj = SessionExam.objects.get(id = id)
@@ -107,6 +113,7 @@ def ApiDeleteSession(request):
     
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def DetailsSession(request, pk):
     context = {
         'pk' : pk,
@@ -115,6 +122,7 @@ def DetailsSession(request, pk):
     return render(request, 'tenant_folder/exams/details-session.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiGetSessionDetails(request):
     session_id = request.GET.get("id")
     
@@ -129,6 +137,7 @@ def ApiGetSessionDetails(request):
     return JsonResponse(data)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'delete')
 def ApiDeleteGroupeSessionLine(request):
     id = request.GET.get('id')
 
@@ -147,6 +156,7 @@ def ApiDeleteGroupeSessionLine(request):
 
     return JsonResponse({'status' : 'success', 'message': "Suppression effectuée avec succès"})
 
+@module_permission_required('exa', 'change')
 def ApiUpdateSession(request):
     id = request.POST.get('id')
     label = request.POST.get('label')
@@ -179,6 +189,7 @@ def ApiUpdateSession(request):
         return JsonResponse({'status' : 'success', 'message' : 'Les informations de la session ont été mises à jour avec succès'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiGetSessionLineDetails(request):
     id = request.GET.get('id')
 
@@ -198,6 +209,7 @@ def ApiGetSessionLineDetails(request):
         return JsonResponse({'status': 'error', 'message': 'Ligne de session non trouvée'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'change')
 def ApiUpdateGroupeSessionLine(request):
     if request.method == 'POST':
         id = request.POST.get('id')
@@ -231,6 +243,7 @@ def ApiUpdateGroupeSessionLine(request):
         return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiGetExamPlanificationDetails(request):
     exam_plan_id = request.GET.get('id')
 
@@ -257,6 +270,7 @@ def ApiGetExamPlanificationDetails(request):
         return JsonResponse({'status': 'error', 'message': 'Planification d\'examen non trouvée'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'change')
 def ApiUpdateExamPlanification(request):
     if request.method == 'POST':
         exam_plan_id = request.POST.get('exam_planification_id')
@@ -304,6 +318,7 @@ def ApiUpdateExamPlanification(request):
     else:
         return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
+@module_permission_required('exa', 'view')
 def ApiCheckAvailability(request):
     label = request.GET.get('label')
     code = request.GET.get('code')
@@ -318,6 +333,7 @@ def ApiCheckAvailability(request):
     
     return JsonResponse({'error': 'No parameters provided'}, status=400)
 
+@module_permission_required('exa', 'add')
 def ApiPlaneExam(request):
     groupe = request.POST.get('groupe')
     session = request.POST.get('session')
@@ -355,6 +371,7 @@ def ApiPlaneExam(request):
 
         return JsonResponse({'status' : 'success', 'message' : 'Le groupe a été planifié'})
 
+@module_permission_required('exa', 'change')
 def ExamConfiguration(request, pk):
     try:
         SessionExamLine.objects.get(id=pk)
@@ -366,10 +383,12 @@ def ExamConfiguration(request, pk):
     }
     return render(request, 'tenant_folder/exams/exams_plannification.html', context)
 
+@module_permission_required('exa', 'view')
 def ApiGetExamLineDetails(request):
     pass
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
 def ApiLoadDatasForPlanExam(request):
     id = request.GET.get('id')
     obj = SessionExamLine.objects.get(id = id)
@@ -384,6 +403,7 @@ def ApiLoadDatasForPlanExam(request):
     return JsonResponse(data, safe=False)
 
 @transaction.atomic
+@module_permission_required('exa', 'add')
 def save_exam_plan(request):
     
     session_line_id = request.POST.get("session_id")

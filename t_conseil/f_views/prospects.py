@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -11,6 +12,7 @@ def ApiListeProspect(request):
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
 def ApiCreateProspect(request):
     if request.method == "POST":
         entreprise = request.POST.get('entreprise')

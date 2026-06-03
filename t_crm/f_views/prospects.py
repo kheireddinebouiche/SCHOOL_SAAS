@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render,redirect
 from django.http import JsonResponse
 from ..models import *
@@ -433,6 +434,7 @@ from datetime import datetime
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
+@module_permission_required('crm', 'approuv')
 def ApiValidateProspect(request):
     if request.method == 'POST':
         id_prospect = request.POST.get('id_prospect')
@@ -471,6 +473,7 @@ def ApiValidateProspect(request):
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('crm', 'approuv')
 def ApiValidateProspectDouble(request):
     if request.method == "POST":
         id_prospect = request.POST.get('id_prospect')
@@ -653,6 +656,7 @@ def ApiCreateVoeux(request):
     return JsonResponse({"status" : "success", "message" : "La fiche de voeux a été enregistrée avec succès"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('crm', 'approuv')
 def ApiConfirmeDoubleDiplome(request):
     if request.method == "POST":
         pass

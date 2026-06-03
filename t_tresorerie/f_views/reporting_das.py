@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
@@ -6,6 +7,7 @@ from django.apps import apps
 import datetime
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ReportingDAS(request):
     """
     Dashboard showing total amounts grouped by PaymentCategory AND Entreprise.

@@ -1,3 +1,5 @@
+from institut_app.decorators import superuser_required
+from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
@@ -11,10 +13,12 @@ from ..models import UserSession, UserDeviceLog
 User = get_user_model()
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def liste_users(request):
     return render(request, 'tenant_folder/users/liste_users.html')
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiListeUtilisateurs(request):
     if request.method == "GET":
         try:
@@ -49,6 +53,7 @@ def ApiListeUtilisateurs(request):
         return JsonResponse({"status": "error", "message": "Method not allowed"})
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiShowUserDetails(request):
     if request.method == "GET":
         user_id = request.GET.get('id')
@@ -82,6 +87,7 @@ def ApiShowUserDetails(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiUpdateUser(request):
     if request.method == "POST":
         user_id = request.POST.get('id')
@@ -127,6 +133,7 @@ def ApiUpdateUser(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiDeleteUser(request):
     if request.method == "POST":
         user_id = request.POST.get('id')
@@ -153,6 +160,7 @@ def ApiDeleteUser(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiChangeUserStatus(request):
     if request.method == "POST":
         user_id = request.POST.get('id')
@@ -188,6 +196,7 @@ def ApiChangeUserStatus(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiCreateUser(request):
     if request.method == "POST":
         username = request.POST.get('username')
@@ -243,6 +252,7 @@ def ApiCreateUser(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiChangeUserPassword(request):
     if request.method == "POST":
         user_id = request.POST.get('id')
@@ -292,6 +302,7 @@ def ApiChangeUserPassword(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiResetDeviceLock(request):
     """
     Réinitialise le verrouillage de l'appareil pour un utilisateur.
@@ -318,6 +329,7 @@ def ApiResetDeviceLock(request):
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def DeviceManagementPage(request):
     """
     Page affichant l'historique des appareils et des connexions.
@@ -339,6 +351,7 @@ def DeviceManagementPage(request):
     return render(request, 'tenant_folder/users/device_management.html', context)
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiToggleDeviceLock(request):
     """
     Active ou désactive le verrouillage par appareil pour un utilisateur.
@@ -370,6 +383,7 @@ def ApiToggleDeviceLock(request):
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def LoginAsUser(request, user_id):
     if not request.user.is_superuser:
         messages.error(request, "Permission refusée.")
@@ -400,3 +414,53 @@ def RestoreOriginalUser(request):
     else:
         messages.info(request, "Aucune session d'origine trouvée.")
     return redirect('institut_app:index')
+
+@login_required(login_url="institut_app:login")
+@superuser_required
+def ApiGetSubMenuAccess(request):
+    user_id = request.GET.get('id')
+    module_code = request.GET.get('module_code', 'tre')
+    
+    if not user_id:
+        return JsonResponse({"status": "error", "message": "ID utilisateur requis"})
+        
+    try:
+        from institut_app.models import UserSubMenuAccess
+        target_user = User.objects.get(id=user_id)
+        accesses = UserSubMenuAccess.objects.filter(user=target_user, module_code=module_code)
+        
+        data = {acc.submenu_code: acc.is_active for acc in accesses}
+        return JsonResponse({"status": "success", "data": data})
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+@superuser_required
+def ApiToggleSubMenuAccess(request):
+    if request.method == "POST":
+        import json
+        data = json.loads(request.body)
+        user_id = data.get('id')
+        module_code = data.get('module_code', 'tre')
+        submenu_code = data.get('submenu_code')
+        is_active = data.get('is_active')
+        
+        if not user_id or not submenu_code:
+            return JsonResponse({"status": "error", "message": "Données incomplètes"})
+            
+        try:
+            from institut_app.models import UserSubMenuAccess
+            target_user = User.objects.get(id=user_id)
+            access, created = UserSubMenuAccess.objects.get_or_create(
+                user=target_user, 
+                module_code=module_code, 
+                submenu_code=submenu_code
+            )
+            access.is_active = is_active
+            access.save()
+            
+            return JsonResponse({"status": "success", "message": "Paramètre mis à jour"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})

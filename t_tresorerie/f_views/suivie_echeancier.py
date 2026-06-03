@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -14,6 +15,7 @@ from datetime import datetime
 from django.utils.timezone import now
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadConvertedProspects(request):
 
     # Total payé par étudiant (tous contextes confondus, hors remboursements)
@@ -89,6 +91,7 @@ def ApiLoadConvertedProspects(request):
     return JsonResponse(data, safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiStats(request):
     nombre_inscrit = Prospets.objects.filter(statut="convertit").count()
     nombre_paiement = Paiements.objects.filter(is_refund=False, prospect__statut="convertit").count()
@@ -112,6 +115,7 @@ def ApiStats(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def DetailsEcheancierClient(request, pk):
     context = {
         'pk': pk,
@@ -120,6 +124,7 @@ def DetailsEcheancierClient(request, pk):
     return render(request, 'tenant_folder/comptabilite/echeancier/details-suivie-echeancier.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def DetailsEcheancierClientDouble(request, pk):
     context = {
         'pk' : pk,
@@ -130,6 +135,7 @@ def DetailsEcheancierClientDouble(request, pk):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetLunchedSpec(request):
     if request.method == "GET":
         id_promo = request.GET.get("id_promo")
@@ -201,6 +207,7 @@ def ApiGetLunchedSpec(request):
 from t_groupe.models import GroupeLine
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetClientEcheancier(request):
     if request.method == "GET":
 
@@ -458,6 +465,7 @@ def ApiGetClientEcheancier(request):
         return JsonResponse(data, safe=False)
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetClientEcheancierDouble(request):
     if request.method == "GET":
 
@@ -713,6 +721,7 @@ def ApiGetClientEcheancierDouble(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiSaveRefundOperation(request):
     if request.method == "POST":
         id_client = request.POST.get('id_client')
@@ -949,6 +958,7 @@ def ApiSaveRefundOperation(request):
         return JsonResponse({"status" : "error"})
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiShowRefundTraiteResult(request):
     id_demande = request.GET.get('id_demande')
     if not id_demande:
@@ -983,6 +993,7 @@ def ApiShowRefundTraiteResult(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetEntrepriseInfos(request):
     id_client = request.GET.get('id_client')
     print(id_client)
@@ -1014,6 +1025,7 @@ def ApiGetEntrepriseInfos(request):
     return JsonResponse(data)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetProspectsList(request):
 
     if request.method == "GET":
@@ -1077,6 +1089,7 @@ def ApiGetProspectsList(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'change')
 def ApiToggleFinancialAlert(request):
     if request.method == "POST":
         id_client = request.POST.get('id_client')
@@ -1128,6 +1141,7 @@ def ApiToggleFinancialAlert(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'view')
 def ApiSendEmailRelance(request):
     if request.method == "POST":
         id_client = request.POST.get('client_id')
@@ -1282,6 +1296,7 @@ def ApiSendEmailRelance(request):
 
 @login_required(login_url="institut_app:login")
 @require_http_methods(["POST"])
+@module_permission_required('tre', 'view')
 def ApiMarkEngagementPrinted(request, prospect_id):
     try:
         data = json.loads(request.body)
@@ -1306,6 +1321,7 @@ def ApiMarkEngagementPrinted(request, prospect_id):
 
 @login_required(login_url="institut_app:login")
 @require_http_methods(["POST"])
+@module_permission_required('tre', 'view')
 def ApiMarkQuittancePrinted(request):
     try:
         data = json.loads(request.body)
@@ -1331,4 +1347,4 @@ def ApiMarkQuittancePrinted(request):
     except Paiements.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Paiement non trouvé'}, status=404)
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

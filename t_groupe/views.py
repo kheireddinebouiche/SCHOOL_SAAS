@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from .models import *
@@ -272,6 +273,7 @@ def makeGroupeBrouillon(request, pk):
 
 @login_required(login_url="insitut_app:login")
 @transaction.atomic
+@module_permission_required('scol', 'approuv')
 def validateGroupe(request, pk):
     groupe = Groupe.objects.get(id = pk)
     groupe.etat = "inscription"

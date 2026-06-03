@@ -1,3 +1,5 @@
+from institut_app.decorators import superuser_required
+from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render,redirect
 from django.http import HttpResponse, JsonResponse
 from ..models import *
@@ -5,15 +7,18 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ModulesPages(request):
     return render(request, 'tenant_folder/administration/permissions/modules.html')
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def Role_Attribution(request):
     return render(request,"tenant_folder/administration/permissions/attribution_des_roles.html")
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiListeModules(request):
     if request.method == "GET":
         
@@ -38,6 +43,7 @@ def ApiListeModules(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiAddModule(request):
     if request.method == "POST":
         addModuleName = request.POST.get('addModuleName')
@@ -64,6 +70,7 @@ def ApiAddModule(request):
 
 
 @login_required(login_url='institut_app:login')
+@superuser_required
 def ApiListeRoles(request):
     if request.method == 'GET':
         roles = Role.objects.all()
@@ -87,6 +94,7 @@ def ApiListeRoles(request):
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
+@superuser_required
 def ApiAddRole(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -122,6 +130,7 @@ def ApiAddRole(request):
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
+@superuser_required
 def ApiUpdateRole(request):
     if request.method == 'POST':
         role_id = request.POST.get('id')
@@ -161,6 +170,7 @@ def ApiUpdateRole(request):
 
 
 @login_required(login_url='institut_app:login')
+@superuser_required
 def ApiGetRoleDetails(request):
     role_id = request.GET.get('id')
 
@@ -190,6 +200,7 @@ def ApiGetRoleDetails(request):
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
+@superuser_required
 def ApiDeleteRole(request):
     if request.method == 'POST':
         role_id = request.POST.get('id')
@@ -221,6 +232,7 @@ def ApiDeleteRole(request):
 
 
 @login_required(login_url='institut_app:login')
+@superuser_required
 def ApiChangeRoleStatus(request):
     if request.method == 'POST':
         role_id = request.POST.get('id')
@@ -260,6 +272,7 @@ def ApiChangeRoleStatus(request):
 # View functions for the roles page
 
 @login_required(login_url='institut_app:login')
+@superuser_required
 def roles_page(request):
     """Page de gestion des rôles"""
     roles = Role.objects.all()
@@ -273,6 +286,7 @@ def roles_page(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiUpdateModule(request):
     if request.method == "POST":
         module_id = request.POST.get('id')
@@ -309,6 +323,7 @@ def ApiUpdateModule(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiGetModuleDetails(request):
     module_id = request.GET.get('id')
 
@@ -337,6 +352,7 @@ def ApiGetModuleDetails(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiChangeModuleStatus(request):
     if request.method == "POST":
         module_id = request.POST.get('id')
@@ -374,6 +390,7 @@ def ApiChangeModuleStatus(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiGetModulePermissions(request):
     module_id = request.GET.get('module_id')
 
@@ -412,6 +429,7 @@ def ApiGetModulePermissions(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiAddModulePermission(request):
     if request.method == "POST":
         module_id = request.POST.get('module_id')
@@ -462,6 +480,7 @@ def ApiAddModulePermission(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiUpdateModulePermission(request):
     if request.method == "POST":
         permission_id = request.POST.get('permission_id')
@@ -513,6 +532,7 @@ def ApiUpdateModulePermission(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiDeleteModulePermission(request):
     if request.method == "POST":
         permission_id = request.POST.get('permission_id')
@@ -541,6 +561,7 @@ def ApiDeleteModulePermission(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiGetRolePermissions(request):
     role_id = request.GET.get('role_id')
 
@@ -581,6 +602,7 @@ def ApiGetRolePermissions(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiSaveRolePermissions(request):
     if request.method == "POST":
         role_id = request.POST.get('role_id')
@@ -640,6 +662,7 @@ def ApiSaveRolePermissions(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiAddRolePermission(request):
     if request.method == "POST":
         role_id = request.POST.get('role_id')
@@ -689,6 +712,7 @@ def ApiAddRolePermission(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiUpdateRolePermission(request):
     if request.method == "POST":
         permission_id = request.POST.get('permission_id')
@@ -748,6 +772,7 @@ def ApiUpdateRolePermission(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiDeleteRolePermission(request):
     if request.method == "POST":
         permission_id = request.POST.get('permission_id')
@@ -780,6 +805,7 @@ def ApiDeleteRolePermission(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiDeleteModule(request):
     if request.method == "POST":
         module_id = request.POST.get('id')
@@ -813,6 +839,7 @@ def ApiDeleteModule(request):
  
  
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiListeAttributions(request):
     if request.method == "GET":
         try:
@@ -867,6 +894,7 @@ def ApiListeAttributions(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiAddAttribution(request):
     if request.method == "POST":
         user_id = request.POST.get('user_id')
@@ -932,6 +960,7 @@ def ApiAddAttribution(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiBulkAddAttribution(request):
     """
     API pour créer plusieurs attributions à la fois (1 rôle pour plusieurs modules)
@@ -995,6 +1024,7 @@ def ApiBulkAddAttribution(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiUpdateAttribution(request):
     if request.method == "POST":
         attribution_id = request.POST.get('id')
@@ -1072,6 +1102,7 @@ def ApiUpdateAttribution(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiDeleteAttribution(request):
     if request.method == "POST":
         attribution_id = request.POST.get('id')
@@ -1104,6 +1135,7 @@ def ApiDeleteAttribution(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiGetAttributionDetails(request):
     """
     API pour récupérer les détails d'une attribution spécifique
@@ -1159,6 +1191,7 @@ def ApiGetAttributionDetails(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiListeUsersPermission(request):
     """
     API pour lister tous les utilisateurs
@@ -1193,6 +1226,7 @@ def ApiListeUsersPermission(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiGetRolePermissionsByRoleId(request):
     """
     API pour récupérer toutes les permissions du rôle pour un module spécifique
@@ -1255,6 +1289,7 @@ def ApiGetRolePermissionsByRoleId(request):
         })
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiGetAttributionPermissions(request):
     """
     Récupère toutes les permissions possibles pour le module d'une attribution,
@@ -1273,13 +1308,13 @@ def ApiGetAttributionPermissions(request):
         all_module_permissions = ModulePermission.objects.filter(module=module)
         
         # Permissions accordées par le rôle
-        role_granted_ids = RolePermission.objects.filter(
+        role_granted_ids = set(RolePermission.objects.filter(
             role=role,
             module_permission__module=module
-        ).values_list('module_permission_id', flat=True)
+        ).values_list('module_permission_id', flat=True))
         
         # Permissions explicitement désactivées pour cet utilisateur
-        denied_ids = attribution.denied_permissions.values_list('id', flat=True)
+        denied_ids = set(attribution.denied_permissions.values_list('id', flat=True))
         
         permissions_data = []
         for mp in all_module_permissions:
@@ -1302,6 +1337,7 @@ def ApiGetAttributionPermissions(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiTogglePermissionDenial(request):
     """
     Bascule l'état de désactivation d'une permission pour une attribution.
@@ -1339,6 +1375,7 @@ def ApiTogglePermissionDenial(request):
 import json
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiExportModules(request):
     try:
         modules = Module.objects.all().prefetch_related('permissions')
@@ -1368,6 +1405,7 @@ def ApiExportModules(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiImportModules(request):
     if request.method == 'POST' and request.FILES.get('file'):
         try:

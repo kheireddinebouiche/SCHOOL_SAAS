@@ -122,6 +122,8 @@ urlpatterns = [
     path('ApiToggleDeviceLock', ApiToggleDeviceLock, name="ApiToggleDeviceLock"),
     path('login-as-user/<int:user_id>/', LoginAsUser, name="LoginAsUser"),
     path('restore-original-user/', RestoreOriginalUser, name="RestoreOriginalUser"),
+    path('ApiGetSubMenuAccess', ApiGetSubMenuAccess, name="ApiGetSubMenuAccess"),
+    path('ApiToggleSubMenuAccess', ApiToggleSubMenuAccess, name="ApiToggleSubMenuAccess"),
     path('utilisateurs/historique-appareils/', DeviceManagementPage, name="DeviceManagementPage"),
 
     #### Dashboard #####

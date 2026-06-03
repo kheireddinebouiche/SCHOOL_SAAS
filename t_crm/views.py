@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from .models import (
@@ -77,6 +78,7 @@ def nouveauVisiteur(request):
         }
         return render(request, 'tenant_folder/crm/nouveau_visiteur.html', context)
 
+@module_permission_required('crm', 'approuv')
 def ApprouveVisiteurInscription(request,pk):
     visiteur = Visiteurs.objects.get(id= pk)
     
@@ -239,6 +241,7 @@ def ApiAddNewDemandeInscription(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('crm', 'approuv')
 def ApiConfirmDemandeInscription(request):
 
     id_demande = request.GET.get('id_demande')
@@ -913,40 +916,39 @@ def ApiQuickSearchExistingContact(request):
     return JsonResponse({'status': 'success', 'results': results})
 
 @login_required(login_url="institut_app:login")
-@module_permission_required('crm','view')
+@module_permission_required('rel','view')
 def MasterListeEtudiants(request):
     if request.tenant.tenant_type != 'master':
         raise PermissionDenied("Seul le compte maître peut accéder à cette page.")
         
     from django_tenants.utils import schema_context
     from app.models import Institut
-    from t_etudiants.models import Etudiant
+    from t_groupe.models import Groupe
     
-    etudiants_par_tenant = []
+    instituts_data = []
     
-    tenants = Institut.objects.exclude(schema_name='public')
+    tenants = Institut.objects.filter(tenant_type='second').exclude(schema_name='public')
     for tenant in tenants:
         with schema_context(tenant.schema_name):
-            etudiants = Etudiant.objects.all().select_related('relation')
-            for etu in etudiants:
-                if etu.relation:
-                    nom = etu.relation.nom
-                    prenom = etu.relation.prenom
-                else:
-                    nom = etu.nom_arabe or ""
-                    prenom = etu.prenom_arabe or ""
-                
-                etudiants_par_tenant.append({
-                    'tenant_nom': tenant.nom,
-                    'nom': nom,
-                    'prenom': prenom,
-                    'email': etu.email,
-                    'telephone': etu.telephone,
-                    'date_inscription': etu.date_inscription
+            groupes = Groupe.objects.filter(specialite__formation__type_formation='etrangere').select_related('specialite', 'specialite__formation', 'promotion')
+            
+            groupes_data = []
+            for groupe in groupes:
+                groupes_data.append({
+                    'nom': groupe.nom,
+                    'formation': groupe.specialite.formation.nom if groupe.specialite and groupe.specialite.formation else 'N/A',
+                    'specialite': groupe.specialite.label if groupe.specialite else 'N/A',
+                    'promotion': groupe.promotion.label if groupe.promotion else 'N/A',
+                    'etat': groupe.get_etat_display(),
                 })
                 
+            instituts_data.append({
+                'tenant_nom': tenant.nom,
+                'groupes': groupes_data
+            })
+                
     context = {
-        'etudiants': etudiants_par_tenant,
+        'instituts': instituts_data,
         'tenant': request.tenant
     }
     return render(request, 'tenant_folder/crm/master_liste_etudiants.html', context)

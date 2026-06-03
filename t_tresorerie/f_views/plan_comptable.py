@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -13,6 +14,7 @@ import json
 
 
 @login_required
+@module_permission_required('tre', 'view')
 def PagePlanComptable(request):
     """
     Affiche la page du plan comptable avec une interface harmonisée
@@ -29,6 +31,7 @@ def PagePlanComptable(request):
 
 
 @login_required
+@module_permission_required('tre', 'view')
 def PagePlanComptableRecetteDepense(request):
     """
     Page consolidée pour gérer les catégories de recettes (PaymentCategory) 
@@ -45,6 +48,7 @@ def PagePlanComptableRecetteDepense(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
+@module_permission_required('tre', 'add')
 def CreateCompteModal(request):
     """
     Vue pour afficher ou traiter la modal de création d'un compte comptable
@@ -137,6 +141,7 @@ def CreateCompteModal(request):
 
 
 @login_required
+@module_permission_required('tre', 'view')
 def PlanComptableAPI(request):
     """
     API endpoint to fetch all PlanComptable data for the table

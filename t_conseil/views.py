@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import *
 from .models import *
@@ -17,6 +18,7 @@ from django.utils import timezone
 from institut_app.decorators import ajax_required
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ListeThematique(request):
     context = {
         'tenant' : request.tenant,
@@ -25,11 +27,13 @@ def ListeThematique(request):
     return render(request, 'tenant_folder/conseil/liste-des-thematiques.html', context)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiLoadThematique(request):
     thematique = Thematiques.objects.filter(etat  = "active").values('id', 'label', 'description', 'prix', 'created_at', 'billing_type', 'default_tva', 'categorie')
     return JsonResponse(list(thematique), safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'add')
 def ApiSaveThematique(request):
     label = request.POST.get('label')
     prix = request.POST.get('prix')
@@ -50,6 +54,7 @@ def ApiSaveThematique(request):
     return JsonResponse({'status': 'success', 'message': 'ThÃ©matique ajoutÃ©e avec succÃ¨s.'})
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiLoadThematiqueDetails(request):
     id_thematique = request.GET.get('id_thematique')
     obj = Thematiques.objects.filter(id = id_thematique)
@@ -66,6 +71,7 @@ def ApiLoadThematiqueDetails(request):
     return JsonResponse(data, safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def DetailsProspectConseil(request, slug):
     prospect = get_object_or_404(Prospets, slug=slug)
     
@@ -80,12 +86,14 @@ def DetailsProspectConseil(request, slug):
     return render(request, 'tenant_folder/conseil/prospect/details_prospect.html', context)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiLoadProspectDevis(request):
     id_prospect = request.GET.get('id_prospect')
     devis = Devis.objects.filter(client_id=id_prospect).values('id', 'num_devis', 'montant', 'date_emission', 'etat')
     return JsonResponse(list(devis), safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiLoadProspectFactures(request):
     id_prospect = request.GET.get('id_prospect')
     factures = Facture.objects.filter(client_id=id_prospect)
@@ -102,6 +110,7 @@ def ApiLoadProspectFactures(request):
     return JsonResponse(data, safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiLoadProspectFinancials(request):
     id_prospect = request.GET.get('id_prospect')
     factures = Facture.objects.filter(client_id=id_prospect)
@@ -127,6 +136,7 @@ def ApiLoadProspectFinancials(request):
     })
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'add')
 def AddNewDevis(request):
     form = NewDevisForms()
     if request.method == "POST":
@@ -167,6 +177,7 @@ def AddNewDevis(request):
     return render(request, 'tenant_folder/conseil/nouveau-devis.html', context)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'add')
 def AddNewFacture(request):
     form = NewFactureForms()
     if request.method == "POST":
@@ -197,6 +208,7 @@ def ApiFetchEnterpriseTvas(request):
     return JsonResponse({'status': 'success', 'tvas': data})
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'change')
 def configure_devis(request, pk):
     if pk is None or pk == '0':
         return redirect('t_conseil:AddNewDevis')
@@ -225,6 +237,7 @@ def configure_devis(request, pk):
         return render(request, 'tenant_folder/conseil/configure-devis.html', context)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'change')
 def configure_facture(request, pk):
     if pk is None or pk == '0':
         return redirect('t_conseil:AddNewFacture')
@@ -253,6 +266,7 @@ def configure_facture(request, pk):
         return render(request, 'tenant_folder/conseil/configure-facture.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ListeDesDevis(request):
     devis = Devis.objects.all().order_by('-created_at')
     
@@ -271,6 +285,7 @@ def ListeDesDevis(request):
     return render(request,'tenant_folder/conseil/liste_des_devis.html', context)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'delete')
 def ArchiveThematique(request):
     context = {
         'tenant' : request.tenant
@@ -279,11 +294,13 @@ def ArchiveThematique(request):
     return render(request, 'tenant_folder/conseil/archive_thematique.html', context)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiLoadArchivedThematique(request):
     thematique = Thematiques.objects.filter(etat = "archive").values('id', 'label', 'prix', 'created_at', 'categorie', 'billing_type')
     return JsonResponse(list(thematique), safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'delete')
 def ApiArchiveThematique(request):
     id_thematique = request.POST.get('id_thematique')
     thematique = Thematiques.objects.get(id=id_thematique)
@@ -292,6 +309,7 @@ def ApiArchiveThematique(request):
     return JsonResponse({'status': 'success', 'message': 'ThÃ©matique archivÃ©e avec succÃ¨s.'})   
     
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'change')
 def ApiActivateThematique(request):
     id_thematique = request.POST.get('id_thematique')
     thematique = Thematiques.objects.get(id=id_thematique)
@@ -300,16 +318,19 @@ def ApiActivateThematique(request):
     return JsonResponse({'status': 'success', 'message': 'ThÃ©matique activÃ©e avec succÃ¨s.'})
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'delete')
 def ApiDeleteFinalThematique(request):
     id_thematique = request.POST.get('id_thematique')
     thematique = Thematiques.objects.get(id=id_thematique)
     thematique.delete()
     return JsonResponse({'status': 'success', 'message': 'ThÃ©matique supprimÃ©e dÃ©finitivement.'})
 
+@module_permission_required('con', 'change')
 def make_prospect_client(request):
     pass
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'change')
 def ApiUpdateThematique(request):
     id_thematique = request.POST.get('id_thematique')
     label = request.POST.get('label')
@@ -352,10 +373,12 @@ def ListeProspectConseil(request):
     return render(request, "tenant_folder/conseil/prospect/liste_des_prospects.html",context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ApiLoadProspect(request):
     pass
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ListeDesClients(request):
     context = {
         'tenant': request.tenant,
@@ -363,6 +386,7 @@ def ListeDesClients(request):
     return render(request, "tenant_folder/conseil/clients/liste_des_clients.html", context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def DetailsClient(request, slug):
     client = get_object_or_404(Prospets, slug=slug)
     context = {
@@ -373,6 +397,7 @@ def DetailsClient(request, slug):
     return render(request, "tenant_folder/conseil/clients/details_client.html", context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ApiListeClients(request):
     liste = Prospets.objects.filter(context='con', is_client=True).values(
         'id', 'slug', 'nom', 'prenom', 'entreprise', 'email', 'telephone', 'created_at', 'convertit_date'
@@ -380,6 +405,7 @@ def ApiListeClients(request):
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'change')
 def ApiTransformeToClient(request):
     id_prospect = request.POST.get('id_prospect')
     try:
@@ -393,6 +419,7 @@ def ApiTransformeToClient(request):
         return JsonResponse({'status': 'error', 'message': 'Prospect non trouvÃ©.'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
 def ApiSaveLigneDevis(request):
     import decimal
     devis_id = request.POST.get('devis_id')
@@ -426,6 +453,7 @@ def ApiSaveLigneDevis(request):
     return JsonResponse({'status': 'success', 'message': 'Ligne ajoutÃ©e avec succÃ¨s.'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'change')
 def ApiStartTransformationDevisToFacture(request):
     import decimal
     devis_id = request.POST.get('devis_id')
@@ -526,6 +554,7 @@ def ApiStartTransformationDevisToFacture(request):
     return JsonResponse({'status': 'success', 'message': 'Devis transformÃ© en facture avec succÃ¨s.', 'facture_num': facture.num_facture})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
 def ApiSaveDevisItems(request):
     import json
     import decimal
@@ -635,6 +664,7 @@ def ApiSaveDevisItems(request):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def DetailsDevis(request, pk):
     devis = Devis.objects.get(num_devis=pk)
     lignes_devis = devis.lignes_devis.all()
@@ -671,6 +701,7 @@ def DetailsDevis(request, pk):
     return render(request, 'tenant_folder/conseil/details_devis.html', context)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'approuv')
 def ApiValidateDevis(request):
     if request.method == 'POST':
         devis_id = request.POST.get('devis_id')
@@ -708,6 +739,7 @@ def ApiValidateDevis(request):
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'change')
 def ApiRevertDevisToDraft(request):
     if request.method == 'POST':
         devis_id = request.POST.get('devis_id')
@@ -725,6 +757,7 @@ def ApiRevertDevisToDraft(request):
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ListeDesFactures(request):
     factures = Facture.objects.filter(module_source='conseil').exclude(type_facture='avoir').order_by('-created_at')
     
@@ -753,6 +786,7 @@ def ListeDesFactures(request):
     return render(request, 'tenant_folder/conseil/liste_des_factures.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ListeDesAvoirs(request):
     factures = Facture.objects.filter(module_source='conseil', type_facture='avoir').order_by('-created_at')
     
@@ -782,6 +816,7 @@ def ListeDesAvoirs(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
 def ApiQuickCreateProspect(request):
     if request.method != "POST":
          return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
@@ -830,6 +865,7 @@ def ApiQuickCreateProspect(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'delete')
 def ApiDeleteOpportunite(request):
     if request.method == "POST":
         id_opp = request.POST.get('id')
@@ -843,6 +879,7 @@ def ApiDeleteOpportunite(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'add')
 def ApiAddPaiement(request):
     if request.method == "POST":
         facture_id = request.POST.get('facture_id')
@@ -899,6 +936,7 @@ def ApiAddPaiement(request):
     return JsonResponse({'status': 'error', 'message': 'MÃ©thode non autorisÃ©e.'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def DetailsFacture(request, pk):
     facture = Facture.objects.get(num_facture=pk)
     lignes_facture = facture.lignes_facture.all()
@@ -942,6 +980,7 @@ def DetailsFacture(request, pk):
     return render(request, 'tenant_folder/conseil/details_facture.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ConseilDashboard(request):
     context = {
         'tenant': request.tenant,
@@ -949,6 +988,7 @@ def ConseilDashboard(request):
     return render(request, 'tenant_folder/conseil/dashboard.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def PipelineConseil(request):
     from django.db.models import Sum, Q
     from django.db.models.functions import TruncMonth
@@ -1040,6 +1080,7 @@ def PipelineConseil(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'change')
 def ApiToggleFavorite(request):
     prospect_id = request.POST.get('prospect_id')
     try:
@@ -1051,6 +1092,7 @@ def ApiToggleFavorite(request):
         return JsonResponse({'status': 'error', 'message': 'Prospect non trouvÃ©.'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ExportPipelineCsv(request):
     import csv
     from django.http import HttpResponse
@@ -1071,6 +1113,7 @@ def ExportPipelineCsv(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'change')
 def ApiConvertProspectToDevis(request):
     from django.urls import reverse
     # Note: 'prospect_id' parameter actually comes as opportunite_id from the new pipeline
@@ -1107,6 +1150,7 @@ def ApiConvertProspectToDevis(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'delete')
 def ApiDeleteDevis(request):
     num_devis = request.POST.get('num_devis')
     try:
@@ -1119,6 +1163,7 @@ def ApiDeleteDevis(request):
 @login_required(login_url="institut_app:login")
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'change')
 def ApiUpdatePipelineStage(request):
     if request.method == "POST":
         # 'prospect_id' coming from frontend is actually Opportunite ID now
@@ -1136,6 +1181,7 @@ def ApiUpdatePipelineStage(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'add')
 def ApiCreateOpportunite(request):
     if request.method == "POST":
         prospect_id = request.POST.get('prospect_id')
@@ -1177,6 +1223,7 @@ def ApiCreateOpportunite(request):
     return JsonResponse({'status': 'error', 'message': 'MÃ©thode non autorisÃ©e.'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ApiGetOpportunite(request):
     opp_id = request.GET.get('id')
     try:
@@ -1198,6 +1245,7 @@ def ApiGetOpportunite(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'change')
 def ApiUpdateOpportunite(request):
     if request.method == "POST":
         opp_id = request.POST.get('id')
@@ -1223,6 +1271,7 @@ def ApiUpdateOpportunite(request):
             
     return JsonResponse({'status': 'error', 'message': 'MÃ©thode non autorisÃ©e.'})
 
+@module_permission_required('con', 'add')
 def ConfigurationConseil(request):
     enterprise_id = request.GET.get('enterprise_id') or request.POST.get('enterprise_id')
     enterprise = None
@@ -1306,6 +1355,7 @@ def ConfigurationConseil(request):
     }
     return render(request, 'tenant_folder/conseil/configuration.html', context)
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def DetailsFacture(request, pk):
     facture = get_object_or_404(Facture, num_facture=pk)
     lignes_facture = facture.lignes_facture.all()
@@ -1353,6 +1403,7 @@ def DetailsFacture(request, pk):
     return render(request, 'tenant_folder/conseil/details_facture.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
 def AddNewFacture(request):
     if request.method == "POST":
         form = NewFactureForms(request.POST)
@@ -1371,6 +1422,7 @@ def AddNewFacture(request):
     return render(request, 'tenant_folder/conseil/nouveau-facture.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'change')
 def configure_facture(request, pk):
     facture = get_object_or_404(Facture, num_facture=pk)
     lignes_facture = facture.lignes_facture.all()
@@ -1405,6 +1457,7 @@ def configure_facture(request, pk):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'add')
 def ApiSaveFactureItems(request):
     import json
     if request.method != 'POST':
@@ -1549,6 +1602,7 @@ def ApiSaveFactureItems(request):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'approuv')
 def ApiValidateFacture(request):
     if request.method == 'POST':
         facture_id = request.POST.get('facture_id')
@@ -1596,6 +1650,7 @@ def ApiValidateFacture(request):
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'change')
 def ApiRevertFactureToDraft(request):
     if request.method == 'POST':
         facture_id = request.POST.get('facture_id')
@@ -1610,6 +1665,7 @@ def ApiRevertFactureToDraft(request):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'delete')
 def ApiDeleteFacture(request):
     facture_id = request.POST.get('facture_id')
     try:
@@ -1623,6 +1679,7 @@ def ApiDeleteFacture(request):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'add')
 def ApiCreateAvoir(request):
     facture_id = request.POST.get('facture_id')
     try:
@@ -1678,6 +1735,7 @@ def ApiFetchEnterpriseTvas(request):
 
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ListeDAS(request):
     """
     Renders the page to manage DAS mappings (Products/Services to PaymentCategory).
@@ -1693,6 +1751,7 @@ def ListeDAS(request):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'add')
 def ApiSaveDAS(request):
     """
     API to create or update a DAS mapping.
@@ -1737,6 +1796,7 @@ def ApiSaveDAS(request):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'delete')
 def ApiDeleteDAS(request):
     """
     API to delete a DAS mapping.
@@ -1798,6 +1858,7 @@ def DownloadFacturePDF(request, pk):
         return HttpResponse(f"Erreur lors de la gÃ©nÃ©ration du PDF: {str(e)}", status=500)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
 def ApiSaveParticipants(request):
     import json
     if request.method != 'POST':
@@ -1844,18 +1905,21 @@ def ApiSaveParticipants(request):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ApiGetDegreeFormations(request):
     from t_formations.models import Specialites
     specialites = Specialites.objects.all().values('id', 'label', 'prix', 'code', 'created_at', 'formation__nom')
     return JsonResponse(list(specialites), safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiLoadDegreeFormationsList(request):
     from t_formations.models import Formation
     formations = Formation.objects.all().values('id', 'nom', 'description', 'prix_formation', 'code', 'date_creation')
     return JsonResponse(list(formations), safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiGetSpecialiteDetails(request):
     """
     Returns full details for a specific specialty, including associated modules.
@@ -1892,6 +1956,7 @@ def ApiGetSpecialiteDetails(request):
         return JsonResponse({'status': 'error', 'message': 'SpÃ©cialitÃ© introuvable'}, status=404)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
 def ApiEnrollToGroup(request):
     from t_groupe.models import Groupe, GroupeLine
     from t_crm.models import Prospets
@@ -1946,6 +2011,7 @@ def ApiEnrollToGroup(request):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'view')
 def ApiGetGroups(request):
     """
     Returns groups for a specific specialty.
@@ -1959,6 +2025,7 @@ def ApiGetGroups(request):
     return JsonResponse({'status': 'success', 'groups': list(groups)})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ApiLoadProspectParticipants(request):
     prospect_id = request.GET.get('prospect_id')
     if not prospect_id:
@@ -1971,6 +2038,7 @@ def ApiLoadProspectParticipants(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'add')
 def ApiSaveParticipant(request):
     import json
     if request.method != 'POST':
@@ -2005,6 +2073,7 @@ def ApiSaveParticipant(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'delete')
 def ApiDeleteParticipant(request):
     import json
     if request.method != 'POST':
@@ -2023,6 +2092,7 @@ def ApiDeleteParticipant(request):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'add')
 def ApiSaveEtsDetails(request):
     if request.method == 'POST':
         prospect_id = request.POST.get('prospect_id')
@@ -2042,6 +2112,7 @@ def ApiSaveEtsDetails(request):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'view')
 def ApiLoadBankAccounts(request):
     prospect_id = request.GET.get('id_prospect')
     accounts = ProspectBankAccount.objects.filter(prospect_id=prospect_id).values(
@@ -2051,6 +2122,7 @@ def ApiLoadBankAccounts(request):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'add')
 def ApiSaveBankAccount(request):
     if request.method == 'POST':
         account_id = request.POST.get('account_id')
@@ -2073,6 +2145,7 @@ def ApiSaveBankAccount(request):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'delete')
 def ApiDeleteBankAccount(request):
     if request.method == 'POST':
         account_id = request.POST.get('account_id')
@@ -2169,6 +2242,7 @@ def GroupedParticipants(request):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'add')
 def ApiCreateGroupFromParticipants(request):
     """
     API to create a group in t_groupe from selected participants.
@@ -2248,6 +2322,7 @@ def ApiCreateGroupFromParticipants(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'approuv')
 def ApiAcceptDevis(request):
     if request.method == 'POST':
         devis_id = request.POST.get('devis_id')
@@ -2270,6 +2345,7 @@ def ApiAcceptDevis(request):
     return JsonResponse({'status': 'error', 'message': 'Mauvaise méthode.'}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'approuv')
 def ApiRejectDevis(request):
     if request.method == 'POST':
         devis_id = request.POST.get('devis_id')
@@ -2292,6 +2368,7 @@ def ApiRejectDevis(request):
     return JsonResponse({'status': 'error', 'message': 'Mauvaise méthode.'}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def PaiementsConseilListe(request):
     # Fetch all payments related to t_conseil
     paiements = Paiement.objects.all().order_by('-date_paiement', '-created_at')

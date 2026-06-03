@@ -1,3 +1,5 @@
+from django.utils.decorators import method_decorator
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, DetailView, FormView, DeleteView
 from django.urls import reverse_lazy
@@ -21,6 +23,7 @@ from datetime import datetime, timedelta
 from django.db.models import Count, Sum, Q
 import collections
 
+@method_decorator(module_permission_required('rh', 'view'), name='dispatch')
 class ContratListView(LoginRequiredMixin, ListView):
     model = Contrat
     context_object_name = 'contrats'
@@ -56,6 +59,7 @@ class ContratForm(forms.ModelForm):
             'actif': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
+@method_decorator(module_permission_required('rh', 'add'), name='dispatch')
 class ContratCreateView(LoginRequiredMixin, CreateView):
     model = Contrat
     form_class = ContratForm
@@ -89,6 +93,7 @@ class ContratCreateView(LoginRequiredMixin, CreateView):
             return JsonResponse({'status': 'invalid', 'html': html})
         return super().form_invalid(form)
 
+@method_decorator(module_permission_required('rh', 'change'), name='dispatch')
 class ContratUpdateView(LoginRequiredMixin, UpdateView):
     model = Contrat
     form_class = ContratForm
@@ -116,6 +121,7 @@ class ContratUpdateView(LoginRequiredMixin, UpdateView):
             return JsonResponse({'status': 'invalid', 'html': html})
         return super().form_invalid(form)
 
+@method_decorator(module_permission_required('rh', 'view'), name='dispatch')
 class ContratDetailView(LoginRequiredMixin, DetailView):
     model = Contrat
     template_name = 't_ressource_humaine/contrat_print.html'
@@ -129,6 +135,7 @@ class FichePaieGenerationForm(forms.Form):
     primes_exceptionnelles = forms.DecimalField(initial=0, required=False, widget=forms.NumberInput(attrs={'class': 'form-control'}))
     avance_sur_salaire = forms.DecimalField(initial=0, required=False, widget=forms.NumberInput(attrs={'class': 'form-control'}))
 
+@module_permission_required('rh', 'add')
 def generer_paie(request, contrat_id):
     contrat = get_object_or_404(Contrat, pk=contrat_id)
     
@@ -266,6 +273,7 @@ def generer_paie(request, contrat_id):
     return render(request, 't_ressource_humaine/generate_paie.html', 
                   {'form': form, 'contrat': contrat, 'rubriques': rubriques_actives, 'contract_defaults': contract_defaults})
 
+@module_permission_required('rh', 'change')
 def modifier_paie(request, pk):
     fiche = get_object_or_404(FichePaie, pk=pk)
     contrat = fiche.contrat
@@ -380,6 +388,7 @@ def modifier_paie(request, pk):
     return render(request, 't_ressource_humaine/generate_paie.html', 
                   {'form': form, 'contrat': contrat, 'rubriques': rubriques_actives, 'existing_lignes': existing_lignes})
 
+@module_permission_required('rh', 'delete')
 def supprimer_paie(request, pk):
     fiche = get_object_or_404(FichePaie, pk=pk)
     
@@ -398,6 +407,7 @@ def supprimer_paie(request, pk):
     return redirect('t_ressource_humaine:fiche_paie_list') # Fallback if direct access GET
 
 
+@method_decorator(module_permission_required('rh', 'view'), name='dispatch')
 class FichePaieDetailView(LoginRequiredMixin, DetailView):
     model = FichePaie
     template_name = 't_ressource_humaine/fiche_paie_print.html'
@@ -408,6 +418,7 @@ class FichePaieDetailView(LoginRequiredMixin, DetailView):
             return ['t_ressource_humaine/_fiche_paie_detail.html']
         return [self.template_name]
 
+@method_decorator(module_permission_required('rh', 'view'), name='dispatch')
 class FichePaieListView(LoginRequiredMixin, ListView):
     model = FichePaie
     template_name = 't_ressource_humaine/fiche_paie_list.html'
@@ -475,6 +486,7 @@ class ParametresPaieForm(forms.ModelForm):
             'seuil_exoneration_irg': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
+@module_permission_required('rh', 'change')
 def config_paie(request):
     active_id = request.session.get('active_entreprise_id')
     if not active_id:
@@ -502,6 +514,7 @@ def config_paie(request):
 
 from .models import Rubrique, LignePaie, RubriqueContrat
 
+@module_permission_required('rh', 'change')
 def manage_rubriques_contrat(request, contrat_id):
     contrat = get_object_or_404(Contrat, pk=contrat_id)
     
@@ -593,11 +606,13 @@ class RubriqueForm(forms.ModelForm):
             'actif': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
+@method_decorator(module_permission_required('rh', 'view'), name='dispatch')
 class RubriqueListView(LoginRequiredMixin, ListView):
     model = Rubrique
     template_name = 't_ressource_humaine/rubrique_list.html'
     context_object_name = 'rubriques'
 
+@method_decorator(module_permission_required('rh', 'add'), name='dispatch')
 class RubriqueCreateView(LoginRequiredMixin, CreateView):
     model = Rubrique
     form_class = RubriqueForm
@@ -625,6 +640,7 @@ class RubriqueCreateView(LoginRequiredMixin, CreateView):
              return JsonResponse({'status': 'invalid', 'html': html})
         return super().form_invalid(form)
 
+@method_decorator(module_permission_required('rh', 'change'), name='dispatch')
 class RubriqueUpdateView(LoginRequiredMixin, UpdateView):
     model = Rubrique
     form_class = RubriqueForm
@@ -652,6 +668,7 @@ class RubriqueUpdateView(LoginRequiredMixin, UpdateView):
              return JsonResponse({'status': 'invalid', 'html': html})
         return super().form_invalid(form)
 
+@method_decorator(module_permission_required('rh', 'delete'), name='dispatch')
 class RubriqueDeleteView(LoginRequiredMixin, DeleteView):
     model = Rubrique
     success_url = reverse_lazy('t_ressource_humaine:rubrique_list')
@@ -665,6 +682,7 @@ class RubriqueDeleteView(LoginRequiredMixin, DeleteView):
         return redirect(success_url)
 
 @login_required
+@module_permission_required('rh', 'add')
 def init_conventional_primes(request):
     """
     Initialise les primes conventionnelles standards si elles n'existent pas.
@@ -702,6 +720,7 @@ def init_conventional_primes(request):
 
 # -- Config Paie (Existing) --
 
+@module_permission_required('rh', 'view')
 def select_entreprise_paie(request):
     if request.method == 'POST':
         entreprise_id = request.POST.get('entreprise_id')
@@ -717,6 +736,7 @@ def select_entreprise_paie(request):
 
 # --- Import / Export Rubriques ---
 
+@module_permission_required('rh', 'view')
 def export_rubriques(request):
     wb = Workbook()
     ws = wb.active
@@ -752,6 +772,7 @@ def export_rubriques(request):
     wb.save(response)
     return response
 
+@module_permission_required('rh', 'add')
 def import_rubriques(request):
     if request.method == 'POST' and request.FILES.get('file'):
         excel_file = request.FILES['file']
@@ -815,6 +836,7 @@ def import_rubriques(request):
             
     return JsonResponse({'status': 'error', 'message': 'Fichier manquant ou méthode non autorisée.'})
 
+@module_permission_required('rh', 'view')
 def fiches_mensuelles(request):
     """
     View to display monthly course summary for trainers.

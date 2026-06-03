@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from ..models import *
@@ -9,20 +10,24 @@ from institut_app.models import Fournisseur  # Import the Fournisseur model from
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageFournisseur(request):
     return render(request,'tenant_folder/comptabilite/fournisseurs/liste_des_fournisseurs.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListeFournisseurs(request):
     liste = Fournisseur.objects.all().values('id', 'designation','telephone','code','email')
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageNouveauFournisseur(request):
     return render(request,'tenant_folder/comptabilite/fournisseurs/nouveau_fournisseur.html')
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'view')
 def enregistrer_fournisseur(request):
     #if request.method == "POST":
     try:
@@ -68,6 +73,7 @@ def enregistrer_fournisseur(request):
     #     return JsonResponse({"status":"error","message":"methode non autoriser"})      
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageDetailsFournisseur(request, pk):
     if not pk:
         return redirect('t_tresorerie:PageFournisseur')
@@ -79,6 +85,7 @@ def PageDetailsFournisseur(request, pk):
     return render(request, 'tenant_folder/comptabilite/fournisseurs/details_fournisseur.html',context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadFournisseur(request):
     if request.method == "GET":
         liste = Fournisseur.objects.all().values('id','designation')
@@ -88,6 +95,7 @@ def ApiLoadFournisseur(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'change')
 def UpdateFournisseur(request):
     if request.method =="POST":
         id = request.POST.get('id')

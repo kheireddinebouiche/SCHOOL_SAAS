@@ -22,6 +22,7 @@ class Stage(models.Model):
     sujet = models.CharField(max_length=500)
     problematique = models.TextField(null=True, blank=True)
     plan_previsionnel = models.TextField(null=True, blank=True)
+    organisme_accueil = models.CharField(max_length=255, null=True, blank=True, help_text="Entreprise ou organisme accueillant les stagiaires")
     
     date_debut = models.DateField(null=True, blank=True)
     date_fin = models.DateField(null=True, blank=True)
@@ -130,3 +131,55 @@ class DecisionConseil(models.Model):
 
     def __str__(self):
         return f"Décision {self.stage} : {self.get_decision_display()}"
+
+
+class BulletinStage(models.Model):
+    groupe = models.ForeignKey(Groupe, on_delete=models.CASCADE, related_name='bulletins_stage')
+    etudiant = models.ForeignKey(Prospets, on_delete=models.CASCADE, related_name='bulletins_stage')
+    moyenne_ponderee = models.FloatField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Bulletin Examen Final (Stage)"
+        verbose_name_plural = "Bulletins Examens Finaux (Stage)"
+        unique_together = ['groupe', 'etudiant']
+
+    def __str__(self):
+        return f"Bulletin {self.etudiant} - {self.groupe}"
+
+
+class NoteBulletinStage(models.Model):
+    bulletin = models.ForeignKey(BulletinStage, on_delete=models.CASCADE, related_name='notes')
+    module = models.ForeignKey('t_formations.Modules', on_delete=models.CASCADE)
+    valeur = models.FloatField(null=True, blank=True, help_text="Note sur 20")
+    coefficient = models.IntegerField(default=1)
+    valeur_ponderee = models.FloatField(null=True, blank=True, help_text="Note * Coefficient")
+
+    class Meta:
+        verbose_name = "Note Examen Final (Stage)"
+        verbose_name_plural = "Notes Examens Finaux (Stage)"
+        unique_together = ['bulletin', 'module']
+
+    def save(self, *args, **kwargs):
+        if self.valeur is not None and self.coefficient is not None:
+            self.valeur_ponderee = self.valeur * self.coefficient
+        else:
+            self.valeur_ponderee = None
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Note {self.module} - {self.bulletin.etudiant}"
+
+class StageDocumentHistory(models.Model):
+    stage = models.ForeignKey(Stage, on_delete=models.CASCADE, related_name='document_history')
+    document = models.ForeignKey('pdf_editor.DocumentGeneration', on_delete=models.CASCADE, related_name='+')
+    target_info = models.CharField(max_length=255, help_text="Cible de l'impression (Ex: Tout le binôme, ou Nom de l'étudiant)")
+    date_generation = models.DateTimeField(auto_now_add=True)
+    generated_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        ordering = ['-date_generation']
+
+    def __str__(self):
+        return f"{self.document.template.title} pour {self.stage} le {self.date_generation}"

@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 import json
 import os
 from datetime import datetime
@@ -13,6 +14,7 @@ from t_conseil.models import Devis, Participant, Thematiques, GroupeConseil, Gro
 from t_formations.models import Formateurs
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ListeGroupesConseil(request):
     groupes = GroupeConseil.objects.all().order_by('-created_at')
     context = {
@@ -23,6 +25,7 @@ def ListeGroupesConseil(request):
     return render(request, 'tenant_folder/conseil/groupes/liste_des_groupes.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
 def NouveauGroupeConseil(request):
     clients = Prospets.objects.filter(is_client=True, context='con')
     context = {
@@ -32,6 +35,7 @@ def NouveauGroupeConseil(request):
     return render(request, 'tenant_folder/conseil/groupes/nouveau_groupe_conseil.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def DetailsGroupeConseil(request, pk):
     try:
         groupe = GroupeConseil.objects.get(pk=pk)
@@ -54,6 +58,7 @@ def DetailsGroupeConseil(request, pk):
     return render(request, 'tenant_folder/conseil/groupes/details_du_groupe.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ApiGetClientDevis(request):
     client_id = request.GET.get('client_id')
     if not client_id:
@@ -63,6 +68,7 @@ def ApiGetClientDevis(request):
     return JsonResponse(list(devis), safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ApiGetDevisDetails(request):
     devis_id = request.GET.get('devis_id')
     if not devis_id:
@@ -101,6 +107,7 @@ def ApiGetDevisDetails(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('con', 'add')
 def ApiSaveConseilGroupe(request):
     if request.method != "POST":
         return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
@@ -162,6 +169,7 @@ def ApiSaveConseilGroupe(request):
         return JsonResponse({'status': 'error', 'message': str(e)})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'delete')
 def ApiDeleteGroupeConseil(request):
     if request.method == "GET":
         id = request.GET.get('id')
@@ -180,6 +188,7 @@ def ApiDeleteGroupeConseil(request):
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'change')
 def ApiCloturerGroupeConseil(request):
     id = request.GET.get('id')
     if not id:
@@ -199,6 +208,7 @@ def ApiCloturerGroupeConseil(request):
         return JsonResponse({"status": "error", "message": str(e)})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'change')
 def ApiUpdateGroupeSettings(request):
     if request.method != "POST":
         return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
@@ -219,6 +229,7 @@ def ApiUpdateGroupeSettings(request):
         return JsonResponse({'status': 'error', 'message': str(e)})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
 def ApiAddPlanningSession(request):
     if request.method != "POST":
         return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
@@ -280,6 +291,7 @@ def ApiAddPlanningSession(request):
         return JsonResponse({'status': 'error', 'message': str(e)})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'delete')
 def ApiDeletePlanningSession(request):
     if request.method != "POST":
         return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
@@ -294,6 +306,7 @@ def ApiDeletePlanningSession(request):
         return JsonResponse({'status': 'error', 'message': str(e)})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def SessionAttendancePDF(request, session_id):
     from django.shortcuts import get_object_or_404
     from t_conseil.models import GroupeConseilPlanning
@@ -348,6 +361,7 @@ def SessionAttendancePDF(request, session_id):
     return response
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'approuv')
 def ApiConfirmParticipantForScolarite(request):
     if request.method == "POST":
         participant_id = request.POST.get('participant_id')
@@ -363,6 +377,7 @@ def ApiConfirmParticipantForScolarite(request):
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'approuv')
 def ApiCancelParticipantConfirmationForScolarite(request):
     if request.method == "POST":
         participant_id = request.POST.get('participant_id')

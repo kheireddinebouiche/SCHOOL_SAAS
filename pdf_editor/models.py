@@ -18,6 +18,7 @@ class DocumentTemplate(models.Model):
         ('student_info', 'Fiche Étudiant'),  # Ajout du type pour les étudiants
         ('payment_receipt', 'Reçu de Paiement'),  # Type pour les reçus de paiement
         ('payment_statement', 'Relevé de Paiement'),  # Type pour les relevés de paiement
+        ('stage', 'Document Stage'),  # Type pour les stages
     ]
 
     title = models.CharField(max_length=255, verbose_name="Titre du template")

@@ -6,6 +6,8 @@ app_name = 't_stage'
 urlpatterns = [
     path('', views.stage_dashboard, name='stage_dashboard'),
     path('list/', views.list_stages, name='list_stages'),
+    path('<int:stage_id>/', views.stage_detail, name='stage_detail'),
+    path('<int:stage_id>/print/', views.print_stage_document, name='print_stage_document'),
     path('launch/', views.launch_stage, name='launch_stage'),
     path('edit/<int:stage_id>/', views.edit_stage, name='edit_stage'),
     path('ajax/students-by-group/', views.ajax_get_students_by_group, name='ajax_get_students_by_group'),
@@ -19,4 +21,10 @@ urlpatterns = [
     path('council/', views.validation_council, name='validation_council'),
     path('council/quick-decision/', views.quick_decision, name='quick_decision'),
     path('council/<int:pk>/', views.council_detail, name='council_detail'),
+    
+    # Examens Finaux
+    path('examens-finaux/', views.list_groupes_examens_finaux, name='list_groupes_examens_finaux'),
+    path('examens-finaux/<int:groupe_id>/toggle-concerne/', views.toggle_concerne_examen, name='toggle_concerne_examen'),
+    path('examens-finaux/<int:groupe_id>/saisie/', views.saisie_notes_examen_final, name='saisie_notes_examen_final'),
+    path('examens-finaux/<int:groupe_id>/bulletins/', views.bulletins_examen_final, name='bulletins_examen_final'),
 ]

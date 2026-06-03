@@ -1009,7 +1009,7 @@ def ApiGetSpecialiteModule(request):
         all_modules = queryset.values('id', 'label')
 
         # Pagination
-        paginator = Paginator(queryset.values('id', 'label','code','code_interne','coef','duree', 'est_valider'), page_size)
+        paginator = Paginator(queryset.values('id', 'label','code','code_interne','coef','duree', 'est_valider', 'plan_cours'), page_size)
         page_obj = paginator.get_page(page_number)
         
         specialite = Specialites.objects.get(id=id)
@@ -2054,3 +2054,19 @@ def pedagogique_dashboard(request):
     else:
         return render(request, 'tenant_folder/formations/pedagogique_dashboard_user.html', context)
 
+
+@login_required(login_url="institut_app:login")
+def ApiUploadPlanCours(request):
+    if request.method == "POST":
+        module_id = request.POST.get('module_id')
+        plan_cours_file = request.FILES.get('plan_cours')
+        if module_id and plan_cours_file:
+            try:
+                module = Modules.objects.get(id=module_id)
+                module.plan_cours = plan_cours_file
+                module.save()
+                return JsonResponse({'success': True, 'message': 'Plan cours uploadé avec succès'})
+            except Modules.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'Module introuvable'})
+        return JsonResponse({'success': False, 'message': 'Fichier ou module manquant'})
+    return JsonResponse({'success': False, 'message': 'Méthode non autorisée'})

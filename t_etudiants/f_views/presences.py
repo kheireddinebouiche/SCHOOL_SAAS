@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from ..models import *
 from django.contrib.auth.decorators import login_required
+from institut_app.decorators import module_permission_required
 from ..forms import *
 from t_crm.models import NotesProcpects, RendezVous
 from django.db import transaction
@@ -15,6 +16,7 @@ from django.shortcuts import get_object_or_404
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def RegistrePage(request):
 
     groupes = Groupe.objects.all()
@@ -92,6 +94,7 @@ def RegistrePage(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'add')
 @transaction.atomic
 def ApiSaveRegistreGroupe(request):
     registerName = request.POST.get('registerName')
@@ -112,6 +115,7 @@ def ApiSaveRegistreGroupe(request):
     
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def DetailsRegistrePresence(request, pk):
     registre = RegistrePresence.objects.get(id= pk)
 
@@ -129,6 +133,7 @@ def DetailsRegistrePresence(request, pk):
     return render(request, 'tenant_folder/presences/details_registre.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'add')
 def liste_registres(request):
     if request.method == "POST":
         module_id = request.POST.get('module_id')
@@ -158,6 +163,7 @@ def liste_registres(request):
     
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def DetailsListePresence(request, pk):
     object = LigneRegistrePresence.objects.get(id = pk)
 
@@ -171,6 +177,7 @@ def DetailsListePresence(request, pk):
     return render(request, 'tenant_folder/presences/details_ligne_presence.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ApiLoadDatas(request):
     if request.method == "GET":
         id_ligne_presence = request.GET.get('id_ligne_presence')
@@ -212,6 +219,7 @@ def ApiLoadDatas(request):
         return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'add')
 @csrf_exempt
 def ApiAjouterHistoriqueAbsence(request):
     if request.method == "POST":
@@ -259,6 +267,7 @@ def ApiAjouterHistoriqueAbsence(request):
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ApiGetHistoriqueEtudiant(request, pk, id_ligne):
     try:
         historique_obj = get_object_or_404(HistoriqueAbsence, etudiant_id=pk, ligne_presence_id=id_ligne)
@@ -268,6 +277,7 @@ def ApiGetHistoriqueEtudiant(request, pk, id_ligne):
         return JsonResponse({"status": "error", "message": str(e)})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 @csrf_exempt
 def ApiUpdateAbsenceReason(request):
     if request.method == "POST":
@@ -346,6 +356,7 @@ def ApiUpdateAbsenceReason(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ListeDesEtudiants(request):
     liste = Prospets.objects.filter(statut = "convertit")
     context = {
@@ -453,6 +464,7 @@ def get_attendance_data(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def EtatPresences(request):
     """Vue HTML principale"""
     final_stats = get_attendance_data(request)
@@ -461,6 +473,7 @@ def EtatPresences(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'export')
 def ExportPresencesExcel(request):
     """Génération du fichier Excel"""
     from openpyxl import Workbook
@@ -521,6 +534,7 @@ def ExportPresencesExcel(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'export')
 def ExportPresencesPDF(request):
     """Génération du fichier PDF via WeasyPrint"""
     from weasyprint import HTML

@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -11,10 +12,12 @@ from institut_app.models import Entreprise
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageProduits(request):
     return render(request, 'tenant_folder/comptabilite/produits/liste_categories_produits.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListeCategoriesProduits(request):
     """API endpoint to list all payment categories in hierarchical structure"""
     # Get all categories with parent relationship
@@ -57,6 +60,7 @@ def ApiListeCategoriesProduits(request):
     return JsonResponse({'data': category_tree}, safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiCreerCategorieProduit(request):
     """API endpoint to create a new payment category"""
     if request.method == 'POST':
@@ -93,6 +97,7 @@ def ApiCreerCategorieProduit(request):
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'change')
 def ApiModifierCategorieProduit(request):
     """API endpoint to update a payment category"""
     if request.method == 'POST':  # Changed to POST for consistency
@@ -131,6 +136,7 @@ def ApiModifierCategorieProduit(request):
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'delete')
 def ApiSupprimerCategorieProduit(request):
     """API endpoint to delete a payment category"""
     if request.method == 'DELETE':
@@ -156,6 +162,7 @@ def ApiSupprimerCategorieProduit(request):
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetCategorieProduit(request, pk):
     """API endpoint to get details of a specific payment category"""
     try:
@@ -171,11 +178,13 @@ def ApiGetCategorieProduit(request, pk):
         return JsonResponse({'error': 'Catégorie non trouvée'}, status=404)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageCategoriesProduits(request):
     """Page to manage payment categories"""
     return render(request, 'tenant_folder/comptabilite/produits/liste_categories_produits.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageAutrePaiements(request):
     """Page to manage other payments"""
     entites = Entreprise.objects.all()
@@ -183,6 +192,7 @@ def PageAutrePaiements(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'add')
 def ApiStoreAutrePaiement(request):
     """API endpoint to create a new other payment"""
 
@@ -259,6 +269,7 @@ def ApiStoreAutrePaiement(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListeAutrePaiements(request):
     """API endpoint to list all other payments"""
     
@@ -283,6 +294,7 @@ def ApiListeAutrePaiements(request):
     
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetAutrePaiement(request, pk):
     """API endpoint to get details of a specific other payment"""
     try:
@@ -309,6 +321,7 @@ def ApiGetAutrePaiement(request, pk):
         return JsonResponse({'error': 'Paiement non trouvé'}, status=404)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'change')
 def ApiUpdateAutrePaiement(request):
     """API endpoint to update an other payment"""
     if request.method == 'POST':
@@ -375,6 +388,7 @@ def ApiUpdateAutrePaiement(request):
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'delete')
 def ApiDeleteAutrePaiement(request):
     """API endpoint to delete an other payment"""
     if request.method == 'DELETE':
@@ -405,6 +419,7 @@ def ApiDeleteAutrePaiement(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def api_liste_clients(request):
     if request.method == "GET":
         type_prospect = request.GET.get('type', None)
@@ -425,6 +440,7 @@ def api_liste_clients(request):
     
 
 @login_required(login_url="institu_app:login")
+@module_permission_required('tre', 'add')
 def CreateClientFromTresorerie(request):
     if request.method == "POST":
         nom  = request.POST.get('nom')

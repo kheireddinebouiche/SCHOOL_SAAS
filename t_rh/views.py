@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect, get_object_or_404
 from .utils import calculate_leave_duration
 from django.http import JsonResponse, HttpResponse
@@ -57,6 +58,7 @@ def view_contrat(request, pk):
 #     }
 #     return render(request, 'tenant_folder/rh/contrats/contrat_template.html', context)
 
+@module_permission_required('rh', 'view')
 def listeEmployes(request):
     liste = Employees.objects.prefetch_related('contrats').all()
    
@@ -66,6 +68,7 @@ def listeEmployes(request):
     return render(request,"tenant_folder/rh/liste_des_employee.html", context)
 
 @transaction.atomic
+@module_permission_required('rh', 'add')
 def nouveauEmploye(request):
     form = NouveauEmploye()
     if request.method == 'POST':
@@ -82,6 +85,7 @@ def nouveauEmploye(request):
 
     return render(request, 'tenant_folder/rh/nouveau_employe.html', context)
 
+@module_permission_required('rh', 'view')
 def detailsEmploye(request, pk):
     employe = Employees.objects.prefetch_related('contrats').get(id = pk)
     # Get active contract (the one with the latest date_embauche)
@@ -110,6 +114,7 @@ def detailsEmploye(request, pk):
     return render(request,'tenant_folder/rh/details_employe.html', context)
 
 @transaction.atomic
+@module_permission_required('rh', 'change')
 def updateEmploye(request,pk):
     emp = Employees.objects.get(id = pk)
     form = NouveauEmploye(instance=emp)
@@ -127,6 +132,7 @@ def updateEmploye(request,pk):
     return render(request, "tenant_folder/rh/update_employe.html", context)
 
 @transaction.atomic
+@module_permission_required('rh', 'add')
 def nouveauService(request):
     form = NouveauService()
     if request.method == 'POST':
@@ -142,6 +148,7 @@ def nouveauService(request):
     }
     return render(request, 'tenant_folder/rh/services/nouveau_service.html', context)
 
+@module_permission_required('rh', 'view')
 def listeServices(request):
 
     context = {
@@ -150,10 +157,12 @@ def listeServices(request):
     }
     return render(request, 'tenant_folder/rh/services/liste_des_services.html', context)
 
+@module_permission_required('rh', 'view')
 def ApiListeServices(request):
     liste = Services.objects.filter().values('id','label', 'description','created_at')
     return JsonResponse(list(liste), safe=False)
 
+@module_permission_required('rh', 'add')
 def ApiAddService(request):
     label = request.POST.get('label')
     description = request.POST.get('description')
@@ -165,11 +174,13 @@ def ApiAddService(request):
     else:
         return JsonResponse({'status': 'error', 'message':"Erreur lors de l'ajout du service"})
 
+@module_permission_required('rh', 'view')
 def ApiGetService(request):
     id = request.GET.get('id')
     service = Services.objects.filter(id=id).values('id','label', 'description')
     return JsonResponse(list(service), safe=False)
 
+@module_permission_required('rh', 'change')
 def ApiUpdateService(request):
     id = request.POST.get('id')
     label = request.POST.get('label')
@@ -184,6 +195,7 @@ def ApiUpdateService(request):
     else:
         return JsonResponse({'status': 'error', 'message':"Erreur lors de la mise à jour du service"})
 
+@module_permission_required('rh', 'delete')
 def ApiDeleteService(request):
     id = request.POST.get('id')
     if id:
@@ -194,6 +206,7 @@ def ApiDeleteService(request):
         return JsonResponse({'status': 'error', 'message':"Erreur lors de la suppression du service"})
 
 @transaction.atomic
+@module_permission_required('rh', 'add')
 def NouveauArticleContrat(request):
     form = ArticlesContratStandard()
     if request.method == 'POST':
@@ -208,6 +221,7 @@ def NouveauArticleContrat(request):
     }
     return render(request, 'tenant_folder/rh/contrats/nouveau_article.html', context)
 
+@module_permission_required('rh', 'view')
 def listeArticlesContrat(request):
     liste = ArticlesContratStandard.objects.all()
     context = {
@@ -216,16 +230,19 @@ def listeArticlesContrat(request):
     }
     return render(request, 'tenant_folder/rh/contrats/liste_des_articles.html', context)
 
+@module_permission_required('rh', 'view')
 def listeTypeContrat(request):
     context = {
         'tenant' : request.tenant,
     }
     return render(request, 'tenant_folder/rh/contrats/liste_des_types_contrat.html', context)
 
+@module_permission_required('rh', 'view')
 def ApiListeTypeContrat(request):
     liste = TypesContrat.objects.all().values('id','label','description','created_at')
     return JsonResponse(list(liste), safe=False)
 
+@module_permission_required('rh', 'add')
 def ApiAddTypeContrat(request):
     label = request.POST.get('label')
     description = request.POST.get('description')
@@ -239,6 +256,7 @@ def ApiAddTypeContrat(request):
     else:
         return JsonResponse({'status': 'error', 'message':"Le champ label est requis"})
     
+@module_permission_required('rh', 'change')
 def ApiUpdateTypeContrat(request):
     id = request.POST.get('id')
     label = request.POST.get('label')
@@ -254,6 +272,7 @@ def ApiUpdateTypeContrat(request):
     else:
         return JsonResponse({'status' : 'error', 'message' : "Veuillez saisir les champs requis"})
 
+@module_permission_required('rh', 'delete')
 def ApiDeleteTypeContrat(request):
     id = request.GET.get('id')
 
@@ -266,6 +285,7 @@ def ApiDeleteTypeContrat(request):
         type.delete()
         return JsonResponse({'status' : 'success', "message" : "La suppression est effectué avec succès."})
 
+@module_permission_required('rh', 'view')
 def ClausesTypeContrat(request, pk):
     type = TypesContrat.objects.get(id= pk)
     context = {
@@ -274,12 +294,14 @@ def ClausesTypeContrat(request, pk):
     }
     return render(request, 'tenant_folder/rh/contrats/type_contrat_articles.html', context)
 
+@module_permission_required('rh', 'view')
 def ApiGetClauseStandardOfType(request):
     id = request.GET.get('id')
     type = TypesContrat.objects.get(id=id)
     liste = ArticlesContratStandard.objects.filter(type_contrat = type).values('id', 'titre','contenu','created_at')
     return JsonResponse(list(liste), safe=False)
 
+@module_permission_required('rh', 'add')
 def ApiAddNewClause(request):
     titre = request.POST.get('titre')
     contenu = request.POST.get('contenu')
@@ -297,12 +319,14 @@ def ApiAddNewClause(request):
     else:
         return JsonResponse({'status' : "error", "message" : "Tous les champs sont requis."})
 
+@module_permission_required('rh', 'delete')
 def ApiDeleteClause(request):
     id = request.GET.get('id')
     obj = ArticlesContratStandard.objects.get(id = id)
     obj.delete()
     return JsonResponse({'status' : 'success', 'message' : "La clause à été supprimé avec succès"})
 
+@module_permission_required('rh', 'change')
 def ApiUpdateClause(request):
     id = request.POST.get('id')
     titre = request.POST.get('update_titre')
@@ -316,16 +340,19 @@ def ApiUpdateClause(request):
     else:
         return JsonResponse({'status' : 'error', 'message' : "Tous les champs sont requis"})
 
+@module_permission_required('rh', 'view')
 def ListeCategorieContrat(request):
     context = {
         'tenant' : request.tenant
     }
     return render(request,'tenant_folder/rh/contrats/liste_categorie_contrat.html', context)
 
+@module_permission_required('rh', 'view')
 def ApiListCategorie(request):
     liste = CategoriesContrat.objects.filter().values('id', 'label', 'entite_legal','entite_legal__designation', 'description')
     return JsonResponse(list(liste), safe=False)
 
+@module_permission_required('rh', 'add')
 def ApiAddCategorieContrat(request):
     label = request.POST.get('label')
     description = request.POST.get('description')
@@ -344,12 +371,14 @@ def ApiAddCategorieContrat(request):
     else:
         return JsonResponse({'status' : "error", 'message': "Champs requis manquants, veuillez completer les champs"})
 
+@module_permission_required('rh', 'view')
 def ApiGetDefaultValueForContrat(request):
     entreprises = list(Entreprise.objects.filter().values('id', 'designation'))
     services = list(Services.objects.values('id', 'label'))
     postes = list(Posts.objects.filter().values('id','label'))
     return JsonResponse({'entreprises': entreprises, 'services': services, 'postes' : postes}, safe=False)
 
+@module_permission_required('rh', 'view')
 def detailsCategorie(request, pk):
     cate = CategoriesContrat.objects.get(id = pk)
     context = {
@@ -357,17 +386,20 @@ def detailsCategorie(request, pk):
     }
     return render(request,'tenant_folder/rh/contrats/details_categorie_contrat.html', context)
 
+@module_permission_required('rh', 'view')
 def ApiGetListeTypeContratByCategorie(request):
     id = request.GET.get('id_categorie')
     liste = TypesContrat.objects.filter(categorie = id).values('id','label','description','created_at')
     return JsonResponse(list(liste), safe=False)
 
+@module_permission_required('rh', 'view')
 def ApiGetCategorieContrat(request):
     id_entite = request.GET.get('id_entite')
     entite = Entreprise.objects.get(id = id_entite)
     categories = CategoriesContrat.objects.filter(entite_legal = entite).values('id', 'label')
     return JsonResponse(list(categories), safe=False)
 
+@module_permission_required('rh', 'view')
 def ApiGetTypeContrat(request):
     id_categorie = request.GET.get('id_categorie')
     types = TypesContrat.objects.filter(categorie=id_categorie)
@@ -379,6 +411,7 @@ def ApiGetTypeContrat(request):
         })
     return JsonResponse(data, safe=False)
 
+@module_permission_required('rh', 'view')
 def ApiGetRubriquesOfType(request):
     id_type = request.GET.get('id')
     from t_ressource_humaine.models import Rubrique
@@ -395,6 +428,7 @@ def ApiGetRubriquesOfType(request):
         'globals': list(globals)
     }, safe=False)
 
+@module_permission_required('rh', 'add')
 def ApiCreateContrat(request):
     import json
     id_employe = request.POST.get('id_employe')
@@ -488,6 +522,7 @@ def ApiCreateContrat(request):
 
     return JsonResponse({"status" : "success", 'message' : "Le contrat a été créé et les rubriques de paie ont été associées."})
 
+@module_permission_required('rh', 'view')
 def ApiGetListContratForEmploye(request):
     id_employe = request.GET.get('id_employe')
     employe = get_object_or_404(Employees, id=id_employe)
@@ -508,6 +543,7 @@ def ApiGetListContratForEmploye(request):
         
     return JsonResponse(liste, safe=False)
 
+@module_permission_required('rh', 'view')
 def ApiGetCategorieContratDetails(request):
     id = request.GET.get('id')
 
@@ -523,6 +559,7 @@ def ApiGetCategorieContratDetails(request):
 
     return JsonResponse(data, safe=False)
 
+@module_permission_required('rh', 'change')
 def ApiUpdateCategorieGroupe(request):
     update_label = request.POST.get('update_label')
     update_description = request.POST.get('update_description')
@@ -542,6 +579,7 @@ def ApiUpdateCategorieGroupe(request):
     except:
         return JsonResponse({'status' : "error", "message" : "Une erreur est survenue lors du traitement de la réquete"})
 
+@module_permission_required('rh', 'view')
 def ApiGetDetailsOfContract(request):
     id = request.GET.get('id')
     obj = get_object_or_404(Contrats, id=id)
@@ -576,10 +614,12 @@ def ApiGetDetailsOfContract(request):
     }
     return JsonResponse(data, safe=False)
 
+@module_permission_required('rh', 'view')
 def ApiListePostes(request):
     liste = Posts.objects.filter().values('id', 'label', 'description')
     return JsonResponse(list(liste), safe=False)
 
+@module_permission_required('rh', 'add')
 def ApiAddPoste(request):
     poste = request.POST.get('poste')
     description = request.POST.get('description')
@@ -592,12 +632,14 @@ def ApiAddPoste(request):
     messages.success(request, 'Le poste à été ajouté avec succès')
     return JsonResponse({'status' : "success", "message" : "Le poste à été ajouter avec suucès",'id' : new_poste.id})
 
+@module_permission_required('rh', 'view')
 def ListeDesPostes(request):
     context = {
         'tenant' : request.tenant,
     }
     return render(request, 'tenant_folder/rh/postes/liste_des_postes.html', context)
 
+@module_permission_required('rh', 'change')
 def UpdatePoste(request, pk):
     poste = Posts.objects.get(id = pk)
     form = NouveauPoste(instance=poste)
@@ -615,6 +657,7 @@ def UpdatePoste(request, pk):
     }
     return render(request, 'tenant_folder/rh/postes/update_poste.html', context)
 
+@module_permission_required('rh', 'view')
 def ApiGetPostDetails(request):
     id=  request.GET.get('id')
     obj = Posts.objects.get(id = id)
@@ -627,6 +670,7 @@ def ApiGetPostDetails(request):
 
     return JsonResponse(data, safe=False)
 
+@module_permission_required('rh', 'view')
 def ApiGetListPostTaches(request):
     id = request.GET.get('postId')
     liste = TachesPoste.objects.filter(poste = Posts.objects.get(id=id))
@@ -640,26 +684,33 @@ def ApiGetListPostTaches(request):
 
     return JsonResponse(data, safe=False)
 
+@module_permission_required('rh', 'change')
 def ApiUpdateCategorie(request):
     pass
 
+@module_permission_required('rh', 'delete')
 def ApiDeleteCategorie(request):
     pass
 
 
+@module_permission_required('rh', 'change')
 def modifierArticleContrat(request):
     pass
 
+@module_permission_required('rh', 'view')
 def detailsArticleContrat(request):
     pass
 
+@module_permission_required('rh', 'delete')
 def supprimerArticleContrat(request):
     pass
 
+@module_permission_required('rh', 'view')
 def ApiGetEntite(request):
     liste = Entreprise.objects.all().values('id','designation')
     return JsonResponse(list(liste),safe=False)
 
+@module_permission_required('rh', 'view')
 def listeDesContrats(request):
     contrats = Contrats.objects.select_related('employee', 'type_contrat', 'poste').all().order_by('-created_at')
     from pdf_editor.models import DocumentTemplate
@@ -671,6 +722,7 @@ def listeDesContrats(request):
     }
     return render(request, 'tenant_folder/rh/contrats/liste_des_contrats.html', context)
 
+@module_permission_required('rh', 'view')
 def imprimerContrat(request, contrat_id, template_id):
     from pdf_editor.models import DocumentTemplate, DocumentGeneration
     from django.template import Template, Context
@@ -708,6 +760,7 @@ def imprimerContrat(request, contrat_id, template_id):
         messages.error(request, f"Erreur lors de la génération du contrat: {str(e)}")
         return redirect('t_rh:liste_des_contrats')
 
+@module_permission_required('rh', 'view')
 def imprimerAttestation(request, employe_id, template_id):
     """Generate attestation document via pdf_editor."""
     from django.shortcuts import get_object_or_404, redirect
@@ -735,6 +788,7 @@ def imprimerAttestation(request, employe_id, template_id):
     )
     return redirect('pdf_editor:document-export', pk=doc_gen.pk)
 
+@module_permission_required('rh', 'view')
 def imprimerBadge(request, employe_id, template_id):
     """Generate badge document via pdf_editor."""
     from django.shortcuts import get_object_or_404, redirect
@@ -762,6 +816,7 @@ def imprimerBadge(request, employe_id, template_id):
     )
     return redirect('pdf_editor:document-export', pk=doc_gen.pk)
 
+@module_permission_required('rh', 'add')
 def nouveauContrat(request):
     employes = Employees.objects.all().order_by('nom', 'prenom')
     context = {
@@ -770,6 +825,7 @@ def nouveauContrat(request):
     }
     return render(request, 'tenant_folder/rh/contrats/nouveau_contrat.html', context)
 
+@module_permission_required('rh', 'view')
 def listePresences(request):
     # Get filtering parameters
     date_str = request.GET.get('date', datetime.now().strftime('%Y-%m-%d'))
@@ -832,6 +888,7 @@ def listePresences(request):
     }
     return render(request, 'tenant_folder/rh/presences/liste_presences.html', context)
 
+@module_permission_required('rh', 'view')
 def fichesMensuelles(request):
     import calendar
     from django.db.models import Count, Q
@@ -910,6 +967,7 @@ def fichesMensuelles(request):
 
 
 @transaction.atomic
+@module_permission_required('rh', 'add')
 def ApiMarkPresence(request):
     if request.method == 'POST':
         employee_id = request.POST.get('employee_id')
@@ -932,6 +990,7 @@ def ApiMarkPresence(request):
     
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
+@module_permission_required('rh', 'view')
 def listeConges(request):
     conges = Conges.objects.all().order_by('-created_at')
     context = {
@@ -940,6 +999,7 @@ def listeConges(request):
     }
     return render(request, 'tenant_folder/rh/conges/liste_conges.html', context)
 
+@module_permission_required('rh', 'add')
 def demandeConge(request):
     if request.method == 'POST':
         employee_id = request.POST.get('employee')
@@ -1007,6 +1067,7 @@ def demandeConge(request):
     }
     return render(request, 'tenant_folder/rh/conges/demande_conge.html', context)
 
+@module_permission_required('rh', 'approuv')
 def validerConge(request, pk):
     conge = get_object_or_404(Conges, pk=pk)
     action = request.POST.get('action') # 'valider' or 'refuser'
@@ -1036,6 +1097,7 @@ from t_ressource_humaine.models import Rubrique, FichePaie, LignePaie, Parametre
 
 from .reporting_paie import generate_payroll_journal_csv, generate_bank_transfer_csv
 
+@module_permission_required('rh', 'view')
 def assistantPaie(request):
     month = int(request.GET.get('month', timezone.now().month))
     year = int(request.GET.get('year', timezone.now().year))
@@ -1137,6 +1199,7 @@ def assistantPaie(request):
 
 from t_ressource_humaine.models import TrancheIRG
 
+@module_permission_required('rh', 'change')
 def configFiscalite(request):
     # Retrieve the legal entity for the current tenant
     entreprise = Entreprise.objects.first()
@@ -1161,6 +1224,7 @@ def configFiscalite(request):
 
 from t_ressource_humaine.models import FichePaie
 
+@module_permission_required('rh', 'view')
 def listeFichesPaie(request):
     fiches = FichePaie.objects.filter(contrat__employee__isnull=False).order_by('-annee', '-mois', 'contrat__employee__nom')
     
@@ -1182,6 +1246,7 @@ def listeFichesPaie(request):
     }
     return render(request, 'tenant_folder/rh/paie/liste_fiches_paie.html', context)
 
+@module_permission_required('rh', 'view')
 def detailFichePaie(request, pk):
     fiche = get_object_or_404(FichePaie, pk=pk)
     context = {
@@ -1190,6 +1255,7 @@ def detailFichePaie(request, pk):
     }
     return render(request, 'tenant_folder/rh/paie/fiche_paie_detail.html', context)
 
+@module_permission_required('rh', 'view')
 def hubConfigRH(request):
 
 
@@ -1199,6 +1265,7 @@ def hubConfigRH(request):
     }
     return render(request, 'tenant_folder/rh/hub_config_rh.html', context)
 
+@module_permission_required('rh', 'change')
 def configRH(request):
 
     config, created = HRConfig.objects.get_or_create(pk=1)
@@ -1218,6 +1285,7 @@ def configRH(request):
     }
     return render(request, 'tenant_folder/rh/config_rh.html', context)
 
+@module_permission_required('rh', 'view')
 def dashboardRH(request):
     today = timezone.now().date()
     start_of_month = today.replace(day=1)
@@ -1314,4 +1382,4 @@ def dashboardRH(request):
 
 
 
-
+

@@ -1,3 +1,5 @@
+from institut_app.decorators import superuser_required
+from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from decimal import Decimal, InvalidOperation
@@ -408,6 +410,7 @@ def FinanceDashboard(request):
     return render(request, 'tenant_folder/dashboard/finance_dash.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def pedago_dashboard(request):
     # KPIs
     total_groups = Groupe.objects.count()
@@ -791,6 +794,7 @@ def ApiGetEntrepriseDetails(request):
     entreprise = Entreprise.objects.filter(id=id).values('id','designation','rc','nif','art','nis','adresse','telephone','wilaya','pays','email','site_web')
     return JsonResponse(list(entreprise), safe=False)
 
+@superuser_required
 def UsersListePage(request):
     context = {
         'tenant' : request.tenant,
@@ -798,10 +802,12 @@ def UsersListePage(request):
     return render(request, 'tenant_folder/users/liste_users.html', context)
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiListeUsers(request):
     users = User.objects.all().values('id','is_staff','email','username','date_joined','is_active')
     return JsonResponse(list(users), safe=False)
 
+@superuser_required
 def ApiGetDetailsProfile(request):
     id = request.GET.get('id')
     obj = User.objects.get(id = id)
@@ -812,6 +818,7 @@ def ApiGetDetailsProfile(request):
     else:
         return JsonResponse({'status' : 'error', 'message' : "Aucun profile trouvé pour l'utilisateur"})
     
+@superuser_required
 def ApiCreateProfile(request):
     id_user= request.POST.get('id_user')
     nom = request.POST.get('nom')
@@ -832,6 +839,7 @@ def ApiCreateProfile(request):
 
     return JsonResponse({'status' : 'success', 'message' : "Le profile de l'utilisateur crée avec succès"})
 
+@superuser_required
 def ApiDeactivateUser(request):
     id = request.GET.get('id')
     if id:
@@ -843,6 +851,7 @@ def ApiDeactivateUser(request):
     else:
         return JsonResponse({'status' : 'success', 'message' : "<i class='ri-shut-down-line'></i>Erreur"})
     
+@superuser_required
 def ApiActivateUser(request):
     id = request.GET.get('id')
     if id:
@@ -854,13 +863,16 @@ def ApiActivateUser(request):
     else:
         return JsonResponse({'status' : 'success', 'message' : "<i class='ri-shut-down-line'></i>Le compte utilisateur a été desactiver avec succès"})
     
+@superuser_required
 def ListGroupePage(request):
     return render(request, "tenant_folder/users/groupe_list.html", {'tenant' : request.tenant})
 
+@superuser_required
 def ApilistGroupe(request):
     liste = CustomGroupe.objects.all().values('id', 'name', 'description', 'created_at')
     return JsonResponse(list(liste), safe=False)
     
+@superuser_required
 def NewCustomGroupe(request):
     form = CustomGroupForm()
 
@@ -880,17 +892,20 @@ def NewCustomGroupe(request):
     }
     return render(request,'tenant_folder/users/nouveau_groupe.html', context)
 
+@superuser_required
 def ApiGetGroupFrom(request):
     form = CustomGroupForm()
     form_html = form.as_p()
     return JsonResponse({'form' : form_html})
 
+@superuser_required
 def ApiGetNewUserForm(request):
     form = CreateNewUserForm()
     html = render_to_string('tenant_folder/users/html/form_create_user.html', {'form': form}, request=request)
     return JsonResponse({'form' : html})
 
 @transaction.atomic
+@superuser_required
 def PageUpdateUserDetails(request, pk):
     obj = User.objects.get(id = pk)
     form = UserUpdateForm(instance=obj)
@@ -911,6 +926,7 @@ def PageUpdateUserDetails(request, pk):
         }
         return render(request, 'tenant_folder/users/update_user.html', context)
 
+@superuser_required
 def ApiSaveUser(request):
     if request.method == "POST":
         form = CreateNewUserForm(request.POST)
@@ -922,6 +938,7 @@ def ApiSaveUser(request):
     else:
         return JsonResponse({"success" : False, 'message' : "Erreur"})
 
+@superuser_required
 def ApiCheckUsernameDisponibility(request):
     username = request.GET.get('username')
     try:
@@ -932,6 +949,7 @@ def ApiCheckUsernameDisponibility(request):
     except:
          return JsonResponse({'status' : 'error'})
 
+@superuser_required
 def ApiGetUpdateGroupForm(request):
     id = request.GET.get('id')
     obj = CustomGroupe.objects.get(id = id)
@@ -939,6 +957,7 @@ def ApiGetUpdateGroupForm(request):
     form_html = form.as_p()
     return JsonResponse({'form' : form_html})
 
+@superuser_required
 def ApiSaveGroup(request):
     if request.method == 'POST':
         form = CustomGroupForm(request.POST)
@@ -951,6 +970,7 @@ def ApiSaveGroup(request):
         else:
             return JsonResponse({'success': False,"message": "Le rôle existe déja ! <br>Veuillez attribuer un nom diffents"})
 
+@superuser_required
 def ApiGetUserDetails(request):
     id = request.GET.get('id')
     try:
@@ -973,6 +993,7 @@ def ApiGetUserDetails(request):
 
         return JsonResponse({'error' : 'Utilisateur non trouvé'})
 
+@superuser_required
 def ApiGetGroupeDetails(request):
     id = request.GET.get('id')
     try:
@@ -989,6 +1010,7 @@ def ApiGetGroupeDetails(request):
     except CustomGroupe.DoesNotExist:
         return JsonResponse({'error': 'Groupe non trouvé'}, status=404)
     
+@superuser_required
 def ApiDeleteGroup(request):
     id = request.GET.get('id')
     obj = CustomGroupe.objects.get(id = id)
@@ -1046,6 +1068,7 @@ def Error404(request):
     return render(request,'tenant_folder/not_authorized.html')
 
 @login_required(login_url='institut_app:login')
+@superuser_required
 def active_sessions_view(request):
     """
     List all active user sessions.
@@ -1078,6 +1101,7 @@ def active_sessions_view(request):
     return render(request, 'tenant_folder/users/active_sessions.html', context)
 
 @login_required(login_url='institut_app:login')
+@superuser_required
 def terminate_session_api(request):
     """
     API endpoint to manually terminate a user session.

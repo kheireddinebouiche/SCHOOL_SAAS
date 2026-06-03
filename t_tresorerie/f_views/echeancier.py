@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -6,10 +7,12 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('tre', 'view')
 def ListeModelEcheancier(request):
     return render(request,'tenant_folder/comptabilite/tresorerie/gestion_echeancier.html')
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('tre', 'view')
 def ApiLoadModelEcheancier(request):
     promo_id = request.GET.get('promo_id')
     query = ModelEcheancier.objects.all()
@@ -23,6 +26,7 @@ def ApiLoadModelEcheancier(request):
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadPromo(request):
     promo = Promos.objects.all().values('id','label','code','begin_year','end_year','session')
     for i in promo:
@@ -32,6 +36,7 @@ def ApiLoadPromo(request):
     return JsonResponse(list(promo), safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadSpecialites(request):
     if request.method == "GET":
         formation_id = request.GET.get('formation_id')
@@ -45,6 +50,7 @@ def ApiLoadSpecialites(request):
         return JsonResponse({"status": "error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadEcheancierDetails(request):
     try:
         ids_raw = request.GET.get("id")
@@ -121,6 +127,7 @@ def ApiLoadEcheancierDetails(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiSaveEcheancier(request):
     if request.method == 'POST':
         try:
@@ -302,6 +309,7 @@ def ApiSaveEcheancier(request):
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadFormations(request):
     try:
         formations = Formation.objects.all().values('id', 'nom', 'prix_formation', 'code')
@@ -311,6 +319,7 @@ def ApiLoadFormations(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiSaveModeleEcheancier(request):
     if request.method == "POST":
         promo = request.POST.get('promo')
@@ -343,6 +352,7 @@ def ApiSaveModeleEcheancier(request):
         return JsonResponse({"status":"error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadModeleEcheancierDetails(request):
     id = request.GET.get("id")
     try:
@@ -373,6 +383,7 @@ def ApiLoadModeleEcheancierDetails(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'change')
 def ApiUpdateModeleEcheancier(request):
     echeancierId = request.POST.get('id')
     promo = request.POST.get('promo')
@@ -401,14 +412,17 @@ def ApiUpdateModeleEcheancier(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def CreeEcheancier(request):
     return render(request,'tenant_folder/comptabilite/tresorerie/creer-un-echeancier.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'change')
 def ListeEcheanciersConfigures(request):
     return render(request,'tenant_folder/comptabilite/tresorerie/echeancier-configurer.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'change')
 def ApiLoadEcheanciersConfigures(request):
     try:
         echeanciers = EcheancierPaiement.objects.all().values(
@@ -544,6 +558,7 @@ def ApiLoadEcheanciersConfigures(request):
         return JsonResponse({'status': 'error', 'message': str(e)})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'delete')
 def ApiDeleteEcheancier(request):
     if request.method == "POST":
         ids_raw = request.POST.get('echeancierId')
@@ -569,6 +584,7 @@ def ApiDeleteEcheancier(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'delete')
 def ApiBulkDeleteEcheanciers(request):
     if request.method == "POST":
         try:
@@ -591,6 +607,7 @@ def ApiBulkDeleteEcheanciers(request):
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadEntiteLegal(request):
     if request.method == "GET":
         liste = Entreprise.objects.all().values('id','designation')
@@ -599,12 +616,14 @@ def ApiLoadEntiteLegal(request):
         return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def echeancierAppliquer(request):
 
     return render(request,'tenant_folder/comptabilite/tresorerie/echeancier-configurer.html')
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'view')
 def ApiSetEcheancierDefault(request):
     if request.method == 'POST':
         try:
@@ -634,6 +653,7 @@ def ApiSetEcheancierDefault(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'change')
 def ApiToggleEcheancierAvailability(request):
     if request.method == 'POST':
         try:
@@ -654,6 +674,7 @@ def ApiToggleEcheancierAvailability(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'change')
 def ApiUpdateEcheancier(request):
     if request.method == 'POST':
         try:
@@ -784,6 +805,7 @@ def ApiUpdateEcheancier(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiCheckEcheancierState(request):
     if request.method == "GET":
         id_echeancier = request.GET.get('id_echeancier')
@@ -801,6 +823,7 @@ def ApiCheckEcheancierState(request):
     
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiCheckStateModel(request):
     id_model = request.GET.get('id_model')
     model_obj = ModelEcheancier.objects.get(id = id_model)

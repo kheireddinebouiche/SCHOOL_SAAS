@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -11,10 +12,12 @@ from django.db.models import Q, Sum, F, Case, When, Value, CharField, Count
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ListeDesPaiements(request):
     return render(request, 'tenant_folder/comptabilite/paiements/liste_des_paiements.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListePaiements(request):
     liste = Paiements.objects.filter(is_refund=False)
 
@@ -51,12 +54,14 @@ def ApiListePaiements(request):
     return JsonResponse(data, safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageCategoriesProduits(request):
     """Page to manage payment categories"""
     return render(request, 'tenant_folder/comptabilite/produits/liste_categories_produits.html')
 
 @login_required(login_url="institut_app:login")
 @require_http_methods(["POST"])
+@module_permission_required('tre', 'change')
 def ApiUpdatePaymentType(request):
     try:
         data = json.loads(request.body)

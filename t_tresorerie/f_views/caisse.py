@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.apps import apps
@@ -19,6 +20,7 @@ from t_crm.models import UserActionLog
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageBrouillardCaisse(request):
     today = datetime.now().date()
     default_year = today.year if today.month >= 8 else today.year - 1
@@ -35,6 +37,7 @@ def PageBrouillardCaisse(request):
     return render(request, 'tenant_folder/comptabilite/caisse/brouillad_caisse.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageBrouillardBanque(request):
     today = datetime.now().date()
     default_year = today.year if today.month >= 8 else today.year - 1
@@ -51,6 +54,7 @@ def PageBrouillardBanque(request):
     return render(request,'tenant_folder/comptabilite/caisse/brouillard_banque.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def brouillard_caisse_json(request):
     # Load t_conseil Paiement model
     try:
@@ -222,6 +226,7 @@ def brouillard_caisse_json(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def brouillard_banck_json(request):
     # Load t_conseil Paiement model
     try:
@@ -386,15 +391,18 @@ def brouillard_banck_json(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def brouillard_banque(request):
     pass
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'approuv')
 def ImputationBancaire(request):
     return render(request,'tenant_folder/comptabilite/caisse/imputation_bancaire.html')
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiReturnUndonePaiament(request):
     if request.method == "GET":
         paiements = OperationsBancaire.objects.filter(operation_type="entree")
@@ -508,6 +516,7 @@ def ApiReturnUndonePaiament(request):
         return JsonResponse({"status" : "error"})
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'approuv')
 def ApiImputeBankPaiment(request):
     if request.method == "POST":
         operationId = request.POST.get('operationId')
@@ -556,6 +565,7 @@ def ApiImputeBankPaiment(request):
         return JsonResponse({"status":"error",'message' : 'methode non autorise'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadEntrepises(request):
     if request.method == "GET":
         entreprises = Entreprise.objects.all().values('id','designation')
@@ -564,12 +574,14 @@ def ApiLoadEntrepises(request):
     else:
         return JsonResponse({"status" : "error"})
 
+@module_permission_required('tre', 'view')
 def PaiementsData(request):
     paiements = Paiements.objects.filter(mode_paiement = 'esp')
     pass
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ClientDetails(request, pk):
     return render(request,"tenant_folder/comptabilite/clients/details_clients.html")
 
@@ -577,6 +589,7 @@ from institut_app.decorators import *
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('tre', 'view')
 def ApiDetailsPaiement(request):
     if request.method == "GET":
         id = request.GET.get('id')
@@ -653,6 +666,7 @@ def ApiDetailsPaiement(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('tre', 'view')
 def ApiListBankAccount(request):
     if request.method == "GET":
         liste = BankAccount.objects.all().values('id','entreprise__designation','bank_name','bank_code')
@@ -661,10 +675,12 @@ def ApiListBankAccount(request):
         return JsonResponse({"status": "error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageRecouvrement(request):
     return render(request, 'tenant_folder/comptabilite/caisse/recouvrement_paiement.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'change')
 def ApiUpdateEffectiveDate(request):
     if request.method == "POST":
         paiement_id = request.POST.get('paiement_id')
@@ -705,6 +721,7 @@ def ApiUpdateEffectiveDate(request):
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'change')
 def ApiUpdateReferencePaiement(request):
     if request.method == "POST":
         item_id = request.POST.get('item_id')
@@ -745,6 +762,7 @@ def ApiUpdateReferencePaiement(request):
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListRecouvrementPaiements(request):
     if request.method == "GET":
         data = []
@@ -833,6 +851,7 @@ def ApiListRecouvrementPaiements(request):
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiRecouvrementStats(request):
     if request.method == "GET":
         # 1. Standard Payments
@@ -881,6 +900,7 @@ def ApiRecouvrementStats(request):
 
 @require_POST
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def api_set_solde_initial(request):
     try:
         data = json.loads(request.body)
@@ -922,6 +942,7 @@ def api_set_solde_initial(request):
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def api_list_soldes_initiaux(request):
     soldes = SoldeInitial.objects.all().order_by('-annee_scolaire', 'type')
     data = []
@@ -939,10 +960,12 @@ def api_list_soldes_initiaux(request):
     return JsonResponse(data, safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageDepotBanque(request):
     return render(request, 'tenant_folder/comptabilite/caisse/depot_banque.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def api_list_depots_banque(request):
     depots = DepotBanque.objects.all().order_by('-date_depot', '-created_at')
     
@@ -982,6 +1005,7 @@ def api_list_depots_banque(request):
 
 @require_POST
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'add')
 def api_create_depot_banque(request):
     try:
         data = json.loads(request.body)
@@ -1025,6 +1049,7 @@ def api_create_depot_banque(request):
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def imprimer_remise_fonds(request, pk):
     depot = DepotBanque.objects.get(pk=pk)
     context = {
@@ -1034,11 +1059,13 @@ def imprimer_remise_fonds(request, pk):
     return render(request, 'tenant_folder/comptabilite/caisse/remise_fonds_pdf.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadEntrepises(request):
     entreprises = Entreprise.objects.all().values('id', 'designation')
     return JsonResponse(list(entreprises), safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListBankAccount(request):
     entreprise_id = request.GET.get('entreprise_id')
     banks = BankAccount.objects.all()
@@ -1048,6 +1075,7 @@ def ApiListBankAccount(request):
     data = list(banks.values('id', 'bank_name', 'bank_code', 'bank_iban', 'entreprise__designation'))
     return JsonResponse(data, safe=False)
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageSituationComptes(request):
     bank_accounts = BankAccount.objects.filter(is_archived=False)
     situations = []
@@ -1108,6 +1136,7 @@ def PageSituationComptes(request):
     return render(request, 'tenant_folder/comptabilite/caisse/situation_comptes.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def api_get_depot_banque(request, pk):
     try:
         depot = DepotBanque.objects.get(pk=pk)
@@ -1129,6 +1158,7 @@ def api_get_depot_banque(request, pk):
 
 @login_required(login_url="institut_app:login")
 @require_POST
+@module_permission_required('tre', 'change')
 def api_update_depot_banque(request, pk):
     try:
         depot = DepotBanque.objects.get(pk=pk)
@@ -1169,6 +1199,7 @@ def api_update_depot_banque(request, pk):
 
 @login_required(login_url="institut_app:login")
 @require_POST
+@module_permission_required('tre', 'delete')
 def api_delete_depot_banque(request, pk):
     try:
         depot = DepotBanque.objects.get(pk=pk)

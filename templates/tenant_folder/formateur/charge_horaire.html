@@ -1,0 +1,308 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+
+{% block title %}Formateurs - Charge horaire{% endblock title %}
+
+{% block content %}
+<style>
+  /* Premium Glass-Card Styles */
+  :root {
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.4);
+      --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+      --premium-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  }
+
+  .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      border-radius: 16px;
+  }
+
+  .icon-box {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      font-size: 1.5rem;
+  }
+  /* Badges */
+  .badge-soft-primary { background-color: rgba(64, 81, 137, 0.1); color: #405189; }
+  .badge-soft-success { background-color: rgba(10, 179, 156, 0.1); color: #0ab39c; }
+  .badge-soft-warning { background-color: rgba(247, 184, 75, 0.1); color: #f7b84b; }
+  .badge-soft-danger { background-color: rgba(240, 101, 72, 0.1); color: #f06548; }
+
+  /* Table Styles */
+  .table thead th {
+      background-color: #f8f9fa;
+      color: #495057;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.025em;
+      padding: 1rem;
+      border-bottom: 1px solid #eef0f7;
+  }
+  .table tbody td {
+      padding: 1rem;
+      border-bottom: 1px solid #f3f3f3;
+      color: #495057;
+  }
+
+  /* Avatar */
+  .avatar-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: white;
+  }
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light pb-5">
+    <div class="container-fluid">
+        
+        <!-- Header -->
+        <div class="row mb-4 mt-2">
+            <div class="col-12">
+                <div class="glass-card p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-box bg-primary bg-opacity-10 text-primary me-3">
+                            <i class="ri-time-line"></i>
+                        </div>
+                        <div>
+                            <h4 class="fw-bold mb-1">Charge Horaire des Formateurs</h4>
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0 bg-transparent p-0">
+                                    <li class="breadcrumb-item text-muted">Pédagogie</li>
+                                    <li class="breadcrumb-item"><a href="{% url 't_formations:PageFormateurs' %}" class="text-muted text-decoration-none">Formateurs</a></li>
+                                    <li class="breadcrumb-item active text-primary fw-medium" aria-current="page">Charge Horaire</li>
+                                </ol>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="glass-card mb-4 overflow-hidden">
+            <div class="card-body p-4 bg-white bg-opacity-75">
+                <form method="GET" action="{% url 't_formations:ChargeHoraireFormateur' %}" class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label for="formateur_id" class="form-label fw-bold text-muted small text-uppercase">Sélectionner un formateur</label>
+                        <select name="formateur_id" id="formateur_id" class="form-select form-select-lg bg-light border-0 shadow-none cursor-pointer" required>
+                            <option value="">-- Choisir un formateur --</option>
+                            {% for f in formateurs %}
+                                <option value="{{ f.id }}" {% if selected_formateur and selected_formateur.id == f.id %}selected{% endif %}>
+                                    {{ f.nom }} {{ f.prenom }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="mode" class="form-label fw-bold text-muted small text-uppercase">Mode de calcul</label>
+                        <select name="mode" id="mode" class="form-select form-select-lg bg-light border-0 shadow-none cursor-pointer">
+                            <option value="standard" {% if mode_calcul == 'standard' %}selected{% endif %}>Mensuel Standard (Hebdo x 4)</option>
+                            <option value="reel" {% if mode_calcul == 'reel' %}selected{% endif %}>Mensuel Réel (Estimation jours réels)</option>
+                            <option value="semestre" {% if mode_calcul == 'semestre' %}selected{% endif %}>Semestriel (Hebdo x 14)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill fw-bold shadow-sm" style="transition: all 0.2s;">
+                            <i class="ri-search-line me-2"></i> Analyser
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if selected_formateur %}
+            <!-- Alert Explication du Mode de Calcul -->
+            <div class="alert alert-info border-0 shadow-sm rounded-4 d-flex align-items-center mb-4" role="alert" style="background-color: rgba(41, 156, 219, 0.08);">
+                <i class="ri-information-line fs-3 text-info me-3"></i>
+                <div>
+                    <h6 class="alert-heading fw-bold mb-1 text-info">Mode de calcul sélectionné : {% if mode_calcul == 'standard' %}Mensuel Standard{% elif mode_calcul == 'reel' %}Mensuel Réel (Estimé){% elif mode_calcul == 'semestre' %}Semestriel{% endif %}</h6>
+                    <p class="mb-0 text-muted small">
+                        {% if mode_calcul == 'standard' %}
+                            Ce mode calcule le total mensuel en multipliant la charge hebdomadaire stricte par <strong>4 semaines</strong>. Il est généralement utilisé comme base de facturation forfaitaire classique.
+                        {% elif mode_calcul == 'reel' %}
+                            Ce mode calcule le total mensuel estimé en multipliant la charge hebdomadaire par <strong>4,33 semaines</strong> (représentatif d'un mois de 30/31 jours). Il reflète plus fidèlement la réalité des heures travaillées dans un mois complet.
+                        {% elif mode_calcul == 'semestre' %}
+                            Ce mode calcule le volume horaire global pour un semestre en multipliant la charge hebdomadaire par une estimation de <strong>14 semaines</strong> académiques.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Totaux -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6 mb-3 mb-xl-0">
+                    <div class="stat-card p-4 h-100 d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-uppercase fw-bold text-muted fs-11 mb-2">Hebdomadaire</p>
+                            <h2 class="fw-bold mb-0 text-primary">{{ totaux.hebdo }} <span class="fs-6 text-muted fw-normal">h</span></h2>
+                        </div>
+                        <div class="icon-box bg-primary bg-opacity-10 text-primary">
+                            <i class="ri-calendar-event-line"></i>
+                        </div>
+                    </div>
+                </div>
+
+                {% if mode_calcul == 'standard' or mode_calcul == 'reel' %}
+                <div class="col-xl-4 col-md-6 mb-3 mb-xl-0">
+                    <div class="stat-card p-4 h-100 d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-uppercase fw-bold text-muted fs-11 mb-2">Mensuel ({% if mode_calcul == 'standard' %}Standard{% else %}Réel estimé{% endif %})</p>
+                            <h2 class="fw-bold mb-0 text-success">{% if mode_calcul == 'standard' %}{{ totaux.mensuel_standard }}{% else %}{{ totaux.mensuel_reel }}{% endif %} <span class="fs-6 text-muted fw-normal">h</span></h2>
+                        </div>
+                        <div class="icon-box bg-success bg-opacity-10 text-success">
+                            <i class="ri-calendar-2-line"></i>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if mode_calcul == 'semestre' %}
+                <div class="col-xl-4 col-md-6 mb-3 mb-xl-0">
+                    <div class="stat-card p-4 h-100 d-flex align-items-center justify-content-between">
+                        <div>
+                            <p class="text-uppercase fw-bold text-muted fs-11 mb-2">Semestriel</p>
+                            <h2 class="fw-bold mb-0 text-warning">{{ totaux.semestre }} <span class="fs-6 text-muted fw-normal">h</span></h2>
+                        </div>
+                        <div class="icon-box bg-warning bg-opacity-10 text-warning">
+                            <i class="ri-book-open-line"></i>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="col-xl-5 col-md-12 mb-3 mb-xl-0">
+                    <div class="stat-card p-4 h-100 d-flex align-items-center">
+                        <div class="avatar-circle me-3" style="width: 56px; height: 56px; background-color: #4f46e5; font-size: 1.5rem;">
+                            {{ selected_formateur.nom|first|upper }}{{ selected_formateur.prenom|first|upper }}
+                        </div>
+                        <div>
+                            <h5 class="fw-bold text-dark mb-1">{{ selected_formateur.nom }} {{ selected_formateur.prenom }}</h5>
+                            <p class="text-muted fs-13 mb-0"><i class="ri-mail-line me-1"></i>{{ selected_formateur.email|default:"Non spécifié" }} &nbsp;|&nbsp; <i class="ri-phone-line me-1"></i>{{ selected_formateur.telephone|default:"Non spécifié" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Détails de la charge horaire -->
+            <div class="glass-card mb-5" style="overflow: visible;">
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="overflow: visible;">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="border-0 rounded-start ps-4">Groupe / Semestre</th>
+                                    <th class="border-0 text-center">Lun</th>
+                                    <th class="border-0 text-center">Mar</th>
+                                    <th class="border-0 text-center">Mer</th>
+                                    <th class="border-0 text-center">Jeu</th>
+                                    <th class="border-0 text-center">Ven</th>
+                                    <th class="border-0 text-center">Sam</th>
+                                    <th class="border-0 text-center">Dim</th>
+                                    <th class="border-0 text-end">Total Hebdo</th>
+                                    
+                                    {% if mode_calcul == 'standard' or mode_calcul == 'reel' %}
+                                        <th class="border-0 text-end">Total Mensuel</th>
+                                    {% endif %}
+                                    
+                                    {% if mode_calcul == 'semestre' %}
+                                        <th class="border-0 text-end">Total Semestre</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody class="border-top-0">
+                                {% if workload_data %}
+                                    {% for row in workload_data %}
+                                    <tr>
+                                        <td class="px-4 py-3">
+                                            <div class="d-flex flex-column">
+                                                <span class="fw-bold text-dark">{{ row.groupe }}</span>
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary w-auto mt-1" style="width: fit-content;">{{ row.semestre }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 text-center">
+                                            {% if row.jour_stats.lundi > 0 %}<span class="badge bg-primary bg-opacity-10 text-primary">{{ row.jour_stats.lundi }}h</span>{% else %}<span class="text-muted opacity-50">-</span>{% endif %}
+                                        </td>
+                                        <td class="py-3 text-center">
+                                            {% if row.jour_stats.mardi > 0 %}<span class="badge bg-primary bg-opacity-10 text-primary">{{ row.jour_stats.mardi }}h</span>{% else %}<span class="text-muted opacity-50">-</span>{% endif %}
+                                        </td>
+                                        <td class="py-3 text-center">
+                                            {% if row.jour_stats.mercredi > 0 %}<span class="badge bg-primary bg-opacity-10 text-primary">{{ row.jour_stats.mercredi }}h</span>{% else %}<span class="text-muted opacity-50">-</span>{% endif %}
+                                        </td>
+                                        <td class="py-3 text-center">
+                                            {% if row.jour_stats.jeudi > 0 %}<span class="badge bg-primary bg-opacity-10 text-primary">{{ row.jour_stats.jeudi }}h</span>{% else %}<span class="text-muted opacity-50">-</span>{% endif %}
+                                        </td>
+                                        <td class="py-3 text-center">
+                                            {% if row.jour_stats.vendredi > 0 %}<span class="badge bg-primary bg-opacity-10 text-primary">{{ row.jour_stats.vendredi }}h</span>{% else %}<span class="text-muted opacity-50">-</span>{% endif %}
+                                        </td>
+                                        <td class="py-3 text-center">
+                                            {% if row.jour_stats.samedi > 0 %}<span class="badge bg-primary bg-opacity-10 text-primary">{{ row.jour_stats.samedi }}h</span>{% else %}<span class="text-muted opacity-50">-</span>{% endif %}
+                                        </td>
+                                        <td class="py-3 text-center">
+                                            {% if row.jour_stats.dimanche > 0 %}<span class="badge bg-primary bg-opacity-10 text-primary">{{ row.jour_stats.dimanche }}h</span>{% else %}<span class="text-muted opacity-50">-</span>{% endif %}
+                                        </td>
+                                        
+                                        <td class="py-3 text-end fw-bold text-primary">{{ row.total_hebdomadaire }}h</td>
+                                        
+                                        {% if mode_calcul == 'standard' %}
+                                            <td class="px-4 py-3 text-end fw-bold text-success">{{ row.mensuel_standard }}h</td>
+                                        {% elif mode_calcul == 'reel' %}
+                                            <td class="px-4 py-3 text-end fw-bold text-success">{{ row.mensuel_reel }}h</td>
+                                        {% endif %}
+                                        
+                                        {% if mode_calcul == 'semestre' %}
+                                            <td class="px-4 py-3 text-end fw-bold text-warning">{{ row.semestre_total }}h</td>
+                                        {% endif %}
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="10" class="text-center py-5">
+                                            <div class="d-flex flex-column align-items-center">
+                                                <i class="ri-calendar-2-line fs-1 text-muted opacity-50 mb-3"></i>
+                                                <h5 class="fw-bold text-muted">Aucune affectation trouvée</h5>
+                                                <p class="text-muted mb-0">Ce formateur n'a pas encore de charge horaire assignée dans les emplois du temps.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        {% else %}
+            <!-- État vide (Aucun formateur sélectionné) -->
+            <div class="glass-card mb-5">
+                <div class="card-body p-5 text-center">
+                    <div class="bg-primary bg-opacity-10 rounded-circle mx-auto d-flex align-items-center justify-content-center mb-4" style="width: 100px; height: 100px;">
+                        <i class="ri-user-search-line text-primary fs-1"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark mb-3">Sélectionnez un formateur</h3>
+                    <p class="text-muted fs-5 mb-0 mx-auto" style="max-width: 600px;">
+                        Veuillez choisir un formateur dans la liste ci-dessus et sélectionner un mode de calcul pour visualiser le détail de sa charge horaire.
+                    </p>
+                </div>
+            </div>
+        {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}

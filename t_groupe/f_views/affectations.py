@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect
 from ..models import *
 from ..forms import *
@@ -409,6 +410,7 @@ def AutreAffectationPage(request):
     return render(request, 'tenant_folder/scolarite/autre_affectation.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('scol', 'approuv')
 def ApiParticipantsConfirmes(request):
     participants = Participant.objects.filter(is_confirmed_for_scolarite=True).select_related('prospect')
     data = []

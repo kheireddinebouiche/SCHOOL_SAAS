@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -16,6 +17,7 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageConfPenalite(request):
     entreprises = Entreprise.objects.all()
     payment_types = PaymentType.objects.all()
@@ -24,6 +26,7 @@ def PageConfPenalite(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadPromo(request):
     if request.method == "GET":
         promo = Promos.objects.all()
@@ -47,6 +50,7 @@ def ApiLoadPromo(request):
         return JsonResponse({"status":"error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'change')
 def ApiUpdatePromoConfig(request):
     if request.method == 'POST':
         try:
@@ -77,6 +81,7 @@ def ApiUpdatePromoConfig(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'change')
 def ApiLoadPenaltyConfig(request):
     if request.method == "GET":
         config = PenaltyGlobalConfiguration.get_solo()
@@ -93,6 +98,7 @@ def ApiLoadPenaltyConfig(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'change')
 def ApiUpdatePenaltyConfig(request):
     if request.method == 'POST':
         try:
@@ -137,12 +143,14 @@ def ApiUpdatePenaltyConfig(request):
 from t_conseil.models import TvaConseil
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ListePenalite(request):
     tvas = TvaConseil.objects.all().order_by('valeur')
     return render(request,'tenant_folder/comptabilite/penalite_rachat/demande_paiements.html', {'tvas': tvas})
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListeDuePenalite(request):
     if request.method == 'GET':
         due_paiements = DuePaiements.objects.filter(type__in=['rach', 'dette', 'autre']).select_related('client', 'payment_type')
@@ -167,6 +175,7 @@ def ApiListeDuePenalite(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'delete')
 def ApiDeleteDuePenalite(request):
     if request.method == 'POST':
         try:
@@ -184,6 +193,7 @@ def ApiDeleteDuePenalite(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'view')
 def ApiPayDuePenalite(request):
     if request.method == 'POST':
         try:
@@ -259,6 +269,7 @@ def ApiPayDuePenalite(request):
 
 @xframe_options_exempt
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PrintReceipt(request, paiement_id):
     try:
         paiement = Paiements.objects.get(id=paiement_id)

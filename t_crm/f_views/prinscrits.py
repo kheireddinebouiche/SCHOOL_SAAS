@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render,redirect
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -1308,6 +1309,7 @@ def ApiReactivatePreinscrit(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('crm', 'approuv')
 def ApiValidatePreinscrit(request):
     id_preinscrit = request.GET.get('id_preinscrit')
 
@@ -1550,4 +1552,4 @@ def SearchProspectPreinscrit(request):
 
     return render(request, 'tenant_folder/crm/search_prospect_preinscrit.html', {'tenant': request.tenant})
 
-
+

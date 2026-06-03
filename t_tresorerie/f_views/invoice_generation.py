@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
@@ -171,6 +172,7 @@ def create_invoice_from_payment_object(paiement, tva_percent, show_tva, skip_tim
 
 @login_required
 @require_POST
+@module_permission_required('tre', 'add')
 def generate_invoice_from_payment(request):
     try:
         paiement_id = request.POST.get('paiement_id')
@@ -198,6 +200,7 @@ def generate_invoice_from_payment(request):
 
 @login_required
 @require_POST
+@module_permission_required('tre', 'add')
 def generate_consolidated_invoice(request):
     try:
         prospect_id = request.POST.get('prospect_id')
@@ -396,6 +399,7 @@ def generate_consolidated_invoice(request):
 
 @login_required
 @require_POST
+@module_permission_required('tre', 'change')
 def ApiUpdateDraftInvoice(request):
     try:
         facture_id = request.POST.get('facture_id')

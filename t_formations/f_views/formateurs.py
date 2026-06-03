@@ -3,6 +3,7 @@ from django.contrib import messages
 from ..models import *
 from ..forms import *
 from django.contrib.auth.decorators import login_required
+from institut_app.decorators import module_permission_required
 from django.db import transaction, IntegrityError
 from django_tenants.utils import get_tenant_model, schema_context
 from django.http import JsonResponse
@@ -79,6 +80,7 @@ def export_formateurs(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def PageFormateurs(request):
     search_query = request.GET.get('search', '')
     
@@ -112,6 +114,7 @@ def PageFormateurs(request):
     return render(request, 'tenant_folder/formateur/liste_des_formateur.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 def request_formateur_dispo(request):
     if request.method == "POST":
         formateur_id = request.POST.get("id")
@@ -131,6 +134,7 @@ def request_formateur_dispo(request):
     return JsonResponse({"status": "error", "message": "Méthode non autorisée."}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'add')
 @transaction.atomic
 def create_formateur(request):
     if request.method == "POST":
@@ -158,6 +162,7 @@ def create_formateur(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 @transaction.atomic
 def update_formateur(request):
     if request.method == "POST":
@@ -192,6 +197,8 @@ def update_formateur(request):
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 
+@login_required(login_url="institut_app:login")
+@module_permission_required('int', 'delete')
 def delete_formateur(request):
     if request.method == "POST":
         formateur_id = request.POST.get('id')
@@ -210,6 +217,7 @@ def delete_formateur(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ApiGetFormateurs(request):
     try:
         formateurs = Formateurs.objects.all()
@@ -231,6 +239,8 @@ def ApiGetFormateurs(request):
         return JsonResponse({"status": "error", "message": str(e)})
 
 
+@login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def load_module_teachers(request):
     module_id = request.GET.get('module_id')
     if module_id:
@@ -258,6 +268,7 @@ def load_module_teachers(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 @transaction.atomic
 def assign_trainers_to_module(request):
     if request.method == "POST":
@@ -314,6 +325,7 @@ def assign_trainers_to_module(request):
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 def create_availability(request):
     if request.method == "POST":
         try:
@@ -394,6 +406,7 @@ def create_availability(request):
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'delete')
 @transaction.atomic
 def remove_trainer_from_module(request):
     if request.method == "POST":
@@ -442,6 +455,7 @@ def remove_trainer_from_module(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 @transaction.atomic
 def update_module_details(request):
     if request.method == "POST":
@@ -497,6 +511,7 @@ def update_module_details(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'approuv')
 def validate_module(request):
     if request.method == "POST":
         try:
@@ -527,6 +542,7 @@ def validate_module(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def get_availability(request):
     if request.method == "GET":
         try:
@@ -559,6 +575,7 @@ def get_availability(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'delete')
 def delete_availability(request):
     if request.method == "POST":
         try:
@@ -606,3 +623,96 @@ def delete_availability(request):
             return JsonResponse({'status': 'error', 'message': str(e)})
     else:
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
+def ChargeHoraireFormateur(request):
+    from t_timetable.models import TimetableEntry
+    
+    # Récupérer tous les formateurs pour le menu déroulant
+    formateurs = Formateurs.objects.all().order_by('nom', 'prenom')
+    
+    selected_formateur_id = request.GET.get('formateur_id')
+    mode_calcul = request.GET.get('mode', 'standard') # 'standard' (Hebdo x 4), 'reel' (Mois en cours), 'semestre' (Hebdo x 14)
+    
+    data = []
+    formateur = None
+    totaux = {
+        'hebdo': 0,
+        'mensuel_standard': 0,
+        'mensuel_reel': 0,
+        'semestre': 0
+    }
+
+    if selected_formateur_id:
+        formateur = Formateurs.objects.filter(id=selected_formateur_id).first()
+        if formateur:
+            # Récupérer toutes les affectations du formateur dans les emplois du temps
+            entries = TimetableEntry.objects.filter(formateur=formateur).select_related('timetable', 'timetable__groupe', 'cours')
+            
+            # Structurer les données par (Groupe, Semestre)
+            grouped_data = {}
+            
+            for entry in entries:
+                if not entry.heure_debut or not entry.heure_fin or not entry.jour:
+                    continue
+                    
+                groupe_nom = entry.timetable.groupe.nom if entry.timetable.groupe else "Non assigné"
+                semestre = entry.timetable.get_semestre_display() if entry.timetable.semestre else "N/A"
+                
+                key = f"{groupe_nom}_{semestre}"
+                
+                if key not in grouped_data:
+                    grouped_data[key] = {
+                        'groupe': groupe_nom,
+                        'semestre': semestre,
+                        'jour_stats': {'lundi': 0, 'mardi': 0, 'mercredi': 0, 'jeudi': 0, 'vendredi': 0, 'samedi': 0, 'dimanche': 0},
+                        'total_hebdomadaire': 0,
+                    }
+                
+                jour = entry.jour.lower()
+                
+                # Calcul de la durée en heures
+                dt = datetime.combine(datetime.min, entry.heure_fin) - datetime.combine(datetime.min, entry.heure_debut)
+                hours = dt.total_seconds() / 3600.0
+                
+                # S'assurer que le jour est standard
+                for standard_jour in grouped_data[key]['jour_stats'].keys():
+                    if standard_jour in jour:
+                        grouped_data[key]['jour_stats'][standard_jour] += hours
+                        grouped_data[key]['total_hebdomadaire'] += hours
+                        break
+            
+            # Calculer les volumes selon le mode
+            for key, v in grouped_data.items():
+                v['total_hebdomadaire'] = round(v['total_hebdomadaire'], 2)
+                
+                # 1. Mode Standard (Hebdo x 4)
+                v['mensuel_standard'] = round(v['total_hebdomadaire'] * 4, 2)
+                
+                # 2. Mode Réel (Estimation sur le mois actuel : on compte ~4.3 semaines en moyenne, ou on pourrait calculer les jours réels du mois)
+                # Pour l'instant, on utilise 4.33 (30.4 jours / 7)
+                v['mensuel_reel'] = round(v['total_hebdomadaire'] * 4.33, 2)
+                
+                # 3. Mode Semestriel (Généralement 14 semaines)
+                v['semestre_total'] = round(v['total_hebdomadaire'] * 14, 2)
+                
+                data.append(v)
+                
+                # Ajouter aux totaux globaux
+                totaux['hebdo'] += v['total_hebdomadaire']
+                totaux['mensuel_standard'] += v['mensuel_standard']
+                totaux['mensuel_reel'] += v['mensuel_reel']
+                totaux['semestre'] += v['semestre_total']
+                
+            # Arrondir les totaux
+            totaux = {k: round(v, 2) for k, v in totaux.items()}
+
+    context = {
+        'formateurs': formateurs,
+        'selected_formateur': formateur,
+        'workload_data': data,
+        'mode_calcul': mode_calcul,
+        'totaux': totaux
+    }
+    return render(request, 'tenant_folder/formateur/charge_horaire.html', context)

@@ -79,6 +79,13 @@ class TemplateListView(LoginRequiredMixin, ListView):
         if template_type:
             queryset = queryset.filter(template_type=template_type)
 
+        # Filtrer par statut
+        status = self.request.GET.get('status')
+        if status == 'active':
+            queryset = queryset.filter(is_active=True)
+        elif status == 'inactive':
+            queryset = queryset.filter(is_active=False)
+
         # Recherche par titre ou description
         search = self.request.GET.get('search')
         if search:
@@ -104,6 +111,12 @@ class TemplateDetailView(LoginRequiredMixin, DetailView):
     template_name = 'documents/template_detail.html'
     slug_field = 'slug'
     context_object_name = 'template'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from .variables import get_variables_for_type
+        context['template_variables'] = get_variables_for_type(self.object.template_type)
+        return context
 
 
 class TemplateCreateBasicView(LoginRequiredMixin, CreateView):
@@ -175,14 +188,17 @@ class DocumentGenerationView(LoginRequiredMixin, View):
         form = DocumentGenerationForm(request.POST)
         
         if form.is_valid():
-            # Préparer les données de contexte
-            context_data = {
-                'recipient_name': form.cleaned_data.get('recipient_name', ''),
-                'recipient_email': form.cleaned_data.get('recipient_email', ''),
-                'document_date': form.cleaned_data.get('document_date', ''),
-                'company_name': 'SALDAE SYSTEMS',  # À personnaliser
-                'current_user': request.user.get_full_name() or request.user.username,
-            }
+            # Préparer les données de contexte avec Mock
+            from .utils import get_mock_context_for_type
+            context_data = get_mock_context_for_type(template_obj.template_type)
+            
+            # Surcharger avec les données du formulaire si fournies
+            if form.cleaned_data.get('recipient_name'):
+                context_data['recipient_name'] = form.cleaned_data.get('recipient_name')
+            if form.cleaned_data.get('recipient_email'):
+                context_data['recipient_email'] = form.cleaned_data.get('recipient_email')
+            if form.cleaned_data.get('document_date'):
+                context_data['document_date'] = form.cleaned_data.get('document_date').strftime("%d/%m/%Y")
             
             # Rendre le template Django
             try:

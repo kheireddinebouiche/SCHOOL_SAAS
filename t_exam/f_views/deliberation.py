@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
@@ -18,6 +19,7 @@ from reportlab.pdfgen import canvas
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def groupe_deliberation_results_view(request, pk):
 
     session_line = get_object_or_404(SessionExamLine, id=pk)
@@ -189,6 +191,7 @@ def groupe_deliberation_results_view(request, pk):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def groupe_deliberation_results_pdf_view(request, pk):
     session_line = get_object_or_404(SessionExamLine, id=pk)
     groupe = session_line.groupe
@@ -645,6 +648,7 @@ def groupe_deliberation_results_pdf_view(request, pk):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
 def api_save_deliberation_decision(request):
     if request.method == "POST":
         session_line_id = request.POST.get("session_line_id")

@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -8,6 +9,7 @@ import json
 
 
 @login_required
+@module_permission_required('tre', 'view')
 def liste_categories_produits(request):
     """
     Vue pour afficher la liste des catégories de paiement (TypePaiement)
@@ -19,6 +21,7 @@ def liste_categories_produits(request):
     return render(request, 'tenant_folder/comptabilite/produits/liste_categories_produits.html', context)
 
 
+@module_permission_required('tre', 'add')
 def create_type_paiement(request):
     """
     Vue pour créer une nouvelle catégorie de paiement (TypePaiement)
@@ -47,6 +50,7 @@ def create_type_paiement(request):
     return JsonResponse({'success': False, 'error': 'Méthode non autorisée'})
 
 
+@module_permission_required('tre', 'change')
 def update_type_paiement(request):
     """
     Vue pour mettre à jour une catégorie de paiement existante (TypePaiement)
@@ -76,6 +80,7 @@ def update_type_paiement(request):
     return JsonResponse({'success': False, 'error': 'Méthode non autorisée'})
 
 
+@module_permission_required('tre', 'view')
 def get_type_paiement(request):
     """
     Vue pour récupérer les détails d'une catégorie de paiement (TypePaiement)
@@ -99,6 +104,7 @@ def get_type_paiement(request):
 
 
 @csrf_exempt
+@module_permission_required('tre', 'delete')
 def delete_type_paiement(request):
     """
     Vue pour supprimer une catégorie de paiement (TypePaiement)

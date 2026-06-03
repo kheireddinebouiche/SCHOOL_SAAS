@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from ..models import *
@@ -13,17 +14,20 @@ from django.db.models import Q, Sum, F, Case, When, Value, CharField, Count
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageFacturation(request):
     if request.method == "GET":
         return render(request, "tenant_folder/comptabilite/facturation/liste_des_factures.html", {"filter_type": "all"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageFacturesAvoir(request):
     if request.method == "GET":
         return render(request, "tenant_folder/comptabilite/facturation/liste_des_factures.html", {"filter_type": "avoir"})
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListeDesFactures(request):
     if request.method == "GET":
         try:
@@ -65,6 +69,7 @@ def ApiListeDesFactures(request):
             return JsonResponse({'status': 'error', 'message': str(e)})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def DetailsFactureTresorerie(request, pk):
     try:
         facture = Facture.objects.get(num_facture=pk, module_source='tresorerie')
@@ -130,6 +135,7 @@ def DetailsFactureTresorerie(request, pk):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetProspectPaymentsByNin(request):
     if request.method == "GET":
         try:
@@ -190,6 +196,7 @@ def ApiGetProspectPaymentsByNin(request):
 
 @login_required(login_url="institut_app:login")
 @require_http_methods(["POST"])
+@module_permission_required('tre', 'delete')
 def ApiDeleteFacture(request):
     try:
         facture_id = request.POST.get('facture_id')
@@ -218,6 +225,7 @@ def ApiDeleteFacture(request):
 
 @login_required(login_url="institut_app:login")
 @require_http_methods(["POST"])
+@module_permission_required('tre', 'approuv')
 def ApiValidateFacture(request):
     try:
         facture_id = request.POST.get('facture_id')
@@ -245,6 +253,7 @@ def ApiValidateFacture(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetDraftInvoiceDetails(request):
     if request.method == "GET":
         try:
@@ -329,6 +338,7 @@ def ApiGetDraftInvoiceDetails(request):
 
 @login_required(login_url="institut_app:login")
 @require_http_methods(["POST"])
+@module_permission_required('tre', 'view')
 def ApiDemanderRemboursement(request):
     try:
         facture_id = request.POST.get('facture_id')

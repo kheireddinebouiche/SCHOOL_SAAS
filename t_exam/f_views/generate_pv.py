@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -20,6 +21,7 @@ from reportlab.lib.units import mm
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
 def GeneratePvModal(request, pk):
     obj = ExamPlanification.objects.get(id=pk)
     groupe = SessionExamLine.objects.get(id=obj.exam_line.id)
@@ -409,6 +411,7 @@ def GeneratePvModal(request, pk):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
 def DownloadBlankPvsPdf(request):
     """
     Generates a single, high-fidelity landscape A4 PDF compiled server-side via ReportLab,

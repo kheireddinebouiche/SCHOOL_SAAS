@@ -237,6 +237,7 @@ class Fournisseur(models.Model):
 class Module(models.Model):
     MODULES = [
         ('crm',_('CRM')),
+        ('rel',_('Relations Extérieures')),
         ('ped',_('Pédagogie')),
         ('exa',_('Examens')),
         ('eva',_('Evaluation')),
@@ -405,3 +406,17 @@ class PasswordResetRequest(models.Model):
 
     def __str__(self):
         return f"Reset for {self.user.username} at {self.created_at}"
+
+class UserSubMenuAccess(models.Model):
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='submenu_accesses')
+    module_code = models.CharField(max_length=10) # e.g. 'tre'
+    submenu_code = models.CharField(max_length=50) # e.g. 'tresorerie', 'caisse', 'depenses'
+    is_active = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('user', 'module_code', 'submenu_code')
+        verbose_name = _('Accès Sous-Menu')
+        verbose_name_plural = _('Accès Sous-Menus')
+
+    def __str__(self):
+        return f"{self.user} - {self.module_code} - {self.submenu_code} : {'Actif' if self.is_active else 'Inactif'}"

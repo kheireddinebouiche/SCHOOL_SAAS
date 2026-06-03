@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -26,6 +27,7 @@ def clean_montant(val_str):
         return Decimal('0.00')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetPaiementRequestDetails(request):
     id_client = request.GET.get('id_client')
     id_echeancier = request.GET.get('id_echeancier')
@@ -80,6 +82,7 @@ def ApiGetPaiementRequestDetails(request):
         return JsonResponse({'error': 'Aucune donnée d\'échéancier fournie'}, status=400)
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetPaiementRequestDetailsDouble(request):
     if request.method == "GET":
         id_client = request.GET.get('id_client')
@@ -220,6 +223,7 @@ def ApiStorePaiementsDouble(client,label,date_echeance,montant,promo,echeancier,
     return JsonResponse({"status": "success","id": paiement.id,"ordre": assigned_ordre})
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'add')
 def ApiApplyRemiseToPaiement(request):
     if request.method == "POST":
         remiseId = request.POST.get('remiseId')
@@ -234,6 +238,7 @@ def ApiApplyRemiseToPaiement(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiStoreClientPaiement(request):
     echeance = request.POST.get('echeance')
     datePaiement = request.POST.get('datePaiement')
@@ -306,6 +311,7 @@ def ApiStoreClientPaiement(request):
  
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'delete')
 def ApiDeletePaiement(request):
     if request.method == "POST":
         num_bon = request.POST.get('num_bon')   
@@ -334,6 +340,7 @@ def ApiDeletePaiement(request):
     
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiApplyEcheancierSpecial(request):
     if request.method == "POST":
         id_echeancier_special = request.POST.get('id_echeancier_special')
@@ -385,6 +392,7 @@ def generate_matricule_interne(promo_code):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'approuv')
 def ApiConfirmInscription(request):
     if request.method == "POST":
         id_client = request.POST.get('id_preinscrit')
@@ -414,6 +422,7 @@ def ApiConfirmInscription(request):
     
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'approuv')
 def ApiConfirmInscriptionDouble(request):
     if request.method == "POST":
         id_client = request.POST.get('id_preinscrit')
@@ -443,6 +452,7 @@ def ApiConfirmInscriptionDouble(request):
     
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'view')
 def ApiRequestRefundPaiement(request):
     if request.method == "POST":
         id_client = request.POST.get('client_id')
@@ -467,6 +477,7 @@ def ApiRequestRefundPaiement(request):
     
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'delete')
 def ApiCancelPaiementRequest(request):
     if request.method == "POST":
         id_demande = request.POST.get('id_demande')
@@ -512,6 +523,7 @@ def ApiCancelPaiementRequest(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'delete')
 def ApiCancelDuePaiements(request):
     if request.method == "POST":
         id_demande = request.POST.get('id_demande')
@@ -547,5 +559,6 @@ def ApiCancelDuePaiements(request):
     return JsonResponse({'status': 'error', 'message': "Méthode non autorisée."}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def SuivieEcheancier(request):
     return render(request, 'tenant_folder/comptabilite/echeancier/suivie_echeancier.html')

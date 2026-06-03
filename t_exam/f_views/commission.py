@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from t_timetable.models import Timetable
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
@@ -15,6 +16,7 @@ from django.contrib.auth.decorators import login_required
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def PageCommission(request):
     commissions = Commissions.objects.all()
     all_promotions = Promos.objects.all()
@@ -26,6 +28,7 @@ def PageCommission(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiListeDesCommission(request):
     if request.method == "GET":
         commissions = Commissions.objects.all()
@@ -44,6 +47,7 @@ from django.contrib import messages
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'view')
 def NouvelleCommission(request):
     form = CommissionForm()
     if request.method == "POST":
@@ -64,6 +68,7 @@ def NouvelleCommission(request):
     return render(request, 'tenant_folder/exams/commission/nouvelle_commission.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def DetailsCommission(request, pk):
     obj = Commissions.objects.get(id = pk)
    
@@ -75,6 +80,7 @@ def DetailsCommission(request, pk):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'change')
 def UpdateCommission(request, pk):
     commission = Commissions.objects.get(id = pk)
     form = CommissionForm(instance = commission)
@@ -95,6 +101,7 @@ def UpdateCommission(request, pk):
     return render(request,'tenant_folder/exams/commission/update_commission.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'approuv')
 def validate_commission(request):
     if request.method == "POST":
         commissionId = request.POST.get('commissionId')
@@ -130,6 +137,7 @@ def validate_commission(request):
         })
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'delete')
 def delete_commission(request, pk):
     if request.method == "POST":
         try:
@@ -159,6 +167,7 @@ def delete_commission(request, pk):
         })
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiGetGroupeDetails(request):
     if request.method == "GET":
         groupe_id = request.GET.get("id")
@@ -206,6 +215,7 @@ def ApiGetGroupeDetails(request):
     return JsonResponse({"status": "error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiGetCommissionResults(request):
     if request.method == "GET":
         id_commission = request.GET.get('idCommission')
@@ -240,6 +250,7 @@ def ApiGetCommissionResults(request):
     
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'view')
 def close_commission(request, pk):
     from ..models import SessionExam, SessionExamLine
     from t_timetable.models import Timetable

@@ -5,6 +5,7 @@ from t_rh.models import *
 from t_crm.tenant_path import *
 from pdf_editor.models import *
 from django.db.models import Max
+from django.core.validators import FileExtensionValidator
 
 class Partenaires(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
@@ -126,6 +127,11 @@ class Modules(models.Model):
     n_elimate = models.IntegerField(null=True, blank=True)
 
     systeme_eval = models.CharField(max_length=100, null=True, blank=True)
+    plan_cours = models.FileField(
+        upload_to=tenant_directory_path_for_plan_cours,
+        validators=[FileExtensionValidator(['pdf'])],
+        null=True, blank=True
+    )
 
     is_archived = models.BooleanField(default=False)
     est_valider = models.BooleanField(default=False)

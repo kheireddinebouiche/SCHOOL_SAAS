@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -18,12 +19,14 @@ from django.views.decorators.http import require_http_methods
 from t_tresorerie.models import *
 
 
+@module_permission_required('tre', 'view')
 def listeDesRembourssement(request):
     return render(request, "tenant_folder/comptabilite/tresorerie/liste-des-rembourssement.html")
 
 
 @login_required
 @require_http_methods(["GET"])
+@module_permission_required('tre', 'view')
 def ApiLoadRemboursements(request):
     
     remboursements = Rembourssements.objects.select_related('client', 'facture').all()
@@ -95,6 +98,7 @@ def ApiLoadRemboursements(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def DetailsRembourssement(request, pk):
     obj = Rembourssements.objects.get(id = pk)
     if obj.client.is_double:
@@ -149,6 +153,7 @@ def DetailsRembourssement(request, pk):
     return render(request, 'tenant_folder/comptabilite/rembourssement/details_rembourssement.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadPaiements(request):
     if request.method == "GET":
         remboursement_id = request.GET.get('remboursement_id')
@@ -183,6 +188,7 @@ def ApiLoadPaiements(request):
         return JsonResponse({"status":"error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiSearchProspectForRefund(request):
     if request.method == "GET":
         query = request.GET.get('q', '').strip()
@@ -267,6 +273,7 @@ def ApiSearchProspectForRefund(request):
 
 @login_required(login_url="institut_app:login")
 @require_http_methods(["POST"])
+@module_permission_required('tre', 'delete')
 def ApiCancelRefund(request, pk):
     try:
         obj = Rembourssements.objects.get(id=pk)
@@ -288,4 +295,4 @@ def ApiCancelRefund(request, pk):
     except Rembourssements.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': "Demande de remboursement introuvable."}, status=404)
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

@@ -1,3 +1,5 @@
+from institut_app.decorators import superuser_required
+from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -5,6 +7,7 @@ from ..models import GlobalConfiguration
 from django.views.decorators.csrf import csrf_exempt
 
 @login_required
+@superuser_required
 def general_settings_view(request):
     """
     Renders the general configuration page.
@@ -20,6 +23,7 @@ from django.db import models
 
 @csrf_exempt
 @login_required
+@superuser_required
 def api_update_global_settings(request):
     """
     API endpoint to update global settings via AJAX.
@@ -54,6 +58,7 @@ def api_update_global_settings(request):
 
 @csrf_exempt
 @login_required
+@superuser_required
 def api_update_tenant_settings(request):
     """
     API endpoint to update Institut (tenant) details.

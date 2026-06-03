@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -7,15 +8,18 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageDepenses(request):
     return render(request,'tenant_folder/comptabilite/depenses/liste_des_depenses.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListeDepenses(request):
     liste = Depenses.objects.all().values('id','label', 'category__name', 'category__parent__name','montant_ht','tva','montant_ttc','date_paiement','client__prenom','client__nom','fournisseur__designation','etat','created_at', 'mode_paiement', 'entite__id', 'entite__designation').order_by('-id')
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadEntites(request):
     if request.method == "GET":
         # Fetch all enterprises/entities
@@ -26,11 +30,13 @@ def ApiLoadEntites(request):
         return JsonResponse({"status": "error", "message": "Method not allowed"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageNouvelleDepense(request):
     entites = Entreprise.objects.all()
     return render(request, "tenant_folder/comptabilite/depenses/nouvelle_depense.html", {'entites': entites})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadTypeDepense(request):
     if request.method == 'GET':
         types = TypeDepense.objects.all()
@@ -56,6 +62,7 @@ def ApiLoadTypeDepense(request):
     
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiStoreNewType(request):
     if request.method == "POST":
         typeName = request.POST.get('typeName')
@@ -81,6 +88,7 @@ def ApiStoreNewType(request):
         return JsonResponse({"status":"error",'message':"methode non autoriser"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'add')
 def ApiAddCategorieComptable(request):
     if request.method == "POST":
         label = request.POST.get('label')
@@ -99,11 +107,13 @@ def ApiAddCategorieComptable(request):
         return JsonResponse({"status":"error",'message':"methode non autoriser"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadCategories(request):
     liste = TypeDepense.objects.all().values('id','label')
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetCategorie(request):
     if request.method == "GET":
         liste = TypeDepense.objects.all().values('id','label')
@@ -112,6 +122,7 @@ def ApiGetCategorie(request):
         return JsonResponse({"status":"error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiFilterSousCategrorie(request):
     if request.method == "GET":
         option = request.GET.get('option')
@@ -122,6 +133,7 @@ def ApiFilterSousCategrorie(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiStoreDepense(request):
     if request.method == "POST":
         label = request.POST.get('label')
@@ -164,6 +176,7 @@ def ApiStoreDepense(request):
         return JsonResponse({"status":"error"})
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetDepenseDetails(request):
     if request.method == "GET":
         id = request.GET.get('id')
@@ -196,6 +209,7 @@ def ApiGetDepenseDetails(request):
     
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'change')
 def ApiUpdateDepense(request):
     if request.method == "POST":
         id = request.POST.get('id')
@@ -252,6 +266,7 @@ def ApiUpdateDepense(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'approuv')
 def ApiValidateDepense(request):
     if request.method == "GET":
         id = request.GET.get('id')
@@ -265,6 +280,7 @@ def ApiValidateDepense(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'delete')
 def ApiDeleteDepense(request):
     if request.method == "GET":
         id = request.GET.get('id')
@@ -276,6 +292,7 @@ def ApiDeleteDepense(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'view')
 def ApiRecordExpensePayment(request):
     if request.method == "POST":
         try:
