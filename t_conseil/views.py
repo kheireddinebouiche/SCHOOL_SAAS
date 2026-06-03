@@ -266,7 +266,6 @@ def configure_facture(request, pk):
         return render(request, 'tenant_folder/conseil/configure-facture.html', context)
 
 @login_required(login_url="institut_app:login")
-@module_permission_required('con', 'view')
 def ListeDesDevis(request):
     devis = Devis.objects.all().order_by('-created_at')
     
@@ -378,7 +377,6 @@ def ApiLoadProspect(request):
     pass
 
 @login_required(login_url="institut_app:login")
-@module_permission_required('con', 'view')
 def ListeDesClients(request):
     context = {
         'tenant': request.tenant,
@@ -757,7 +755,6 @@ def ApiRevertDevisToDraft(request):
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
 
 @login_required(login_url="institut_app:login")
-@module_permission_required('con', 'view')
 def ListeDesFactures(request):
     factures = Facture.objects.filter(module_source='conseil').exclude(type_facture='avoir').order_by('-created_at')
     

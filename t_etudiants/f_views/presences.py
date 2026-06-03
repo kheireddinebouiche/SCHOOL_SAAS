@@ -4,7 +4,7 @@ from ..models import *
 from django.contrib.auth.decorators import login_required
 from institut_app.decorators import module_permission_required
 from ..forms import *
-from t_crm.models import NotesProcpects, RendezVous
+from t_crm.models import NotesProcpects, RendezVous, UserActionLog
 from django.db import transaction
 from t_formations.models import *
 from t_groupe.models import GroupeLine, Group
@@ -103,10 +103,19 @@ def ApiSaveRegistreGroupe(request):
 
 
     try:
-        RegistrePresence.objects.create(
+        registre = RegistrePresence.objects.create(
             label = registerName,
             semestre = semester,
             groupe_id = group,
+        )
+
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='RegistrePresence',
+            target_id=str(registre.id),
+            details=f"Création d'un registre de présence : {registerName} (Semestre {semester})",
+            ip_address=request.META.get('REMOTE_ADDR')
         )
 
         return JsonResponse({"status" : "success"})
@@ -259,6 +268,15 @@ def ApiAjouterHistoriqueAbsence(request):
                     # Appel de la méthode du modèle
                     historique.ajouter_entree(date_obj, module_label, module_code, status)
 
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='LigneRegistrePresence',
+                target_id=str(ligne_id),
+                details=f"Mise à jour des présences/absences pour le {date_str} (Module: {ligne.module.label if ligne.module else 'N/A'})",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({"status": "success", "message": "Historique mis à jour avec succès"})
         
         except Exception as e:
@@ -345,6 +363,16 @@ def ApiUpdateAbsenceReason(request):
                 if updated:
                     historique_obj.historique = new_historique
                     historique_obj.save()
+                    
+                    UserActionLog.objects.create(
+                        user=request.user,
+                        action_type='UPDATE',
+                        target_model='HistoriqueAbsence',
+                        target_id=str(historique_obj.id),
+                        details=f"Mise à jour du motif d'absence pour l'étudiant ID {student_id} au {date_str} (Nouveau motif: {new_reason})",
+                        ip_address=request.META.get('REMOTE_ADDR')
+                    )
+                    
                     return JsonResponse({"status": "success", "message": "Enregistrement réussi."})
             
             return JsonResponse({"status": "error", "message": f"Erreur : {error_details}"})

@@ -455,6 +455,24 @@ def ApiGetSubMenuAccess(request):
     try:
         from institut_app.models import UserSubMenuAccess
         target_user = User.objects.get(id=user_id)
+        
+        # Liste des sous-menus connus pour forcer l'activation par défaut
+        submenus = []
+        if module_code == 'tre':
+            submenus = ['dashboard', 'tresorerie', 'exec_edu', 'remboursement', 'remises', 'caisse', 'banque', 'autres_paiements', 'depenses', 'fournisseurs', 'factures', 'parametres', 'echeanciers']
+        elif module_code == 'scol':
+            submenus = ['groupes', 'affectations', 'etudiants', 'transferts', 'presences', 'contrats']
+            
+        # "l'accès aux sous menu scolarité et finance doivent etre activé par default (si dans le systeme on les trouve descativé il faut les activé)"
+        # Modifié pour ne pas écraser les désactivations manuelles.
+        for sc in submenus:
+            UserSubMenuAccess.objects.get_or_create(
+                user=target_user,
+                module_code=module_code,
+                submenu_code=sc,
+                defaults={'is_active': True}
+            )
+                
         accesses = UserSubMenuAccess.objects.filter(user=target_user, module_code=module_code)
         
         data = {acc.submenu_code: acc.is_active for acc in accesses}

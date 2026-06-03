@@ -166,6 +166,39 @@ TEMPLATE_VARIABLES = {
             {'tag': '{{ entreprise.adresse }}', 'desc': 'Adresse de l\'institut'},
             {'tag': '{{ date_impression }}', 'desc': 'Date d\'impression'},
         ]}
+    ],
+    'bulletin': [
+        {'category': 'Étudiant', 'vars': [
+            {'tag': '{{ etudiant.nom }}', 'desc': 'Nom de l\'étudiant'},
+            {'tag': '{{ etudiant.prenom }}', 'desc': 'Prénom de l\'étudiant'},
+            {'tag': '{{ etudiant.matricule }}', 'desc': 'Matricule'},
+            {'tag': '{{ etudiant.date_naissance }}', 'desc': 'Date de naissance'},
+            {'tag': '{{ etudiant.lieu_naissance }}', 'desc': 'Lieu de naissance'},
+        ]},
+        {'category': 'Session / Groupe', 'vars': [
+            {'tag': '{{ groupe.nom_groupe }}', 'desc': 'Nom du groupe'},
+            {'tag': '{{ session_line.session.nom_session }}', 'desc': 'Nom de la session'},
+            {'tag': '{{ session_line.semestre }}', 'desc': 'Semestre'},
+        ]},
+        {'category': 'Résultats', 'vars': [
+            {'tag': '{{ moyenne_semestre }}', 'desc': 'Moyenne du semestre'},
+            {'tag': '{{ total_points }}', 'desc': 'Total des points'},
+            {'tag': '{{ total_coef }}', 'desc': 'Total des coefficients'},
+            {'tag': '{{ deliberation.decision }}', 'desc': 'Décision du jury'},
+        ]},
+        {'category': 'Modules (Boucle)', 'vars': [
+            {'tag': '{{ module.matiere }}', 'desc': 'Nom du module (utiliser dans une boucle: for module in modules_data)'},
+            {'tag': '{{ module.professeur }}', 'desc': 'Professeur'},
+            {'tag': '{{ module.coef }}', 'desc': 'Coefficient'},
+            {'tag': '{{ module.moyenne_matiere }}', 'desc': 'Moyenne du module'},
+            {'tag': '{{ module.observation }}', 'desc': 'Observation'},
+            {'tag': '{{ module.total_points }}', 'desc': 'Total des points pour ce module'},
+        ]},
+        {'category': 'Institut', 'vars': [
+            {'tag': '{{ entreprise.designation }}', 'desc': 'Nom de l\'institut'},
+            {'tag': '{{ entreprise.adresse }}', 'desc': 'Adresse de l\'institut'},
+            {'tag': '{{ date_impression }}', 'desc': 'Date d\'impression'},
+        ]}
     ]
 }
 

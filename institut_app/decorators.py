@@ -89,12 +89,23 @@ def submenu_access_required(module_code, submenu_code):
                 return view_func(request, *args, **kwargs)
             try:
                 from institut_app.models import UserSubMenuAccess
-                access = UserSubMenuAccess.objects.get(
-                    user=request.user,
-                    module_code=module_code,
-                    submenu_code=submenu_code,
-                    is_active=True
-                )
+                
+                if isinstance(submenu_code, (list, tuple)):
+                    access = UserSubMenuAccess.objects.filter(
+                        user=request.user,
+                        module_code=module_code,
+                        submenu_code__in=submenu_code,
+                        is_active=True
+                    ).exists()
+                    if not access:
+                        raise Exception("No access")
+                else:
+                    access = UserSubMenuAccess.objects.get(
+                        user=request.user,
+                        module_code=module_code,
+                        submenu_code=submenu_code,
+                        is_active=True
+                    )
             except Exception:
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                     from django.http import JsonResponse

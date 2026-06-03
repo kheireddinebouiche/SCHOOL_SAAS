@@ -931,6 +931,23 @@ def ApiAddAttribution(request):
                 assigned_by=request.user
             )
             
+            # Activer automatiquement les sous-menus par défaut lors de l'attribution
+            from institut_app.models import UserSubMenuAccess
+            if module.name == 'tre':
+                submenus = ['dashboard', 'tresorerie', 'exec_edu', 'remboursement', 'remises', 'caisse', 'banque', 'autres_paiements', 'depenses', 'fournisseurs', 'factures', 'parametres', 'echeanciers']
+            elif module.name == 'scol':
+                submenus = ['groupes', 'affectations', 'etudiants', 'transferts', 'presences', 'contrats']
+            else:
+                submenus = []
+                
+            for sc in submenus:
+                UserSubMenuAccess.objects.get_or_create(
+                    user=user,
+                    module_code=module.name,
+                    submenu_code=sc,
+                    defaults={'is_active': True}
+                )
+            
             return JsonResponse({
                 'status': 'success',
                 'message': 'Attribution créée avec succès',

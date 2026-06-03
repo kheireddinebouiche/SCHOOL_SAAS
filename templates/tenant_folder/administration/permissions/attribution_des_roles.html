@@ -795,7 +795,8 @@
                 <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2" style="min-width: 200px;">
                   <li><a href="#" class="dropdown-item edit-attribution" data-attribution-id="${attribution.id}"><i class="ri-edit-line text-primary me-2"></i>Modifier</a></li>
                   <li><a href="#" class="dropdown-item view-permissions" data-attribution-id="${attribution.id}"><i class="ri-eye-line text-info me-2"></i>Permissions</a></li>
-                  ${attribution.module.name_code === 'tre' ? `<li><a href="#" class="dropdown-item configure-submenu" data-user-id="${attribution.user.id}"><i class="ri-function-line text-info me-2"></i>Accès Sous-Menus Finance</a></li>` : ''}
+                  ${attribution.module.name_code === 'tre' ? `<li><a href="#" class="dropdown-item configure-submenu" data-module="tre" data-user-id="${attribution.user.id}"><i class="ri-function-line text-info me-2"></i>Accès Sous-Menus Finance</a></li>` : ''}
+                  ${attribution.module.name_code === 'scol' ? `<li><a href="#" class="dropdown-item configure-submenu" data-module="scol" data-user-id="${attribution.user.id}"><i class="ri-function-line text-info me-2"></i>Accès Sous-Menus Scolarité</a></li>` : ''}
                   <li><hr class="dropdown-divider my-1 opacity-50"></li>
                   <li><a href="#" class="dropdown-item text-danger delete-attribution" data-attribution-id="${attribution.id}"><i class="ri-delete-bin-line me-2"></i>Supprimer</a></li>
                 </ul>
@@ -1669,7 +1670,11 @@
     $(document).on('click', '.configure-submenu', function(e) {
       e.preventDefault();
       var userId = $(this).data('user-id');
+      var moduleCode = $(this).data('module') || 'tre';
       $('#submenuConfigModal').data('user-id', userId);
+      $('#submenuConfigModal').data('module-code', moduleCode);
+      var titleText = moduleCode === 'tre' ? 'Accès Sous-Menus Finance' : 'Accès Sous-Menus Scolarité';
+      $('#submenuConfigModal').find('.modal-title').text(titleText);
       $('#submenuList').html('<div class="text-center py-3"><div class="spinner-border text-info" role="status"></div></div>');
       $('#submenuConfigModal').modal('show');
       
@@ -1677,25 +1682,37 @@
       $.ajax({
         url: "{% url 'institut_app:ApiGetSubMenuAccess' %}",
         type: 'GET',
-        data: { id: userId, module_code: 'tre' },
+        data: { id: userId, module_code: moduleCode },
         success: function(response) {
           if(response.status === 'success') {
             var accesses = response.data;
-            var submenus = [
-              {code: 'dashboard', name: 'Tableau de bord financier'},
-              {code: 'tresorerie', name: 'Trésorerie'},
-              {code: 'exec_edu', name: 'Executive Education'},
-              {code: 'remboursement', name: 'Remboursements'},
-              {code: 'remises', name: 'Remises'},
-              {code: 'caisse', name: 'Caisse'},
-              {code: 'banque', name: 'Banque'},
-              {code: 'autres_paiements', name: 'Autres paiements'},
-              {code: 'depenses', name: 'Dépenses'},
-              {code: 'fournisseurs', name: 'Fournisseurs'},
-              {code: 'factures', name: 'Factures'},
-              {code: 'parametres', name: 'Paramètres Financiers'},
-              {code: 'echeanciers', name: 'Échéanciers'}
-            ];
+            var submenus = [];
+            if (moduleCode === 'tre') {
+                submenus = [
+                  {code: 'dashboard', name: 'Tableau de bord financier'},
+                  {code: 'tresorerie', name: 'Trésorerie'},
+                  {code: 'exec_edu', name: 'Executive Education'},
+                  {code: 'remboursement', name: 'Remboursements'},
+                  {code: 'remises', name: 'Remises'},
+                  {code: 'caisse', name: 'Caisse'},
+                  {code: 'banque', name: 'Banque'},
+                  {code: 'autres_paiements', name: 'Autres paiements'},
+                  {code: 'depenses', name: 'Dépenses'},
+                  {code: 'fournisseurs', name: 'Fournisseurs'},
+                  {code: 'factures', name: 'Factures'},
+                  {code: 'parametres', name: 'Paramètres Financiers'},
+                  {code: 'echeanciers', name: 'Échéanciers'}
+                ];
+            } else if (moduleCode === 'scol') {
+                submenus = [
+                  {code: 'groupes', name: 'Gestion des Groupes'},
+                  {code: 'affectations', name: 'Affectations'},
+                  {code: 'etudiants', name: 'Gestion des Étudiants'},
+                  {code: 'transferts', name: 'Transferts'},
+                  {code: 'presences', name: 'Gestion des Présences'},
+                  {code: 'contrats', name: 'Gestion des Contrats'}
+                ];
+            }
             
             var html = '';
             submenus.forEach(function(item) {
@@ -1724,6 +1741,7 @@
     // Handle toggle switch change
     $(document).on('change', '.submenu-toggle', function() {
         var userId = $('#submenuConfigModal').data('user-id');
+        var moduleCode = $('#submenuConfigModal').data('module-code') || 'tre';
         var submenuCode = $(this).data('submenu');
         var isActive = $(this).is(':checked');
         
@@ -1732,7 +1750,7 @@
             type: 'POST',
             data: JSON.stringify({
                 id: userId,
-                module_code: 'tre',
+                module_code: moduleCode,
                 submenu_code: submenuCode,
                 is_active: isActive
             }),

@@ -153,6 +153,14 @@ class GlobalConfiguration(models.Model):
     payment_notification_mode = models.CharField(max_length=20, choices=PAYMENT_NOTIFICATION_MODE_CHOICES, default='role', verbose_name=_("Mode de notification de paiement"))
     payment_notification_receivers = models.ManyToManyField(User, blank=True, verbose_name=_("Receveurs des notifications de paiement"), related_name='payment_receivers')
 
+    # Transfer Notifications
+    TRANSFER_NOTIFICATION_MODE_CHOICES = (
+        ('role', _('Par rôle (Scolarité)')),
+        ('specific', _('Comptes spécifiques')),
+    )
+    transfer_notification_mode = models.CharField(max_length=20, choices=TRANSFER_NOTIFICATION_MODE_CHOICES, default='role', verbose_name=_("Mode de notification de transfert"))
+    transfer_notification_receivers = models.ManyToManyField(User, blank=True, verbose_name=_("Receveurs des notifications de transfert"), related_name='transfer_receivers')
+
     # Email Configuration
     email_enabled = models.BooleanField(default=False, verbose_name=_("Envoi d'emails activé"))
     email_host = models.CharField(max_length=255, default='smtp.gmail.com', verbose_name=_("Serveur SMTP"))

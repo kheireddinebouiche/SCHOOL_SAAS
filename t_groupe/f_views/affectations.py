@@ -380,6 +380,15 @@ def ApiAffectStudentToGroupe(request):
             specialite_id = specialite,
         )
 
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='AffectationGroupe',
+            target_id=str(studentId),
+            details=f"Affectation de l'étudiant ID {studentId} au groupe ID {groupId}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
        
         return JsonResponse({"status":  "success"})
     else:
@@ -397,9 +406,20 @@ def ApiCancelStudentAffectation(request):
             return JsonResponse({"status":"error","message":"Informations manquantes"})
         
         obj = GroupeLine.objects.get(student_id = studentId, groupe__specialite__id = specialite)
+        groupe = obj.groupe
+        student = obj.student
         obj.delete()
 
         AffectationGroupe.objects.get(etudiant_id = studentId, specialite_id = specialite).delete()
+
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='GroupeLine',
+            target_id=str(studentId),
+            details=f"Désinscription de l'étudiant {student.nom} {student.prenom} du groupe {groupe.nom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
 
         return JsonResponse({"status":"success","message":"L'affectation a été annulée avec succès"})
     else:
@@ -410,7 +430,6 @@ def AutreAffectationPage(request):
     return render(request, 'tenant_folder/scolarite/autre_affectation.html')
 
 @login_required(login_url="institut_app:login")
-@module_permission_required('scol', 'approuv')
 def ApiParticipantsConfirmes(request):
     participants = Participant.objects.filter(is_confirmed_for_scolarite=True).select_related('prospect')
     data = []
@@ -515,6 +534,16 @@ def ApiAffectParticipantToAcademicGroupe(request):
                         groupe=groupe,
                         specialite=groupe.specialite
                     )
+                    
+                    UserActionLog.objects.create(
+                        user=request.user,
+                        action_type='CREATE',
+                        target_model='AffectationGroupe',
+                        target_id=str(prospect.id),
+                        details=f"Affectation en masse : Le participant {prospect.nom} {prospect.prenom} a été affecté au groupe {groupe.nom}",
+                        ip_address=request.META.get('REMOTE_ADDR')
+                    )
+                    
                     success_count += 1
                 else:
                     errors.append(f"{participant.nom} est déjà affecté à cette spécialité.")

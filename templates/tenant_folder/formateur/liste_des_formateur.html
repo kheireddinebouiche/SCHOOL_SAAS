@@ -962,18 +962,34 @@
       }
     });
 
-    // Initialize search functionality (Server-side with Debounce)
-    let searchTimer;
-    $('#table-filter').prop('disabled', false);
-    $('#table-filter').on('input', function() {
-      clearTimeout(searchTimer);
-      const search = $(this).val();
-      searchTimer = setTimeout(function() {
+    // Initialize search functionality (Server-side)
+    const searchInput = $('#table-filter');
+    searchInput.prop('disabled', false);
+    
+    // Si un filtre est actif, on remet le focus à la fin du texte pour continuer la saisie
+    if (searchInput.val()) {
+        const val = searchInput.val();
+        searchInput.focus().val('').val(val);
+    }
+    
+    // Déclenchement sur appui de la touche Entrée
+    searchInput.on('keypress', function(e) {
+      if (e.which === 13) {
+        const search = $(this).val();
         const url = new URL(window.location.href);
         url.searchParams.set('search', search);
         url.searchParams.set('page', 1);
         window.location.href = url.toString();
-      }, 500);
+      }
+    });
+
+    // Déclenchement au clic sur l'icône de recherche
+    $('.search-input-group i').css('cursor', 'pointer').on('click', function() {
+        const search = searchInput.val();
+        const url = new URL(window.location.href);
+        url.searchParams.set('search', search);
+        url.searchParams.set('page', 1);
+        window.location.href = url.toString();
     });
 
     // Toggle View Logic

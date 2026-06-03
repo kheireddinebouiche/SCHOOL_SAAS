@@ -1,4 +1,5 @@
 from django.urls import path
+from institut_app.decorators import module_permission_required
 from .views import *
 from .f_views.prospects import *
 from .f_views.groupes_conseil import *
@@ -12,7 +13,7 @@ urlpatterns = [
   path('nouveau-devis/', AddNewDevis, name="AddNewDevis"),
   path('configuration-devis/<str:pk>/', configure_devis , name="configure-devis"),
   path('details-devis/<str:pk>/', DetailsDevis, name="DetailsDevis"),
-  path('liste-des-devis/', ListeDesDevis, name="ListeDesDevis"),
+  path('liste-des-devis/', module_permission_required('con', 'view')(ListeDesDevis), name="ListeDesDevis"),
 
   path('ApiSaveThematique' , ApiSaveThematique, name="ApiSaveThematique"),
 
@@ -34,7 +35,7 @@ urlpatterns = [
   path('prospects-en-instance/',ListeProspectConseil, name="prospectInstance"),
   path('ApiLoadProspect',ApiLoadProspect, name="ApiLoadProspect"),
   path('ApiTransformeToClient',ApiTransformeToClient, name="ApiTransformeToClient"),
-  path('liste-des-clients/', ListeDesClients, name="ListeDesClients"),
+  path('liste-des-clients/', module_permission_required('con', 'view')(ListeDesClients), name="ListeDesClients"),
   path('details-client/<str:slug>/', DetailsClient, name="DetailsClient"),
   path('ApiListeClients', ApiListeClients, name="ApiListeClients"),
 
@@ -51,7 +52,7 @@ urlpatterns = [
   path('ApiFetchEnterpriseTvas', ApiFetchEnterpriseTvas, name="ApiFetchEnterpriseTvas"),
 
   
-  path('liste-des-factures/', ListeDesFactures, name="ListeDesFactures"),
+  path('liste-des-factures/', module_permission_required('con', 'view')(ListeDesFactures), name="ListeDesFactures"),
   path('liste-des-avoirs/', ListeDesAvoirs, name="ListeDesAvoirs"),
   path('nouvelle-facture/', AddNewFacture, name="AddNewFacture"),
   path('configuration-facture/<str:pk>/', configure_facture, name="configure-facture"),

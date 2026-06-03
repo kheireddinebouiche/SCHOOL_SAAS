@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from .models import *
 from django.contrib.auth.decorators import login_required
 from .forms import *
-from t_crm.models import NotesProcpects, RendezVous
+from t_crm.models import NotesProcpects, RendezVous, UserActionLog
 from django.db import transaction
 from t_formations.models import Specialites, Promos
 from t_groupe.models import Groupe
@@ -93,11 +93,20 @@ def ApiSaveStudentNote(request):
         noteContent = request.POST.get('noteContent')
         note_tags = request.POST.get('note_tags')
         try:
-            NotesProcpects.objects.create(
+            note_obj = NotesProcpects.objects.create(
                 prospect_id = etudiant,
                 note = noteContent,
                 tage = note_tags,
                 context = "etudiant"
+            )
+
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='NotesProcpects',
+                target_id=str(note_obj.id),
+                details=f"Ajout d'une note pour l'étudiant ID {etudiant}",
+                ip_address=request.META.get('REMOTE_ADDR')
             )
 
             return JsonResponse({"status" : "success",'message' : "La note est enregistrée avec succès"})
@@ -120,6 +129,15 @@ def ApiUpdateStudentNote(request):
         note.tage = note_tags
         note.save()
 
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='NotesProcpects',
+            target_id=str(note.id),
+            details=f"Modification de la note ID {note.id}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
         return JsonResponse({'status': "success"})
     else:
         return JsonResponse({'status': "error", "message" : "Méthode non autorisée"})
@@ -135,6 +153,15 @@ def ApiAccomplirNote(request):
         note.observation = observation
         note.is_done = True
         note.save()
+
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='NotesProcpects',
+            target_id=str(note.id),
+            details=f"Clôture de la note ID {note.id}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
 
         return JsonResponse({"status" : "success", "message" : "Le statut de la note a été changé"})
     else:
@@ -155,7 +182,7 @@ def ApiSaveStudentRappel(request):
         try:
             student = Prospets.objects.get(id = etudiant)
 
-            RendezVous.objects.create(
+            rendezvous = RendezVous.objects.create(
                 prospect = student,
                 type = reminderType,
                 object = reminderSubject,
@@ -163,6 +190,15 @@ def ApiSaveStudentRappel(request):
                 date_rendez_vous = reminderDate,
                 heure_rendez_vous = reminderTime,
                 context = "etudiant"
+            )
+
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='RendezVous',
+                target_id=str(rendezvous.id),
+                details=f"Création d'un rappel pour l'étudiant ID {etudiant}: {reminderSubject}",
+                ip_address=request.META.get('REMOTE_ADDR')
             )
 
             return JsonResponse({"status" : "success", "message" : "Les informations ont été enregistrées avec succès"})
@@ -190,6 +226,7 @@ def StudentTransfertList(request):
 
 from t_formations.models import Specialites, Promos, Formation
 from t_groupe.models import Groupe, GroupeLine, AffectationGroupe
+from t_crm.models import UserActionLog
 
 @login_required(login_url='institut_app:login')
 def ApiGetSpecialitesPromos(request):
@@ -217,7 +254,10 @@ def ApiRequestTransfer(request):
         reason = request.POST.get('reason')
 
         try:
-            StudentTransferRequest.objects.create(
+            if StudentTransferRequest.objects.filter(student_id=student_id, status='pending').exists():
+                return JsonResponse({'status': 'error', 'message': 'Une demande de transfert est déjà en attente pour cet étudiant.'})
+
+            transfer_request = StudentTransferRequest.objects.create(
                 student_id=student_id,
                 origin_group_id=origin_group_id,
                 target_specialty_id=target_specialty_id if not target_is_double else None,
@@ -227,6 +267,37 @@ def ApiRequestTransfer(request):
                 reason=reason,
                 created_by=request.user
             )
+
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='StudentTransferRequest',
+                target_id=str(transfer_request.id),
+                details=f"Nouvelle demande de transfert créée pour l'étudiant {transfer_request.student.nom} {transfer_request.student.prenom}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
+            # Notification
+            from institut_app.utils_notifications import send_notification_to_module_level, send_notification_to_user
+            from institut_app.models import GlobalConfiguration
+            from django.urls import reverse
+            from django.utils.translation import gettext as _
+
+            message = _("Une nouvelle demande de transfert a été créée pour {} {}").format(transfer_request.student.nom, transfer_request.student.prenom)
+            link = reverse('t_etudiants:StudentTransfertList')
+            
+            config = GlobalConfiguration.get_solo()
+            if config.crm_notifications_enabled:
+                if config.transfer_notification_mode == 'specific':
+                    for receiver in config.transfer_notification_receivers.all():
+                        send_notification_to_user(receiver, message, link)
+                else:
+                    send_notification_to_module_level('sco', [1, 2, 3], message, link=link)
+
+            # Notification d'accusé de réception pour le demandeur
+            msg_demandeur = _("Votre demande de transfert pour l'étudiant {} {} a bien été reçue et est en cours de traitement.").format(transfer_request.student.nom, transfer_request.student.prenom)
+            send_notification_to_user(request.user, msg_demandeur, link)
+
             return JsonResponse({'status': 'success', 'message': 'Demande de transfert enregistrée.'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
@@ -246,7 +317,47 @@ def ApiUpdateTransferStatus(request):
             if new_status == 'rejected' and rejection_reason:
                 transfer_request.rejection_reason = rejection_reason
             transfer_request.save()
+            
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='StudentTransferRequest',
+                target_id=str(transfer_request.id),
+                details=f"Mise à jour du statut de la demande de transfert de l'étudiant {transfer_request.student.nom} en {new_status}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': f'Statut mis à jour : {transfer_request.get_status_display()}'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
+@login_required(login_url='institut_app:login')
+@transaction.atomic
+def ApiDeleteTransferRequest(request):
+    if request.method == "POST":
+        from institut_app.permissions.utils import user_can
+        if not (user_can(request.user, 'scol', 'delete') or request.user.is_superuser):
+            return JsonResponse({'status': 'error', 'message': 'Permission refusée. Vous n\'avez pas le droit de supprimer.'})
+
+        request_id = request.POST.get('request_id')
+        try:
+            transfer_request = StudentTransferRequest.objects.get(id=request_id)
+            student_nom = f"{transfer_request.student.nom} {transfer_request.student.prenom}"
+            transfer_request.delete()
+            
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='StudentTransferRequest',
+                target_id=str(request_id),
+                details=f"Suppression de la demande de transfert de l'étudiant {student_nom}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            return JsonResponse({'status': 'success', 'message': 'Demande supprimée avec succès.'})
+        except StudentTransferRequest.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Demande introuvable.'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
@@ -315,6 +426,15 @@ def ApiExecuteTransfer(request):
 
             transfer_request.status = 'done'
             transfer_request.save()
+
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='StudentTransferRequest',
+                target_id=str(transfer_request.id),
+                details=f"Exécution du transfert pour l'étudiant {transfer_request.student.nom} {transfer_request.student.prenom}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({'status': 'success', 'message': 'Transfert exécuté avec succès.'})
         except Exception as e:

@@ -3,7 +3,7 @@ from django.http import JsonResponse, HttpResponse
 from ..models import *
 from django.contrib.auth.decorators import login_required
 from ..forms import *
-from t_crm.models import NotesProcpects, RendezVous
+from t_crm.models import NotesProcpects, RendezVous, UserActionLog
 from django.db import transaction
 from t_formations.models import *
 from t_groupe.models import GroupeLine, Group
@@ -63,7 +63,18 @@ def ApiDeleteModeleContrat(request):
         try:
             modele_id = request.POST.get('id_modele')
             modele = get_object_or_404(ModelContrat, id=modele_id)
+            nom_modele = modele.label
             modele.delete()
+            
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='ModelContrat',
+                target_id=str(modele_id),
+                details=f"Suppression du modèle de contrat : {nom_modele}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Modèle de contrat supprimé avec succès'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
@@ -123,6 +134,16 @@ def ApiUpdateModeleContrat(request):
                 modele.status = request.POST.get('status')
             
             modele.save()
+            
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='ModelContrat',
+                target_id=str(modele.id),
+                details=f"Mise à jour du modèle de contrat : {modele.label}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Modèle de contrat mis à jour avec succès'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
@@ -163,6 +184,16 @@ def ApiCreateModeleContrat(request):
                 modele.formation = formation
             
             modele.save()
+            
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='ModelContrat',
+                target_id=str(modele.id),
+                details=f"Création d'un modèle de contrat : {modele.label}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Modèle de contrat créé avec succès'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
@@ -204,6 +235,16 @@ def ApiCreateArticleContrat(request):
                 article=article_text
             )
             
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='ClauseContrat',
+                target_id=str(clause.id),
+                details=f"Ajout d'un article au modèle de contrat {modele.label} : {titre}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            
             return JsonResponse({
                 'status': 'success', 
                 'message': 'Article ajouté avec succès',
@@ -232,6 +273,16 @@ def ApiUpdateArticleContrat(request):
             clause.titre = titre
             clause.article = article_text
             clause.save()
+            
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='ClauseContrat',
+                target_id=str(clause.id),
+                details=f"Mise à jour d'un article du modèle de contrat : {clause.titre}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             
             return JsonResponse({
                 'status': 'success', 
@@ -310,7 +361,18 @@ def ApiDeleteArticleContrat(request):
             article_id = request.POST.get('article_id')
             
             clause = get_object_or_404(ClauseContrat, id=article_id)
+            titre = clause.titre
             clause.delete()
+            
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='ClauseContrat',
+                target_id=str(article_id),
+                details=f"Suppression d'un article de contrat : {titre}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             
             return JsonResponse({'status': 'success', 'message': 'Article supprimé avec succès'})
         except Exception as e:

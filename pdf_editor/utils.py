@@ -108,6 +108,23 @@ def get_mock_context_for_type(template_type):
             'nom': 'Ammar', 'prenom': 'Yassine',
         }
 
+    elif template_type == 'bulletin':
+        context['etudiant'] = {
+            'nom': 'Benali', 'prenom': 'Lamine', 'matricule': 'MAT2024-001',
+            'date_naissance': '12/03/2001', 'lieu_naissance': 'Alger'
+        }
+        context['groupe'] = {'nom_groupe': 'Groupe A'}
+        context['session_line'] = {'session': {'nom_session': 'Session Normale 2024'}, 'semestre': 'Semestre 1'}
+        context['moyenne_semestre'] = '14.50'
+        context['total_points'] = '290.00'
+        context['total_coef'] = '20'
+        context['deliberation'] = {'decision': 'Admis'}
+        context['modules_data'] = [
+            {'matiere': 'Mathématiques', 'professeur': 'Mr. Kaddour', 'coef': 3, 'moyenne_matiere': '15.00', 'total_points': '45.00', 'observation': 'Très bien'},
+            {'matiere': 'Physique', 'professeur': 'Mme. Yassmine', 'coef': 3, 'moyenne_matiere': '12.50', 'total_points': '37.50', 'observation': 'Assez bien'},
+            {'matiere': 'Informatique', 'professeur': 'Mr. Hicham', 'coef': 4, 'moyenne_matiere': '16.00', 'total_points': '64.00', 'observation': 'Excellent'},
+        ]
+
     return context
 
 def serialize_templates(queryset):

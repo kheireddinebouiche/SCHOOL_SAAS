@@ -99,6 +99,8 @@ urlpatterns = [
    path('ShowPvModal/<int:pk>', ShowPvModal, name="ShowPvModal"),
    path('GeneratePvModal/<int:pk>/', GeneratePvModal, name="GeneratePvModal"),
    path('download-blank-pvs-pdf/', DownloadBlankPvsPdf, name="DownloadBlankPvsPdf"),
+   path('api-get-exam-instructors/', ApiGetExamInstructors, name="ApiGetExamInstructors"),
+   path('api-send-instructor-email/', ApiSendExamEmailToInstructor, name="ApiSendExamEmailToInstructor"),
 
    # URLs pour les résultats d'examens
    path('exams-results/', exams_results, name="exams_results"),
@@ -136,6 +138,7 @@ urlpatterns = [
     path('ApiListeGroupeSession',ApiListeGroupeSession ,name="ApiListeGroupeSession"),
     path('builltins/resultats/etudiants/<int:pk>/',ListeDesEtudiants, name="liste_etudiants"),
     path('builltins/bulletin/<int:session_line_id>/<int:student_id>/', StudentBulletin, name="student_bulletin"),
+    path('builltins/print-pdf/<int:session_line_id>/<int:student_id>/', PrintBulletinPDF, name="print_bulletin_pdf"),
 
 
 

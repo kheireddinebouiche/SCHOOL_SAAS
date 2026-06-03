@@ -87,13 +87,14 @@ def PageFormateurs(request):
     queryset = Formateurs.objects.all().order_by('-nom')
 
     if search_query:
-        queryset = queryset.filter(
-            Q(nom__icontains=search_query) |
-            Q(prenom__icontains=search_query) |
-            Q(email__icontains=search_query) |
-            Q(telephone__icontains=search_query) |
-            Q(nin__icontains=search_query)
-        )
+        for term in search_query.split():
+            queryset = queryset.filter(
+                Q(nom__icontains=term) |
+                Q(prenom__icontains=term) |
+                Q(email__icontains=term) |
+                Q(telephone__icontains=term) |
+                Q(nin__icontains=term)
+            )
 
     # Stats (full dataset for total counts)
     total_count = Formateurs.objects.count()
