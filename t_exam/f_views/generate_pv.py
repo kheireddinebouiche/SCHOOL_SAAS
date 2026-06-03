@@ -933,21 +933,15 @@ def ApiSendCustomExamEmail(request):
             return JsonResponse({"status": "error", "message": "Aucun formateur avec une adresse e-mail valide n'a été trouvé."})
             
         try:
-            from django.core.mail import get_connection, EmailMessage
-            connection = get_connection(
-                host=config.email_host,
-                port=config.email_port,
-                username=config.email_host_user,
-                password=config.email_host_password,
-                use_tls=config.email_use_tls
-            )
+            config.apply_email_settings()
+            from django.conf import settings
+            from django.core.mail import EmailMessage
             
             email = EmailMessage(
                 subject=subject,
                 body=body,
-                from_email=config.default_from_email,
-                to=emails,
-                connection=connection
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=emails
             )
             
             # Read the uploaded file synchronously if present
@@ -957,9 +951,12 @@ def ApiSendCustomExamEmail(request):
             
             def send_email_in_background(email_msg):
                 try:
-                    email_msg.send(fail_silently=True)
+                    # fail_silently=False permet de lever les exceptions SMTP
+                    email_msg.send(fail_silently=False)
                 except Exception as e:
-                    print(f"Erreur en arrière-plan lors de l'envoi d'e-mail : {str(e)}")
+                    import logging
+                    logging.getLogger(__name__).error(f"Erreur en arrière-plan d'e-mail: {str(e)}")
+                    print(f"Erreur d'envoi SMTP : {str(e)}")
 
             import threading
             thread = threading.Thread(target=send_email_in_background, args=(email,))
