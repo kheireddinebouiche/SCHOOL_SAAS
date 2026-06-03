@@ -904,8 +904,8 @@ def ApiSendCustomExamEmail(request):
         body = request.POST.get('body')
         attachment = request.FILES.get('attachment')
         
-        if not exam_plan_id or not subject or not body or not attachment:
-            return JsonResponse({"status": "error", "message": "Veuillez remplir tous les champs et fournir la pièce jointe."})
+        if not exam_plan_id or not subject or not body:
+            return JsonResponse({"status": "error", "message": "Veuillez remplir le sujet et le message."})
             
         try:
             exam_plan = ExamPlanification.objects.get(id=exam_plan_id)
@@ -950,9 +950,10 @@ def ApiSendCustomExamEmail(request):
                 connection=connection
             )
             
-            # Read the uploaded file synchronously while we have it
-            file_data = attachment.read()
-            email.attach(attachment.name, file_data, attachment.content_type)
+            # Read the uploaded file synchronously if present
+            if attachment:
+                file_data = attachment.read()
+                email.attach(attachment.name, file_data, attachment.content_type)
             
             def send_email_in_background(email_msg):
                 try:
