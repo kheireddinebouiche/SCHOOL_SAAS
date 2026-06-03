@@ -848,8 +848,7 @@ def ApiSendExamEmailToInstructor(request):
                 port=config.email_port,
                 username=config.email_host_user,
                 password=config.email_host_password,
-                use_tls=config.email_use_tls,
-                timeout=15  # Ajout d'un timeout pour éviter le blocage
+                use_tls=config.email_use_tls
             )
             
             subject = f"Planification d'examen : {module.label} - {groupe.nom}"
