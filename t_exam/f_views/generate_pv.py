@@ -963,7 +963,8 @@ def ApiSendCustomExamEmail(request):
             thread.daemon = True
             thread.start()
             
-            return JsonResponse({"status": "success", "message": f"L'e-mail est en cours d'envoi à {len(emails)} formateur(s)."})
+            emails_str = ', '.join(emails)
+            return JsonResponse({"status": "success", "message": f"L'e-mail est en cours d'envoi vers : {emails_str}"})
         except Exception as e:
             return JsonResponse({"status": "error", "message": f"Erreur lors de la préparation de l'envoi : {str(e)}"})
             

@@ -48,7 +48,15 @@ class SaaSEmailConfiguration(models.Model):
         settings.EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
         settings.EMAIL_HOST = self.email_host
         settings.EMAIL_PORT = self.email_port
-        settings.EMAIL_USE_TLS = self.email_use_tls
+        
+        # Gestion automatique du SSL vs TLS en fonction du port
+        if int(self.email_port) == 465:
+            settings.EMAIL_USE_SSL = True
+            settings.EMAIL_USE_TLS = False
+        else:
+            settings.EMAIL_USE_SSL = False
+            settings.EMAIL_USE_TLS = self.email_use_tls
+            
         settings.EMAIL_HOST_USER = self.email_host_user
         settings.EMAIL_HOST_PASSWORD = self.email_host_password
         settings.DEFAULT_FROM_EMAIL = self.default_from_email
