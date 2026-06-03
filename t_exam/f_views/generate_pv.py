@@ -936,6 +936,9 @@ def ApiSendCustomExamEmail(request):
             config.apply_email_settings()
             from django.conf import settings
             from django.core.mail import EmailMessage
+            import logging
+            
+            logger = logging.getLogger(__name__)
             
             email = EmailMessage(
                 subject=subject,
@@ -944,27 +947,45 @@ def ApiSendCustomExamEmail(request):
                 to=emails
             )
             
+            emails_str = ', '.join(emails)
+            
             # Read the uploaded file synchronously if present
             if attachment:
                 file_data = attachment.read()
                 email.attach(attachment.name, file_data, attachment.content_type)
-            
-            def send_email_in_background(email_msg):
-                try:
-                    # fail_silently=False permet de lever les exceptions SMTP
-                    email_msg.send(fail_silently=False)
-                except Exception as e:
-                    import logging
-                    logging.getLogger(__name__).error(f"Erreur en arrière-plan d'e-mail: {str(e)}")
-                    print(f"Erreur d'envoi SMTP : {str(e)}")
+                
+                # Avec pièce jointe, envoi en arrière-plan pour éviter les timeouts
+                def send_email_in_background(email_msg, dests):
+                    logger.info(f"Début d'envoi asynchrone d'e-mail avec PJ vers {dests}")
+                    print(f"--- Début d'envoi asynchrone d'e-mail avec PJ vers {dests} ---")
+                    try:
+                        email_msg.send(fail_silently=False)
+                        logger.info("Envoi asynchrone réussi.")
+                        print("--- Envoi asynchrone réussi ---")
+                    except Exception as e:
+                        logger.error(f"Erreur en arrière-plan d'e-mail: {str(e)}")
+                        print(f"--- Erreur en arrière-plan d'e-mail : {str(e)} ---")
 
-            import threading
-            thread = threading.Thread(target=send_email_in_background, args=(email,))
-            thread.daemon = True
-            thread.start()
-            
-            emails_str = ', '.join(emails)
-            return JsonResponse({"status": "success", "message": f"L'e-mail est en cours d'envoi vers : {emails_str}"})
+                import threading
+                thread = threading.Thread(target=send_email_in_background, args=(email, emails_str))
+                thread.daemon = True
+                thread.start()
+                
+                return JsonResponse({"status": "success", "message": f"L'e-mail (avec PJ) est en cours d'envoi vers : {emails_str}"})
+            else:
+                # Sans pièce jointe, envoi synchrone
+                logger.info(f"Début d'envoi synchrone d'e-mail vers {emails_str}")
+                print(f"--- Début d'envoi synchrone d'e-mail vers {emails_str} ---")
+                try:
+                    email.send(fail_silently=False)
+                    logger.info("Envoi synchrone réussi.")
+                    print("--- Envoi synchrone réussi ---")
+                    return JsonResponse({"status": "success", "message": f"L'e-mail a été envoyé avec succès vers : {emails_str}"})
+                except Exception as e:
+                    logger.error(f"Erreur d'envoi synchrone SMTP: {str(e)}")
+                    print(f"--- Erreur d'envoi synchrone SMTP : {str(e)} ---")
+                    return JsonResponse({"status": "error", "message": f"Erreur d'envoi SMTP : {str(e)}"})
+                    
         except Exception as e:
             return JsonResponse({"status": "error", "message": f"Erreur lors de la préparation de l'envoi : {str(e)}"})
             

@@ -29,7 +29,7 @@ def test_smtp():
             "TEST FROM ANTIGRAVITY",
             "This is a test to see if SMTP connects.",
             settings.DEFAULT_FROM_EMAIL,
-            ["kheireddine.bouiche@gmail.com"],
+            ["kheireddinebouiche@gmail.com"],
             fail_silently=False
         )
         print(f"Result: {res}")
