@@ -21,7 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from .generate_paiements import ApiGeneratePaiementRequest
 from django.db.models import Q, Sum
 from django.urls import reverse
-from institut_app.utils_notifications import send_notification_to_module_level
+from institut_app.utils_notifications import send_notification_to_module_level, send_notification_to_user
 from institut_app.models import GlobalConfiguration
 from django.core.paginator import Paginator
 
@@ -1341,13 +1341,17 @@ def ApiValidatePreinscrit(request):
         preinscrit.instance_date = now()
         preinscrit.save()
 
-        # Envoi de notification au module Trésorerie (utilisateur, superviseur, manager)
+        # Envoi de notification au module Trésorerie
         message = _("Une nouvelle demande de paiement a été créée pour {} {}").format(preinscrit.nom, preinscrit.prenom)
         link = reverse('t_tresorerie:attentes_de_paiements')
         
         config = GlobalConfiguration.get_solo()
         if config.crm_notifications_enabled:
-            send_notification_to_module_level('tre', [1, 2, 3], message, link=link)
+            if config.payment_notification_mode == 'specific':
+                for receiver in config.payment_notification_receivers.all():
+                    send_notification_to_user(receiver, message, link)
+            else:
+                send_notification_to_module_level('tre', [1, 2, 3], message, link=link)
 
         return JsonResponse({'status': "success", "message": "La validation a été effectuée avec succès"})
     except Exception as e:

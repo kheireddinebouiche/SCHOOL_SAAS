@@ -137,6 +137,22 @@ class GlobalConfiguration(models.Model):
     session_timeout_enabled = models.BooleanField(default=True, verbose_name=_("Verrouillage de session actif"))
     device_lock_enabled = models.BooleanField(default=True, verbose_name=_("Verrouillage par appareil actif"))
     
+    # Derogation Settings
+    NOTIFICATION_MODE_CHOICES = (
+        ('role', _('Par rôle (Managers/Superviseurs CRM)')),
+        ('specific', _('Comptes spécifiques')),
+    )
+    derogation_notification_mode = models.CharField(max_length=20, choices=NOTIFICATION_MODE_CHOICES, default='role', verbose_name=_("Mode de notification de dérogation"))
+    derogation_notification_receivers = models.ManyToManyField(User, blank=True, verbose_name=_("Receveurs des notifications de dérogation"), related_name='derogation_receivers')
+
+    # Payment Notifications
+    PAYMENT_NOTIFICATION_MODE_CHOICES = (
+        ('role', _('Par rôle (Trésorerie)')),
+        ('specific', _('Comptes spécifiques')),
+    )
+    payment_notification_mode = models.CharField(max_length=20, choices=PAYMENT_NOTIFICATION_MODE_CHOICES, default='role', verbose_name=_("Mode de notification de paiement"))
+    payment_notification_receivers = models.ManyToManyField(User, blank=True, verbose_name=_("Receveurs des notifications de paiement"), related_name='payment_receivers')
+
     # Email Configuration
     email_enabled = models.BooleanField(default=False, verbose_name=_("Envoi d'emails activé"))
     email_host = models.CharField(max_length=255, default='smtp.gmail.com', verbose_name=_("Serveur SMTP"))

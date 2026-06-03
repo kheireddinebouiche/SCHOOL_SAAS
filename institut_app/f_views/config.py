@@ -12,10 +12,13 @@ def general_settings_view(request):
     """
     Renders the general configuration page.
     """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
     config = GlobalConfiguration.get_solo()
     context = {
         'config': config,
         'tenant': request.tenant,
+        'users': User.objects.filter(is_active=True).order_by('first_name', 'last_name')
     }
     return render(request, 'tenant_folder/configuration/general_settings.html', context)
 
@@ -39,12 +42,20 @@ def api_update_global_settings(request):
             field = config._meta.get_field(setting_name)
             
             if isinstance(field, models.BooleanField):
-                val = setting_value.lower() == 'true'
+                val = str(setting_value).lower() == 'true'
             elif isinstance(field, (models.IntegerField, models.PositiveIntegerField)):
                 try:
                     val = int(setting_value)
                 except (ValueError, TypeError):
                     return JsonResponse({'status': 'error', 'message': 'Valeur numérique invalide.'}, status=400)
+            elif isinstance(field, models.ManyToManyField):
+                import json
+                try:
+                    val_list = json.loads(setting_value)
+                    getattr(config, setting_name).set(val_list)
+                    return JsonResponse({'status': 'success', 'message': 'Paramètre mis à jour avec succès.'})
+                except Exception as e:
+                    return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
             else:
                 val = setting_value
                 
