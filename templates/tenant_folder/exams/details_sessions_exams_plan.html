@@ -865,7 +865,7 @@
       </div>
       <div class="modal-body p-4">
         <div class="text-center mb-4">
-          <p class="text-muted mb-0">Les formateurs suivants enseignant ce module recevront un e-mail contenant le PV vierge (PDF) en pièce jointe :</p>
+          <p class="text-muted mb-0">Les formateurs suivants enseignant ce module recevront cet e-mail :</p>
         </div>
         
         <div id="instructorsListContainer" class="list-group mb-4">
@@ -875,7 +875,25 @@
             </div>
         </div>
         
-        <input type="hidden" id="emailExamPlanId">
+        <form id="customEmailForm" enctype="multipart/form-data">
+            <input type="hidden" id="emailExamPlanId" name="plan_id">
+            
+            <div class="mb-3">
+                <label for="emailSubject" class="form-label fw-bold">Sujet de l'e-mail</label>
+                <input type="text" class="form-control" id="emailSubject" name="subject" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="emailBody" class="form-label fw-bold">Message</label>
+                <textarea class="form-control" id="emailBody" name="body" rows="6" required></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="emailAttachment" class="form-label fw-bold">Pièce jointe (PV Vierge PDF)</label>
+                <input class="form-control" type="file" id="emailAttachment" name="attachment" accept=".pdf" required>
+                <small class="text-muted">Téléchargez d'abord le PV vierge (via l'icône imprimante) et ajoutez-le ici.</small>
+            </div>
+        </form>
       </div>
       <div class="modal-footer bg-light rounded-bottom-3 p-4">
         <div class="d-flex w-100">
@@ -2142,13 +2160,29 @@
             const btn = $(this);
             const originalIcon = btn.html();
             
-            // Si le bouton est désactivé (via les classes bootstrap), ne rien faire
+            // Extract some info from the row for default email body
+            const row = btn.closest('tr');
+            const moduleName = row.find('td').eq(0).text().trim().split('\n')[0];
+            const examType = row.find('td').eq(2).text().trim();
+            const salle = row.find('td').eq(3).text().trim();
+            const dateStr = row.find('td').eq(4).text().trim();
+            const timeStr = row.find('td').eq(5).text().trim();
+            
+            // Si le bouton est désactivé, ne rien faire
             if(btn.hasClass('disabled') || btn.attr('disabled')) {
                 return;
             }
             
+            // Reset form
+            $('#customEmailForm')[0].reset();
+            
             // Préparer le modal
             $('#emailExamPlanId').val(planId);
+            $('#emailSubject').val(`PV d'examen : ${moduleName}`);
+            
+            const defaultBody = `Bonjour,\n\nVeuillez trouver ci-joint le PV vierge (PDF) pour l'examen suivant :\n\n- Module : ${moduleName}\n- Type : ${examType}\n- Date : ${dateStr}\n- Heure : ${timeStr}\n- Salle : ${salle}\n\nCordialement.`;
+            $('#emailBody').val(defaultBody);
+            
             $('#instructorsListContainer').html(`
                 <div class="text-center py-3">
                     <div class="spinner-border text-info" role="status"><span class="visually-hidden">Chargement...</span></div>
@@ -2216,27 +2250,35 @@
             });
         });
 
-        // Confirmation de l'envoi
+        // Confirmation de l'envoi (avec pièce jointe)
         $(document).on('click', '#confirmSendEmailBtn', function(e) {
             e.preventDefault();
-            const planId = $('#emailExamPlanId').val();
+            
+            const form = $('#customEmailForm')[0];
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            
+            const formData = new FormData(form);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            
             const btn = $(this);
             const originalIcon = btn.html();
             
             btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Envoi en cours...');
             
             $.ajax({
-                url: "{% url 't_exam:ApiSendExamEmailToInstructor' %}",
+                url: "{% url 't_exam:ApiSendCustomExamEmail' %}",
                 type: 'POST',
-                timeout: 20000, // 20 secondes maximum
-                data: {
-                    'plan_id': planId,
-                    'csrfmiddlewaretoken': '{{ csrf_token }}'
-                },
+                data: formData,
+                processData: false, // Nécessaire pour l'upload de fichier
+                contentType: false, // Nécessaire pour l'upload de fichier
                 success: function(response) {
                     btn.prop('disabled', false).html(originalIcon);
-                    $('#emailInstructorModal').modal('hide');
+                    
                     if(response.status === 'success') {
+                        $('#emailInstructorModal').modal('hide');
                         if (typeof alertify !== 'undefined') {
                             alertify.success(response.message);
                         } else {

@@ -101,6 +101,7 @@ urlpatterns = [
    path('download-blank-pvs-pdf/', DownloadBlankPvsPdf, name="DownloadBlankPvsPdf"),
    path('api-get-exam-instructors/', ApiGetExamInstructors, name="ApiGetExamInstructors"),
    path('api-send-instructor-email/', ApiSendExamEmailToInstructor, name="ApiSendExamEmailToInstructor"),
+   path('api-send-custom-exam-email/', ApiSendCustomExamEmail, name="ApiSendCustomExamEmail"),
 
    # URLs pour les résultats d'examens
    path('exams-results/', exams_results, name="exams_results"),

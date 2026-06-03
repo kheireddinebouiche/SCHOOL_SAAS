@@ -894,3 +894,70 @@ def ApiSendExamEmailToInstructor(request):
             return JsonResponse({"status": "error", "message": f"Erreur lors de l'envoi de l'e-mail : {str(e)}"})
     
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
+def ApiSendCustomExamEmail(request):
+    if request.method == "POST":
+        exam_plan_id = request.POST.get('plan_id')
+        subject = request.POST.get('subject')
+        body = request.POST.get('body')
+        attachment = request.FILES.get('attachment')
+        
+        if not exam_plan_id or not subject or not body or not attachment:
+            return JsonResponse({"status": "error", "message": "Veuillez remplir tous les champs et fournir la pièce jointe."})
+            
+        try:
+            exam_plan = ExamPlanification.objects.get(id=exam_plan_id)
+        except ExamPlanification.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Planification introuvable"})
+            
+        # Check config
+        config = SaaSEmailConfiguration.get_solo()
+        if not config.email_enabled:
+            return JsonResponse({"status": "error", "message": "L'envoi d'e-mails n'est pas activé dans l'administration SaaS."})
+            
+        # Find Formateurs
+        groupe = exam_plan.exam_line.groupe
+        semestre = exam_plan.exam_line.semestre
+        module = exam_plan.module
+        
+        instructors = Formateurs.objects.filter(
+            timetableentry__timetable__groupe=groupe,
+            timetableentry__timetable__semestre=semestre,
+            timetableentry__cours=module
+        ).distinct()
+        
+        emails = [i.email for i in instructors if i.email]
+        if not emails:
+            return JsonResponse({"status": "error", "message": "Aucun formateur avec une adresse e-mail valide n'a été trouvé."})
+            
+        try:
+            from django.core.mail import get_connection, EmailMessage
+            connection = get_connection(
+                host=config.email_host,
+                port=config.email_port,
+                username=config.email_host_user,
+                password=config.email_host_password,
+                use_tls=config.email_use_tls
+            )
+            
+            email = EmailMessage(
+                subject=subject,
+                body=body,
+                from_email=config.default_from_email,
+                to=emails,
+                connection=connection
+            )
+            
+            # Read the uploaded file
+            file_data = attachment.read()
+            email.attach(attachment.name, file_data, attachment.content_type)
+            
+            email.send(fail_silently=False)
+            
+            return JsonResponse({"status": "success", "message": f"E-mail envoyé avec succès à {len(emails)} formateur(s)."})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": f"Erreur lors de l'envoi : {str(e)}"})
+            
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
