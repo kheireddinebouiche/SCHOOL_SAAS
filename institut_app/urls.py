@@ -117,6 +117,7 @@ urlpatterns = [
     path('ApiDeleteUser', ApiDeleteUser, name="ApiDeleteUser"),
     path('ApiChangeUserStatus', ApiChangeUserStatus, name="ApiChangeUserStatus"),
     path('ApiChangeUserPassword', ApiChangeUserPassword, name="ApiChangeUserPassword"),
+    path('ApiForcePasswordChangeAdmin', ApiForcePasswordChangeAdmin, name="ApiForcePasswordChangeAdmin"),
     path('ApiCreateUser', ApiCreateUser, name="ApiCreateUser"),
     path('ApiResetDeviceLock', ApiResetDeviceLock, name="ApiResetDeviceLock"),
     path('ApiToggleDeviceLock', ApiToggleDeviceLock, name="ApiToggleDeviceLock"),

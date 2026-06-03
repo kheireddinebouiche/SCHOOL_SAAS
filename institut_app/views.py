@@ -607,10 +607,22 @@ def ForgotPasswordRequestView(request):
         
         if user:
             from .models import PasswordResetRequest
+            from institut_app.utils_notifications import send_notification_to_user
+            
             if PasswordResetRequest.objects.filter(user=user, is_active=True).exists():
                 return JsonResponse({'status': 'warning', 'message': 'Une demande est déjà en cours pour ce compte.'})
             
             PasswordResetRequest.objects.create(user=user)
+            
+            # Notifier les superutilisateurs en temps réel
+            superusers = User.objects.filter(is_superuser=True)
+            for su in superusers:
+                send_notification_to_user(
+                    user=su,
+                    message=f"L'utilisateur {user.username} a demandé la réinitialisation de son mot de passe.",
+                    link=""
+                )
+                
             return JsonResponse({'status': 'success', 'message': 'Votre demande a été envoyée à l\'administrateur. Veuillez patienter.'})
         else:
             return JsonResponse({'status': 'error', 'message': 'Utilisateur introuvable.'})

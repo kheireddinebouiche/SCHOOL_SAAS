@@ -303,6 +303,34 @@ def ApiChangeUserPassword(request):
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 @superuser_required
+def ApiForcePasswordChangeAdmin(request):
+    if request.method == "POST":
+        user_id = request.POST.get('id')
+
+        if not user_id:
+            return JsonResponse({"status": "error", "message": "User ID is required"})
+
+        try:
+            user = User.objects.get(id=user_id)
+            from ..models import Profile
+            profile, created = Profile.objects.get_or_create(user=user)
+            profile.force_password_change = True
+            profile.save()
+
+            return JsonResponse({
+                "status": "success",
+                "message": f"Le changement de mot de passe a été forcé pour {user.username}. Il devra le modifier à sa prochaine connexion."
+            })
+        except User.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Utilisateur introuvable"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    else:
+        return JsonResponse({"status": "error", "message": "Method not allowed"})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+@superuser_required
 def ApiResetDeviceLock(request):
     """
     Réinitialise le verrouillage de l'appareil pour un utilisateur.
