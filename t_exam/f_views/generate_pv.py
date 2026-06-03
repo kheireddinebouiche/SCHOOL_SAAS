@@ -839,17 +839,8 @@ def ApiSendExamEmailToInstructor(request):
             return JsonResponse({"status": "error", "message": "Aucun formateur avec une adresse e-mail valide n'a été trouvé pour ce module dans l'emploi du temps (même groupe et semestre)."})
             
         try:
-            # Generate PDF
+            # Generate PDF synchronously so we can use the DB connections safely
             pdf_bytes = generate_blank_pvs_pdf_bytes([exam_plan.id])
-            
-            # Build Email
-            connection = get_connection(
-                host=config.email_host,
-                port=config.email_port,
-                username=config.email_host_user,
-                password=config.email_host_password,
-                use_tls=config.email_use_tls
-            )
             
             subject = f"Planification d'examen : {module.label} - {groupe.nom}"
             date_str = exam_plan.date.strftime("%d/%m/%Y") if exam_plan.date else "Non définie"
@@ -867,16 +858,38 @@ def ApiSendExamEmailToInstructor(request):
             body += f"Type : {exam_plan.get_type_examen_display()}\n\n"
             body += "Veuillez trouver en pièce jointe le PV vierge (liste des étudiants) pour cet examen.\n\nCordialement."
             
-            email = EmailMessage(
-                subject=subject,
-                body=body,
-                from_email=config.default_from_email,
-                to=emails,
-                connection=connection
-            )
-            email.attach(f"PV_{module.code}_{groupe.nom}.pdf", pdf_bytes, 'application/pdf')
-            email.send(fail_silently=False)
-            return JsonResponse({"status": "success", "message": f"E-mail envoyé avec succès à {len(emails)} formateur(s)."})
+            # Fonction interne pour envoyer l'e-mail en arrière-plan
+            def send_email_thread():
+                import threading
+                from django.core.mail import get_connection, EmailMessage
+                
+                try:
+                    connection = get_connection(
+                        host=config.email_host,
+                        port=config.email_port,
+                        username=config.email_host_user,
+                        password=config.email_host_password,
+                        use_tls=config.email_use_tls
+                    )
+                    
+                    email = EmailMessage(
+                        subject=subject,
+                        body=body,
+                        from_email=config.default_from_email,
+                        to=emails,
+                        connection=connection
+                    )
+                    email.attach(f"PV_{module.code}_{groupe.nom}.pdf", pdf_bytes, 'application/pdf')
+                    email.send(fail_silently=True)
+                except Exception as e:
+                    print(f"Erreur d'envoi d'e-mail en arrière-plan: {e}")
+
+            import threading
+            thread = threading.Thread(target=send_email_thread)
+            thread.daemon = True
+            thread.start()
+            
+            return JsonResponse({"status": "success", "message": f"E-mail en cours d'envoi à {len(emails)} formateur(s). Cela peut prendre quelques instants."})
         except Exception as e:
             return JsonResponse({"status": "error", "message": f"Erreur lors de l'envoi de l'e-mail : {str(e)}"})
     
