@@ -1134,7 +1134,8 @@ def assistantPaie(request):
     year = int(request.GET.get('year', timezone.now().year))
     action = request.GET.get('action')
     
-    employees = Employees.objects.filter(etat='en cours', has_contract=True)
+    from django.db.models import Q
+    employees = Employees.objects.filter(Q(etat='en cours') | Q(etat__isnull=True) | Q(etat=""), has_contract=True)
     
     payroll_data = []
     for emp in employees:

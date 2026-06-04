@@ -3107,14 +3107,14 @@ def saas_reset_tresorerie_view(request, tenant_id):
 
 
 from .models import SystemUpdate
-@saas_superuser_required
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
 def saas_changelog_view(request):
     updates = SystemUpdate.objects.all()
     return render(request, 'saas_admin_app/saas_changelog.html', {'updates': updates})
 
 from django.http import JsonResponse
 from django.utils import timezone
-@saas_superuser_required
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
 def saas_changelog_action_view(request):
     if request.method == 'POST':
         action = request.POST.get('action')

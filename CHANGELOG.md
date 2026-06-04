@@ -9,9 +9,12 @@ Ce fichier recense toutes les modifications, corrections de bugs et nouvelles fo
 ### 🐛 Corrections de Bugs (Bugfixes)
 - **Ressources Humaines (Paie & Présences)** :
   - Modification du formulaire d'ajout d'employé pour rendre tous les champs non obligatoires.
-  - Résolution d'un bug empêchant l'affichage des nouveaux employés dans les vues de présences en autorisant les états (etat) non définis ou vides.
+  - Résolution d'un bug empêchant l'affichage des nouveaux employés dans les vues de présences et dans l'assistant de paie en autorisant les états (etat) non définis ou vides.
   - Résolution d'un bug bloquant l'ajout d'un nouvel employé dû à la validation silencieuse de champs manquants dans le formulaire (exclusion de `solde_conge`, `solde_conge_annee_prec`, `is_teacher`, etc.).
   - Résolution de l'erreur `KeyError` dans le calcul des paies.
+- **SaaS Admin** :
+  - Correction d'une erreur de syntaxe (`SyntaxError`) dans `urls.py` causée par des caractères `\n` mal formatés empêchant l'accès au portail.
+  - Correction d'une erreur `NameError` due au décorateur `@saas_superuser_required` non défini dans `views.py` (remplacé par `@user_passes_test(superadmin_only)`).
   - Correction de la localisation des noms de mois en anglais dans les fiches mensuelles de présence.
   - Création des pages "Empty States" Premium pour les tableaux vides (Congés, Présences, Fiches Mensuelles, Employés).
 - **Executive Education (`t_conseil`)** :

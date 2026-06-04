@@ -1,6 +1,7 @@
 from django.urls import path
 from django.views.generic import RedirectView
-from .views import (\n    saas_changelog_view, saas_changelog_action_view,
+from .views import (
+    saas_changelog_view, saas_changelog_action_view,
     saas_dashboard_view, saas_login_view, saas_logout_view, saas_performance_view, 
     saas_logs_view, saas_tenant_detail_view, saas_update_user_view,
     saas_tenant_files_view, saas_file_browser_view, saas_file_serve_view,
@@ -89,4 +90,6 @@ urlpatterns = [
     path('api/tenant/<int:tenant_id>/specialite/delete/', api_tenant_delete_specialite_view, name='api_tenant_delete_specialite'),
     path('tenant/<int:tenant_id>/prospects/export/', saas_export_prospects_view, name='saas_export_prospects'),
     path('api/tenant/<int:tenant_id>/reset-tresorerie/', saas_reset_tresorerie_view, name='saas_reset_tresorerie_action'),
-    path('changelog/', saas_changelog_view, name='saas_changelog'),\n    path('changelog/action/', saas_changelog_action_view, name='saas_changelog_action'),\n]
+    path('changelog/', saas_changelog_view, name='saas_changelog'),
+    path('changelog/action/', saas_changelog_action_view, name='saas_changelog_action'),
+]
