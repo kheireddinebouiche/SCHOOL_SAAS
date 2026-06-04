@@ -940,10 +940,15 @@ def fiches_mensuelles(request):
                 'year': year,
                 'months': []
             }
+            months_fr = {
+                1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+            }
             for month, sessions in sorted(months.items(), reverse=True):
                 month_report = {
                     'month': month,
-                    'month_name': datetime(year, month, 1).strftime('%B'),
+                    'month_name': months_fr.get(month, ''),
                     'sessions': sessions,
                     'total_hours': round(sum(s['duration'] for s in sessions), 2)
                 }

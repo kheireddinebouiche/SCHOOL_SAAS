@@ -1,5 +1,6 @@
 from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect, get_object_or_404
+from django.db import transaction
 from .forms import *
 from .models import *
 from t_tresorerie.models import PaymentCategory, OperationsBancaire
@@ -34,6 +35,7 @@ def ApiLoadThematique(request):
 
 @login_required(login_url='institut_app:login')
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveThematique(request):
     label = request.POST.get('label')
     prix = request.POST.get('prix')
@@ -213,7 +215,11 @@ def configure_devis(request, pk):
     if pk is None or pk == '0':
         return redirect('t_conseil:AddNewDevis')
     else:
-        devis = Devis.objects.get(num_devis=pk)
+        try:
+            devis = Devis.objects.get(num_devis=pk) 
+        except Devis.DoesNotExist:
+            messages.error(request, 'Devis introuvable.')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
         lignes_devis = devis.lignes_devis.all()
 
         config = None
@@ -242,7 +248,11 @@ def configure_facture(request, pk):
     if pk is None or pk == '0':
         return redirect('t_conseil:AddNewFacture')
     else:
-        facture = Facture.objects.get(num_facture=pk)
+        try:
+            facture = Facture.objects.get(num_facture=pk) 
+        except Facture.DoesNotExist:
+            messages.error(request, 'Facture introuvable.')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
         lignes_facture = facture.lignes_facture.all()
 
         config = None
@@ -300,27 +310,39 @@ def ApiLoadArchivedThematique(request):
 
 @login_required(login_url='institut_app:login')
 @module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiArchiveThematique(request):
     id_thematique = request.POST.get('id_thematique')
-    thematique = Thematiques.objects.get(id=id_thematique)
+    try:
+        thematique = Thematiques.objects.get(id=id_thematique) 
+    except Thematiques.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
     thematique.etat = "archive"
     thematique.save()
     return JsonResponse({'status': 'success', 'message': 'ThÃ©matique archivÃ©e avec succÃ¨s.'})   
     
 @login_required(login_url='institut_app:login')
 @module_permission_required('con', 'change')
+@transaction.atomic
 def ApiActivateThematique(request):
     id_thematique = request.POST.get('id_thematique')
-    thematique = Thematiques.objects.get(id=id_thematique)
+    try:
+        thematique = Thematiques.objects.get(id=id_thematique) 
+    except Thematiques.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
     thematique.etat = "active"
     thematique.save()
     return JsonResponse({'status': 'success', 'message': 'ThÃ©matique activÃ©e avec succÃ¨s.'})
 
 @login_required(login_url='institut_app:login')
 @module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeleteFinalThematique(request):
     id_thematique = request.POST.get('id_thematique')
-    thematique = Thematiques.objects.get(id=id_thematique)
+    try:
+        thematique = Thematiques.objects.get(id=id_thematique) 
+    except Thematiques.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
     thematique.delete()
     return JsonResponse({'status': 'success', 'message': 'ThÃ©matique supprimÃ©e dÃ©finitivement.'})
 
@@ -330,6 +352,7 @@ def make_prospect_client(request):
 
 @login_required(login_url='institut_app:login')
 @module_permission_required('con', 'change')
+@transaction.atomic
 def ApiUpdateThematique(request):
     id_thematique = request.POST.get('id_thematique')
     label = request.POST.get('label')
@@ -404,6 +427,7 @@ def ApiListeClients(request):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'change')
+@transaction.atomic
 def ApiTransformeToClient(request):
     id_prospect = request.POST.get('id_prospect')
     try:
@@ -418,6 +442,7 @@ def ApiTransformeToClient(request):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveLigneDevis(request):
     import decimal
     devis_id = request.POST.get('devis_id')
@@ -425,8 +450,14 @@ def ApiSaveLigneDevis(request):
     quantite = request.POST.get('quantite')
     description = request.POST.get('description')
     
-    devis = Devis.objects.get(num_devis=devis_id)
-    thematique = Thematiques.objects.get(id=thematique_id)
+    try:
+        devis = Devis.objects.get(num_devis=devis_id) 
+    except Devis.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Devis introuvable.'})
+    try:
+        thematique = Thematiques.objects.get(id=thematique_id) 
+    except Thematiques.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
     
     try:
         qty = decimal.Decimal(quantite)
@@ -452,6 +483,7 @@ def ApiSaveLigneDevis(request):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'change')
+@transaction.atomic
 def ApiStartTransformationDevisToFacture(request):
     import decimal
     devis_id = request.POST.get('devis_id')
@@ -553,6 +585,7 @@ def ApiStartTransformationDevisToFacture(request):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveDevisItems(request):
     import json
     import decimal
@@ -567,7 +600,10 @@ def ApiSaveDevisItems(request):
         show_tva = data.get('show_tva', True)
         show_remise = data.get('show_remise', False)
         
-        devis = Devis.objects.get(num_devis=devis_id)
+        try:
+            devis = Devis.objects.get(num_devis=devis_id) 
+        except Devis.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Devis introuvable.'})
         devis.show_tva = show_tva
         devis.show_remise = show_remise
         
@@ -664,7 +700,11 @@ def ApiSaveDevisItems(request):
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'view')
 def DetailsDevis(request, pk):
-    devis = Devis.objects.get(num_devis=pk)
+    try:
+        devis = Devis.objects.get(num_devis=pk) 
+    except Devis.DoesNotExist:
+        messages.error(request, 'Devis introuvable.')
+        return redirect(request.META.get('HTTP_REFERER', '/'))
     lignes_devis = devis.lignes_devis.all()
     
     # Calculate totals for summary (since we have per-line TVA)
@@ -700,6 +740,7 @@ def DetailsDevis(request, pk):
 
 @login_required(login_url='institut_app:login')
 @module_permission_required('con', 'approuv')
+@transaction.atomic
 def ApiValidateDevis(request):
     if request.method == 'POST':
         devis_id = request.POST.get('devis_id')
@@ -738,6 +779,7 @@ def ApiValidateDevis(request):
 
 @login_required(login_url='institut_app:login')
 @module_permission_required('con', 'change')
+@transaction.atomic
 def ApiRevertDevisToDraft(request):
     if request.method == 'POST':
         devis_id = request.POST.get('devis_id')
@@ -814,6 +856,7 @@ def ListeDesAvoirs(request):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiQuickCreateProspect(request):
     if request.method != "POST":
          return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
@@ -863,6 +906,7 @@ def ApiQuickCreateProspect(request):
 @login_required(login_url="institut_app:login")
 @ajax_required
 @module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeleteOpportunite(request):
     if request.method == "POST":
         id_opp = request.POST.get('id')
@@ -877,6 +921,7 @@ def ApiDeleteOpportunite(request):
 @login_required(login_url="institut_app:login")
 @ajax_required
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiAddPaiement(request):
     if request.method == "POST":
         facture_id = request.POST.get('facture_id')
@@ -935,7 +980,11 @@ def ApiAddPaiement(request):
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'view')
 def DetailsFacture(request, pk):
-    facture = Facture.objects.get(num_facture=pk)
+    try:
+        facture = Facture.objects.get(num_facture=pk) 
+    except Facture.DoesNotExist:
+        messages.error(request, 'Facture introuvable.')
+        return redirect(request.META.get('HTTP_REFERER', '/'))
     lignes_facture = facture.lignes_facture.all()
     
     config = None
@@ -1078,6 +1127,7 @@ def PipelineConseil(request):
 @login_required(login_url="institut_app:login")
 @ajax_required
 @module_permission_required('con', 'change')
+@transaction.atomic
 def ApiToggleFavorite(request):
     prospect_id = request.POST.get('prospect_id')
     try:
@@ -1111,6 +1161,7 @@ def ExportPipelineCsv(request):
 @login_required(login_url="institut_app:login")
 @ajax_required
 @module_permission_required('con', 'change')
+@transaction.atomic
 def ApiConvertProspectToDevis(request):
     from django.urls import reverse
     # Note: 'prospect_id' parameter actually comes as opportunite_id from the new pipeline
@@ -1148,6 +1199,7 @@ def ApiConvertProspectToDevis(request):
 @login_required(login_url="institut_app:login")
 @ajax_required
 @module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeleteDevis(request):
     num_devis = request.POST.get('num_devis')
     try:
@@ -1161,6 +1213,7 @@ def ApiDeleteDevis(request):
 @login_required(login_url="institut_app:login")
 @ajax_required
 @module_permission_required('con', 'change')
+@transaction.atomic
 def ApiUpdatePipelineStage(request):
     if request.method == "POST":
         # 'prospect_id' coming from frontend is actually Opportunite ID now
@@ -1179,6 +1232,7 @@ def ApiUpdatePipelineStage(request):
 @login_required(login_url="institut_app:login")
 @ajax_required
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiCreateOpportunite(request):
     if request.method == "POST":
         prospect_id = request.POST.get('prospect_id')
@@ -1243,6 +1297,7 @@ def ApiGetOpportunite(request):
 @login_required(login_url="institut_app:login")
 @ajax_required
 @module_permission_required('con', 'change')
+@transaction.atomic
 def ApiUpdateOpportunite(request):
     if request.method == "POST":
         opp_id = request.POST.get('id')
@@ -1455,6 +1510,7 @@ def configure_facture(request, pk):
 @login_required(login_url='institut_app:login')
 @ajax_required
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveFactureItems(request):
     import json
     if request.method != 'POST':
@@ -1472,7 +1528,10 @@ def ApiSaveFactureItems(request):
         date_emission = data.get('date_emission')
         date_echeance = data.get('date_echeance')
         
-        facture = Facture.objects.get(num_facture=facture_id)
+        try:
+            facture = Facture.objects.get(num_facture=facture_id) 
+        except Facture.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Facture introuvable.'})
         
         if facture.etat != 'brouillon':
             return JsonResponse({'status': 'error', 'message': 'Modification impossible : la facture n\'est plus en brouillon.'})
@@ -1489,7 +1548,10 @@ def ApiSaveFactureItems(request):
             facture.date_echeance = date_echeance
             
         if entreprise_id:
-            facture.entreprise = Entreprise.objects.get(id=entreprise_id)
+            try:
+                facture.entreprise = Entreprise.objects.get(id=entreprise_id) 
+            except Entreprise.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Entreprise introuvable.'})
         facture.save()
         
         # Clear existing items and recreate
@@ -1509,7 +1571,10 @@ def ApiSaveFactureItems(request):
             
             thematique = None
             if t_id:
-                thematique = Thematiques.objects.get(id=t_id)
+                try:
+                    thematique = Thematiques.objects.get(id=t_id) 
+                except Thematiques.DoesNotExist:
+                    return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
                 
             montant_ht = (qty * unit_price) * (1 - (remise_percent / 100))
             tva_amount = montant_ht * (tva_percent / 100)
@@ -1600,6 +1665,7 @@ def ApiSaveFactureItems(request):
 
 @login_required(login_url='institut_app:login')
 @module_permission_required('con', 'approuv')
+@transaction.atomic
 def ApiValidateFacture(request):
     if request.method == 'POST':
         facture_id = request.POST.get('facture_id')
@@ -1648,6 +1714,7 @@ def ApiValidateFacture(request):
 
 @login_required(login_url='institut_app:login')
 @module_permission_required('con', 'change')
+@transaction.atomic
 def ApiRevertFactureToDraft(request):
     if request.method == 'POST':
         facture_id = request.POST.get('facture_id')
@@ -1663,6 +1730,7 @@ def ApiRevertFactureToDraft(request):
 @login_required(login_url='institut_app:login')
 @ajax_required
 @module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeleteFacture(request):
     facture_id = request.POST.get('facture_id')
     try:
@@ -1677,6 +1745,7 @@ def ApiDeleteFacture(request):
 @login_required(login_url='institut_app:login')
 @ajax_required
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiCreateAvoir(request):
     facture_id = request.POST.get('facture_id')
     try:
@@ -1749,6 +1818,7 @@ def ListeDAS(request):
 @login_required(login_url='institut_app:login')
 @ajax_required
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveDAS(request):
     """
     API to create or update a DAS mapping.
@@ -1767,7 +1837,10 @@ def ApiSaveDAS(request):
             category = PaymentCategory.objects.get(id=category_id)
 
             if das_id:
-                mapping = DASMapping.objects.get(id=das_id)
+                try:
+                    mapping = DASMapping.objects.get(id=das_id) 
+                except DASMapping.DoesNotExist:
+                    return JsonResponse({'status': 'error', 'message': 'DASMapping introuvable.'})
                 mapping.designation = designation
                 mapping.thematique = thematique
                 mapping.payment_category = category
@@ -1794,6 +1867,7 @@ def ApiSaveDAS(request):
 @login_required(login_url='institut_app:login')
 @ajax_required
 @module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeleteDAS(request):
     """
     API to delete a DAS mapping.
@@ -1856,6 +1930,7 @@ def DownloadFacturePDF(request, pk):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveParticipants(request):
     import json
     if request.method != 'POST':
@@ -1869,11 +1944,17 @@ def ApiSaveParticipants(request):
         
         devis = None
         if devis_id:
-            devis = Devis.objects.get(num_devis=devis_id)
+            try:
+                devis = Devis.objects.get(num_devis=devis_id) 
+            except Devis.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Devis introuvable.'})
         
         facture = None
         if facture_id:
-            facture = Facture.objects.get(num_facture=facture_id)
+            try:
+                facture = Facture.objects.get(num_facture=facture_id) 
+            except Facture.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Facture introuvable.'})
             
         # Full sync: delete existing for this doc and re-add
         from django.db import transaction
@@ -1954,6 +2035,7 @@ def ApiGetSpecialiteDetails(request):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiEnrollToGroup(request):
     from t_groupe.models import Groupe, GroupeLine
     from t_crm.models import Prospets
@@ -1968,13 +2050,22 @@ def ApiEnrollToGroup(request):
         prospect_id = data.get('prospect_id') # From Prospets model
         groupe_id = data.get('groupe_id')
         
-        groupe = Groupe.objects.get(id=groupe_id)
+        try:
+            groupe = Groupe.objects.get(id=groupe_id) 
+        except Groupe.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Groupe introuvable.'})
         
         prospect = None
         if prospect_id:
-            prospect = Prospets.objects.get(id=prospect_id)
+            try:
+                prospect = Prospets.objects.get(id=prospect_id) 
+            except Prospets.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Prospets introuvable.'})
         elif participant_id:
-            p = Participant.objects.get(id=participant_id)
+            try:
+                p = Participant.objects.get(id=participant_id) 
+            except Participant.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Participant introuvable.'})
             prospect = Prospets.objects.filter(nom=p.nom, prenom=p.prenom, email=p.email).first()
             if not prospect:
                 prospect = Prospets.objects.create(
@@ -2036,6 +2127,7 @@ def ApiLoadProspectParticipants(request):
 @login_required(login_url="institut_app:login")
 @ajax_required
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveParticipant(request):
     import json
     if request.method != 'POST':
@@ -2050,7 +2142,10 @@ def ApiSaveParticipant(request):
             return JsonResponse({'status': 'error', 'message': 'Prospect ID required'}, status=400)
             
         if p_id:
-            participant = Participant.objects.get(id=p_id)
+            try:
+                participant = Participant.objects.get(id=p_id) 
+            except Participant.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Participant introuvable.'})
         else:
             participant = Participant(prospect_id=prospect_id)
             
@@ -2071,6 +2166,7 @@ def ApiSaveParticipant(request):
 @login_required(login_url="institut_app:login")
 @ajax_required
 @module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeleteParticipant(request):
     import json
     if request.method != 'POST':
@@ -2090,6 +2186,7 @@ def ApiDeleteParticipant(request):
 @login_required(login_url='institut_app:login')
 @ajax_required
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveEtsDetails(request):
     if request.method == 'POST':
         prospect_id = request.POST.get('prospect_id')
@@ -2120,15 +2217,22 @@ def ApiLoadBankAccounts(request):
 @login_required(login_url='institut_app:login')
 @ajax_required
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveBankAccount(request):
     if request.method == 'POST':
         account_id = request.POST.get('account_id')
         prospect_id = request.POST.get('prospect_id')
         
         if account_id:
-            account = ProspectBankAccount.objects.get(id=account_id)
+            try:
+                account = ProspectBankAccount.objects.get(id=account_id) 
+            except ProspectBankAccount.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'ProspectBankAccount introuvable.'})
         else:
-            prospect = Prospets.objects.get(id=prospect_id)
+            try:
+                prospect = Prospets.objects.get(id=prospect_id) 
+            except Prospets.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Prospets introuvable.'})
             account = ProspectBankAccount(prospect=prospect)
             
         account.bank_name = request.POST.get('bank_name')
@@ -2143,6 +2247,7 @@ def ApiSaveBankAccount(request):
 @login_required(login_url='institut_app:login')
 @ajax_required
 @module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeleteBankAccount(request):
     if request.method == 'POST':
         account_id = request.POST.get('account_id')
@@ -2240,6 +2345,7 @@ def GroupedParticipants(request):
 @login_required(login_url='institut_app:login')
 @ajax_required
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiCreateGroupFromParticipants(request):
     """
     API to create a group in t_groupe from selected participants.
@@ -2278,9 +2384,15 @@ def ApiCreateGroupFromParticipants(request):
                 student = None
                 if str(pid_str).startswith('prospect_'):
                     prospect_id = pid_str.replace('prospect_', '')
-                    student = Prospets.objects.get(id=prospect_id)
+                    try:
+                        student = Prospets.objects.get(id=prospect_id) 
+                    except Prospets.DoesNotExist:
+                        return JsonResponse({'status': 'error', 'message': 'Prospets introuvable.'})
                 else:
-                    participant = Participant.objects.get(id=pid_str)
+                    try:
+                        participant = Participant.objects.get(id=pid_str) 
+                    except Participant.DoesNotExist:
+                        return JsonResponse({'status': 'error', 'message': 'Participant introuvable.'})
                     # Find or create a Prospets record for the individual participant
                     if participant.email:
                         student = Prospets.objects.filter(email=participant.email, is_ets_prospect=False).first()
@@ -2320,6 +2432,7 @@ def ApiCreateGroupFromParticipants(request):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'approuv')
+@transaction.atomic
 def ApiAcceptDevis(request):
     if request.method == 'POST':
         devis_id = request.POST.get('devis_id')
@@ -2343,6 +2456,7 @@ def ApiAcceptDevis(request):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'approuv')
+@transaction.atomic
 def ApiRejectDevis(request):
     if request.method == 'POST':
         devis_id = request.POST.get('devis_id')

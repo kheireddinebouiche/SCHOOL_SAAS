@@ -108,6 +108,7 @@ def ApiGetDevisDetails(request):
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveConseilGroupe(request):
     if request.method != "POST":
         return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
@@ -115,7 +116,10 @@ def ApiSaveConseilGroupe(request):
     try:
         data = json.loads(request.body)
         
-        devis = Devis.objects.get(id=data['devis_id'])
+        try:
+            devis = Devis.objects.get(id=data.get('devis_id')) 
+        except Devis.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Devis introuvable.'})
         
         groupe = GroupeConseil.objects.create(
             nom=data.get('nom'),
@@ -130,7 +134,10 @@ def ApiSaveConseilGroupe(request):
         for p_id in data.get('participants', []):
             if str(p_id).startswith('prospect_'):
                 real_id = p_id.split('_')[1]
-                prospect = Prospets.objects.get(id=real_id)
+                try:
+                    prospect = Prospets.objects.get(id=real_id) 
+                except Prospets.DoesNotExist:
+                    return JsonResponse({'status': 'error', 'message': 'Prospets introuvable.'})
                 
                 participant, created = Participant.objects.get_or_create(
                     prospect=prospect,
@@ -144,15 +151,24 @@ def ApiSaveConseilGroupe(request):
                 )
                 GroupeConseilParticipant.objects.create(groupe=groupe, participant=participant)
             else:
-                participant = Participant.objects.get(id=p_id)
+                try:
+                    participant = Participant.objects.get(id=p_id) 
+                except Participant.DoesNotExist:
+                    return JsonResponse({'status': 'error', 'message': 'Participant introuvable.'})
                 GroupeConseilParticipant.objects.create(groupe=groupe, participant=participant)
                 
         # Thematics
         for assign in data.get('assignments', []):
-            thematique = Thematiques.objects.get(id=assign['thematique_id'])
+            try:
+                thematique = Thematiques.objects.get(id=assign.get('thematique_id')) 
+            except Thematiques.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
             formateur = None
             if assign.get('formateur_id'):
-                formateur = Formateurs.objects.get(id=assign['formateur_id'])
+                try:
+                    formateur = Formateurs.objects.get(id=assign.get('formateur_id')) 
+                except Formateurs.DoesNotExist:
+                    return JsonResponse({'status': 'error', 'message': 'Formateurs introuvable.'})
                 
             GroupeConseilThematique.objects.create(
                 groupe=groupe,
@@ -170,6 +186,7 @@ def ApiSaveConseilGroupe(request):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeleteGroupeConseil(request):
     if request.method == "GET":
         id = request.GET.get('id')
@@ -189,6 +206,7 @@ def ApiDeleteGroupeConseil(request):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'change')
+@transaction.atomic
 def ApiCloturerGroupeConseil(request):
     id = request.GET.get('id')
     if not id:
@@ -209,6 +227,7 @@ def ApiCloturerGroupeConseil(request):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'change')
+@transaction.atomic
 def ApiUpdateGroupeSettings(request):
     if request.method != "POST":
         return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
@@ -219,7 +238,10 @@ def ApiUpdateGroupeSettings(request):
         lieu = data.get('lieu_formation')
         jours = data.get('jours_travail')
         
-        groupe = GroupeConseil.objects.get(id=groupe_id)
+        try:
+            groupe = GroupeConseil.objects.get(id=groupe_id) 
+        except GroupeConseil.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'GroupeConseil introuvable.'})
         groupe.lieu_formation = lieu
         groupe.jours_travail = jours
         groupe.save()
@@ -230,6 +252,7 @@ def ApiUpdateGroupeSettings(request):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'add')
+@transaction.atomic
 def ApiAddPlanningSession(request):
     if request.method != "POST":
         return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
@@ -238,8 +261,14 @@ def ApiAddPlanningSession(request):
         data = json.loads(request.body)
         from t_conseil.models import GroupeConseilPlanning, GroupeConseilThematique
         
-        groupe = GroupeConseil.objects.get(id=data.get('groupe_id'))
-        thematique = Thematiques.objects.get(id=data.get('thematique_id'))
+        try:
+            groupe = GroupeConseil.objects.get(id=data.get('groupe_id')) 
+        except GroupeConseil.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'GroupeConseil introuvable.'})
+        try:
+            thematique = Thematiques.objects.get(id=data.get('thematique_id')) 
+        except Thematiques.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
         
         # Auto-detect formateur from the group's thematic association
         assoc = GroupeConseilThematique.objects.filter(groupe=groupe, thematique=thematique).first()
@@ -292,6 +321,7 @@ def ApiAddPlanningSession(request):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeletePlanningSession(request):
     if request.method != "POST":
         return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
@@ -299,7 +329,10 @@ def ApiDeletePlanningSession(request):
     try:
         data = json.loads(request.body)
         from t_conseil.models import GroupeConseilPlanning
-        session = GroupeConseilPlanning.objects.get(id=data.get('session_id'))
+        try:
+            session = GroupeConseilPlanning.objects.get(id=data.get('session_id')) 
+        except GroupeConseilPlanning.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'GroupeConseilPlanning introuvable.'})
         session.delete()
         return JsonResponse({'status': 'success', 'message': 'Session supprimée'})
     except Exception as e:
@@ -362,6 +395,7 @@ def SessionAttendancePDF(request, session_id):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'approuv')
+@transaction.atomic
 def ApiConfirmParticipantForScolarite(request):
     if request.method == "POST":
         participant_id = request.POST.get('participant_id')
@@ -378,6 +412,7 @@ def ApiConfirmParticipantForScolarite(request):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'approuv')
+@transaction.atomic
 def ApiCancelParticipantConfirmationForScolarite(request):
     if request.method == "POST":
         participant_id = request.POST.get('participant_id')

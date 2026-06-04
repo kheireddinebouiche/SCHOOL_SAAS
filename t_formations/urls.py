@@ -127,5 +127,6 @@ urlpatterns = [
     path('export-formations/', export_formations, name="export_formations"),
     path('export-partenaires/', export_partenaires, name="export_partenaires"),
     path('export-formateurs/', export_formateurs, name="export_formateurs"),
+    path('import-formateurs/', import_formateurs, name="import_formateurs"),
     path('ApiUploadPlanCours', ApiUploadPlanCours, name="ApiUploadPlanCours"),
 ]

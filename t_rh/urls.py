@@ -10,6 +10,7 @@ urlpatterns = [
     path('nouveau-employe/',nouveauEmploye, name="nouveau_employe"),
     path('details-employe/<int:pk>/', detailsEmploye, name="detailsEmploye"),
     path('mise-a-jours/<int:pk>/',updateEmploye,name="updateEmploye"),
+    path('ApiDeleteEmploye/', ApiDeleteEmploye, name="ApiDeleteEmploye"),
 
     path('nouveau-service/',nouveauService, name="nouveau_service"),
     path('liste-services/',listeServices, name="liste_services"),

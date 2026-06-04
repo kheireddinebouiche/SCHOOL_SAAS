@@ -26,57 +26,101 @@ def format_dispo(dispo):
         items.append(f"{jour}:{debut}-{fin}")
     return ", ".join(items)
 
-login_required(login_url="institut_app:login")
+@login_required(login_url="institut_app:login")
 def export_formateurs(request):
-    format_type = request.GET.get('format', 'csv')
     formateurs = Formateurs.objects.all()
 
     headers = ['Email', 'Nom', 'Prénom', 'Téléphone', 'Diplôme', 'NIN', 'Disponibilité']
 
-    if format_type == 'excel':
-        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename="formateurs_export.xlsx"'
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="formateurs_export.xlsx"'
 
-        workbook = openpyxl.Workbook()
-        sheet = workbook.active
-        sheet.title = 'Formateurs'
-        sheet.append(headers)
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = 'Formateurs'
+    sheet.append(headers)
 
-        for f in formateurs:
-            sheet.append([
-                f.email,
-                f.nom,
-                f.prenom,
-                f.telephone,
-                f.diplome,
-                f.nin,
-                format_dispo(f.dispo)
-            ])
+    for f in formateurs:
+        sheet.append([
+            f.email,
+            f.nom,
+            f.prenom,
+            f.telephone,
+            f.diplome,
+            f.nin,
+            format_dispo(f.dispo)
+        ])
 
-        workbook.save(response)
-        return response
+    workbook.save(response)
+    return response
 
-    else:
-        # Default to CSV
-        response = HttpResponse(content_type='text/csv')
-        response.write('\ufeff'.encode('utf8'))
-        response['Content-Disposition'] = 'attachment; filename="formateurs_export.csv"'
+@login_required(login_url="institut_app:login")
+@module_permission_required('int', 'add')
+def import_formateurs(request):
+    if request.method == "POST":
+        if 'file' not in request.FILES:
+            messages.error(request, 'Aucun fichier sélectionné.')
+            return redirect('t_formations:PageFormateurs')
+            
+        excel_file = request.FILES['file']
+        if not excel_file.name.endswith('.xlsx'):
+            messages.error(request, 'Veuillez utiliser un fichier au format Excel (.xlsx)')
+            return redirect('t_formations:PageFormateurs')
 
-        writer = csv.writer(response, delimiter=';')
-        writer.writerow(headers)
-
-        for f in formateurs:
-            writer.writerow([
-                f.email,
-                f.nom,
-                f.prenom,
-                f.telephone,
-                f.diplome,
-                f.nin,
-                format_dispo(f.dispo)
-            ])
-
-        return response
+        try:
+            wb = openpyxl.load_workbook(excel_file, data_only=True)
+            sheet = wb.active
+            
+            headers = [str(cell.value).strip() if cell.value else "" for cell in sheet[1]]
+            
+            email_idx = headers.index('Email') if 'Email' in headers else -1
+            nom_idx = headers.index('Nom') if 'Nom' in headers else -1
+            prenom_idx = headers.index('Prénom') if 'Prénom' in headers else -1
+            tel_idx = headers.index('Téléphone') if 'Téléphone' in headers else -1
+            diplome_idx = headers.index('Diplôme') if 'Diplôme' in headers else -1
+            nin_idx = headers.index('NIN') if 'NIN' in headers else -1
+            
+            if nom_idx == -1 or prenom_idx == -1 or tel_idx == -1 or email_idx == -1:
+                messages.error(request, 'Format invalide. Les colonnes Email, Nom, Prénom, Téléphone sont obligatoires.')
+                return redirect('t_formations:PageFormateurs')
+                
+            count_new = 0
+            count_updated = 0
+            
+            for row in sheet.iter_rows(min_row=2, values_only=True):
+                email = str(row[email_idx]).strip() if email_idx != -1 and row[email_idx] else None
+                nom = str(row[nom_idx]).strip() if nom_idx != -1 and row[nom_idx] else None
+                prenom = str(row[prenom_idx]).strip() if prenom_idx != -1 and row[prenom_idx] else None
+                telephone = str(row[tel_idx]).strip() if tel_idx != -1 and row[tel_idx] else None
+                diplome = str(row[diplome_idx]).strip() if diplome_idx != -1 and row[diplome_idx] else ""
+                nin = str(row[nin_idx]).strip() if nin_idx != -1 and row[nin_idx] else ""
+                
+                # Ignorer la disponibilité car ce n'est pas requis
+                
+                if not nom or not prenom or not email or not telephone or email.lower() == 'none':
+                    continue
+                    
+                formateur, created = Formateurs.objects.update_or_create(
+                    email=email,
+                    defaults={
+                        'nom': nom,
+                        'prenom': prenom,
+                        'telephone': telephone,
+                        'diplome': diplome if diplome and diplome.lower() != 'none' else "",
+                        'nin': nin if nin and nin.lower() != 'none' else "",
+                    }
+                )
+                if created:
+                    count_new += 1
+                else:
+                    count_updated += 1
+                    
+            messages.success(request, f'Import terminé avec succès. {count_new} créés, {count_updated} mis à jour.')
+            
+        except Exception as e:
+            messages.error(request, f"Erreur lors de l'importation: {str(e)}")
+            
+    return redirect('t_formations:PageFormateurs')
 
 
 @login_required(login_url="institut_app:login")

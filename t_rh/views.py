@@ -30,7 +30,11 @@ def remplacer_tags(contenu, employe, contrat):
 
 def view_contrat(request, pk):
     employe = Employees.objects.get(id=pk)
-    contrat = Contrats.objects.get(employee=employe)
+    contrat = Contrats.objects.filter(employee=employe).last()
+    
+    if not contrat:
+        messages.error(request, "Cet employé n'a aucun contrat associé.")
+        return redirect('t_rh:detailsEmploye', pk)
     articles = ArticlesContratStandard.objects.filter(type_contrat=contrat.type_contrat)
 
     articles_personnalises = []
@@ -131,6 +135,20 @@ def updateEmploye(request,pk):
     }
     return render(request, "tenant_folder/rh/update_employe.html", context)
 
+@module_permission_required('rh', 'delete')
+def ApiDeleteEmploye(request):
+    if request.method == "POST":
+        id = request.POST.get('id')
+        if id:
+            try:
+                emp = Employees.objects.get(id=id)
+                emp.delete()
+                return JsonResponse({'status': 'success', 'message': "L'employé et toutes ses informations ont été supprimés avec succès."})
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'message': f"Erreur lors de la suppression: {str(e)}"})
+        return JsonResponse({'status': 'error', 'message': "ID manquant."})
+    return JsonResponse({'status': 'error', 'message': "Méthode non autorisée."})
+
 @transaction.atomic
 @module_permission_required('rh', 'add')
 def nouveauService(request):
@@ -187,11 +205,14 @@ def ApiUpdateService(request):
     description = request.POST.get('description')
 
     if id and label and description:
-        service = Services.objects.get(id=id)
-        service.label = label
-        service.description = description
-        service.save()
-        return JsonResponse({'status': 'success', 'message':"Service mis à jour avec succès"})
+        try:
+            service = Services.objects.get(id=id)
+            service.label = label
+            service.description = description
+            service.save()
+            return JsonResponse({'status': 'success', 'message':"Service mis à jour avec succès"})
+        except Services.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': "Service introuvable."})
     else:
         return JsonResponse({'status': 'error', 'message':"Erreur lors de la mise à jour du service"})
 
@@ -199,9 +220,12 @@ def ApiUpdateService(request):
 def ApiDeleteService(request):
     id = request.POST.get('id')
     if id:
-        service = Services.objects.get(id=id)
-        service.delete()
-        return JsonResponse({'status': 'success', 'message':"Service supprimé avec succès"})
+        try:
+            service = Services.objects.get(id=id)
+            service.delete()
+            return JsonResponse({'status': 'success', 'message':"Service supprimé avec succès"})
+        except Services.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': "Service introuvable."})
     else:
         return JsonResponse({'status': 'error', 'message':"Erreur lors de la suppression du service"})
 
@@ -451,10 +475,13 @@ def ApiCreateContrat(request):
         except:
             pass
 
-    employe = Employees.objects.get(id=id_employe)
-    type_contrat = TypesContrat.objects.get(id=id_type_contrat)
-    service = Services.objects.get(id=id_service)
-    poste = Posts.objects.get(id=id_poste)
+    try:
+        employe = Employees.objects.get(id=id_employe)
+        type_contrat = TypesContrat.objects.get(id=id_type_contrat)
+        service = Services.objects.get(id=id_service)
+        poste = Posts.objects.get(id=id_poste)
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": "ID(s) invalide(s) fourni(s)."})
 
     new_contrat = Contrats(
         service = service,
@@ -978,7 +1005,10 @@ def ApiMarkPresence(request):
             return JsonResponse({'status': 'error', 'message': 'Paramètres manquants'})
             
         date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-        employee = Employees.objects.get(id=employee_id)
+        try:
+            employee = Employees.objects.get(id=employee_id)
+        except Employees.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Employé introuvable'})
         
         presence, created = Presence.objects.update_or_create(
             employee=employee,
@@ -1120,6 +1150,7 @@ def assistantPaie(request):
         
         payroll_data.append({
             'employee': emp,
+            'contrat_obj': contrat_rh,
             'variables': vars,
             'result': res
         })
@@ -1169,7 +1200,7 @@ def assistantPaie(request):
                     defaults={
                         'entreprise': Entreprise.objects.first(),
                         'jours_travailles': data['variables']['jours_travailles'],
-                        'heures_absence': data['variables']['absences_heures'],
+                        'heures_absence': data['variables']['absences_jours'] * 8,
                         'salaire_base_calcule': data['result']['salaire_base_calcule'],
                         'montant_ss': data['result']['montant_ss'],
                         'base_ss': data['result']['base_ss'],
@@ -1204,6 +1235,14 @@ def configFiscalite(request):
     # Retrieve the legal entity for the current tenant
     entreprise = Entreprise.objects.first()
     config = ParametresPaie.get_config(entreprise=entreprise)
+
+    if not TrancheIRG.objects.exists():
+        TrancheIRG.objects.bulk_create([
+            TrancheIRG(min_montant=0, max_montant=30000, taux=0.00),
+            TrancheIRG(min_montant=30000, max_montant=35000, taux=0.20),
+            TrancheIRG(min_montant=35000, max_montant=120000, taux=0.30),
+            TrancheIRG(min_montant=120000, max_montant=None, taux=0.35),
+        ])
 
     tranches = TrancheIRG.objects.all().order_by('min_montant')
     
