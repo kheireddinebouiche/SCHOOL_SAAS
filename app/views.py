@@ -572,3 +572,14 @@ def tenant_comm_global(request):
     return render(request, 'tenant_folder/communication/inter_tenant_hub.html', context)
     
 
+
+
+from saas_admin_app.models import SystemUpdate
+@login_required(login_url='institut_app:login')
+def tenant_changelog_view(request):
+    if not request.user.is_superuser:
+        messages.error(request, 'Accès non autorisé.')
+        return redirect('/')
+    updates = SystemUpdate.objects.filter(is_published=True)
+    context = {'tenant': request.tenant, 'updates': updates}
+    return render(request, 'tenant_folder/changelog.html', context)

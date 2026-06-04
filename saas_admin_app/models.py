@@ -185,3 +185,30 @@ class KnowledgeResource(models.Model):
 
     def __str__(self):
         return self.title
+
+class SystemUpdate(models.Model):
+    UPDATE_TYPES = (
+        ('bugfix', 'Correction de Bug'),
+        ('feature', 'Nouvelle Fonctionnalité'),
+        ('optimisation', 'Optimisation'),
+        ('security', 'Sécurité'),
+        ('other', 'Autre'),
+    )
+
+    version = models.CharField(max_length=50, verbose_name="Version", help_text="ex: v1.2.4")
+    title = models.CharField(max_length=255, verbose_name="Titre")
+    description = models.TextField(verbose_name="Description détaillée")
+    update_type = models.CharField(max_length=20, choices=UPDATE_TYPES, default='bugfix', verbose_name="Type de mise à jour")
+    date_published = models.DateTimeField(verbose_name="Date de publication")
+    is_published = models.BooleanField(default=True, verbose_name="Est publié")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Mise à jour Système (Changelog)"
+        verbose_name_plural = "Mises à jour Système"
+        ordering = ['-date_published', '-created_at']
+
+    def __str__(self):
+        return f"{self.version} - {self.title}"

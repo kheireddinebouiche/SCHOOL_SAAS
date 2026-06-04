@@ -3104,3 +3104,29 @@ def saas_reset_tresorerie_view(request, tenant_id):
             return JsonResponse({'status': 'success', 'message': 'La trsorerie a t rinitialise avec succs.'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+from .models import SystemUpdate
+@saas_superuser_required
+def saas_changelog_view(request):
+    updates = SystemUpdate.objects.all()
+    return render(request, 'saas_admin_app/saas_changelog.html', {'updates': updates})
+
+from django.http import JsonResponse
+from django.utils import timezone
+@saas_superuser_required
+def saas_changelog_action_view(request):
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'create':
+            title = request.POST.get('title')
+            version = request.POST.get('version')
+            desc = request.POST.get('description')
+            u_type = request.POST.get('update_type')
+            SystemUpdate.objects.create(title=title, version=version, description=desc, update_type=u_type, date_published=timezone.now())
+            return JsonResponse({'status': 'success'})
+        elif action == 'delete':
+            uid = request.POST.get('id')
+            SystemUpdate.objects.filter(id=uid).delete()
+            return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'})
