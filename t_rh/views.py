@@ -861,7 +861,8 @@ def listePresences(request):
     date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
     
     # Base queryset for employees
-    employees = Employees.objects.filter(etat="en cours", is_teacher=False)
+    from django.db.models import Q
+    employees = Employees.objects.filter(Q(etat="en cours") | Q(etat__isnull=True) | Q(etat=""), is_teacher=False)
 
 
     
@@ -927,7 +928,7 @@ def fichesMensuelles(request):
     service_id = request.GET.get('service')
 
     # Base queryset for active employees
-    employees = Employees.objects.filter(etat="en cours", is_teacher=False)
+    employees = Employees.objects.filter(Q(etat="en cours") | Q(etat__isnull=True) | Q(etat=""), is_teacher=False)
     if service_id:
         employees = employees.filter(contrats__service_id=service_id).distinct()
 

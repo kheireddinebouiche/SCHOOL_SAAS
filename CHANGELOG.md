@@ -9,6 +9,7 @@ Ce fichier recense toutes les modifications, corrections de bugs et nouvelles fo
 ### 🐛 Corrections de Bugs (Bugfixes)
 - **Ressources Humaines (Paie & Présences)** :
   - Modification du formulaire d'ajout d'employé pour rendre tous les champs non obligatoires.
+  - Résolution d'un bug empêchant l'affichage des nouveaux employés dans les vues de présences en autorisant les états (etat) non définis ou vides.
   - Résolution d'un bug bloquant l'ajout d'un nouvel employé dû à la validation silencieuse de champs manquants dans le formulaire (exclusion de `solde_conge`, `solde_conge_annee_prec`, `is_teacher`, etc.).
   - Résolution de l'erreur `KeyError` dans le calcul des paies.
   - Correction de la localisation des noms de mois en anglais dans les fiches mensuelles de présence.
