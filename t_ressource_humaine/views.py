@@ -45,19 +45,22 @@ class ContratListView(LoginRequiredMixin, ListView):
 class ContratForm(forms.ModelForm):
     class Meta:
         model = Contrat
-        fields = '__all__'
+        exclude = ['entreprise', 'employee', 'prime_transport', 'prime_panier', 'created_at', 'updated_at']
         widgets = {
             'formateur': forms.Select(attrs={'class': 'form-select'}),
-            'employee': forms.Select(attrs={'class': 'form-select'}),
             'type_contrat': forms.Select(attrs={'class': 'form-select'}),
             'date_debut': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'date_fin': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'salaire_base': forms.NumberInput(attrs={'class': 'form-control'}),
             'salaire_horaire': forms.NumberInput(attrs={'class': 'form-control'}),
-            'prime_transport': forms.NumberInput(attrs={'class': 'form-control'}),
-            'prime_panier': forms.NumberInput(attrs={'class': 'form-control'}),
             'actif': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            if field_name not in ['formateur', 'type_contrat', 'date_debut']:
+                field.required = False
 
 @method_decorator(module_permission_required('rh', 'add'), name='dispatch')
 class ContratCreateView(LoginRequiredMixin, CreateView):

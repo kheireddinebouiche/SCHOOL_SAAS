@@ -6,11 +6,13 @@ Ce fichier recense toutes les modifications, corrections de bugs et nouvelles fo
 
 ## [04/06/2026] - v1.1.0 - Refonte de Stabilité (Executive Education & RH)
 
-### 🐛 Corrections de Bugs (Bugfixes)
-- **Ressources Humaines (Paie & Présences)** :
+- **Global / Core** :
+  - Correction d'une erreur fatale au démarrage du serveur (NameError) dans `school/settings.py` causée par `DEBUG = F`.
+- **Ressources Humaines (Paie, Présences & Formateurs)** :
   - Modification du formulaire d'ajout d'employé pour rendre tous les champs non obligatoires.
   - Résolution d'un bug empêchant l'affichage des nouveaux employés dans les vues de présences et dans l'assistant de paie en autorisant les états (etat) non définis ou vides.
   - Résolution d'un bug bloquant l'ajout d'un nouvel employé dû à la validation silencieuse de champs manquants dans le formulaire (exclusion de `solde_conge`, `solde_conge_annee_prec`, `is_teacher`, etc.).
+  - Résolution d'un bug similaire empêchant la création d'un nouveau contrat pour un formateur (exclusion des champs non rendus comme `prime_transport`, `prime_panier`, `employee` du `ContratForm`).
   - Résolution de l'erreur `KeyError` dans le calcul des paies.
 - **SaaS Admin** :
   - Correction d'une erreur de syntaxe (`SyntaxError`) dans `urls.py` causée par des caractères `\n` mal formatés empêchant l'accès au portail.
