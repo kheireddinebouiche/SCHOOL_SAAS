@@ -52,6 +52,7 @@ class Employees(models.Model):
     # Congés
     solde_conge = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Solde de congé actuel (jours)")
     solde_conge_annee_prec = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Reliquat année précédente")
+    is_particular_irg = models.BooleanField(default=False, verbose_name="Cas particulier IRG (Retraité / Handicapé)", help_text="Cochez pour appliquer le barème particulier de l'IRG")
 
 
     class Meta:

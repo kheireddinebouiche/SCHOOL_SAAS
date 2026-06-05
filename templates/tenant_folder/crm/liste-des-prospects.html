@@ -691,6 +691,10 @@
                       </button>
                     </div>
 
+                    <button type="button" class="btn btn-soft-primary rounded-pill px-4 shadow-sm d-flex align-items-center gap-2 h-100" data-bs-toggle="modal" data-bs-target="#importProspectModal">
+                      <i class="ri-upload-cloud-2-line fs-5"></i> Importer
+                    </button>
+
                     <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm d-flex align-items-center gap-2 h-100" data-bs-toggle="modal" data-bs-target="#newProspectModal">
                       <i class="ri-add-line fs-5"></i> Nouveau
                     </button>
@@ -871,6 +875,47 @@
              Annuler
            </button>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal for importing prospects -->
+<div class="modal fade modal-modern" id="importProspectModal" tabindex="-1" aria-labelledby="importProspectModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0 pt-4 px-4">
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center pt-0 pb-4 px-4">
+        <div class="avatar-lg mx-auto mb-4">
+          <div class="avatar-title bg-info-subtle text-info">
+            <i class="ri-file-excel-2-line"></i>
+          </div>
+        </div>
+        
+        <h3 class="modal-title-custom text-dark mb-2">Importer des Prospects Particuliers</h3>
+        <p class="modal-text-custom mb-3">Téléchargez un fichier Excel (.xlsx) contenant les prospects. Ils seront ajoutés sans vœux formulés pour le moment.</p>
+        
+        <div class="text-center mb-4">
+            <a href="{% url 't_crm:DownloadProspectsTemplate' %}" class="btn btn-sm btn-soft-info rounded-pill px-3">
+                <i class="ri-download-cloud-2-line me-1"></i> Télécharger le modèle Excel
+            </a>
+        </div>
+
+        <form id="importProspectForm" enctype="multipart/form-data">
+            <div class="mb-4 text-start">
+                <label for="excelFile" class="form-label fw-bold">Fichier Excel (.xlsx) <span class="text-danger">*</span></label>
+                <input class="form-control" type="file" id="excelFile" name="file" accept=".xlsx" required>
+            </div>
+            
+            <div class="pt-2 d-flex gap-2 justify-content-center">
+                <button type="button" class="btn btn-modern-light w-50" data-bs-dismiss="modal">Annuler</button>
+                <button type="submit" class="btn btn-modern-primary w-50" id="btnImportSubmit">
+                    <i class="ri-upload-cloud-2-line me-1"></i> Importer
+                </button>
+            </div>
+        </form>
       </div>
     </div>
   </div>
@@ -1374,6 +1419,48 @@
 
       $('.hstack').html(row);
       $('.deleteModal').modal('show');
+    });
+
+    // Import prospect form submit
+    $('#importProspectForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        var formData = new FormData(this);
+        var $btn = $('#btnImportSubmit');
+        var originalText = $btn.html();
+        
+        $btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Importation...').prop('disabled', true);
+        
+        $.ajax({
+            url: "{% url 't_crm:ApiImportProspectsParticuliers' %}",
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                $btn.html(originalText).prop('disabled', false);
+                if(response.status === 'success') {
+                    $('#importProspectModal').modal('hide');
+                    $('#importProspectForm')[0].reset();
+                    
+                    alertify.success(response.message);
+                    
+                    // Reload page after a short delay
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    alertify.error(response.message || "Erreur lors de l'importation");
+                }
+            },
+            error: function() {
+                $btn.html(originalText).prop('disabled', false);
+                alertify.error("Une erreur s'est produite lors de la connexion au serveur.");
+            }
+        });
     });
 
     // Modal handlers removed as they now use data-bs attributes directly in HTML for better reliability with dynamic content

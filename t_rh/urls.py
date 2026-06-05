@@ -66,6 +66,9 @@ urlpatterns = [
 
     path('contrat_temp/<int:pk>/',view_contrat, name="view_contrat"),
     path('ApiGetDetailsOfContract', ApiGetDetailsOfContract, name="ApiGetDetailsOfContract"),
+    path('modifier-contrat/<int:pk>/', updateContratPage, name="updateContratPage"),
+    path('ApiUpdateContratFull', ApiUpdateContratFull, name="ApiUpdateContratFull"),
+    path('ApiDeleteContrat', ApiDeleteContrat, name="ApiDeleteContrat"),
 
     # Présences
     path('presences/', listePresences, name="liste_presences"),
@@ -83,6 +86,9 @@ urlpatterns = [
     path('paie/assistant/', assistantPaie, name="assistant_paie"),
     path('paie/config-fiscalite/', configFiscalite, name="config_fiscalite"),
     path('paie/fiches/', listeFichesPaie, name="liste_fiches_paie"),
+    path('paie/fiches/valider/', ApiValiderFichePaie, name="ApiValiderFichePaie"),
+    path('paie/fiches/valider-mois/', ApiValiderPaieMois, name="api_valider_paie_mois"),
+    path('paie/fiches/delete/', ApiDeleteFichePaie, name="ApiDeleteFichePaie"),
     path('paie/fiches/<int:pk>/', detailFichePaie, name="detail_fiche_paie"),
 
     # Dashboard

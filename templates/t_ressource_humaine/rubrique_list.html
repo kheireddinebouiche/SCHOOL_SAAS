@@ -68,6 +68,9 @@
                             <button type="button" class="btn btn-soft-warning btn-rounded px-3 py-2" id="btnInitPrimes">
                                 <i class="ri-magic-line align-bottom me-1"></i> Initialiser les Primes
                             </button>
+                            <button type="button" class="btn btn-soft-danger btn-rounded px-3 py-2" id="btnResetPrimes">
+                                <i class="ri-refresh-line align-bottom me-1"></i> Réinitialiser les Rubriques
+                            </button>
                             <a href="{% url 't_ressource_humaine:rubrique_create' %}" class="btn btn-modern-primary open-modal-url" data-modal-title="Ajouter une Rubrique" data-modal-size="modal-lg">
                                 <i class="ri-add-line align-bottom me-1"></i> Nouvelle Rubrique
                             </a>
@@ -321,6 +324,35 @@
                 },
                 error: function() {
                     alertify.error('Erreur technique');
+                    btn.prop('disabled', false).html(originalHtml);
+                }
+            });
+        });
+
+        // Reset Rubriques Handler
+        $('#btnResetPrimes').on('click', function() {
+            if (!confirm('Attention: Voulez-vous RÉINITIALISER toutes les rubriques ? Les rubriques inutilisées seront supprimées, les doublons seront nettoyés, et les rubriques existantes utilisées seront mises à jour en conformité avec la législation (ex: Heures supplémentaires passées en calcul horaire).')) return;
+            
+            var btn = $(this);
+            var originalHtml = btn.html();
+            btn.prop('disabled', true).html('<i class="ri-loader-4-line ri-spin align-bottom me-1"></i> Réinitialisation...');
+
+            $.ajax({
+                url: "{% url 't_ressource_humaine:reset_rubriques' %}",
+                type: 'GET',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alertify.success(response.message);
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        alertify.error(response.message);
+                        btn.prop('disabled', false).html(originalHtml);
+                    }
+                },
+                error: function() {
+                    alertify.error('Erreur technique lors de la réinitialisation');
                     btn.prop('disabled', false).html(originalHtml);
                 }
             });

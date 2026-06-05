@@ -1,3 +1,4 @@
+from decimal import Decimal
 from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect, get_object_or_404
 from .utils import calculate_leave_duration
@@ -637,9 +638,151 @@ def ApiGetDetailsOfContract(request):
         'duree': obj.duree or 'Indéterminée',
         'date_embauche': obj.date_embauche.strftime('%d/%m/%Y') if obj.date_embauche else '-',
         'salaire_base': float(payroll_contract.salaire_base) if payroll_contract else 0,
-        'primes': primes
+        'primes': primes,
+        'service_id': obj.service.id if obj.service else '',
+        'poste_id': obj.poste.id if obj.poste else '',
+        'date_embauche_raw': obj.date_embauche.strftime('%Y-%m-%d') if obj.date_embauche else '',
+        'duree_raw': obj.duree or ''
     }
     return JsonResponse(data, safe=False)
+
+@module_permission_required('rh', 'delete')
+def ApiDeleteContrat(request):
+    if request.method == "POST":
+        id = request.POST.get('id')
+        try:
+            contrat = Contrats.objects.get(id=id)
+            from t_ressource_humaine.models import Contrat as PayrollContrat
+            payroll_contrats = PayrollContrat.objects.filter(employee=contrat.employee)
+            for pc in payroll_contrats:
+                pc.delete()
+            
+            # Update employee status if no other contracts
+            if Contrats.objects.filter(employee=contrat.employee).count() <= 1:
+                contrat.employee.has_contract = False
+                contrat.employee.save()
+                
+            contrat.delete()
+            return JsonResponse({"status": "success", "message": "Contrat supprimé avec succès"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+@module_permission_required('rh', 'change')
+def updateContratPage(request, pk):
+    contrat = get_object_or_404(Contrats, id=pk)
+    employes = Employees.objects.all().order_by('nom', 'prenom')
+    
+    from t_ressource_humaine.models import Contrat as PayrollContrat, RubriqueContrat
+    payroll_contract = PayrollContrat.objects.filter(employee=contrat.employee).first()
+    
+    import json
+    prefill_dict = {
+        'employe_id': contrat.employee_id if contrat.employee else '',
+        'service_id': contrat.service_id if contrat.service else '',
+        'poste_id': contrat.poste_id if contrat.poste else '',
+        'date_embauche': contrat.date_embauche.strftime('%Y-%m-%d') if contrat.date_embauche else '',
+        'duree': contrat.duree or '',
+        'has_essai': contrat.has_essai or 0,
+        'periode_essai': contrat.periode_essai or '',
+        'salaire_base': float(payroll_contract.salaire_base) if payroll_contract else (float(contrat.salaire_base) if contrat.salaire_base else 0),
+        'type_contrat_id': contrat.type_contrat_id if contrat.type_contrat else '',
+        'categorie_id': contrat.type_contrat.categorie.id if contrat.type_contrat and contrat.type_contrat.categorie else '',
+        'entite_id': contrat.type_contrat.categorie.entite_legal.id if contrat.type_contrat and contrat.type_contrat.categorie and contrat.type_contrat.categorie.entite_legal else '',
+    }
+
+    # We will pass the contract data to the template to prefill it
+    context = {
+        'page_title': 'Modifier Contrat',
+        'contrat': contrat,
+        'employes': employes,
+        'payroll_contract': payroll_contract,
+        'tenant': request.tenant,
+        'prefill': json.dumps(prefill_dict),
+    }
+    return render(request, 'tenant_folder/rh/contrats/update_contrat.html', context)
+
+@module_permission_required('rh', 'change')
+def ApiUpdateContratFull(request):
+    if request.method == "POST":
+        import json
+        id_contrat = request.POST.get('id')
+        id_employe = request.POST.get('id_employe')
+        id_type_contrat = request.POST.get('type_contrat')
+        date_embauche = request.POST.get('date_embauche')
+        duree_contrat = request.POST.get('duree_contrat')
+        id_service = request.POST.get('service')
+        id_poste = request.POST.get('posts')
+        has_essaie = request.POST.get('periode_essaie')
+        duree_essaie = request.POST.get('duree_essaie')
+        salaire_base_raw = request.POST.get('salaire_base')
+        salaire_base = float(salaire_base_raw) if salaire_base_raw and salaire_base_raw.strip() else 0
+        
+        rubriques_json = request.POST.get('rubriques_data')
+        rubriques_data = []
+        if rubriques_json:
+            try:
+                rubriques_data = json.loads(rubriques_json)
+            except:
+                pass
+
+        try:
+            contrat = Contrats.objects.get(id=id_contrat)
+            employe = Employees.objects.get(id=id_employe)
+            type_contrat = TypesContrat.objects.get(id=id_type_contrat)
+            service = Services.objects.get(id=id_service)
+            poste = Posts.objects.get(id=id_poste)
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": "Données invalides."})
+
+        contrat.service = service
+        contrat.employee = employe
+        contrat.date_embauche = date_embauche
+        contrat.periode_essai = duree_essaie
+        contrat.has_essai = has_essaie
+        contrat.poste = poste
+        contrat.type_contrat = type_contrat
+        contrat.duree = duree_contrat
+        contrat.salaire_base = salaire_base
+        contrat.save()
+
+        from t_ressource_humaine.models import Contrat as PayrollContrat, Rubrique, RubriqueContrat
+        payroll_contract = PayrollContrat.objects.filter(employee=employe).first()
+        if payroll_contract:
+            payroll_contract.date_debut = date_embauche
+            payroll_contract.salaire_base = salaire_base
+            payroll_contract.save()
+        else:
+            payroll_contract = PayrollContrat.objects.create(
+                employee=employe,
+                date_debut=date_embauche,
+                salaire_base=salaire_base,
+                actif=True
+            )
+
+        # Apply Rubriques
+        if rubriques_data:
+            # Optionally, disable/delete old RubriqueContrat that are not in rubriques_data
+            incoming_ids = [r_item['id'] for r_item in rubriques_data]
+            RubriqueContrat.objects.filter(contrat=payroll_contract).exclude(rubrique_id__in=incoming_ids).update(actif=False)
+            
+            for r_item in rubriques_data:
+                rubrique_obj = Rubrique.objects.get(id=r_item['id'])
+                rc, created_rc = RubriqueContrat.objects.get_or_create(
+                    contrat=payroll_contract,
+                    rubrique=rubrique_obj,
+                    defaults={
+                        'valeur': r_item['valeur'],
+                        'actif': r_item['actif']
+                    }
+                )
+                if not created_rc:
+                    rc.valeur = r_item['valeur']
+                    rc.actif = r_item['actif']
+                    rc.save()
+
+        return JsonResponse({"status": "success", "message": "Contrat mis à jour avec succès"})
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @module_permission_required('rh', 'view')
 def ApiListePostes(request):
@@ -1135,6 +1278,8 @@ def assistantPaie(request):
     action = request.GET.get('action')
     
     from django.db.models import Q
+    from t_ressource_humaine.models import Contrat as PayrollContrat, Rubrique, RubriqueContrat, LignePaie, FichePaie
+    
     employees = Employees.objects.filter(Q(etat='en cours') | Q(etat__isnull=True) | Q(etat=""), has_contract=True)
     
     payroll_data = []
@@ -1143,16 +1288,77 @@ def assistantPaie(request):
         if not contrat_rh:
             continue
             
+        # Get or create the matching PayrollContrat
+        type_c = 'CDD'
+        if contrat_rh.type_contrat and contrat_rh.type_contrat.label:
+            lbl = contrat_rh.type_contrat.label.upper()
+            if 'CDI' in lbl:
+                type_c = 'CDI'
+            elif 'VACATION' in lbl or 'VACAT' in lbl:
+                type_c = 'VACATION'
+                
+        rh_contrat, created = PayrollContrat.objects.get_or_create(
+            employee=emp,
+            defaults={
+                'entreprise': Entreprise.objects.first(),
+                'type_contrat': type_c,
+                'date_debut': contrat_rh.date_embauche or '2020-01-01',
+                'salaire_base': Decimal(getattr(contrat_rh, 'salaire_base', 0) or 0),
+                'prime_panier': Decimal(getattr(contrat_rh, 'prime_panier', 0) or 0),
+                'prime_transport': Decimal(getattr(contrat_rh, 'prime_transport', 0) or 0),
+            }
+        )
+        
+        if not created:
+            # Sync variables from t_rh.Contrats to t_ressource_humaine.Contrat
+            rh_contrat.salaire_base = Decimal(getattr(contrat_rh, 'salaire_base', 0) or 0)
+            rh_contrat.prime_panier = Decimal(getattr(contrat_rh, 'prime_panier', 0) or 0)
+            rh_contrat.prime_transport = Decimal(getattr(contrat_rh, 'prime_transport', 0) or 0)
+            if contrat_rh.type_contrat and contrat_rh.type_contrat.label:
+                lbl = contrat_rh.type_contrat.label.upper()
+                if 'CDI' in lbl:
+                    rh_contrat.type_contrat = 'CDI'
+                elif 'VACATION' in lbl or 'VACAT' in lbl:
+                    rh_contrat.type_contrat = 'VACATION'
+                else:
+                    rh_contrat.type_contrat = 'CDD'
+            rh_contrat.save()
+
+        # Skip this employee if a FichePaie already exists for the selected month/year
+        if FichePaie.objects.filter(contrat=rh_contrat, mois=month, annee=year).exists():
+            continue
+
+        # Load active rubriques and custom overrides for this contract
+        contract_rubrics_config = {rc.rubrique_id: rc for rc in RubriqueContrat.objects.filter(contrat=rh_contrat)}
+        all_rubriques = Rubrique.objects.filter(actif=True).prefetch_related('eligible_types')
+        
+        lignes_rubriques = []
+        for r in all_rubriques:
+            # check eligibility
+            if r.eligible_types.exists() and not r.eligible_types.filter(label__icontains=rh_contrat.type_contrat).exists():
+                continue
+            rc = contract_rubrics_config.get(r.id)
+            valeur = r.valeur_defaut
+            if rc:
+                if not rc.actif:
+                    continue
+                valeur = rc.valeur
+            
+            if valeur != 0:
+                lignes_rubriques.append({'rubrique': r, 'valeur': valeur})
+            
         vars = get_monthly_payroll_variables(emp, month, year)
         res = PaieEngine.calculer_paie(
-            contrat_rh, 
+            rh_contrat, 
             jours_travailles=vars['jours_travailles'],
             heures_absence=vars['absences_jours'] * 8,
+            lignes_rubriques=lignes_rubriques
         )
         
         payroll_data.append({
             'employee': emp,
             'contrat_obj': contrat_rh,
+            'rh_contrat_obj': rh_contrat,
             'variables': vars,
             'result': res
         })
@@ -1171,29 +1377,11 @@ def assistantPaie(request):
         return response
         
     if action == 'valider':
-        from t_ressource_humaine.models import FichePaie, LignePaie, Contrat, Rubrique
         from django.db import transaction
         
         with transaction.atomic():
             for data in payroll_data:
-                contrat_rh = data['contrat_obj'] # The t_rh.Contrats object
-                
-                # Check if a FichePaie already exists for this month/year/contrat
-                # We need a t_ressource_humaine.Contrat link. 
-                # If it doesn't exist, we skip or create one.
-                # For now, let's assume we map t_rh.Contrats to a temporary or persistent RH Contrat
-                
-                # Retrieve or create the corresponding Contrat in t_ressource_humaine
-                rh_contrat, _ = Contrat.objects.get_or_create(
-                    employee=data['employee'],
-                    defaults={
-                        'entreprise': Entreprise.objects.first(),
-                        'date_debut': contrat_rh.date_debut or '2020-01-01',
-                        'salaire_base': Decimal(getattr(contrat_rh, 'salaire_base', 0) or 0),
-                        'prime_panier': Decimal(getattr(contrat_rh, 'prime_panier', 0) or 0),
-                        'prime_transport': Decimal(getattr(contrat_rh, 'prime_transport', 0) or 0),
-                    }
-                )
+                rh_contrat = data['rh_contrat_obj']
                 
                 fiche, created = FichePaie.objects.update_or_create(
                     contrat=rh_contrat,
@@ -1211,15 +1399,78 @@ def assistantPaie(request):
                         'net_a_payer': data['result']['net_a_payer'],
                         'prime_panier': data['result']['prime_panier'],
                         'prime_transport': data['result']['prime_transport'],
+                        'is_validated': True,
                     }
                 )
+                
+                # Clear existing lines to prevent duplicates
+                LignePaie.objects.filter(fiche_paie=fiche).delete()
+                
+                # Save new lines
+                for ligne in data['result']['detail_lignes']:
+                    LignePaie.objects.create(
+                        fiche_paie=fiche,
+                        rubrique=ligne['rubrique'],
+                        valeur_saisie=ligne['valeur_saisie'],
+                        montant=ligne['montant']
+                    )
         
         return redirect('t_rh:liste_fiches_paie')
+
+    total_primes = 0
+    total_retenues = 0
+    for data in payroll_data:
+        total_primes += data['result'].get('prime_panier', 0) + data['result'].get('prime_transport', 0)
+        for ligne in data['result'].get('detail_lignes', []):
+            if ligne['rubrique'].type_rubrique == 'GAIN':
+                total_primes += ligne['montant']
+            elif ligne['rubrique'].type_rubrique == 'RETENUE':
+                total_retenues += ligne['montant']
+
+    totals = {
+        'net_a_payer': sum(data['result']['net_a_payer'] for data in payroll_data),
+        'irg': sum(data['result']['irg'] for data in payroll_data),
+        'montant_ss': sum(data['result']['montant_ss'] for data in payroll_data),
+        'salaire_base_calcule': sum(data['result']['salaire_base_calcule'] for data in payroll_data),
+        'total_primes': total_primes,
+        'total_retenues': total_retenues,
+        'count': len(payroll_data)
+    }
+
+    from django.db.models import Sum
+    existing_fiches = FichePaie.objects.filter(mois=month, annee=year, contrat__employee__isnull=False)
+    existing_count = existing_fiches.count()
+    existing_totals = None
+    
+    if existing_count > 0 and len(payroll_data) == 0:
+        aggs = existing_fiches.aggregate(
+            sum_net=Sum('net_a_payer'),
+            sum_ss=Sum('montant_ss'),
+            sum_irg=Sum('irg'),
+            sum_base=Sum('salaire_base_calcule'),
+            sum_panier=Sum('prime_panier'),
+            sum_transport=Sum('prime_transport')
+        )
+        # Add Gains from LignePaie
+        sum_gains = LignePaie.objects.filter(fiche_paie__in=existing_fiches, rubrique__type_rubrique='GAIN').aggregate(sum_g=Sum('montant'))['sum_g'] or 0
+        total_primes_existing = (aggs['sum_panier'] or 0) + (aggs['sum_transport'] or 0) + sum_gains
+        
+        existing_totals = {
+            'net_a_payer': aggs['sum_net'] or 0,
+            'montant_ss': aggs['sum_ss'] or 0,
+            'irg': aggs['sum_irg'] or 0,
+            'salaire_base_calcule': aggs['sum_base'] or 0,
+            'total_primes': total_primes_existing,
+            'count': existing_count
+        }
 
     context = {
         'month': month,
         'year': year,
         'payroll_data': payroll_data,
+        'totals': totals,
+        'existing_count': existing_count,
+        'existing_totals': existing_totals,
         'months_choices': [
             (1, 'Janvier'), (2, 'Février'), (3, 'Mars'), (4, 'Avril'),
             (5, 'Mai'), (6, 'Juin'), (7, 'Juillet'), (8, 'Août'),
@@ -1269,23 +1520,181 @@ from t_ressource_humaine.models import FichePaie
 def listeFichesPaie(request):
     fiches = FichePaie.objects.filter(contrat__employee__isnull=False).order_by('-annee', '-mois', 'contrat__employee__nom')
     
-    # Filter by month/year if provided
+    # Filter by month/year/employee/status if provided
     month = request.GET.get('month')
     year = request.GET.get('year')
-    if month:
-        fiches = fiches.filter(mois=month)
-    if year:
-        fiches = fiches.filter(annee=year)
+    employee_id = request.GET.get('employee')
+    status = request.GET.get('status')
+    entreprise_id = request.GET.get('entreprise')
+    
+    if month and month.isdigit():
+        fiches = fiches.filter(mois=int(month))
+    if year and year.isdigit():
+        fiches = fiches.filter(annee=int(year))
+    if employee_id and employee_id.isdigit():
+        fiches = fiches.filter(contrat__employee_id=int(employee_id))
+    if entreprise_id and entreprise_id.isdigit():
+        fiches = fiches.filter(entreprise_id=int(entreprise_id))
+    if status:
+        if status == 'validated':
+            fiches = fiches.filter(is_validated=True)
+        elif status == 'draft':
+            fiches = fiches.filter(is_validated=False)
+            
+    employees = Employees.objects.all().order_by('nom', 'prenom')
+    entreprises = Entreprise.objects.all().order_by('designation')
+    years = FichePaie.objects.values_list('annee', flat=True).distinct().order_by('-annee')
+    if not list(years):
+        years = [timezone.now().year]
         
     context = {
         'fiches': fiches,
+        'employees': employees,
+        'entreprises': entreprises,
+        'years': years,
+        'selected_month': int(month) if month and month.isdigit() else None,
+        'selected_year': int(year) if year and year.isdigit() else None,
+        'selected_employee': int(employee_id) if employee_id and employee_id.isdigit() else None,
+        'selected_entreprise': int(entreprise_id) if entreprise_id and entreprise_id.isdigit() else None,
+        'selected_status': status,
         'months_choices': [
             (1, 'Janvier'), (2, 'Février'), (3, 'Mars'), (4, 'Avril'),
             (5, 'Mai'), (6, 'Juin'), (7, 'Juillet'), (8, 'Août'),
             (9, 'Septembre'), (10, 'Octobre'), (11, 'Novembre'), (12, 'Décembre')
         ]
     }
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 'tenant_folder/rh/paie/_liste_fiches_paie_table.html', context)
+        
     return render(request, 'tenant_folder/rh/paie/liste_fiches_paie.html', context)
+
+@module_permission_required('rh', 'delete')
+def ApiDeleteFichePaie(request):
+    if request.method == 'POST':
+        fiche_id = request.POST.get('fiche_id')
+        if not fiche_id:
+            import json
+            try:
+                data = json.loads(request.body)
+                fiche_id = data.get('fiche_id')
+            except:
+                pass
+        
+        if not fiche_id:
+            return JsonResponse({'status': 'error', 'message': 'Fiche de paie non spécifiée.'})
+            
+        try:
+            from t_ressource_humaine.models import FichePaie
+            fiche = FichePaie.objects.get(id=fiche_id)
+            if fiche.is_validated:
+                return JsonResponse({'status': 'error', 'message': 'Impossible de supprimer un bulletin de paie validé et scellé.'})
+            
+            fiche.delete()
+            return JsonResponse({'status': 'success', 'message': 'Bulletin de paie supprimé avec succès.'})
+        except FichePaie.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Bulletin de paie introuvable.'})
+            
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
+@module_permission_required('rh', 'change')
+def ApiValiderFichePaie(request):
+    if request.method == 'POST':
+        action = request.POST.get('action', 'valider')
+        fiche_ids = request.POST.getlist('fiche_ids[]')
+        
+        if not fiche_ids:
+            fiche_id = request.POST.get('fiche_id')
+            if fiche_id:
+                fiche_ids = [fiche_id]
+                
+        if not fiche_ids:
+            import json
+            try:
+                data = json.loads(request.body)
+                fiche_ids = data.get('fiche_ids', [])
+                if not isinstance(fiche_ids, list) and data.get('fiche_id'):
+                    fiche_ids = [data.get('fiche_id')]
+                action = data.get('action', 'valider')
+            except:
+                pass
+
+        if not fiche_ids:
+            return JsonResponse({'status': 'error', 'message': 'Aucun bulletin sélectionné.'})
+
+        from t_ressource_humaine.models import FichePaie
+        fiches = FichePaie.objects.filter(id__in=fiche_ids)
+        
+        is_val = (action == 'valider')
+        count = fiches.update(is_validated=is_val)
+        
+        msg = f"{count} bulletin(s) de paie validé(s) avec succès." if is_val else f"Validation annulée pour {count} bulletin(s)."
+        return JsonResponse({'status': 'success', 'message': msg})
+
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
+@module_permission_required('rh', 'change')
+def ApiValiderPaieMois(request):
+    if request.method == 'POST':
+        import json
+        try:
+            data = json.loads(request.body)
+            month = data.get('month')
+            year = data.get('year')
+            entreprise_id = data.get('entreprise')
+        except:
+            month = request.POST.get('month')
+            year = request.POST.get('year')
+            entreprise_id = request.POST.get('entreprise')
+            
+        if not month or not year:
+            return JsonResponse({'status': 'error', 'message': 'Mois et année requis.'})
+            
+        from t_ressource_humaine.models import FichePaie
+        fiches = FichePaie.objects.filter(mois=int(month), annee=int(year), is_validated=False)
+        if entreprise_id:
+            fiches = fiches.filter(entreprise_id=int(entreprise_id))
+            
+        count = fiches.update(is_validated=True)
+        
+        if count > 0:
+            # Envoi de la notification
+            try:
+                from institut_app.models import GlobalConfiguration, SaaSNotification
+                from django.contrib.auth.models import User
+                config = GlobalConfiguration.get_solo()
+                
+                mois_noms = {
+                    1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                    5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                    9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+                }
+                nom_mois = mois_noms.get(int(month), month)
+                message = f"La paie du mois de {nom_mois} {year} a été validée par les RH. Elle est disponible pour règlement en comptabilité."
+                
+                receivers = []
+                if config.paie_notification_mode == 'role':
+                    receivers = User.objects.filter(is_superuser=True)
+                else:
+                    receivers = config.paie_notification_receivers.all()
+                    
+                for user in receivers:
+                    SaaSNotification.objects.create(
+                        titre="Paie Validée",
+                        message=message,
+                        module="Finance",
+                        icon="ri-money-dollar-circle-line",
+                        url="/comptabilite/tresorerie/paies/liste/",
+                        user=user,
+                        tenant=request.tenant
+                    )
+            except Exception as e:
+                print("Erreur lors de l'envoi de la notification :", str(e))
+        
+        return JsonResponse({'status': 'success', 'message': f'{count} fiche(s) validée(s) pour le mois avec succès.'})
+        
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
 
 @module_permission_required('rh', 'view')
 def detailFichePaie(request, pk):

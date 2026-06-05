@@ -21,6 +21,7 @@ from .f_views.reporting_das import *
 from .f_views.type_depense import *
 from .f_views.payment_types import *
 from .f_views.suivi_paiements import *
+from .views_paie import *
 
 from t_conseil.views import ListeDesFactures, ListeDesDevis, ListeDesClients
 
@@ -317,4 +318,8 @@ urlpatterns = [
     path('factures-executive/', submenu_access_required("tre", "exec_edu")(ListeDesFactures), name="tresorerie_factures_conseil"),
     path('devis-executive/', submenu_access_required("tre", "exec_edu")(ListeDesDevis), name="tresorerie_devis_conseil"),
     path('clients-executive/', submenu_access_required("tre", "exec_edu")(ListeDesClients), name="tresorerie_clients_conseil"),
+
+    # Gestion de la paie
+    path('paies/liste/', submenu_access_required("tre", "tresorerie")(liste_paie_finance), name="liste_paie_finance"),
+    path('paies/lancer-depense/', submenu_access_required("tre", "tresorerie")(lancer_depense_paie), name="lancer_depense_paie"),
 ]

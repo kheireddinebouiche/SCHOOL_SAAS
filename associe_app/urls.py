@@ -62,7 +62,8 @@ from .views import (
     notify_tenants_of_campaign,
     api_mark_saas_notification_read,
     api_mark_all_saas_notifications_read,
-    api_delete_saas_notification
+    api_delete_saas_notification,
+    satisfaction_pending
 )
 
 
@@ -71,6 +72,7 @@ app_name = 'associe_app'
 urlpatterns = [
     path('', index, name='configuration_index'),
     path('mise-en-route/', mise_en_route, name='mise_en_route'),
+    path('satisfaction/', satisfaction_pending, name='satisfaction_pending'),
 
 
 

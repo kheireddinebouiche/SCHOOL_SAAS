@@ -2199,6 +2199,7 @@ def user_create(request):
         last_name = request.POST.get('last_name')
         is_staff = request.POST.get('is_staff') == 'on'
         is_active = request.POST.get('is_active') == 'on'
+        is_superuser = request.POST.get('is_superuser') == 'on'
         
         if User.objects.filter(username=username).exists():
             messages.error(request, "Ce nom d'utilisateur existe déjà.")
@@ -2210,7 +2211,8 @@ def user_create(request):
                 first_name=first_name,
                 last_name=last_name,
                 is_staff=is_staff,
-                is_active=is_active
+                is_active=is_active,
+                is_superuser=is_superuser
             )
             messages.success(request, "Utilisateur créé avec succès.")
             return redirect('associe_app:user_list')
@@ -2227,6 +2229,7 @@ def user_edit(request, pk):
         user.last_name = request.POST.get('last_name')
         user.is_staff = request.POST.get('is_staff') == 'on'
         user.is_active = request.POST.get('is_active') == 'on'
+        user.is_superuser = request.POST.get('is_superuser') == 'on'
         
         password = request.POST.get('password')
         if password:
@@ -2317,3 +2320,8 @@ def api_delete_saas_notification(request):
         except SaaSNotification.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Notification not found'})
     return JsonResponse({'status': 'error', 'message': 'Invalid request'})
+
+@login_required(login_url='login')
+def satisfaction_pending(request):
+    return render(request, 'associe_app/satisfaction_pending.html', {'title': 'Satisfaction'})
+

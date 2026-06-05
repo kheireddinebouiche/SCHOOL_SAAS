@@ -23,7 +23,8 @@ from .f_views.prospects import (
     ApiLoadSpecialiteProspect, ApiUpdateVoeux, ApiCreateVoeux,
     ApiLoadNote, ApiStoreNote, ApiDeleteNote, ApiUpdateNote,
     ApiStoreRappel, ApiDeleteRappel, ApiUpdateRappel,
-    ApiLoadFormation, ApiLoadProspectFinancialHistory
+    ApiLoadFormation, ApiLoadProspectFinancialHistory,
+    ApiImportProspectsParticuliers, DownloadProspectsTemplate
 )
 from .f_views.prinscrits import (
     ListeDesPrinscrits, ApiLoadPrinscrits, DetailsPrinscrit,
@@ -101,6 +102,8 @@ urlpatterns = [
     path('ApiFilterProspect', ApiFilterProspect, name="ApiFilterProspect"),
     path('ApiFilterPrinscrit', ApiFilterPrinscrit, name="ApiFilterPrinscrit"),
     path('ApiLoadFormation', ApiLoadFormation, name="ApiLoadFormation"),
+    path('api/import-prospects-particuliers/', ApiImportProspectsParticuliers, name='ApiImportProspectsParticuliers'),
+    path('api/download-prospects-template/', DownloadProspectsTemplate, name='DownloadProspectsTemplate'),
     path('details-prospect/<str:slug>/', DetailsProspect, name="DetailsProspect"),
     path('ApiLoadPromos', ApiLoadPromos, name="ApiLoadPromos"),
     #path('ApiLoadSpecialite', ApiLoadSpecialite, name="ApiLoadSpecialite"), 

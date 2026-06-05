@@ -3,6 +3,7 @@
 {% block title %} RH - Assistant de Paie {% endblock title %}
 
 {% block content %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
     :root {
         --glass-bg: rgba(255, 255, 255, 0.9);
@@ -78,6 +79,18 @@
         box-shadow: 0 0 0 0.2rem rgba(10, 179, 156, 0.1);
         outline: 0;
     }
+    @keyframes pulseAlert {
+        0% { box-shadow: 0 0 0 0 rgba(240, 101, 72, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(240, 101, 72, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(240, 101, 72, 0); }
+    }
+    .btn-needs-update {
+        animation: pulseAlert 1.5s infinite !important;
+        background-color: #f06548 !important;
+        color: white !important;
+        box-shadow: none;
+        transform: scale(1.05);
+    }
 </style>
 
 <div class="main-content">
@@ -95,14 +108,14 @@
                         <a href="{% url 't_rh:liste_fiches_paie' %}" class="btn btn-modern btn-modern-light d-flex align-items-center">
                             <i class="ri-history-line me-2 fs-5"></i> Historique
                         </a>
-                        <form method="GET" class="d-flex gap-2 align-items-center bg-white p-2 rounded-4 shadow-sm border">
-                            <select name="month" class="select-modern border-0">
+                        <form method="GET" class="d-flex gap-2 align-items-center bg-white p-2 rounded-4 shadow-sm border" id="dateForm">
+                            <select name="month" id="monthSelect" class="select-modern border-0">
                                 {% for m_id, m_name in months_choices %}
                                     <option value="{{ m_id }}" {% if m_id == month %}selected{% endif %}>{{ m_name }}</option>
                                 {% endfor %}
                             </select>
-                            <input type="number" name="year" value="{{ year }}" class="form-control border-0 fw-bold" style="width: 85px;">
-                            <button type="submit" class="btn btn-modern btn-modern-primary py-2 px-3">
+                            <input type="number" name="year" id="yearSelect" value="{{ year }}" class="form-control border-0 fw-bold" style="width: 85px;">
+                            <button type="submit" id="updatePaieBtn" class="btn btn-modern btn-modern-primary py-2 px-3 transition-all">
                                 <i class="ri-search-2-line"></i>
                             </button>
                         </form>
@@ -110,6 +123,76 @@
                 </div>
             </div>
 
+
+
+            <!-- Synthèse globale -->
+            {% with current_totals=existing_totals|default:totals %}
+            {% if payroll_data or existing_count > 0 %}
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <div class="card border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #0ab39c 0%, #099885 100%); color: white;">
+                        <div class="card-body p-4 d-flex align-items-center">
+                            <div class="avatar-sm bg-white bg-opacity-25 rounded-3 p-3 me-3 d-flex align-items-center justify-content-center">
+                                <i class="ri-wallet-3-line fs-2"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-white text-opacity-75 mb-1 fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.75rem;">Total des Paiements Net</h6>
+                                <h3 class="mb-0 fw-bold">{{ current_totals.net_a_payer|floatformat:2 }} <span class="fs-6 fw-normal">DA</span></h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+                        <div class="card-body p-4 d-flex align-items-center">
+                            <div class="avatar-sm bg-success bg-opacity-10 rounded-3 p-3 me-3 d-flex align-items-center justify-content-center">
+                                <i class="ri-add-circle-line text-success fs-2"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted mb-1 fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.75rem;">Total des Primes</h6>
+                                <h3 class="mb-0 fw-bold text-dark">{{ current_totals.total_primes|floatformat:2 }} <span class="fs-6 fw-normal text-muted">DA</span></h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
+                        <div class="card-body p-4 d-flex align-items-center">
+                            <div class="avatar-sm bg-danger bg-opacity-10 rounded-3 p-3 me-3 d-flex align-items-center justify-content-center">
+                                <i class="ri-government-line text-danger fs-2"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted mb-1 fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.75rem;">Total Fiscalité (SS + IRG)</h6>
+                                <h3 class="mb-0 fw-bold text-dark">{{ current_totals.montant_ss|add:current_totals.irg|floatformat:2 }} <span class="fs-6 fw-normal text-muted">DA</span></h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {% if existing_count > 0 and not payroll_data %}
+            <div class="row">
+                <div class="col-12">
+                    <div class="glass-card overflow-hidden text-center py-5">
+                        <div class="py-5">
+                            <div class="avatar-lg mx-auto mb-4 bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center">
+                                <i class="ri-check-double-line fs-1 text-success"></i>
+                            </div>
+                            <h4 class="text-dark fw-bold mb-2">Paie clôturée pour ce mois</h4>
+                            <p class="text-muted mb-4 mx-auto" style="max-width: 400px;">La paie a déjà été traitée et validée pour <strong>{{ existing_count }}</strong> employé(s). Retrouvez tous les détails dans l'historique.</p>
+                            
+                            <div class="d-flex justify-content-center gap-3">
+                                <a href="{% url 't_rh:liste_fiches_paie' %}" class="btn btn-primary px-4 py-2 rounded-pill shadow-sm d-flex align-items-center">
+                                    <i class="ri-history-line me-2"></i> Consulter l'historique
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
             <!-- Content Card -->
             <div class="row">
                 <div class="col-12">
@@ -124,7 +207,8 @@
                                         <th class="text-center">Absences</th>
                                         <th>Base Calculée</th>
                                         <th>Détail Primes</th>
-                                        <th class="text-end" style="width: 20%;">Net à Payer</th>
+                                        <th class="text-end" style="width: 15%;">Net à Payer</th>
+                                        <th class="text-center" style="width: 10%;">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -166,8 +250,18 @@
                                         </td>
                                         <td>
                                             <div class="d-flex flex-column gap-1">
-                                                <div class="small text-muted"><i class="ri-restaurant-line me-1"></i>Panier: <strong>{{ data.result.prime_panier|floatformat:0 }}</strong></div>
-                                                <div class="small text-muted"><i class="ri-bus-line me-1"></i>Transp: <strong>{{ data.result.prime_transport|floatformat:0 }}</strong></div>
+                                                {% if data.result.prime_panier > 0 %}
+                                                    <div class="small text-muted"><i class="ri-restaurant-line me-1"></i>Panier: <strong>{{ data.result.prime_panier|floatformat:0 }}</strong></div>
+                                                {% endif %}
+                                                {% if data.result.prime_transport > 0 %}
+                                                    <div class="small text-muted"><i class="ri-bus-line me-1"></i>Transp: <strong>{{ data.result.prime_transport|floatformat:0 }}</strong></div>
+                                                {% endif %}
+                                                {% for line in data.result.detail_lignes %}
+                                                    <div class="small text-muted" title="{{ line.rubrique.libelle }}">
+                                                        <i class="{% if line.rubrique.type_rubrique == 'GAIN' %}ri-add-circle-line text-success{% else %}ri-subtract-circle-line text-danger{% endif %} me-1"></i>
+                                                        {{ line.rubrique.libelle|truncatechars:15 }}: <strong>{{ line.montant|floatformat:0 }}</strong>
+                                                    </div>
+                                                {% endfor %}
                                             </div>
                                         </td>
                                         <td class="text-end">
@@ -175,6 +269,13 @@
                                                 <div class="h5 fw-bold text-primary mb-0">{{ data.result.net_a_payer|floatformat:2 }} DA</div>
                                                 <small class="text-danger">IRG: {{ data.result.irg|floatformat:2 }}</small>
                                             </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-modern-light text-primary" data-bs-toggle="modal" data-bs-target="#previewModal{{ forloop.counter }}" title="Prévisualiser la fiche de paie">
+                                                <i class="ri-eye-line fs-5"></i>
+                                            </button>
+
+
                                         </td>
                                     </tr>
                                     {% empty %}
@@ -194,6 +295,88 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
+
+            <!-- Modals de prévisualisation (Placés à l'extérieur pour éviter les bugs CSS) -->
+            {% for data in payroll_data %}
+            <div class="modal fade text-start" id="previewModal{{ forloop.counter }}" tabindex="-1" aria-labelledby="previewModalLabel{{ forloop.counter }}" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content border-0 shadow-lg rounded-4">
+                        <div class="modal-header bg-light border-0">
+                            <h5 class="modal-title fw-bold" id="previewModalLabel{{ forloop.counter }}">
+                                <i class="ri-file-text-line me-2 text-primary"></i>Prévisualisation - {{ data.employee }}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3">
+                                        <small class="text-muted d-block mb-1">Poste</small>
+                                        <span class="fw-bold">{{ data.employee.contrats.first.poste|default:"-" }}</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3">
+                                        <small class="text-muted d-block mb-1">Période</small>
+                                        <span class="fw-bold">{{ month }}/{{ year }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">Détails du calcul</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-borderless">
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-muted">Salaire de Base</td>
+                                            <td class="text-end fw-bold">{{ data.result.salaire_base_calcule|floatformat:2 }} DA</td>
+                                        </tr>
+                                        {% if data.result.prime_panier > 0 %}
+                                        <tr>
+                                            <td class="text-muted">Prime de Panier</td>
+                                            <td class="text-end text-success">+{{ data.result.prime_panier|floatformat:2 }} DA</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% if data.result.prime_transport > 0 %}
+                                        <tr>
+                                            <td class="text-muted">Prime de Transport</td>
+                                            <td class="text-end text-success">+{{ data.result.prime_transport|floatformat:2 }} DA</td>
+                                        </tr>
+                                        {% endif %}
+                                        {% for line in data.result.detail_lignes %}
+                                        <tr>
+                                            <td class="text-muted">{{ line.rubrique.libelle }}</td>
+                                            <td class="text-end {% if line.rubrique.type_rubrique == 'GAIN' %}text-success{% else %}text-danger{% endif %}">
+                                                {% if line.rubrique.type_rubrique == 'GAIN' %}+{% else %}-{% endif %}{{ line.montant|floatformat:2 }} DA
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                        <tr class="border-top">
+                                            <td class="text-muted pt-2">Sécurité Sociale (SS)</td>
+                                            <td class="text-end text-danger pt-2">-{{ data.result.montant_ss|floatformat:2 }} DA</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">IRG</td>
+                                            <td class="text-end text-danger">-{{ data.result.irg|floatformat:2 }} DA</td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot class="border-top">
+                                        <tr>
+                                            <td class="fw-bold pt-3 fs-5">NET À PAYER</td>
+                                            <td class="text-end fw-bold pt-3 fs-5 text-primary">{{ data.result.net_a_payer|floatformat:2 }} DA</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 bg-light">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
 
             <!-- Action Bar -->
             {% if payroll_data %}
@@ -208,9 +391,9 @@
                                 <i class="ri-bank-card-2-line me-2"></i> Virement Bancaire
                             </a>
                         </div>
-                        <a href="?month={{ month }}&year={{ year }}&action=valider" class="btn btn-modern btn-modern-primary px-5 py-3 fs-5">
+                        <button onclick="confirmerValidationPaie()" class="btn btn-modern btn-modern-primary px-5 py-3 fs-5">
                             <i class="ri-checkbox-circle-line me-2"></i> Valider et Sceller la Paie
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -219,5 +402,77 @@
         </div>
     </div>
 </div>
+
+<script>
+function confirmerValidationPaie() {
+    Swal.fire({
+        title: 'Confirmer la validation ?',
+        html: `
+            <div class="text-start p-2">
+                <p class="mb-3 text-muted">Veuillez vérifier le résumé de la paie pour ce mois avant scellement :</p>
+                <div class="card border border-light shadow-sm rounded-3 mb-0 overflow-hidden">
+                    <ul class="list-group list-group-flush mb-0">
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-light py-2.5">
+                            <span class="text-muted fs-13">Nombre de salariés :</span>
+                            <span class="badge bg-light text-dark border fw-bold fs-13 px-2.5 py-1.5">{{ totals.count }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-light py-2.5">
+                            <span class="text-muted fs-13">Salaire de base brut global :</span>
+                            <span class="fw-bold text-dark fs-13">{{ totals.salaire_base_calcule|floatformat:2 }} DA</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-light py-2.5">
+                            <span class="text-muted fs-13">Total Cotisations SS (9%) :</span>
+                            <span class="fw-bold text-danger fs-13">-{{ totals.montant_ss|floatformat:2 }} DA</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-light py-2.5">
+                            <span class="text-muted fs-13">Total Retenues IRG (LF 2022) :</span>
+                            <span class="fw-bold text-danger fs-13">-{{ totals.irg|floatformat:2 }} DA</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light border-0 py-3 mt-1">
+                            <span class="fw-bold text-dark">Total Net Global à Payer :</span>
+                            <span class="fw-bold text-primary fs-16">{{ totals.net_a_payer|floatformat:2 }} DA</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#0ab39c',
+        cancelButtonColor: '#f06548',
+        confirmButtonText: '<i class="ri-checkbox-circle-line me-1.5 align-middle"></i> Oui, sceller la paie',
+        cancelButtonText: 'Annuler',
+        customClass: {
+            popup: 'rounded-4 shadow-lg'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Génération en cours...',
+                text: 'Veuillez patienter pendant la création finale des fiches de paie.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                    window.location.href = "?month={{ month }}&year={{ year }}&action=valider";
+                }
+            });
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const monthSelect = document.getElementById('monthSelect');
+    const yearSelect = document.getElementById('yearSelect');
+    const updateBtn = document.getElementById('updatePaieBtn');
+
+    function triggerUpdateAlert() {
+        updateBtn.classList.add('btn-needs-update');
+        updateBtn.innerHTML = '<i class="ri-refresh-line me-1"></i> Actualiser';
+    }
+
+    monthSelect.addEventListener('change', triggerUpdateAlert);
+    yearSelect.addEventListener('input', triggerUpdateAlert);
+});
+</script>
 {% endblock content %}
 

@@ -1,0 +1,154 @@
+{% load humanize %}
+<table class="table table-modern align-middle mb-0" style="border-collapse: separate; border-spacing: 0 10px;">
+    <thead>
+        <tr class="text-uppercase text-muted" style="font-size: 0.75rem; letter-spacing: 1px;">
+            <th scope="col" class="ps-4 border-0">Période</th>
+            {% if not filter_contrat %}<th scope="col" class="border-0">Formateur</th>{% endif %}
+            <th scope="col" class="border-0">Activité / Temps</th>
+            <th scope="col" class="border-0">Salaire Base</th>
+            <th scope="col" class="border-0">Net à Payer</th>
+            <th scope="col" class="border-0">Généré le</th>
+            <th scope="col" class="text-end pe-4 border-0">Actions</th>
+        </tr>
+    </thead>
+    <tbody class="border-0">
+        {% for fiche in fiches %}
+        <tr class="modern-row bg-white rounded-3 shadow-sm transition-all position-relative">
+            <td class="ps-4 rounded-start-3 border-0 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm me-3 position-relative">
+                        <div class="avatar-title rounded-3 fs-6 fw-bold shadow-sm" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); color: #3b82f6; width: 45px; height: 45px; border: 1px solid #bfdbfe;">
+                            <div class="d-flex flex-column lh-1 align-items-center">
+                                <span class="fs-12 text-uppercase">{{ fiche.get_mois_display|truncatechars:4 }}</span>
+                                <span>{{ fiche.annee|stringformat:"s"|slice:"2:" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 fw-bold text-dark">{{ fiche.get_mois_display }}</h6>
+                        <span class="text-muted small">Exercice {{ fiche.annee }}</span>
+                    </div>
+                </div>
+            </td>
+            {% if not filter_contrat %}
+            <td class="border-0 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="fs-14 mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+                            {{ fiche.contrat.formateur }}
+                            <span class="badge bg-soft-primary text-primary px-2 py-1 rounded-pill fs-10 fw-medium">Contrat #{{ fiche.contrat.id }}</span>
+                        </h6>
+                        <span class="text-muted small"><i class="ri-briefcase-line me-1"></i>{{ fiche.contrat.type_contrat }}</span>
+                    </div>
+                </div>
+            </td>
+            {% endif %}
+            <td class="border-0 py-3">
+                <div class="d-inline-flex align-items-center px-3 py-2 bg-light rounded-pill border border-light transition-all hover-lift">
+                    {% if fiche.contrat.type_contrat == 'VACATION' %}
+                        <div class="bg-primary bg-opacity-10 rounded-circle p-1 me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                            <i class="ri-time-line text-primary fs-12"></i>
+                        </div>
+                        <span class="fw-bold text-dark">{{ fiche.heures_travailles }} <small class="text-muted fw-normal">Heures</small></span>
+                    {% else %}
+                        <div class="bg-success bg-opacity-10 rounded-circle p-1 me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                            <i class="ri-calendar-check-line text-success fs-12"></i>
+                        </div>
+                        <span class="fw-bold text-dark">{{ fiche.jours_travailles }} <small class="text-muted fw-normal">Jours</small></span>
+                    {% endif %}
+                </div>
+            </td>
+            <td class="border-0 py-3">
+                <span class="fw-bold text-dark fs-14">{{ fiche.salaire_base_calcule|intcomma }}</span>
+                <small class="text-muted ms-1">DA</small>
+            </td>
+            <td class="border-0 py-3">
+                <div class="d-flex align-items-center">
+                    <span class="badge px-3 py-2 rounded-pill shadow-sm fs-13 d-flex align-items-center" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+                        <i class="ri-wallet-3-line me-2 opacity-75"></i>
+                        {{ fiche.net_a_payer|intcomma }} <small class="ms-1 opacity-75">DA</small>
+                    </span>
+                </div>
+            </td>
+            <td class="border-0 py-3">
+                <div class="text-muted small d-flex flex-column">
+                    <span class="fw-medium text-dark"><i class="ri-calendar-event-line me-1 text-primary"></i>{{ fiche.generated_at|date:"d/m/Y" }}</span>
+                    <span class="text-muted" style="font-size: 0.75rem;"><i class="ri-time-line me-1"></i>{{ fiche.generated_at|date:"H:i" }}</span>
+                </div>
+            </td>
+            <td class="text-end pe-4 rounded-end-3 border-0 py-3">
+                <div class="dropdown">
+                    <button class="btn btn-ghost-primary btn-icon btn-sm rounded-circle shadow-none transition-all" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="viewport">
+                        <i class="ri-more-2-fill fs-18"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-2 modern-dropdown" style="border-radius: 1rem; min-width: 220px; backdrop-filter: blur(10px); background: rgba(255,255,255,0.95);">
+                        <li>
+                            <a href="{% url 't_ressource_humaine:fiche_paie_detail' fiche.id %}" target="_blank" class="dropdown-item rounded-3 py-2 d-flex align-items-center transition-all">
+                                <div class="bg-primary bg-opacity-10 rounded p-1 me-3 text-primary"><i class="ri-printer-line fs-14"></i></div>
+                                <span class="fw-medium">Imprimer le bulletin</span>
+                            </a>
+                        </li>
+                        <div class="dropdown-divider border-light opacity-50 my-1"></div>
+                        <li>
+                            <a href="{% url 't_ressource_humaine:modifier_paie' fiche.id %}" class="dropdown-item rounded-3 py-2 d-flex align-items-center transition-all open-modal-url" data-modal-title="Modifier la paie">
+                                <div class="bg-warning bg-opacity-10 rounded p-1 me-3 text-warning"><i class="ri-edit-circle-line fs-14"></i></div>
+                                <span class="fw-medium">Rectifier</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 't_ressource_humaine:supprimer_paie' fiche.id %}" class="dropdown-item rounded-3 py-2 d-flex align-items-center transition-all open-modal-url text-danger" data-modal-title="Supprimer la fiche de paie">
+                                <div class="bg-danger bg-opacity-10 rounded p-1 me-3 text-danger"><i class="ri-delete-bin-6-line fs-14"></i></div>
+                                <span class="fw-medium">Supprimer</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="7" class="text-center py-5 border-0">
+                <div class="py-5">
+                    <div class="avatar-xl mx-auto mb-4 position-relative">
+                        <div class="position-absolute top-50 start-50 translate-middle" style="width: 100px; height: 100px; background: radial-gradient(circle, rgba(59,130,246,0.1) 0%, rgba(255,255,255,0) 70%);"></div>
+                        <div class="avatar-title bg-transparent text-muted rounded-circle display-3 position-relative z-1">
+                            <i class="ri-file-search-line text-primary opacity-50"></i>
+                        </div>
+                    </div>
+                    <h4 class="text-dark fw-bold mb-2">Aucun bulletin trouvé</h4>
+                    <p class="text-muted mx-auto" style="max-width: 350px;">
+                        Nous n'avons trouvé aucune fiche de paie pour les filtres sélectionnés ou l'entité active.
+                    </p>
+                    <a href="{% url 't_ressource_humaine:formateur_fiche_paie_list' %}" class="btn btn-primary btn-rounded px-4 mt-3 shadow-sm hover-lift">
+                        <i class="ri-refresh-line me-2"></i> Voir tout l'historique
+                    </a>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<style>
+    .modern-row {
+        margin-bottom: 10px;
+    }
+    .modern-row:hover { 
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(59, 130, 246, 0.1) !important; 
+        z-index: 2;
+    }
+    .hover-lift:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .transition-all { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .btn-ghost-primary { color: #64748b; background: transparent; border: none; }
+    .btn-ghost-primary:hover { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    
+    .modern-dropdown .dropdown-item:hover {
+        background: rgba(241, 245, 249, 0.8);
+        transform: translateX(4px);
+    }
+    .bg-soft-primary { background-color: rgba(59, 130, 246, 0.1); }
+</style>

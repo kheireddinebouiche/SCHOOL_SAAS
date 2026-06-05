@@ -26,6 +26,7 @@ class NouveauEmploye(forms.ModelForm):
             'prenom_pere' : forms.TextInput(attrs={'class' : 'form-control'}),
             'nom_mere' : forms.TextInput(attrs={'class' : 'form-control'}),
             'prenom_mere' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'is_particular_irg' : forms.CheckboxInput(attrs={'class' : 'form-check-input'}),
         }
         labels = {
             'civilite' : "Civilité :",
@@ -44,6 +45,7 @@ class NouveauEmploye(forms.ModelForm):
             'date_naissance' : "Date de naissance :",
             'lieu_naissance' : "Lieu de naissance :",
             'bank' : "N° compte bancaire :",
+            'is_particular_irg' : "Cas particulier IRG (Retraité / Handicapé) :",
         }
 
     def __init__(self, *args, **kwargs):

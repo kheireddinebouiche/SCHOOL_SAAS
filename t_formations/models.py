@@ -205,6 +205,11 @@ class Formateurs(models.Model):
     nin = models.CharField(max_length=100, null=True, blank=True)
     password = models.CharField(max_length=255, null=True, blank=True)
     dispo = models.JSONField(default=dict, blank=True, null=True)
+    is_particular_irg = models.BooleanField(
+        default=False, 
+        verbose_name="Cas particulier IRG", 
+        help_text="Cochez pour appliquer le barème particulier (Retraités et Personnes Handicapées)"
+    )
 
 
     created_at = models.DateTimeField(auto_now_add=True)

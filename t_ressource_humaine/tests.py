@@ -36,8 +36,10 @@ class PaieEngineTest(TenantTestCase):
         # 0-20000: 0
         # 20001-40000: 20000 * 0.23 = 4600
         # 40001-45500: 5500 * 0.27 = 1485
-        # Total IRG = 6085
-        irg_attendu = Decimal('6085.00')
+        # Brut = 6085
+        # Abattement 40% = 2434, plafonné à 1500 DA
+        # Total IRG attendu = 6085 - 1500 = 4585
+        irg_attendu = Decimal('4585.00')
         
         net_attendu = (imposable_attendu - irg_attendu) + Decimal('2000.00') + Decimal('4000.00')
         
@@ -183,6 +185,22 @@ class PaieComplianceTest(TenantTestCase):
         self.assertEqual(result['detail_lignes'][0]['montant'], Decimal('2000.00'))
         self.assertEqual(result['total_gains_cotisables'], Decimal('2000.00'))
 
+    def test_calcul_irg_cas_general_30900(self):
+        irg = PaieEngine.calculer_irg(Decimal('30900.00'), is_particular=False)
+        self.assertEqual(irg, Decimal('550.10'))
+
+    def test_calcul_irg_cas_general_30930(self):
+        irg = PaieEngine.calculer_irg(Decimal('30930.00'), is_particular=False)
+        self.assertEqual(irg, Decimal('561.20'))
+
+    def test_calcul_irg_cas_particulier_30900(self):
+        irg = PaieEngine.calculer_irg(Decimal('30900.00'), is_particular=True)
+        self.assertEqual(irg, Decimal('312.50'))
+
+    def test_calcul_irg_cas_particulier_30930(self):
+        irg = PaieEngine.calculer_irg(Decimal('30930.00'), is_particular=True)
+        self.assertEqual(irg, Decimal('318.80'))
+
     def test_carence_maladie(self):
         last_presence_day = 1
         for i in range(1, 16):
@@ -202,3 +220,101 @@ class PaieComplianceTest(TenantTestCase):
         # 3 jours de carence => 9 jours_conges_payes
         # jours_travailles = 11 + 9 = 20
         self.assertEqual(vars_paie['jours_travailles'], 20)
+
+    def test_employee_primes_in_bulk_generation(self):
+        """
+        Teste si les primes d'un employé sont bien calculées en masse et sauvegardées lors de la validation.
+        """
+        from t_ressource_humaine.models import Rubrique, RubriqueContrat, FichePaie, LignePaie
+        
+        self.contrat.salaire_base = Decimal('50000.00')
+        self.contrat.save()
+        
+        # Créer une rubrique de prime cotisable
+        prime_assiduite = Rubrique.objects.create(
+            libelle="Prime de Panier",
+            type_rubrique='GAIN',
+            mode_calcul='FIXE',
+            est_cotisable=True,
+            est_imposable=True,
+            valeur_defaut=Decimal('3000.00')
+        )
+        
+        # Associer la rubrique au contrat de l'employé avec une valeur personnalisée (4000.00)
+        RubriqueContrat.objects.create(
+            contrat=self.contrat,
+            rubrique=prime_assiduite,
+            valeur=Decimal('4000.00'),
+            actif=True
+        )
+        
+        # 1. Résolution des rubriques pour l'employé
+        contract_rubrics_config = {rc.rubrique_id: rc for rc in RubriqueContrat.objects.filter(contrat=self.contrat)}
+        all_rubriques = Rubrique.objects.filter(actif=True).prefetch_related('eligible_types')
+        
+        lignes_rubriques = []
+        for r in all_rubriques:
+            if r.eligible_types.exists() and not r.eligible_types.filter(label__icontains=self.contrat.type_contrat).exists():
+                continue
+            rc = contract_rubrics_config.get(r.id)
+            valeur = r.valeur_defaut
+            if rc:
+                if not rc.actif:
+                    continue
+                valeur = rc.valeur
+            if valeur != 0:
+                lignes_rubriques.append({'rubrique': r, 'valeur': valeur})
+                
+        # 2. Calculer
+        res = PaieEngine.calculer_paie(
+            self.contrat,
+            jours_travailles=22,
+            heures_absence=0,
+            lignes_rubriques=lignes_rubriques
+        )
+        
+        # Assertions sur les calculs
+        # Base = 50000. Prime = 4000. Base SS = 50000 + 4000 = 54000.
+        # SS = 54000 * 0.09 = 4860.
+        # Imposable = (54000 - 4860) = 49140.
+        self.assertEqual(res['salaire_base_calcule'], Decimal('50000.00'))
+        self.assertEqual(res['total_gains_cotisables'], Decimal('4000.00'))
+        self.assertEqual(res['base_ss'], Decimal('54000.00'))
+        self.assertEqual(res['montant_ss'], Decimal('4860.00'))
+        self.assertEqual(res['salaire_imposable'], Decimal('49140.00'))
+        
+        # 3. Simuler la création de la fiche et des lignes de paie lors de la validation
+        fiche, created = FichePaie.objects.update_or_create(
+            contrat=self.contrat,
+            mois=1,
+            annee=2024,
+            defaults={
+                'entreprise': None,
+                'jours_travailles': 22,
+                'heures_absence': 0,
+                'salaire_base_calcule': res['salaire_base_calcule'],
+                'montant_ss': res['montant_ss'],
+                'base_ss': res['base_ss'],
+                'salaire_imposable': res['salaire_imposable'],
+                'irg': res['irg'],
+                'net_a_payer': res['net_a_payer'],
+                'prime_panier': res['prime_panier'],
+                'prime_transport': res['prime_transport'],
+                'is_validated': True,
+            }
+        )
+        
+        # Sauvegarde des lignes de paie
+        LignePaie.objects.filter(fiche_paie=fiche).delete()
+        for ligne in res['detail_lignes']:
+            LignePaie.objects.create(
+                fiche_paie=fiche,
+                rubrique=ligne['rubrique'],
+                valeur_saisie=ligne['valeur_saisie'],
+                montant=ligne['montant']
+            )
+            
+        # Assertions sur la base de données
+        self.assertEqual(LignePaie.objects.filter(fiche_paie=fiche).count(), 1)
+        ligne_enregistree = LignePaie.objects.get(fiche_paie=fiche, rubrique=prime_assiduite)
+        self.assertEqual(ligne_enregistree.montant, Decimal('4000.00'))

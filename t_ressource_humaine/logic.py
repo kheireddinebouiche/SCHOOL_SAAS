@@ -8,14 +8,24 @@ class PaieEngine:
     TAUX_SS = Decimal('0.09') # 9%
 
     @staticmethod
-    def calculer_irg(imposable, config=None):
+    def calculer_irg(imposable, config=None, is_particular=False):
         """
-        Calcul de l'IRG selon le barème dynamique ou par défaut 2022.
+        Calcul de l'IRG selon le barème progressif, abattement 40% (min 1000, max 1500)
+        et formules de lissage (LF 2022) pour cas général et cas particulier.
         """
         from .models import TrancheIRG
         imposable = Decimal(imposable)
         
-        # 1. Tentative de calcul dynamique
+        # Règle DGI: Arrondir le salaire imposable à la dizaine de DA inférieure avant le calcul
+        imposable = (imposable // 10) * 10
+
+        if config is None:
+            config = ParametresPaie.get_config()
+            
+        if imposable <= config.seuil_exoneration_irg:
+            return Decimal('0.00')
+
+        # 1. Calcul de l'IRG Brut
         tranches = TrancheIRG.objects.all().order_by('min_montant')
         irg_brut = Decimal('0.00')
         
@@ -26,7 +36,7 @@ class PaieEngine:
                     base_calcul = min(imposable, borne_sup) - t.min_montant
                     irg_brut += base_calcul * t.taux
         else:
-            # Fallback Barème 2022
+            # Fallback Barème Progressif 2022
             if imposable > 20000:
                 base_23 = min(imposable, Decimal('40000')) - Decimal('20000')
                 irg_brut += base_23 * Decimal('0.23')
@@ -43,19 +53,28 @@ class PaieEngine:
                 base_35 = imposable - Decimal('320000')
                 irg_brut += base_35 * Decimal('0.35')
 
-        # 2. Zone de lissage 30 001 - 35 000 DA (Loi de finances 2022)
-        if config is None:
-            config = ParametresPaie.get_config()
-            
-        if imposable <= config.seuil_exoneration_irg:
-            return Decimal('0.00')
-            
-        if 30000 < imposable < 35000:
-            # Formule de lissage : IRG = (IRG_Barème * 8 - 20000) / 3
-            irg_smoothed = (irg_brut * Decimal('8') - Decimal('20000')) / Decimal('3')
-            return max(Decimal('0.00'), irg_smoothed.quantize(Decimal('0.01')))
+        # 2. Premier abattement proportionnel de 40% (min 1000 DA, max 1500 DA)
+        abattement = irg_brut * Decimal('0.40')
+        if abattement < Decimal('1000.00'):
+            abattement = Decimal('1000.00')
+        elif abattement > Decimal('1500.00'):
+            abattement = Decimal('1500.00')
 
-        return irg_brut.quantize(Decimal('0.01'))
+        irg1 = max(Decimal('0.00'), irg_brut - abattement)
+
+        # 3. Dispositifs de lissage (second abattement)
+        if is_particular:
+            # Cas particuliers (Retraités & Handicapés) entre 30 000 DA et 42 500 DA
+            if 30000 < imposable <= 42500:
+                irg_final = irg1 * Decimal('93') / Decimal('61') - Decimal('81213') / Decimal('41')
+                return max(Decimal('0.00'), irg_final.quantize(Decimal('0.1')))
+        else:
+            # Cas général entre 30 000 DA et 35 000 DA
+            if 30000 < imposable <= 35000:
+                irg_final = irg1 * Decimal('137') / Decimal('51') - Decimal('27925') / Decimal('8')
+                return max(Decimal('0.00'), irg_final.quantize(Decimal('0.1')))
+
+        return irg1.quantize(Decimal('0.1'))
 
 
     @staticmethod
@@ -148,6 +167,8 @@ class PaieEngine:
                     else:
                         th = Decimal(salaire_base_attr) / Decimal(heures_std)
                     montant = valeur * th
+                elif rubrique.mode_calcul == 'JOURS':
+                    montant = valeur * Decimal(jours_travailles)
 
                 else: # FIXE
                     montant = valeur
@@ -176,7 +197,21 @@ class PaieEngine:
         salaire_imposable = (base_ss - montant_ss) + total_gains_imposables_non_cotisables
         
         # 6. IRG
-        irg = PaieEngine.calculer_irg(salaire_imposable, config=config)
+        if 'VACATION' in type_c:
+            # Réglementation Algérienne: L'IRG pour les formateurs vacataires 
+            # (activités d'enseignement/formation) est une retenue à la source forfaitaire (généralement 15% ou 10%)
+            # sans abattement.
+            taux_irg_vacataire = Decimal(str(getattr(config, 'taux_irg_vacataire', '0.10'))) # Taux de base à 10% historique (ou 15% selon LF récente)
+            irg = (salaire_imposable * taux_irg_vacataire).quantize(Decimal('0.01'))
+        else:
+            employee = getattr(contrat, 'employee', None)
+            formateur = getattr(contrat, 'formateur', None)
+            is_particular = False
+            if employee:
+                is_particular = getattr(employee, 'is_particular_irg', False)
+            elif formateur:
+                is_particular = getattr(formateur, 'is_particular_irg', False)
+            irg = PaieEngine.calculer_irg(salaire_imposable, config=config, is_particular=is_particular)
         
         # 7. Net
         net_a_payer = (salaire_imposable - irg) + total_gains_non_imposables + p_panier + p_transport - total_retenues

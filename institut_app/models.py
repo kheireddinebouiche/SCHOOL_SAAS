@@ -153,6 +153,14 @@ class GlobalConfiguration(models.Model):
     payment_notification_mode = models.CharField(max_length=20, choices=PAYMENT_NOTIFICATION_MODE_CHOICES, default='role', verbose_name=_("Mode de notification de paiement"))
     payment_notification_receivers = models.ManyToManyField(User, blank=True, verbose_name=_("Receveurs des notifications de paiement"), related_name='payment_receivers')
 
+    # Paie Notifications
+    PAIE_NOTIFICATION_MODE_CHOICES = (
+        ('role', _('Par rôle (Comptabilité/Finance)')),
+        ('specific', _('Comptes spécifiques')),
+    )
+    paie_notification_mode = models.CharField(max_length=20, choices=PAIE_NOTIFICATION_MODE_CHOICES, default='role', verbose_name=_("Mode de notification de paie"))
+    paie_notification_receivers = models.ManyToManyField(User, blank=True, verbose_name=_("Receveurs des notifications de paie"), related_name='paie_receivers')
+
     # Transfer Notifications
     TRANSFER_NOTIFICATION_MODE_CHOICES = (
         ('role', _('Par rôle (Scolarité)')),

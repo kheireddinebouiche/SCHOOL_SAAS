@@ -190,6 +190,7 @@ def create_formateur(request):
         diplome = request.POST.get('diplome')
         nin = request.POST.get('nin')
         password = request.POST.get('password')
+        is_particular_irg = request.POST.get('is_particular_irg') in ['true', 'on', '1']
 
         Formateurs.objects.create(
             nom = nom,
@@ -199,6 +200,7 @@ def create_formateur(request):
             diplome = diplome,
             nin = nin,
             password = password,
+            is_particular_irg = is_particular_irg,
         )
         messages.success(request,'Les données du formateur ont été sauvegarder avec succès.')
         return JsonResponse({'status': 'success'})
@@ -219,6 +221,7 @@ def update_formateur(request):
         diplome = request.POST.get('diplome')
         nin = request.POST.get('nin')
         password = request.POST.get('password')
+        is_particular_irg = request.POST.get('is_particular_irg') in ['true', 'on', '1']
 
         try:
             formateur = Formateurs.objects.get(id=formateur_id)
@@ -228,6 +231,7 @@ def update_formateur(request):
             formateur.email = email
             formateur.diplome = diplome
             formateur.nin = nin
+            formateur.is_particular_irg = is_particular_irg
             if password:
                 formateur.password = password
 
@@ -277,6 +281,7 @@ def ApiGetFormateurs(request):
                 'email': formateur.email,
                 'diplome': formateur.diplome,
                 'nin': formateur.nin,
+                'is_particular_irg': formateur.is_particular_irg,
             })
         
         return JsonResponse(formateurs_data, safe=False)

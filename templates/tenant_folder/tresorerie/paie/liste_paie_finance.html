@@ -1,0 +1,206 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+    .badge-soft-primary { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .badge-soft-success { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .badge-soft-danger { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .badge-soft-warning { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .badge-soft-info { background-color: rgba(6, 182, 212, 0.1); color: #0891b2; }
+    .table thead th {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.025em;
+        border-top: none;
+        padding: 1rem;
+    }
+    .table tbody tr:hover {
+        background-color: #f8fafc;
+        transition: background-color 0.2s ease;
+    }
+</style>
+<div class="main-content">
+<div class="page-content">
+    <div class="container-fluid">
+        <!-- Header Section - Harmonized -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="ri-wallet-3-line text-primary fs-3"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-1 fw-bold">États de Paie Mensuels</h4>
+                            <p class="text-muted mb-0">Consultez les paies validées et lancez les règlements correspondants.</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 mt-sm-0 d-flex align-items-center gap-3">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb m-0 shadow-none">
+                                <li class="breadcrumb-item"><a href="javascript: void(0);">Finance</a></li>
+                                <li class="breadcrumb-item active">Paie</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show rounded-4 shadow-sm" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="glass-card border-0 overflow-hidden">
+                    <div class="card-body p-0">
+                        {% if paies_groupees %}
+                        <div class="table-responsive">
+                            <table class="table align-middle table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="ps-4" scope="col">Mois / Année</th>
+                                        <th scope="col">Employés concernés</th>
+                                        <th scope="col">Total Net à Payer</th>
+                                        <th scope="col">Statut</th>
+                                        <th scope="col" class="text-center pe-4" style="width: 150px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for paie in paies_groupees %}
+                                    <tr>
+                                        <td class="ps-4">
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-xs me-2">
+                                                    <span class="avatar-title bg-info bg-opacity-10 text-info rounded-circle fs-13">
+                                                        <i class="ri-calendar-2-line"></i>
+                                                    </span>
+                                                </div>
+                                                <span class="fw-semibold text-dark">{{ paie.mois_nom }} {{ paie.annee }}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary bg-opacity-10 text-primary px-2 py-1 fs-12">
+                                                <i class="ri-group-line me-1"></i> {{ paie.total_employes }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="fw-bold text-dark fs-14">{{ paie.total_net|floatformat:2 }} DA</span>
+                                        </td>
+                                        <td>
+                                            {% if paie.est_paye %}
+                                                <span class="badge badge-soft-success px-2 py-1 rounded-pill">
+                                                    <i class="ri-check-double-line me-1"></i> Payé
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-soft-warning px-2 py-1 rounded-pill">
+                                                    <i class="ri-time-line me-1"></i> En attente
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="pe-4">
+                                            <div class="hstack gap-2 justify-content-center">
+                                                {% if not paie.est_paye %}
+                                                    <button type="button" class="btn btn-sm btn-primary rounded-pill d-flex align-items-center shadow-sm" 
+                                                            data-bs-toggle="modal" data-bs-target="#modalDepense{{ paie.mois }}_{{ paie.annee }}">
+                                                        <i class="ri-money-dollar-circle-line me-1"></i> Payer
+                                                    </button>
+                                                {% else %}
+                                                    <button class="btn btn-sm btn-light rounded-pill px-3 shadow-none" disabled>
+                                                        <i class="ri-check-line me-1"></i> Traité
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <div class="avatar-lg mx-auto mb-4 bg-light rounded-circle d-flex align-items-center justify-content-center">
+                                <i class="ri-file-list-3-line fs-1 text-muted"></i>
+                            </div>
+                            <h5 class="text-dark fw-bold">Aucune paie validée</h5>
+                            <p class="text-muted mb-0">Les fiches de paie validées par le service RH apparaîtront ici.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+{% for paie in paies_groupees %}
+    {% if not paie.est_paye %}
+    <!-- Modal de paiement -->
+    <div class="modal fade" id="modalDepense{{ paie.mois }}_{{ paie.annee }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-bottom-0 pb-0 pt-4 px-4">
+                    <h5 class="modal-title fw-bold">Règlement de la Paie</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{% url 't_tresorerie:lancer_depense_paie' %}" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="mois" value="{{ paie.mois }}">
+                    <input type="hidden" name="annee" value="{{ paie.annee }}">
+                    <div class="modal-body p-4 text-start">
+                        <div class="alert alert-info border-0 bg-info bg-opacity-10 text-info rounded-3 mb-4">
+                            <div class="d-flex align-items-center">
+                                <i class="ri-information-line fs-3 me-3"></i>
+                                <div>
+                                    <p class="mb-0">Vous êtes sur le point de lancer une dépense globale de <strong>{{ paie.total_net|floatformat:2 }} DA</strong> pour la paie de <strong>{{ paie.mois_nom }} {{ paie.annee }}</strong>.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Catégorie de Dépense</label>
+                            <select class="form-select" name="category_id" required>
+                                <option value="">Sélectionnez une catégorie...</option>
+                                {% for cat in categories %}
+                                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Choisissez la catégorie comptable à affecter à cette dépense.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Date de paiement effective</label>
+                            <input type="date" class="form-control" name="date_paiement" required value="{% now 'Y-m-d' %}">
+                            <div class="form-text">Indiquez la date à laquelle le paiement a été réellement effectué.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top-0 pt-0 pb-4 px-4">
+                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-4">Confirmer le paiement</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+
+{% endblock %}

@@ -35,6 +35,34 @@
         background-color: #4f46e5;
         color: white;
     }
+    .btn-modern {
+        border-radius: 0.75rem;
+        padding: 0.6rem 1.25rem;
+        font-weight: 600;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: none;
+    }
+    .btn-modern-light {
+        background: #e2e8f0;
+        color: #475569;
+    }
+    .btn-modern-light:hover {
+        background: #cbd5e1;
+        transform: translateY(-2px);
+    }
+    .select-modern {
+        border: 1px solid #e2e8f0;
+        background-color: #fff;
+        padding: 0.5rem 1rem;
+        border-radius: 0.75rem;
+        font-size: 0.875rem;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    .select-modern:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.1);
+        outline: 0;
+    }
 </style>
 
 <div class="main-content">
@@ -48,6 +76,9 @@
                         <p class="text-muted mb-0">Consultez et imprimez les fiches de paie générées.</p>
                     </div>
                     <div class="d-flex gap-2">
+                        <button id="btn-valider-mois" class="btn btn-success rounded-pill px-4 shadow-sm d-none" onclick="validerPaieDuMois()">
+                            <i class="ri-check-double-line me-1"></i> Valider le mois
+                        </button>
                         <a href="{% url 't_rh:assistant_paie' %}" class="btn btn-primary rounded-pill px-4 shadow-sm">
                             <i class="ri-magic-line me-1"></i> Nouvel Assistant
                         </a>
@@ -55,82 +86,70 @@
                 </div>
             </div>
 
+            <!-- Filters Section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <form id="filter-form" method="GET" class="row g-3 bg-white p-3 rounded-4 shadow-sm border align-items-end" onsubmit="event.preventDefault(); filtrerFiches();">
+                        <div class="col-md-2">
+                            <label class="form-label text-muted fw-bold small text-uppercase mb-1">Employé</label>
+                            <select name="employee" class="form-select border-light-dark select-modern w-100" onchange="filtrerFiches()">
+                                <option value="">Tous les employés</option>
+                                {% for emp in employees %}
+                                    <option value="{{ emp.id }}" {% if emp.id == selected_employee %}selected{% endif %}>{{ emp }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted fw-bold small text-uppercase mb-1">Entité Légale</label>
+                            <select name="entreprise" class="form-select border-light-dark select-modern w-100" onchange="filtrerFiches()">
+                                <option value="">Toutes les entités</option>
+                                {% for ent in entreprises %}
+                                    <option value="{{ ent.id }}" {% if ent.id == selected_entreprise %}selected{% endif %}>{{ ent.designation }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted fw-bold small text-uppercase mb-1">Mois</label>
+                            <select name="month" class="form-select border-light-dark select-modern w-100" onchange="filtrerFiches()">
+                                <option value="">Tous les mois</option>
+                                {% for m_id, m_name in months_choices %}
+                                    <option value="{{ m_id }}" {% if m_id == selected_month %}selected{% endif %}>{{ m_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label text-muted fw-bold small text-uppercase mb-1">Année</label>
+                            <select name="year" class="form-select border-light-dark select-modern w-100" onchange="filtrerFiches()">
+                                <option value="">Toutes</option>
+                                {% for y in years %}
+                                    <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted fw-bold small text-uppercase mb-1">Statut</label>
+                            <select name="status" class="form-select border-light-dark select-modern w-100" onchange="filtrerFiches()">
+                                <option value="">Tous les statuts</option>
+                                <option value="validated" {% if selected_status == 'validated' %}selected{% endif %}>Validé</option>
+                                <option value="draft" {% if selected_status == 'draft' %}selected{% endif %}>Brouillon</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex gap-2">
+                            <button type="submit" class="btn btn-modern btn-modern-primary w-100 py-2">
+                                <i class="ri-filter-line me-1"></i> Filtrer
+                            </button>
+                            <button type="button" onclick="effacerFiltres()" class="btn btn-modern btn-modern-light w-100 py-2 text-center text-decoration-none">
+                                Effacer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <div class="row">
                 <div class="col-12">
-                    <div class="glass-card p-4">
-                        <div class="table-responsive">
-                            <table class="table align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Employé</th>
-                                        <th>Période</th>
-                                        <th>Salaire de Poste</th>
-                                        <th>Retenues (SS+IRG)</th>
-                                        <th>Net à Payer</th>
-                                        <th>Date Génération</th>
-                                        <th class="text-end">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for f in fiches %}
-                                    <tr class="fiche-row" onclick="window.location='{% url 't_rh:detail_fiche_paie' f.pk %}'">
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="avatar-xs bg-soft-primary rounded-circle p-2 me-2 d-flex align-items-center justify-content-center">
-                                                    <i class="ri-user-star-line text-primary"></i>
-                                                </div>
-                                                <span class="fw-bold">
-                                                    {% if f.contrat.employee %}
-                                                        {{ f.contrat.employee }}
-                                                    {% elif f.contrat.formateur %}
-                                                        {{ f.contrat.formateur }}
-                                                    {% else %}
-                                                        Inconnu
-                                                    {% endif %}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-light text-dark border rounded-pill">
-                                                {{ f.get_mois_display }} {{ f.annee }}
-                                            </span>
-                                        </td>
-                                        <td>{{ f.salaire_base_calcule|floatformat:2 }} DA</td>
-                                        <td class="text-danger">
-                                            -{{ f.montant_ss|add:f.irg|floatformat:2 }} DA
-                                        </td>
-                                        <td class="fw-bold text-success">{{ f.net_a_payer|floatformat:2 }} DA</td>
-                                        <td><small class="text-muted">{{ f.generated_at|date:"d/m/Y H:i" }}</small></td>
-                                        <td class="text-end">
-                                            <a href="{% url 't_rh:detail_fiche_paie' f.pk %}" class="btn btn-sm btn-soft-info rounded-pill">
-                                                <i class="ri-eye-line"></i> Voir
-                                            </a>
-                                            <button class="btn btn-sm btn-soft-dark rounded-pill">
-                                                <i class="ri-printer-line"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="7" class="p-0 border-0">
-                                            <div class="empty-state">
-                                                <div class="avatar-xl mx-auto mb-4">
-                                                    <div class="avatar-title bg-light text-primary rounded-circle display-3" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                                                        <i class="ri-file-list-3-line"></i>
-                                                    </div>
-                                                </div>
-                                                <h5 class="fw-bold">Aucune fiche de paie</h5>
-                                                <p class="text-muted mb-4">Il n'y a actuellement aucune fiche de paie générée dans le système.</p>
-                                                <a href="{% url 't_rh:assistant_paie' %}" class="btn btn-modern-primary">
-                                                    <i class="ri-magic-line me-2"></i>Lancer l'Assistant
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+                    <div id="fiches-table-wrapper">
+                        {% include 'tenant_folder/rh/paie/_liste_fiches_paie_table.html' %}
                     </div>
                 </div>
             </div>
@@ -138,4 +157,276 @@
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    function toggleSelectAll(master) {
+        const checkboxes = document.querySelectorAll('.fiche-checkbox');
+        checkboxes.forEach(cb => cb.checked = master.checked);
+        updateBulkActionButton();
+    }
+
+    function updateBulkActionButton() {
+        const checkboxes = document.querySelectorAll('.fiche-checkbox:checked');
+        const count = checkboxes.length;
+        const bulkBar = document.getElementById('bulk-action-bar');
+        const countSpan = document.getElementById('selected-count');
+        const masterCheckbox = document.getElementById('select-all-fiches');
+
+        if (count > 0) {
+            bulkBar.classList.remove('d-none');
+            countSpan.textContent = count;
+        } else {
+            bulkBar.classList.add('d-none');
+        }
+
+        // Keep master checkbox state in sync
+        const totalCheckboxes = document.querySelectorAll('.fiche-checkbox').length;
+        if (masterCheckbox) {
+            masterCheckbox.checked = (count === totalCheckboxes && totalCheckboxes > 0);
+        }
+    }
+
+    function validerFiche(id, action) {
+        const titleText = action === 'valider' ? "Valider ce bulletin ?" : "Annuler la validation ?";
+        const confirmColor = action === 'valider' ? "#0ab39c" : "#f06548";
+
+        Swal.fire({
+            title: titleText,
+            text: "Cette action modifiera le statut de validation de la fiche de paie.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: confirmColor,
+            cancelButtonColor: '#cbd5e1',
+            confirmButtonText: 'Confirmer',
+            cancelButtonText: 'Annuler'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                appelerApiValidation([id], action);
+            }
+        });
+    }
+
+    function validerSelection(action) {
+        const checkboxes = document.querySelectorAll('.fiche-checkbox:checked');
+        const ids = Array.from(checkboxes).map(cb => cb.value);
+        if (ids.length === 0) return;
+
+        const titleText = action === 'valider' ? `Valider les ${ids.length} bulletins sélectionnés ?` : `Annuler la validation de ces ${ids.length} bulletins ?`;
+        const confirmColor = action === 'valider' ? "#0ab39c" : "#f06548";
+
+        Swal.fire({
+            title: titleText,
+            text: "Cette action sera appliquée à toutes les fiches cochées.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: confirmColor,
+            cancelButtonColor: '#cbd5e1',
+            confirmButtonText: 'Confirmer',
+            cancelButtonText: 'Annuler'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                appelerApiValidation(ids, action);
+            }
+        });
+    }
+
+    function appelerApiValidation(ids, action) {
+        Swal.fire({
+            title: 'Mise à jour en cours...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        const formData = new FormData();
+        ids.forEach(id => formData.append('fiche_ids[]', id));
+        formData.append('action', action);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch("{% url 't_rh:ApiValiderFichePaie' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                Swal.fire('Succès !', data.message, 'success').then(() => {
+                    window.location.reload();
+                });
+            } else {
+                Swal.fire('Erreur', data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire('Erreur', 'Une erreur est survenue.', 'error');
+        });
+    }
+
+    function supprimerFiche(id) {
+        Swal.fire({
+            title: 'Supprimer ce bulletin ?',
+            text: "Attention : cette action est irréversible et supprimera définitivement le bulletin de paie du système.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#cbd5e1',
+            confirmButtonText: 'Supprimer',
+            cancelButtonText: 'Annuler'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Suppression en cours...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                const formData = new FormData();
+                formData.append('fiche_id', id);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                fetch("{% url 't_rh:ApiDeleteFichePaie' %}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        Swal.fire('Supprimé !', data.message, 'success').then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        Swal.fire('Erreur', data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('Erreur', 'Une erreur est survenue.', 'error');
+                });
+            }
+        });
+    }
+
+    function filtrerFiches() {
+        checkValidationButton();
+        const formData = new FormData(document.getElementById('filter-form'));
+        const searchParams = new URLSearchParams();
+        for (const pair of formData.entries()) {
+            if (pair[1]) {
+                searchParams.append(pair[0], pair[1]);
+            }
+        }
+        
+        // Mettre à jour l'URL sans recharger
+        const newUrl = window.location.pathname + '?' + searchParams.toString();
+        window.history.pushState({path: newUrl}, '', newUrl);
+
+        fetch('{% url "t_rh:liste_fiches_paie" %}?' + searchParams.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('fiches-table-wrapper').innerHTML = html;
+            // Re-initialize tooltips if any
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+            checkValidationButton();
+            updateBulkActionButton();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire('Erreur', 'Impossible de charger les données filtrées.', 'error');
+        });
+    }
+
+    function effacerFiltres() {
+        const form = document.getElementById('filter-form');
+        form.querySelectorAll('select').forEach(select => select.value = '');
+        filtrerFiches();
+    }
+
+    function checkValidationButton() {
+        const month = document.querySelector('select[name="month"]').value;
+        const year = document.querySelector('select[name="year"]').value;
+        const status = document.querySelector('select[name="status"]').value;
+        const btn = document.getElementById('btn-valider-mois');
+        
+        if (month && year && (!status || status === 'draft')) {
+            btn.classList.remove('d-none');
+            const monthText = document.querySelector('select[name="month"] option:checked').text;
+            btn.innerHTML = `<i class="ri-check-double-line me-1"></i> Valider le mois de ${monthText} ${year}`;
+        } else {
+            btn.classList.add('d-none');
+        }
+    }
+
+    function validerPaieDuMois() {
+        const month = document.querySelector('select[name="month"]').value;
+        const year = document.querySelector('select[name="year"]').value;
+        const entreprise = document.querySelector('select[name="entreprise"]').value;
+
+        if (!month || !year) {
+            Swal.fire('Erreur', 'Veuillez sélectionner un mois et une année.', 'error');
+            return;
+        }
+
+        Swal.fire({
+            title: 'Valider la paie ?',
+            text: "Cette action validera toutes les fiches de paie en attente pour ce mois. Une notification sera envoyée à la comptabilité.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Oui, valider tout le mois',
+            cancelButtonText: 'Annuler'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const formData = new FormData();
+                formData.append('month', month);
+                formData.append('year', year);
+                if (entreprise) formData.append('entreprise', entreprise);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                fetch('{% url "t_rh:api_valider_paie_mois" %}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        Swal.fire('Validé!', data.message, 'success');
+                        filtrerFiches();
+                    } else {
+                        Swal.fire('Erreur', data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('Erreur', 'Une erreur est survenue lors de la validation.', 'error');
+                });
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        checkValidationButton();
+    });
+</script>
 {% endblock content %}

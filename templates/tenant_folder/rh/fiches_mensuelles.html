@@ -4,6 +4,8 @@
 {% block title %}Fiches Mensuelles - RH{% endblock %}
 
 {% block content %}
+<!-- SweetAlert2 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
     /* Premium Look & Feel - Harmonized with Rubriques */
     .glass-card {
@@ -73,6 +75,57 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Metrics Section -->
+            {% if metrics %}
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="glass-card p-3 border-bottom border-primary border-3">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm flex-shrink-0">
+                                <span class="avatar-title bg-primary bg-opacity-10 text-primary rounded fs-3">
+                                    <i class="ri-team-line"></i>
+                                </span>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <p class="text-uppercase fw-semibold fs-12 text-muted mb-1">Formateurs Concernés</p>
+                                <h4 class="mb-0"><span class="counter-value" data-target="{{ metrics.total_formateurs }}">{{ metrics.total_formateurs }}</span></h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="glass-card p-3 border-bottom border-success border-3">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm flex-shrink-0">
+                                <span class="avatar-title bg-success bg-opacity-10 text-success rounded fs-3">
+                                    <i class="ri-time-line"></i>
+                                </span>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <p class="text-uppercase fw-semibold fs-12 text-muted mb-1">Heures Dispensées</p>
+                                <h4 class="mb-0"><span class="counter-value" data-target="{{ metrics.total_heures|stringformat:'f' }}">{{ metrics.total_heures|stringformat:"f" }}</span> H</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="glass-card p-3 border-bottom border-info border-3">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm flex-shrink-0">
+                                <span class="avatar-title bg-info bg-opacity-10 text-info rounded fs-3">
+                                    <i class="ri-calendar-event-line"></i>
+                                </span>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <p class="text-uppercase fw-semibold fs-12 text-muted mb-1">Total Séances</p>
+                                <h4 class="mb-0"><span class="counter-value" data-target="{{ metrics.total_sessions }}">{{ metrics.total_sessions }}</span></h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Filter Section -->
             <div class="row mb-4">
@@ -173,10 +226,46 @@
                                                         <span class="fs-15 fw-bold text-dark">{{ month_item.month_name }}</span>
                                                         <span class="text-muted ms-2 fs-13">({{ month_item.sessions|length }} séances enregistrées)</span>
                                                     </div>
-                                                    <div class="text-end me-3">
-                                                        <span class="badge badge-soft-success fs-12 px-3 py-2 btn-rounded">
-                                                            <i class="ri-time-line me-1"></i> {{ month_item.total_hours }} Heures
+                                                    <div class="text-end me-3 d-flex align-items-center gap-2">
+                                                        <span class="badge bg-light text-dark fs-12 px-3 py-2 btn-rounded border">
+                                                            <i class="ri-time-line me-1"></i> {{ month_item.total_hours|stringformat:"f" }} H
                                                         </span>
+                                                        
+                                                        {% if month_item.is_paid %}
+                                                            <span class="badge badge-soft-primary fs-12 px-3 py-2 btn-rounded shadow-sm" title="La paie de ce mois a été générée">
+                                                                <i class="ri-money-dollar-circle-fill me-1"></i> Paie Générée
+                                                            </span>
+                                                        {% elif month_item.is_validated %}
+                                                            <span class="badge badge-soft-success fs-12 px-3 py-2 btn-rounded shadow-sm" title="Fiche validée">
+                                                                <i class="ri-check-double-line me-1"></i> Fiche Validée
+                                                            </span>
+                                                            {% if teacher_item.contrat_id %}
+                                                            <a href="{% url 't_ressource_humaine:generer_paie' teacher_item.contrat_id %}?mois={{ month_item.month }}&annee={{ year_item.year }}&heures_travailles={{ month_item.total_hours|stringformat:"f" }}" 
+                                                               class="btn btn-sm btn-primary btn-rounded shadow-none ms-1"
+                                                               onclick="event.stopPropagation();">
+                                                                <i class="ri-money-dollar-circle-line me-1"></i> Générer Paie
+                                                            </a>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            <span class="badge badge-soft-warning fs-12 px-3 py-2 btn-rounded shadow-sm">
+                                                                <i class="ri-error-warning-line me-1"></i> Brouillon
+                                                            </span>
+                                                            <button class="btn btn-sm btn-rounded shadow-sm ms-1 valider-fiche-btn fw-bold"
+                                                                    style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;"
+                                                                    data-formateur="{{ teacher_item.teacher.id }}"
+                                                                    data-mois="{{ month_item.month }}"
+                                                                    data-annee="{{ year_item.year }}"
+                                                                    data-heures="{{ month_item.total_hours|stringformat:"f" }}"
+                                                                    onclick="event.stopPropagation(); validerFicheFormateur(this);">
+                                                                <i class="ri-checkbox-circle-fill me-1"></i> Valider la Fiche
+                                                            </button>
+                                                        {% endif %}
+                                                        
+                                                        {% if not teacher_item.contrat_id %}
+                                                            <span class="badge badge-soft-danger fs-12 px-2 py-1 btn-rounded ms-1" title="Aucun contrat actif pour ce formateur">
+                                                                <i class="ri-alert-line"></i> Pas de contrat
+                                                            </span>
+                                                        {% endif %}
                                                     </div>
                                                 </div>
                                             </button>
@@ -253,4 +342,64 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function validerFicheFormateur(btn) {
+    const formateurId = btn.getAttribute('data-formateur');
+    const mois = btn.getAttribute('data-mois');
+    const annee = btn.getAttribute('data-annee');
+    const heures = btn.getAttribute('data-heures');
+
+    Swal.fire({
+        title: 'Valider la fiche ?',
+        text: "Une fois validée, cette fiche mensuelle sera marquée comme approuvée.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#0ab39c',
+        cancelButtonColor: '#f06548',
+        confirmButtonText: 'Oui, valider',
+        cancelButtonText: 'Annuler'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ri-loader-line spin me-1"></i> Validation...';
+            
+            const formData = new FormData();
+            formData.append('formateur_id', formateurId);
+            formData.append('mois', mois);
+            formData.append('annee', annee);
+            formData.append('total_heures', heures);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            fetch("{% url 't_ressource_humaine:valider_fiche_mensuelle_formateur' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    Swal.fire('Validée!', data.message, 'success').then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire('Erreur', data.message, 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ri-checkbox-circle-fill me-1"></i> Valider la Fiche';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Erreur', 'Une erreur est survenue.', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ri-checkbox-circle-fill me-1"></i> Valider la Fiche';
+            });
+        }
+    });
+}
+</script>
 {% endblock %}

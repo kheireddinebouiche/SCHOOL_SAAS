@@ -77,6 +77,10 @@ class FichePaie(models.Model):
     generated_at = models.DateTimeField(auto_now_add=True)
     is_validated = models.BooleanField(default=False)
     
+    # Intégration comptable
+    is_paid = models.BooleanField(default=False)
+    date_paiement = models.DateField(null=True, blank=True)
+    
     class Meta:
         unique_together = ['contrat', 'mois', 'annee']
 
@@ -88,6 +92,7 @@ class ParametresPaie(models.Model):
     heures_mensuelles_standard = models.DecimalField(max_digits=6, decimal_places=2, default=173.33, help_text="Nombre d'heures travaillés standard par mois (ex: 173.33)")
     seuil_exoneration_irg = models.DecimalField(max_digits=12, decimal_places=2, default=30000, help_text="Seuil d'exonération IRG")
     snmg_valeur = models.DecimalField(max_digits=12, decimal_places=2, default=20000.00, help_text="Valeur du Salaire National Minimum Garanti (SNMG)")
+    taux_irg_vacataire = models.DecimalField(max_digits=5, decimal_places=4, default=0.10, help_text="Taux de l'IRG applicable aux formateurs vacataires (ex: 0.10 pour 10%, ou 0.15 pour 15%)")
     
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -127,6 +132,7 @@ class Rubrique(models.Model):
         ('FIXE', 'Montant Fixe (DA)'),
         ('PERCENT', 'Pourcentage du Salaire de Base (%)'),
         ('HOURS', 'Nombre d\'heures (h)'),
+        ('JOURS', 'Par jour travaillé (Jour)'),
         ('ANCIENNETE', 'Ancienneté (IEP)'),
     ]
     
@@ -171,3 +177,24 @@ class LignePaie(models.Model):
     
     def __str__(self):
         return f"{self.rubrique.libelle}: {self.montant}"
+
+class ValidationFicheMensuelleFormateur(models.Model):
+    MOIS_CHOICES = [
+        (1, 'Janvier'), (2, 'Février'), (3, 'Mars'), (4, 'Avril'),
+        (5, 'Mai'), (6, 'Juin'), (7, 'Juillet'), (8, 'Août'),
+        (9, 'Septembre'), (10, 'Octobre'), (11, 'Novembre'), (12, 'Décembre')
+    ]
+    formateur = models.ForeignKey(Formateurs, on_delete=models.CASCADE, related_name='fiches_mensuelles_validees')
+    mois = models.IntegerField(choices=MOIS_CHOICES)
+    annee = models.IntegerField()
+    total_heures = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    validated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    validated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['formateur', 'mois', 'annee']
+        verbose_name = "Validation Fiche Mensuelle Formateur"
+        verbose_name_plural = "Validations Fiches Mensuelles Formateurs"
+
+    def __str__(self):
+        return f"Validation {self.formateur} - {self.get_mois_display()} {self.annee}"

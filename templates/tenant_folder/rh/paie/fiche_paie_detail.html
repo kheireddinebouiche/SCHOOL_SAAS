@@ -140,11 +140,58 @@
                         <td>-</td>
                     </tr>
                     
-                    {% for ligne in fiche.lignes.all %}
+                    {% if fiche.prime_panier > 0 %}
                     <tr>
-                        <td>{{ ligne.rubrique.nom }}</td>
-                        <td>{{ ligne.nombre|default:"-" }}</td>
-                        <td>{{ ligne.taux|default:"-" }}</td>
+                        <td>Indemnité de Panier</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>{{ fiche.prime_panier|floatformat:2 }}</td>
+                        <td>-</td>
+                    </tr>
+                    {% endif %}
+                    {% if fiche.prime_transport > 0 %}
+                    <tr>
+                        <td>Indemnité de Transport</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>{{ fiche.prime_transport|floatformat:2 }}</td>
+                        <td>-</td>
+                    </tr>
+                    {% endif %}
+                    {% if fiche.primes_exceptionnelles > 0 %}
+                    <tr>
+                        <td>Primes Exceptionnelles</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>{{ fiche.primes_exceptionnelles|floatformat:2 }}</td>
+                        <td>-</td>
+                    </tr>
+                    {% endif %}
+                    {% if fiche.retenues_absences > 0 %}
+                    <tr>
+                        <td>Retenue Absences ({{ fiche.heures_absence }} h)</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td class="text-danger">{{ fiche.retenues_absences|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
+                    
+                    {% for ligne in fiche.lignes_paie.all %}
+                    <tr>
+                        <td>{{ ligne.rubrique.libelle }}</td>
+                        <td>
+                            {% if ligne.rubrique.mode_calcul == 'PERCENT' %}
+                                {{ ligne.valeur_saisie }}% de Base
+                            {% elif ligne.rubrique.mode_calcul == 'HOURS' %}
+                                {{ ligne.valeur_saisie }} h
+                            {% elif ligne.rubrique.mode_calcul == 'ANCIENNETE' %}
+                                IEP ({{ ligne.valeur_saisie }}%)
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>-</td>
                         <td>
                             {% if ligne.rubrique.type_rubrique == 'GAIN' %}
                                 {{ ligne.montant|floatformat:2 }}
