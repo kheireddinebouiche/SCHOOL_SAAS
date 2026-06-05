@@ -1745,6 +1745,8 @@ def budget_campaign_review(request, campaign_slug, institut_id):
     details = BudgetLineDetail.objects.none()
     structured_postes = []
     total_dispatched = 0
+    total_recette_propose = 0
+    total_depense_propose = 0
     entreprises = []
     row_quarters = {}
     allocations = {}
@@ -1787,6 +1789,8 @@ def budget_campaign_review(request, campaign_slug, institut_id):
                 allocations[key].montant += d.montant
         
         total_dispatched = details.aggregate(Sum('montant'))['montant__sum'] or 0
+        total_recette_propose = details.filter(poste__type='recette').aggregate(Sum('montant'))['montant__sum'] or 0
+        total_depense_propose = details.filter(poste__type='depense').aggregate(Sum('montant'))['montant__sum'] or 0
 
         # 2. Tenant Specific Entities
         with schema_context(institut.schema_name):
@@ -1926,12 +1930,14 @@ def budget_campaign_review(request, campaign_slug, institut_id):
         'entreprises': entreprises,
         'allocations': allocations,
         'total_dispatched': total_dispatched,
+        'total_recette_propose': total_recette_propose,
+        'total_depense_propose': total_depense_propose,
         'row_quarters': row_quarters,
         'is_visible_to_admin': is_visible_to_admin,
         
         # Stats
-        'remaining': budget_line.montant - total_dispatched,
-        'percent_dispatched': (total_dispatched / budget_line.montant * 100) if budget_line.montant > 0 else 0,
+        'remaining': budget_line.montant - total_depense_propose,
+        'percent_dispatched': (total_depense_propose / budget_line.montant * 100) if budget_line.montant > 0 else 0,
 
         # Realization Data
         'combined_postes': realization_data['combined_postes'],

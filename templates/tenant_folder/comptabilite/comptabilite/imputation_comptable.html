@@ -566,20 +566,42 @@
                 row += "</tr>";
             });
         } else {
-            $.each(allAssociations, function(index, assoc) {
-                row += "<tr class='category-row' style='transition: all 0.3s ease;'>";
-                row += "<td class='ps-4'><div class='d-flex align-items-center'><div class='bg-primary bg-opacity-10 rounded-circle p-2 me-2'><i class='ri-book-mark-line text-primary fs-14'></i></div><div><span class='fw-medium text-dark d-block'>" + (assoc.specialite__label || "N/A") + "</span><span class='text-muted fs-12'>" + (assoc.specialite__formation__nom || "Sans formation") + "</span></div></div></td>";
-                row += "<td><span class='badge badge-soft-success fs-13 px-3 py-2'><i class='ri-bank-line me-1'></i>" + (assoc.compte__name || "N/A") + "</span></td>";
-                row += "<td class='text-center'>";
-                row += "<div class='dropdown'>";
-                row += "<button class='btn btn-ghost-secondary btn-sm rounded-circle' data-bs-toggle='dropdown'><i class='ri-more-2-fill'></i></button>";
-                row += "<ul class='dropdown-menu dropdown-menu-end shadow-sm border-0 animate__animated animate__fadeIn'>";
-                row += "<li><a class='dropdown-item edit-association text-primary' href='javascript:void(0)' data-id='" + assoc.id + "' data-specialite='" + assoc.specialite + "' data-compte='" + assoc.compte + "'><i class='ri-pencil-line me-2'></i>Modifier</a></li>";
-                row += "<li><hr class='dropdown-divider'></li>";
-                row += "<li><a class='dropdown-item delete-association text-danger' href='javascript:void(0)' data-id='" + assoc.id + "'><i class='ri-delete-bin-line me-2'></i>Supprimer</a></li>";
-                row += "</ul></div>";
-                row += "</td>";
-                row += "</tr>";
+            // Group associations by compte__name
+            let groupedAssociations = {};
+            allAssociations.forEach(function(assoc) {
+                let compteName = assoc.compte__name || "N/A";
+                if (!groupedAssociations[compteName]) {
+                    groupedAssociations[compteName] = [];
+                }
+                groupedAssociations[compteName].push(assoc);
+            });
+
+            // Sort accounts alphabetically
+            let sortedComptes = Object.keys(groupedAssociations).sort();
+
+            $.each(sortedComptes, function(i, compteName) {
+                let targetClass = "compte-group-" + i;
+                
+                // Add a header row for each accounting account (clickable to toggle)
+                row += "<tr class='bg-light' style='cursor: pointer;' onclick='$(\"." + targetClass + "\").toggle(); $(this).find(\".toggle-icon\").toggleClass(\"ri-arrow-right-s-line ri-arrow-down-s-line\");'>";
+                row += "<td colspan='3' class='fw-bold text-primary py-2 px-3'><i class='ri-arrow-right-s-line me-1 toggle-icon'></i><i class='ri-bank-line me-2'></i>" + compteName + " <span class='badge bg-secondary ms-2'>" + groupedAssociations[compteName].length + " spécialité(s)</span></td></tr>";
+                
+                // Add rows for specialties in this account
+                $.each(groupedAssociations[compteName], function(index, assoc) {
+                    row += "<tr class='category-row " + targetClass + "' style='display: none; transition: all 0.3s ease;'>";
+                    row += "<td class='ps-4'><div class='d-flex align-items-center'><div class='bg-primary bg-opacity-10 rounded-circle p-2 me-2'><i class='ri-book-mark-line text-primary fs-14'></i></div><div><span class='fw-medium text-dark d-block'>" + (assoc.specialite__label || "N/A") + "</span><span class='text-muted fs-12'>" + (assoc.specialite__formation__nom || "Sans formation") + "</span></div></div></td>";
+                    row += "<td><span class='badge badge-soft-success fs-13 px-3 py-2'><i class='ri-bank-line me-1'></i>" + (assoc.compte__name || "N/A") + "</span></td>";
+                    row += "<td class='text-center'>";
+                    row += "<div class='dropdown'>";
+                    row += "<button class='btn btn-ghost-secondary btn-sm rounded-circle' data-bs-toggle='dropdown'><i class='ri-more-2-fill'></i></button>";
+                    row += "<ul class='dropdown-menu dropdown-menu-end shadow-sm border-0 animate__animated animate__fadeIn'>";
+                    row += "<li><a class='dropdown-item edit-association text-primary' href='javascript:void(0)' data-id='" + assoc.id + "' data-specialite='" + assoc.specialite + "' data-compte='" + assoc.compte + "'><i class='ri-pencil-line me-2'></i>Modifier</a></li>";
+                    row += "<li><hr class='dropdown-divider'></li>";
+                    row += "<li><a class='dropdown-item delete-association text-danger' href='javascript:void(0)' data-id='" + assoc.id + "'><i class='ri-delete-bin-line me-2'></i>Supprimer</a></li>";
+                    row += "</ul></div>";
+                    row += "</td>";
+                    row += "</tr>";
+                });
             });
         }
 
