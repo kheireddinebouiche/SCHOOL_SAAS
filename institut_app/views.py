@@ -1879,6 +1879,7 @@ def request_extension(request, campaign_slug):
         'structured_postes': structured_postes,
         'entreprises': entreprises,
         'allocations': allocations,
+        'title': f"Demande de rallonge - {campaign.name}",
     }
     return render(request, 'tenant_folder/budget/request_extension.html', context)
 
