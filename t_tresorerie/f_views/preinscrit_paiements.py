@@ -7,7 +7,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 import json
-from t_crm.models import RemiseAppliquer,FicheDeVoeux,FicheVoeuxDouble, UserActionLog, Derogations
+from t_crm.models import RemiseAppliquer, RemiseAppliquerLine, FicheDeVoeux,FicheVoeuxDouble, UserActionLog, Derogations
 from django.db.models import Q
 from institut_app.decorators import *
 from datetime import datetime
@@ -231,6 +231,48 @@ def ApiApplyRemiseToPaiement(request):
         remise_obj = RemiseAppliquer.objects.get(id = remiseId)
         remise_obj.is_applicated = True
         remise_obj.save()
+
+        # Mettre à jour les paiements dus (DuePaiements) s'ils existent déjà
+        remise_line = RemiseAppliquerLine.objects.filter(remise_appliquer=remise_obj).last()
+        if remise_line and remise_line.prospect:
+            prospect = remise_line.prospect
+            due_paiements = DuePaiements.objects.filter(client=prospect)
+            
+            if due_paiements.exists():
+                if prospect.is_double:
+                    voeux = FicheVoeuxDouble.objects.filter(prospect=prospect, is_confirmed=True).last()
+                    if voeux and voeux.specialite:
+                        prix_formation = Decimal(voeux.specialite.prix_spec1 or 0) + Decimal(voeux.specialite.prix_spec2 or 0)
+                    else:
+                        prix_formation = Decimal('0.00')
+                else:
+                    voeux = FicheDeVoeux.objects.filter(prospect=prospect, is_confirmed=True).last()
+                    if voeux and voeux.specialite:
+                        prix_formation = Decimal(voeux.specialite.prix or 0)
+                    else:
+                        prix_formation = Decimal('0.00')
+                
+                if prix_formation > 0:
+                    remise = remise_obj.remise
+                    for due in due_paiements:
+                        if 'inscription' not in due.label.lower():
+                            montant_due = Decimal(due.montant_due)
+                            if remise.is_value:
+                                ratio = (prix_formation - Decimal(remise.montant or 0)) / prix_formation
+                                new_due = montant_due * ratio
+                            else:
+                                taux = Decimal(remise.taux or 0)
+                                new_due = montant_due - (montant_due * taux / Decimal('100'))
+                            
+                            new_due = round(new_due)
+                            montant_paye = montant_due - Decimal(due.montant_restant)
+                            new_restant = Decimal(new_due) - montant_paye
+                            
+                            due.montant_due = new_due
+                            due.montant_restant = new_restant if new_restant > 0 else Decimal('0.00')
+                            if new_restant <= 0:
+                                due.is_done = True
+                            due.save()
 
         return JsonResponse({"status" : "success"})
     else:

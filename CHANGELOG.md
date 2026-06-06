@@ -158,3 +158,9 @@ Ce fichier recense toutes les modifications, corrections de bugs et nouvelles fo
 - Trésorerie : Retrait des décorateurs de permission (@module_permission_required) sur les actions de suppression et modification des échéanciers configurés (ApiDeleteEcheancier, ApiBulkDeleteEcheanciers, ApiUpdateEcheancier).
 
 - Trésorerie : Restauration des décorateurs de permission (@module_permission_required) sur les actions de suppression et modification des échéanciers configurés suite à une erreur (ApiDeleteEcheancier, ApiBulkDeleteEcheanciers, ApiUpdateEcheancier).
+
+
+### [Fixed] - 2026-06-06
+- **Trésorerie** : Correction du bug où l'application d'une remise ne mettait pas à jour les montants des échéances dans la base de données (DuePaiements) si l'inscription était déjà confirmée. Modifié ApiApplyRemiseToPaiement dans 	_tresorerie/f_views/preinscrit_paiements.py pour recalculer et mettre à jour montant_due et montant_restant des tranches.
+- **UI** : Deplacement du sous-menu Paie & Salaires juste en dessous du sous-menu Depenses dans le menu principal Comptabilite/Finance (menu.html).
+- **UI** : Remplacement du menu deroulant d'actions par des boutons d'icones dans la liste des fournisseurs (liste_des_fournisseurs.html). Correction egalement des colonnes du filtre de recherche.
