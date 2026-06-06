@@ -20,16 +20,33 @@ def liste_paie_finance(request):
     """
     entite = request.session.get('entite_id')
     
+    month = request.GET.get('month')
+    year = request.GET.get('year')
+    entreprise_id = request.GET.get('entreprise')
+    status = request.GET.get('status')
+
     fiches = FichePaie.objects.filter(is_validated=True)
     if entite:
         fiches = fiches.filter(entreprise_id=entite)
         
-    groupes = fiches.values('mois', 'annee').annotate(
+    if month and month.isdigit():
+        fiches = fiches.filter(mois=int(month))
+    if year and year.isdigit():
+        fiches = fiches.filter(annee=int(year))
+    if entreprise_id and entreprise_id.isdigit():
+        fiches = fiches.filter(entreprise_id=int(entreprise_id))
+    if status:
+        if status == 'paid':
+            fiches = fiches.filter(is_paid=True)
+        elif status == 'unpaid':
+            fiches = fiches.filter(is_paid=False)
+            
+    groupes = fiches.values('mois', 'annee', 'entreprise_id', 'entreprise__designation').annotate(
         total_employes=Count('id'),
         total_net=Sum('net_a_payer'),
         total_paye=Count('id', filter=Q(is_paid=True)),
         total_non_paye=Count('id', filter=Q(is_paid=False))
-    ).order_by('-annee', '-mois')
+    ).order_by('-annee', '-mois', 'entreprise__designation')
     
     mois_dict = dict(FichePaie.MOIS_CHOICES)
     
@@ -40,10 +57,25 @@ def liste_paie_finance(request):
         paies_groupees.append(g)
         
     categories = DepensesCategory.objects.all()
+    entreprises = Entreprise.objects.all().order_by('designation')
+    years = FichePaie.objects.values_list('annee', flat=True).distinct().order_by('-annee')
+    if not list(years):
+        years = [timezone.now().year]
 
     context = {
         'paies_groupees': paies_groupees,
         'categories': categories,
+        'entreprises': entreprises,
+        'years': years,
+        'selected_month': int(month) if month and month.isdigit() else None,
+        'selected_year': int(year) if year and year.isdigit() else None,
+        'selected_entreprise': int(entreprise_id) if entreprise_id and entreprise_id.isdigit() else None,
+        'selected_status': status,
+        'months_choices': [
+            (1, 'Janvier'), (2, 'Février'), (3, 'Mars'), (4, 'Avril'),
+            (5, 'Mai'), (6, 'Juin'), (7, 'Juillet'), (8, 'Août'),
+            (9, 'Septembre'), (10, 'Octobre'), (11, 'Novembre'), (12, 'Décembre')
+        ]
     }
     return render(request, 'tenant_folder/tresorerie/paie/liste_paie_finance.html', context)
 
@@ -63,6 +95,7 @@ def lancer_depense_paie(request):
     if request.method == 'POST':
         mois = request.POST.get('mois')
         annee = request.POST.get('annee')
+        entreprise_id = request.POST.get('entreprise_id')
         category_id = request.POST.get('category_id')
         date_paiement_str = request.POST.get('date_paiement')
         entite_id = request.session.get('entite_id')
@@ -83,24 +116,29 @@ def lancer_depense_paie(request):
             is_paid=False
         )
         
-        if entite_id:
+        if entreprise_id:
+            fiches = fiches.filter(entreprise_id=entreprise_id)
+        elif entite_id:
             fiches = fiches.filter(entreprise_id=entite_id)
             
         if not fiches.exists():
-            messages.warning(request, "Aucune fiche de paie en attente de paiement pour ce mois.")
+            messages.warning(request, "Aucune fiche de paie en attente de paiement pour ce mois et cette entité.")
             return redirect('t_tresorerie:liste_paie_finance')
             
         total_net = fiches.aggregate(total=Sum('net_a_payer'))['total'] or 0
         
         try:
             category = DepensesCategory.objects.get(id=category_id)
-            entite = Entreprise.objects.get(id=entite_id) if entite_id else None
+            try:
+                entite = Entreprise.objects.get(id=entreprise_id) if entreprise_id else (Entreprise.objects.get(id=entite_id) if entite_id else None)
+            except Entreprise.DoesNotExist:
+                entite = None
             
             mois_dict = dict(FichePaie.MOIS_CHOICES)
             mois_nom = mois_dict.get(int(mois), str(mois))
             
             depense = Depenses.objects.create(
-                label=f"Paie globale - {mois_nom} {annee}",
+                label=f"Paie globale - {mois_nom} {annee} ({entite.designation if entite else 'Toutes entités'})",
                 category=category,
                 date_depense=timezone.now().date(),
                 date_paiement=date_paiement,

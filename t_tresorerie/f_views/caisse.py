@@ -47,9 +47,38 @@ def PageBrouillardBanque(request):
     except ValueError:
         selected_year = default_year
         
+    start_date = datetime(selected_year, 8, 1).date()
+    end_date = datetime(selected_year + 1, 7, 31).date()
+
+    # --- Stats Imputation Bancaire ---
+    ops_imputation = OperationsBancaire.objects.filter(date_operation__gte=start_date, date_operation__lte=end_date)
+    imputation_attente = ops_imputation.filter(is_rapproche=False).count()
+    imputation_effectue = ops_imputation.filter(is_rapproche=True).count()
+    imputation_total = ops_imputation.count()
+    
+    # --- Stats Recouvrement (chèques et virements) ---
+    paiements_rec = Paiements.objects.filter(mode_paiement__in=['che', 'vir'], date_paiement__gte=start_date, date_paiement__lte=end_date)
+    autres_rec = AutreProduit.objects.filter(mode_paiement__in=['che', 'vir'], date_paiement__gte=start_date, date_paiement__lte=end_date)
+    
+    try:
+        from t_conseil.models import Paiement as ConseilPaiement
+        conseils_rec = ConseilPaiement.objects.filter(mode_paiement__in=['che', 'vir'], date_paiement__gte=start_date, date_paiement__lte=end_date)
+    except Exception:
+        conseils_rec = None
+        
+    recouvrement_attente = paiements_rec.filter(is_done=False).count() + autres_rec.filter(is_done=False).count() + (conseils_rec.filter(is_done=False).count() if conseils_rec else 0)
+    recouvrement_effectue = paiements_rec.filter(is_done=True).count() + autres_rec.filter(is_done=True).count() + (conseils_rec.filter(is_done=True).count() if conseils_rec else 0)
+    recouvrement_total = recouvrement_attente + recouvrement_effectue
+
     context = {
         'selected_year': selected_year,
-        'available_years': range(2023, default_year + 2)
+        'available_years': range(2023, default_year + 2),
+        'imputation_attente': imputation_attente,
+        'imputation_effectue': imputation_effectue,
+        'imputation_total': imputation_total,
+        'recouvrement_attente': recouvrement_attente,
+        'recouvrement_effectue': recouvrement_effectue,
+        'recouvrement_total': recouvrement_total,
     }
     return render(request,'tenant_folder/comptabilite/caisse/brouillard_banque.html', context)
 

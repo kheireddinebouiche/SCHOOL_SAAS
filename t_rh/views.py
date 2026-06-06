@@ -1276,11 +1276,15 @@ def assistantPaie(request):
     month = int(request.GET.get('month', timezone.now().month))
     year = int(request.GET.get('year', timezone.now().year))
     action = request.GET.get('action')
+    entreprise_id = request.GET.get('entreprise')
     
     from django.db.models import Q
     from t_ressource_humaine.models import Contrat as PayrollContrat, Rubrique, RubriqueContrat, LignePaie, FichePaie
     
     employees = Employees.objects.filter(Q(etat='en cours') | Q(etat__isnull=True) | Q(etat=""), has_contract=True)
+
+    if entreprise_id and entreprise_id.isdigit():
+        employees = employees.filter(contrats__type_contrat__categorie__entite_legal_id=int(entreprise_id)).distinct()
     
     payroll_data = []
     for emp in employees:
@@ -1297,10 +1301,19 @@ def assistantPaie(request):
             elif 'VACATION' in lbl or 'VACAT' in lbl:
                 type_c = 'VACATION'
                 
+        entreprise_obj = None
+        try:
+            entreprise_obj = contrat_rh.type_contrat.categorie.entite_legal
+        except AttributeError:
+            pass
+        
+        if not entreprise_obj:
+            entreprise_obj = Entreprise.objects.first()
+
         rh_contrat, created = PayrollContrat.objects.get_or_create(
             employee=emp,
             defaults={
-                'entreprise': Entreprise.objects.first(),
+                'entreprise': entreprise_obj,
                 'type_contrat': type_c,
                 'date_debut': contrat_rh.date_embauche or '2020-01-01',
                 'salaire_base': Decimal(getattr(contrat_rh, 'salaire_base', 0) or 0),
@@ -1311,6 +1324,7 @@ def assistantPaie(request):
         
         if not created:
             # Sync variables from t_rh.Contrats to t_ressource_humaine.Contrat
+            rh_contrat.entreprise = entreprise_obj
             rh_contrat.salaire_base = Decimal(getattr(contrat_rh, 'salaire_base', 0) or 0)
             rh_contrat.prime_panier = Decimal(getattr(contrat_rh, 'prime_panier', 0) or 0)
             rh_contrat.prime_transport = Decimal(getattr(contrat_rh, 'prime_transport', 0) or 0)
@@ -1388,7 +1402,7 @@ def assistantPaie(request):
                     mois=month,
                     annee=year,
                     defaults={
-                        'entreprise': Entreprise.objects.first(),
+                        'entreprise': rh_contrat.entreprise,
                         'jours_travailles': data['variables']['jours_travailles'],
                         'heures_absence': data['variables']['absences_jours'] * 8,
                         'salaire_base_calcule': data['result']['salaire_base_calcule'],
@@ -1464,6 +1478,8 @@ def assistantPaie(request):
             'count': existing_count
         }
 
+    entreprises = Entreprise.objects.all().order_by('designation')
+
     context = {
         'month': month,
         'year': year,
@@ -1471,6 +1487,8 @@ def assistantPaie(request):
         'totals': totals,
         'existing_count': existing_count,
         'existing_totals': existing_totals,
+        'entreprises': entreprises,
+        'selected_entreprise': int(entreprise_id) if entreprise_id and entreprise_id.isdigit() else None,
         'months_choices': [
             (1, 'Janvier'), (2, 'Février'), (3, 'Mars'), (4, 'Avril'),
             (5, 'Mai'), (6, 'Juin'), (7, 'Juillet'), (8, 'Août'),
@@ -1670,7 +1688,17 @@ def ApiValiderPaieMois(request):
                     9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
                 }
                 nom_mois = mois_noms.get(int(month), month)
-                message = f"La paie du mois de {nom_mois} {year} a été validée par les RH. Elle est disponible pour règlement en comptabilité."
+                
+                entite_nom = ""
+                if entreprise_id:
+                    try:
+                        from institut_app.models import Entreprise
+                        entite = Entreprise.objects.get(id=int(entreprise_id))
+                        entite_nom = f" ({entite.designation})"
+                    except Exception:
+                        pass
+                
+                message = f"La paie du mois de {nom_mois} {year}{entite_nom} a été validée par les RH. Elle est disponible pour règlement en comptabilité."
                 
                 receivers = []
                 if config.paie_notification_mode == 'role':
