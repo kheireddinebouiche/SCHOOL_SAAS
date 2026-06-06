@@ -154,3 +154,7 @@ Ce fichier recense toutes les modifications, corrections de bugs et nouvelles fo
 - Trésorerie : Correction d'un problème empêchant la modification de la référence de paiement dans le brouillard de banque (ajout des champs item_id et model_type dans l'API json).
 
 - Correction de l'affichage du montant total demandé dans la page de révision des rallonges budgétaires (associe_app).
+
+- Trésorerie : Retrait des décorateurs de permission (@module_permission_required) sur les actions de suppression et modification des échéanciers configurés (ApiDeleteEcheancier, ApiBulkDeleteEcheanciers, ApiUpdateEcheancier).
+
+- Trésorerie : Restauration des décorateurs de permission (@module_permission_required) sur les actions de suppression et modification des échéanciers configurés suite à une erreur (ApiDeleteEcheancier, ApiBulkDeleteEcheanciers, ApiUpdateEcheancier).
