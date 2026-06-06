@@ -3,6 +3,9 @@
 {% block title %} Contrat formateur {% endblock title %}
 {% block content %}
 <style>
+    /* DataTables CSS */
+    @import url('https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css');
+
     /* Premium Look & Feel - Harmonized with Treasury */
     .glass-card {
         background: rgba(255, 255, 255, 0.95);
@@ -31,6 +34,35 @@
 
     .table-responsive { overflow: visible !important; }
     .dropdown-menu { z-index: 1060 !important; }
+    
+    /* Fix DataTables filter styling */
+    .dataTables_wrapper .dataTables_filter {
+        text-align: right;
+    }
+    .dataTables_wrapper .dataTables_filter label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        margin-bottom: 0;
+    }
+    .dataTables_wrapper .dataTables_filter input {
+        display: inline-block;
+        width: auto;
+        margin-left: 0.5rem;
+    }
+    .dataTables_wrapper .dataTables_length {
+        text-align: left;
+    }
+    .dataTables_wrapper .dataTables_length label {
+        display: inline-flex;
+        align-items: center;
+        margin-bottom: 0;
+    }
+    .dataTables_wrapper .dataTables_length select {
+        display: inline-block;
+        width: auto;
+        margin: 0 0.5rem;
+    }
 </style>
 <div class="main-content">
     <div class="page-content">
@@ -55,42 +87,6 @@
                                     <li class="breadcrumb-item active">Contrats</li>
                                 </ol>
                             </nav>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Entity Selector -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="glass-card">
-                        <div class="card-body py-3">
-                            <form action="{% url 't_ressource_humaine:select_entreprise_paie' %}" method="POST" class="row align-items-center g-3">
-                                {% csrf_token %}
-                                <div class="col-auto">
-                                    <label class="form-label mb-0 fw-bold text-primary">
-                                        <i class="ri-building-line me-1"></i> Entité Active :
-                                    </label>
-                                </div>
-                                <div class="col-md-4">
-                                    <select name="entreprise_id" class="form-select form-select-sm border-light-subtle shadow-none btn-rounded" onchange="this.form.submit()">
-                                        <option value="">-- Sélectionner une entreprise --</option>
-                                        <option value="none" {% if active_entreprise_id == 'none' %}selected{% endif %}>Non-affectés (Archives/Divers)</option>
-                                        {% for ent in entreprises %}
-                                            <option value="{{ ent.id }}" {% if active_entreprise_id|slugify == ent.id|slugify %}selected{% endif %}>
-                                                {{ ent.designation }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="col-auto">
-                                    {% if not active_entreprise_id %}
-                                        <span class="badge badge-soft-danger animate__animated animate__pulse animate__infinite">
-                                            <i class="ri-error-warning-line me-1"></i> Veuillez sélectionner une entité pour voir les contrats
-                                        </span>
-                                    {% endif %}
-                                </div>
-                            </form>
                         </div>
                     </div>
                 </div>
@@ -121,20 +117,70 @@
                 <!-- Add more stats if needed -->
             </div>
 
+            <!-- Filter Section (Harmonized with fiches-mensuelles) -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-4">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-muted">Entité (SaaS)</label>
+                                <form action="{% url 't_ressource_humaine:select_entreprise_paie' %}" method="POST" class="m-0">
+                                    {% csrf_token %}
+                                    <select name="entreprise_id" class="form-select btn-rounded border-light shadow-none" onchange="this.form.submit()">
+                                        <option value="">-- Filtrer par entité --</option>
+                                        <option value="none" {% if active_entreprise_id == 'none' %}selected{% endif %}>Non-affectés (Archives)</option>
+                                        {% for ent in entreprises %}
+                                            <option value="{{ ent.id }}" {% if active_entreprise_id|slugify == ent.id|slugify %}selected{% endif %}>
+                                                {{ ent.designation }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-muted">Rechercher</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-transparent border-light rounded-start-pill">
+                                        <i class="ri-search-line text-muted"></i>
+                                    </span>
+                                    <input type="text" id="customSearchBox" class="form-control border-light shadow-none rounded-end-pill" placeholder="Rechercher un contrat...">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold text-muted">Afficher</label>
+                                <select id="customLengthSelect" class="form-select btn-rounded border-light shadow-none">
+                                    <option value="10">10 entrées</option>
+                                    <option value="25">25 entrées</option>
+                                    <option value="50">50 entrées</option>
+                                    <option value="-1">Tout</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row">
                 <div class="col-lg-12">
                     <div class="card glass-card border-0">
-                        <div class="card-header border-bottom-dashed d-flex align-items-center p-4">
+                        <div class="card-header border-bottom-dashed d-flex flex-wrap align-items-center gap-3 p-4">
                             <h5 class="card-title mb-0 flex-grow-1 fw-bold">Liste des Contrats</h5>
-                            <div class="flex-shrink-0">
+                            <div class="flex-shrink-0 d-flex gap-2 align-items-center">
                                 <a href="{% url 't_ressource_humaine:contrat_create' %}" class="btn btn-primary btn-rounded d-flex align-items-center px-3 py-2 ajax-modal-trigger">
                                     <i class="ri-add-line fs-18 me-1"></i> Nouveau Contrat
                                 </a>
                             </div>
                         </div>
+                        {% if not active_entreprise_id %}
+                        <div class="card-body pb-0">
+                            <div class="alert alert-warning border-0 d-flex align-items-center mb-0">
+                                <i class="ri-error-warning-line me-2 fs-18"></i> Sélectionnez une entité ci-dessus pour afficher les contrats associés.
+                            </div>
+                        </div>
+                        {% endif %}
                         <div class="card-body">
                             <div class="table-responsive table-card">
-                                <table class="table table-nowrap align-middle table-hover mb-0">
+                                <table id="contratsTable" class="table table-nowrap align-middle table-hover mb-0" style="width:100%">
                                     <thead class="table-light text-muted">
                                         <tr>
                                             <th scope="col">Formateur</th>
@@ -192,38 +238,36 @@
                                                 {% endif %}
                                             </td>
                                             <td class="text-end">
-                                                <div class="dropdown d-inline-block">
-                                                    <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="viewport">
-                                                        <i class="ri-more-fill align-middle"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu dropdown-menu-end">
-                                                        <li>
-                                                            <a href="{% url 't_ressource_humaine:contrat_update' contrat.pk %}" class="dropdown-item edit-item-btn ajax-modal-trigger">
-                                                                <i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Modifier
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <a href="{% url 't_ressource_humaine:generer_paie' contrat.pk %}" class="dropdown-item ajax-modal-trigger">
-                                                                <i class="ri-money-dollar-circle-fill align-bottom me-2 text-muted"></i> Générer Paie
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <a href="{% url 't_ressource_humaine:contrat_print' contrat.pk %}" target="_blank" class="dropdown-item">
-                                                                <i class="ri-printer-fill align-bottom me-2 text-muted"></i> Imprimer
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <a href="{% url 't_ressource_humaine:manage_rubriques_contrat' contrat.pk %}" class="dropdown-item ajax-modal-trigger">
-                                                                <i class="ri-settings-4-fill align-bottom me-2 text-muted"></i> Gérer les Primes
-                                                            </a>
-                                                        </li>
-                                                        <li class="dropdown-divider"></li>
-                                                        <li>
-                                                            <a href="{% url 't_ressource_humaine:fiche_paie_list' %}?contrat={{ contrat.pk }}" class="dropdown-item">
-                                                                <i class="ri-history-fill align-bottom me-2 text-muted"></i> Historique Paie
-                                                            </a>
-                                                        </li>
-                                                    </ul>
+                                                <div class="d-flex justify-content-end gap-2">
+                                                    <a href="{% url 't_ressource_humaine:contrat_update' contrat.pk %}" class="btn btn-sm btn-soft-primary ajax-modal-trigger" data-bs-toggle="tooltip" title="Modifier">
+                                                        <i class="ri-pencil-fill"></i>
+                                                    </a>
+                                                    <a href="{% url 't_ressource_humaine:generer_paie' contrat.pk %}" class="btn btn-sm btn-soft-success ajax-modal-trigger" data-bs-toggle="tooltip" title="Générer Paie">
+                                                        <i class="ri-money-dollar-circle-fill"></i>
+                                                    </a>
+                                                    <div class="dropdown d-inline-block">
+                                                        <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="viewport" title="Plus d'actions">
+                                                            <i class="ri-more-fill align-middle"></i>
+                                                        </button>
+                                                        <ul class="dropdown-menu dropdown-menu-end">
+                                                            <li>
+                                                                <a href="{% url 't_ressource_humaine:contrat_print' contrat.pk %}" target="_blank" class="dropdown-item">
+                                                                    <i class="ri-printer-fill align-bottom me-2 text-muted"></i> Imprimer
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a href="{% url 't_ressource_humaine:manage_rubriques_contrat' contrat.pk %}" class="dropdown-item ajax-modal-trigger">
+                                                                    <i class="ri-settings-4-fill align-bottom me-2 text-muted"></i> Gérer les Primes
+                                                                </a>
+                                                            </li>
+                                                            <li class="dropdown-divider"></li>
+                                                            <li>
+                                                                <a href="{% url 't_ressource_humaine:fiche_paie_list' %}?contrat={{ contrat.pk }}" class="dropdown-item">
+                                                                    <i class="ri-history-fill align-bottom me-2 text-muted"></i> Historique Paie
+                                                                </a>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
@@ -268,8 +312,61 @@
     </div>
 </div>
 
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script>
     $(document).ready(function() {
+        // Initialize Tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Initialize DataTable
+        var table = $('#contratsTable').DataTable({
+            language: {
+                "sProcessing":     "Traitement en cours...",
+                "sSearch":         "Rechercher&nbsp;:",
+                "sLengthMenu":     "Afficher _MENU_ entrées",
+                "sInfo":           "Affichage de _START_ à _END_ sur _TOTAL_ entrées",
+                "sInfoEmpty":      "Affichage de 0 à 0 sur 0 entrée",
+                "sInfoFiltered":   "(filtré de _MAX_ entrées au total)",
+                "sInfoPostFix":    "",
+                "sLoadingRecords": "Chargement en cours...",
+                "sZeroRecords":    "Aucun contrat trouvé",
+                "sEmptyTable":     "Aucun contrat disponible",
+                "oPaginate": {
+                    "sFirst":      "Premier",
+                    "sPrevious":   "Précédent",
+                    "sNext":       "Suivant",
+                    "sLast":       "Dernier"
+                },
+                "oAria": {
+                    "sSortAscending":  ": activer pour trier par ordre croissant",
+                    "sSortDescending": ": activer pour trier par ordre décroissant"
+                }
+            },
+            dom: "<'row'<'col-sm-12'tr>>" +
+                 "<'row mt-3 align-items-center'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+            pageLength: 10,
+            order: [], // Let the server/default order remain
+            drawCallback: function() {
+                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            }
+        });
+
+        // Custom Filters for DataTables
+        $('#customSearchBox').on('keyup', function() {
+            table.search(this.value).draw();
+        });
+        
+        $('#customLengthSelect').on('change', function() {
+            table.page.len(this.value).draw();
+        });
+
         // Fix dropdown clipping in responsive tables
         $(document).on('show.bs.dropdown', function(e) {
             var dropdownMenu = $(e.target).find('.dropdown-menu');
