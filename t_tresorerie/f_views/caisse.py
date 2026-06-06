@@ -257,6 +257,8 @@ def brouillard_banck_json(request):
 
     # ---- 1. Paiements (Entrées en banque) ----
     paiements = Paiements.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).values(
+        item_id=F('pk'),
+        model_type=Value('paiement', output_field=CharField()),
         nom=F('paiement_label'),
         date=F('date_paiement'),
         mouvement_montant=Coalesce(F('montant_paye'), Value(0, output_field=models.DecimalField())),
@@ -279,6 +281,8 @@ def brouillard_banck_json(request):
     # ---- 1b. AutreProduit (Entrées en banque) ----
     autres_produits = AutreProduit.objects.filter(mode_paiement__in=['che', 'vir'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).values(
         'reference',
+        item_id=F('pk'),
+        model_type=Value('autre_produit', output_field=CharField()),
         nom=F('label'),
         date=F('date_paiement'),
         mouvement_montant=Coalesce(F('montant_paiement'), Value(0, output_field=models.DecimalField())),
@@ -299,6 +303,8 @@ def brouillard_banck_json(request):
     if ConseilPaiement:
         consulting_paiements = ConseilPaiement.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).values(
             'reference',
+            item_id=F('pk'),
+            model_type=Value('conseil_paiement', output_field=CharField()),
             nom=Value('Paiement Facture', output_field=CharField()),
             date=F('date_paiement'),
             mouvement_montant=Coalesce(F('montant'), Value(0, output_field=models.DecimalField())),
@@ -317,6 +323,8 @@ def brouillard_banck_json(request):
     # ---- 2. Dépenses (Sorties en banque) ----
     depenses = Depenses.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date, etat=True).order_by('date_paiement').exclude(date_paiement__isnull=True).values(
         'reference',
+        item_id=F('pk'),
+        model_type=Value('depense', output_field=CharField()),
         nom=F('label'),
         date=F('date_paiement'),
         mouvement_montant=Coalesce(F('montant_ttc'), F('montant_ht'), Value(0, output_field=models.DecimalField())),
@@ -336,6 +344,8 @@ def brouillard_banck_json(request):
 
     # ---- 2b. Dépôts en Banque (Entrées) ----
     depots_banque = DepotBanque.objects.filter(date_depot__gte=start_date, date_depot__lte=end_date).values(
+        item_id=F('pk'),
+        model_type=Value('depot_banque', output_field=CharField()),
         nom=Value('Dépôt en Banque', output_field=CharField()),
         date=F('date_depot'),
         mouvement_montant=Coalesce(F('montant'), Value(0, output_field=models.DecimalField())),
@@ -366,6 +376,8 @@ def brouillard_banck_json(request):
             solde -= montant
 
         results.append({
+            "item_id": mv.get('item_id'),
+            "model_type": mv.get('model_type'),
             "date": mv['date'],
             "type": mv['type'],
             "nom": mv['nom'],

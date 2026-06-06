@@ -2070,6 +2070,7 @@ def review_extension(request, request_id):
         'ext_request': ext_request,
         'items': items,
         'entreprise_map': entreprise_map,
+        'total_requested': sum(item.requested_amount for item in items),
     }
     context['title'] = f'Révision de Rallonge - {ext_request.institut.nom}'
     return render(request, 'associe_app/review_extension.html', context)
