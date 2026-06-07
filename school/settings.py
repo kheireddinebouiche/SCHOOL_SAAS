@@ -361,4 +361,8 @@ TINYMCE_DEFAULT_CONFIG = {
     'forced_root_block': False,  
 }
 
+# Configuration de la taille maximale d'upload
+DATA_UPLOAD_MAX_MEMORY_SIZE = 524288000  # 500 MB (utile si fichier inclus en base64 / formData)
+FILE_UPLOAD_MAX_MEMORY_SIZE = 524288000  # 500 MB (taille limite avant écriture sur disque temporaire)
+
 # Trigger reload
