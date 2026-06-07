@@ -1432,6 +1432,10 @@ def my_budget_campaigns(request):
     }
     return render(request, 'tenant_folder/budget/my_campaigns.html', context)
 @login_required(login_url="institut_app:login")
+@module_permission_required('ger','view')
+@module_permission_required('ger','add')
+@module_permission_required('ger','change')
+@role_required('ger', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def budget_campaign_dispatch(request, campaign_slug):
     """
     Matrix view for tenants to dispatch their global budget objective 
@@ -1706,6 +1710,10 @@ def budget_campaign_dispatch(request, campaign_slug):
     return render(request, 'tenant_folder/budget/dispatch_budget.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('ger','view')
+@module_permission_required('ger','add')
+@module_permission_required('ger','change')
+@role_required('ger', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def request_extension(request, campaign_slug):
     """
     View for institutes to request a budget extension (rallonge).
@@ -1884,6 +1892,10 @@ def request_extension(request, campaign_slug):
     return render(request, 'tenant_folder/budget/request_extension.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('ger','view')
+@module_permission_required('ger','add')
+@module_permission_required('ger','change')
+@role_required('ger', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def budget_campaign_realization(request, campaign_slug):
     """
     Matrix view for tracking budget realization: shows planned allocations vs realized expenses/payments.

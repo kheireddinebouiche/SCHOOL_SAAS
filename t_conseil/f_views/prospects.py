@@ -8,6 +8,7 @@ from t_crm.models import Prospets
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ApiListeProspect(request):
     liste = Prospets.objects.filter(type_prospect="entreprise", context="con", is_client=False).values('id','slug','nom','prenom','etat','entreprise','poste_dans_entreprise','observation','context','created_at','telephone','email')
     return JsonResponse(list(liste), safe=False)
