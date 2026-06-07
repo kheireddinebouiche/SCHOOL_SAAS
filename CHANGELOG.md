@@ -15,6 +15,10 @@ Ce fichier recense toutes les modifications, corrections de bugs et nouvelles fo
   - **Relance d'annonce** : Ajout d'un bouton "Relancer" permettant de réinitialiser l'historique de lecture d'une annonce spécifique et de forcer sa réapparition en temps réel chez tous les utilisateurs ciblés.
   - **Suivi de lecture** : Affichage d'une modale pour les utilisateurs ciblés. Un système de validation ("J'ai lu cette annonce") enregistre la confirmation en base de données (`AnnouncementRead`) pour désactiver l'affichage.
 
+- **SaaS Admin / Centre de Connaissance** :
+  - Suppression de la mention de limitation de taille de fichier pour l'upload.
+  - Ajout du support de lecture des vidéos (MP4) hébergées localement directement depuis le modal vidéo existant.
+
 - **Trésorerie / Modèles d'échéancier** :
   - **Frais d'inscription** : Ajout de la possibilité d'activer/désactiver la configuration des frais d'inscription au niveau du modèle d'échéancier (`ModelEcheancier.has_frais_inscription`).
   - **Interface utilisateur** : Intégration de toggles "Activer la configuration des frais d'inscription" dans les formulaires de création et de modification des modèles d'échéancier (`gestion_echeancier.html`).
