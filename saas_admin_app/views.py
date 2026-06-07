@@ -22,7 +22,7 @@ from t_formations.models import Formation, Specialites, DossierInscription
 from t_formations.sync_utils import sync_formation_to_tenant
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth import get_user_model
-from .models import DatabaseBackup, SaaSEmailConfiguration, SaaSMaintenanceConfiguration, SaaSGlobalConfiguration
+from .models import DatabaseBackup, SaaSEmailConfiguration, SaaSMaintenanceConfiguration, SaaSGlobalConfiguration, SystemAnnouncement, AnnouncementRead
 from .utils_backup import perform_backup, perform_restore
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
@@ -3129,4 +3129,209 @@ def saas_changelog_action_view(request):
             uid = request.POST.get('id')
             SystemUpdate.objects.filter(id=uid).delete()
             return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'})
+
+# ==========================================
+# GESTION DES ANNONCES SAAS
+# ==========================================
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def saas_announcements_view(request):
+    """Vue pour lister et créer les annonces."""
+    User = get_user_model()
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        message = request.POST.get('message')
+        target_type = request.POST.get('target_type')
+        is_active = request.POST.get('is_active') == 'true'
+        
+        target_tenant_id = request.POST.get('target_tenant')
+        target_user_id = request.POST.get('target_user')
+        
+        target_tenant = None
+        if target_type in ['tenant', 'user'] and target_tenant_id:
+            target_tenant = Institut.objects.filter(id=target_tenant_id).first()
+            
+        target_user = None
+        if target_type == 'user' and target_user_id:
+            target_user = User.objects.filter(id=target_user_id).first()
+            
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        announcement = SystemAnnouncement.objects.create(
+            title=title,
+            message=message,
+            target_type=target_type,
+            target_tenant=target_tenant,
+            target_user=target_user,
+            is_active=is_active
+        )
+        
+        # Envoi WebSocket si actif
+        if is_active:
+            channel_layer = get_channel_layer()
+            event_data = {
+                'type': 'send_notification',
+                'message': 'Nouvelle annonce système : ' + title,
+                'extra_data': 'announcement_trigger'
+            }
+            if target_type == 'all':
+                async_to_sync(channel_layer.group_send)('global_all_users', event_data)
+            elif target_type == 'tenant' and target_tenant:
+                async_to_sync(channel_layer.group_send)(f"{target_tenant.schema_name}_all_users", event_data)
+            elif target_type == 'user' and target_tenant and target_user:
+                async_to_sync(channel_layer.group_send)(f"{target_tenant.schema_name}_user_{target_user.id}", event_data)
+
+        return JsonResponse({'status': 'success', 'message': 'Annonce créée avec succès.'})
+
+    announcements = SystemAnnouncement.objects.all().order_by('-created_at')
+    tenants = Institut.objects.filter(schema_name__startswith='t_')
+    
+    context = {
+        'announcements': announcements,
+        'tenants': tenants,
+    }
+    return render(request, 'saas_admin_app/saas_announcements.html', context)
+
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+def ApiGetTenantUsers(request):
+    """API pour récupérer les utilisateurs d'un tenant spécifique."""
+    User = get_user_model()
+    tenant_id = request.GET.get('tenant_id')
+    if tenant_id:
+        tenant = Institut.objects.filter(id=tenant_id).first()
+        if tenant:
+            # Pour trouver les utilisateurs, il faut changer de schéma
+            with tenant_context(tenant):
+                # Normalement on prend les utilisateurs qui ont accès au tenant
+                # Par simplification on suppose que l'utilisateur est dans la bdd du tenant
+                users = User.objects.all().values('id', 'username', 'first_name', 'last_name')
+                user_list = list(users)
+            return JsonResponse({'status': 'success', 'users': user_list})
+    return JsonResponse({'status': 'error', 'message': 'Tenant introuvable'})
+
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+@require_POST
+def ApiToggleAnnouncementStatus(request):
+    """API pour activer/désactiver une annonce."""
+    announcement_id = request.POST.get('id')
+    is_active = request.POST.get('is_active') == 'true'
+    ann = SystemAnnouncement.objects.filter(id=announcement_id).first()
+    if ann:
+        ann.is_active = is_active
+        ann.save()
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'})
+
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+@require_POST
+def ApiDeleteAnnouncement(request):
+    """API pour supprimer une annonce."""
+    announcement_id = request.POST.get('id')
+    ann = SystemAnnouncement.objects.filter(id=announcement_id).first()
+    if ann:
+        ann.delete()
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'})
+
+@user_passes_test(superadmin_only, login_url='/saas-admin/login/')
+@require_POST
+def ApiResendAnnouncement(request):
+    """API pour relancer une annonce (réinitialise les lectures et renvoie le websocket)."""
+    announcement_id = request.POST.get('id')
+    ann = SystemAnnouncement.objects.filter(id=announcement_id).first()
+    if ann:
+        # Réinitialiser toutes les lectures
+        AnnouncementRead.objects.filter(announcement=ann).delete()
+        
+        # S'assurer qu'elle est active
+        if not ann.is_active:
+            ann.is_active = True
+            ann.save()
+            
+        # Renvoyer le websocket
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        channel_layer = get_channel_layer()
+        event_data = {
+            'type': 'send_notification',
+            'message': 'Nouvelle annonce système : ' + ann.title,
+            'extra_data': 'announcement_trigger'
+        }
+        if ann.target_type == 'all':
+            async_to_sync(channel_layer.group_send)('global_all_users', event_data)
+        elif ann.target_type == 'tenant' and ann.target_tenant:
+            async_to_sync(channel_layer.group_send)(f"{ann.target_tenant.schema_name}_all_users", event_data)
+        elif ann.target_type == 'user' and ann.target_tenant and ann.target_user:
+            async_to_sync(channel_layer.group_send)(f"{ann.target_tenant.schema_name}_user_{ann.target_user.id}", event_data)
+            
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'})
+
+# ==========================================
+# ENDPOINT UTILISATEUR POUR LES ANNONCES
+# ==========================================
+
+from django.db.models import Q
+
+def ApiGetActiveAnnouncement(request):
+    """API appelée par les utilisateurs pour vérifier s'il y a une annonce."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': 'Not logged in'})
+
+    # On utilise connection.tenant pour avoir le tenant actuel s'il existe
+    current_tenant = getattr(connection, 'tenant', None)
+    
+    # Récupérer les IDs des annonces déjà lues par cet utilisateur
+    read_announcement_ids = AnnouncementRead.objects.filter(user=request.user).values_list('announcement_id', flat=True)
+
+    query = Q(is_active=True) & ~Q(id__in=read_announcement_ids)
+    
+    # Condition : Soit cible='all', 
+    # soit cible='tenant' et le tenant correspond, 
+    # soit cible='user' et l'utilisateur correspond.
+    
+    target_conditions = Q(target_type='all')
+    
+    if current_tenant and current_tenant.schema_name != 'public':
+        target_conditions |= Q(target_type='tenant', target_tenant=current_tenant)
+        target_conditions |= Q(target_type='user', target_tenant=current_tenant, target_user=request.user)
+    else:
+        # Pour le public schema (superadmin)
+        target_conditions |= Q(target_type='user', target_user=request.user)
+        
+    announcement = SystemAnnouncement.objects.filter(query & target_conditions).order_by('-created_at').first()
+
+    if announcement:
+        return JsonResponse({
+            'status': 'success',
+            'announcement': {
+                'id': announcement.id,
+                'title': announcement.title,
+                'message': announcement.message,
+                'date': announcement.created_at.strftime("%d/%m/%Y"),
+            }
+        })
+        
+    return JsonResponse({'status': 'none'})
+
+@require_POST
+def ApiMarkAnnouncementRead(request):
+    """API pour marquer une annonce comme lue."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error'})
+        
+    announcement_id = request.POST.get('announcement_id')
+    announcement = SystemAnnouncement.objects.filter(id=announcement_id).first()
+    if announcement:
+        AnnouncementRead.objects.get_or_create(
+            announcement=announcement,
+            user=request.user
+        )
+        return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error'})

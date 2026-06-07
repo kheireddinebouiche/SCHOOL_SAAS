@@ -1,10 +1,29 @@
 # Ã°Å¸â€œï¿½ Journal des Mises ÃƒÂ  Jour (Changelog)
 
-Ce fichier recense toutes les modifications, corrections de bugs et nouvelles fonctionnalitÃƒÂ©s apportÃƒÂ©es au projet `SCHOOL_SAAS` par l'assistant Antigravity. Ce journal peut ÃƒÂªtre utilisÃƒÂ© pour alimenter la vue "NouveautÃƒÂ©s" des superutilisateurs.
+# 🗓️ Journal des Mises à Jour (Changelog)
+
+Ce fichier recense toutes les modifications, corrections de bugs et nouvelles fonctionnalités apportées au projet `SCHOOL_SAAS` par l'assistant Antigravity. Ce journal peut être utilisé pour alimenter la vue "Nouveautés" des superutilisateurs.
 
 ---
 
 ## [07/06/2026] - v1.2.x - Harmonisation de la configuration Facture
+
+- **SaaS Admin / Notifications Globales** :
+  - **Gestion des annonces** : Création d'une interface superadmin permettant de créer, lister, activer ou supprimer des annonces (`SystemAnnouncement`).
+  - **Ciblage granulaire** : Possibilité de cibler l'ensemble des utilisateurs, un Tenant spécifique, ou un utilisateur précis au sein d'un Tenant.
+  - **Temps Réel via WebSockets (Channels)** : Intégration au `NotificationConsumer` existant pour diffuser instantanément les annonces (`announcement_trigger`) sans rafraîchissement de page ni appels AJAX périodiques. Groupes de diffusions optimisés (`global_all_users`, `{schema_name}_all_users`).
+  - **Relance d'annonce** : Ajout d'un bouton "Relancer" permettant de réinitialiser l'historique de lecture d'une annonce spécifique et de forcer sa réapparition en temps réel chez tous les utilisateurs ciblés.
+  - **Suivi de lecture** : Affichage d'une modale pour les utilisateurs ciblés. Un système de validation ("J'ai lu cette annonce") enregistre la confirmation en base de données (`AnnouncementRead`) pour désactiver l'affichage.
+
+- **Trésorerie / Modèles d'échéancier** :
+  - **Frais d'inscription** : Ajout de la possibilité d'activer/désactiver la configuration des frais d'inscription au niveau du modèle d'échéancier (`ModelEcheancier.has_frais_inscription`).
+  - **Interface utilisateur** : Intégration de toggles "Activer la configuration des frais d'inscription" dans les formulaires de création et de modification des modèles d'échéancier (`gestion_echeancier.html`).
+  - **Assistant d'échéancier** : Conditionnement de l'affichage et de l'obligation de saisie du montant des frais d'inscription et de l'entité associée dans le formulaire de création d'échéancier (`creer-un-echeancier.html`), selon la configuration du modèle choisi.
+
+- **CRM / Double Diplomation** :
+  - **Modification des Voeux** : Résolution du bug empêchant la modification des voeux (bouton "Mettre à jour") pour les prospects en double cursus, notamment ceux ayant été annulés ou modifiés sans changement de formation (récupération directe de `id_formation` via `#formation_voeux`).
+  - **Changement de Cursus** : Correction d'une erreur 500 (`FicheVoeuxDouble.DoesNotExist`) survenant lors du passage d'un cursus double à un cursus standard, particulièrement pour les prospects annulés ayant des fiches de voeux déjà confirmées.
+  - **Réinitialisation des Voeux** : Ajout d'un nouveau mécanisme (bouton et modale de confirmation) permettant de supprimer complètement les fiches de vœux d'un prospect (double et standard) et de réinitialiser son orientation.
 
 - **Facturation (Conseil)** :
   - **Design & UI** : Harmonisation complète de la page `configure-facture.html` pour correspondre au design premium de `configure-devis.html`. Modification de la structure de la grille pour utiliser une barre latérale droite fixe (`.col-lg-4`) pour le récapitulatif, et une colonne principale (`.col-lg-8`) pour les informations générales, la liste des articles et les modalités. Adaptation du code JavaScript de génération du récapitulatif financier pour utiliser des éléments HTML `<div class="d-flex ...">` à la place de `<tr>`, afin de correspondre visuellement aux totaux du devis.

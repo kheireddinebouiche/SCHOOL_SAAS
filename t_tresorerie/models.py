@@ -217,6 +217,7 @@ class ModelEcheancier(models.Model):
     description = models.CharField(max_length=1000, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_double_diplomation = models.BooleanField(default=False)
+    has_frais_inscription = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now_add=True)

@@ -172,6 +172,9 @@
                                 <div class="d-flex align-items-center justify-content-between mb-4">
                                     <h5 class="fw-bold mb-0 text-dark">Orientation (Double Diplôme)</h5>
                                     <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-soft-danger btn-sm rounded-pill px-3" id="resetVoeuxBtn">
+                                            <i class="ri-delete-bin-line me-1"></i> Réinitialiser voeux
+                                        </button>
                                         <button type="button" class="btn btn-soft-info btn-sm rounded-pill px-3" id="editVoeuxBtn">
                                             <i class="ri-edit-line me-1"></i> Modifier voeux
                                         </button>
@@ -1352,6 +1355,33 @@
                 </div>
             </div>
 
+            <!-- Modal Réinitialiser Voeux -->
+            <div class="modal fade" id="resetVoeuxModal" tabindex="-1" aria-labelledby="resetVoeuxModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content premium-card border-0 shadow-lg">
+                        <div class="modal-header border-bottom pb-3">
+                            <h5 class="modal-title fw-bold text-danger" id="resetVoeuxModalLabel">
+                                <i class="ri-alert-line me-2"></i>Réinitialiser les vœux
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4 text-center">
+                            <div class="mb-3 text-danger">
+                                <i class="ri-error-warning-line" style="font-size: 3rem;"></i>
+                            </div>
+                            <h5 class="fw-bold mb-3">Êtes-vous sûr de vouloir réinitialiser les vœux ?</h5>
+                            <p class="text-muted mb-0">Cette action va supprimer complètement la fiche de vœux et ramener le prospect à l'état visiteur. Cette action est <strong>irréversible</strong>.</p>
+                        </div>
+                        <div class="modal-footer border-top pt-3">
+                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+                            <button type="button" class="btn btn-danger rounded-pill px-4" id="confirmResetVoeuxBtn">
+                                <i class="ri-delete-bin-line me-1"></i> Confirmer la réinitialisation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Modal Formations Supplémentaires -->
             <div class="modal fade" id="voeuxSuppModal" tabindex="-1" aria-labelledby="voeuxSuppModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -2040,6 +2070,9 @@
                 if ($('#editVoeuxBtn').length) {
                     $('#editVoeuxBtn').prop('disabled', true).prop('hidden', true).hide();
                 }
+                if ($('#resetVoeuxBtn').length) {
+                    $('#resetVoeuxBtn').prop('disabled', true).prop('hidden', true).hide();
+                }
                 if ($('#inscriptionCursusBtn').length) {
                     $('#inscriptionCursusBtn').prop('hidden', true).hide();
                 }
@@ -2051,6 +2084,9 @@
                 if ($('#editVoeuxBtn').length) {
                     $('#editVoeuxBtn').prop('disabled', true).prop('hidden', true).hide();
                 }
+                if ($('#resetVoeuxBtn').length) {
+                    $('#resetVoeuxBtn').prop('disabled', true).prop('hidden', true).hide();
+                }
                 if ($('#inscriptionCursusBtn').length) {
                     $('#inscriptionCursusBtn').prop('hidden', true).hide();
                 }
@@ -2059,8 +2095,11 @@
             } else if (isSimpleCancelled) {
                 $('#validateProspectBtn').prop('hidden', false).show();
                 $('#udapteProspectDetailsBtn').prop('hidden', false).show();
-                if ($('#editVoeuxBtn').length) {
+                if ($('#editVoeuxBtn').length && has_voeux !== false) {
                     $('#editVoeuxBtn').prop('disabled', false).prop('hidden', false).show();
+                }
+                if ($('#resetVoeuxBtn').length && has_voeux !== false) {
+                    $('#resetVoeuxBtn').prop('disabled', false).prop('hidden', false).show();
                 }
                 if ($('#inscriptionCursusBtn').length) {
                     $('#inscriptionCursusBtn').prop('hidden', false).show();
@@ -2070,8 +2109,11 @@
             } else {
                 $('#validateProspectBtn').prop('hidden', false).show();
                 $('#udapteProspectDetailsBtn').prop('hidden', false).show();
-                if ($('#editVoeuxBtn').length) {
+                if ($('#editVoeuxBtn').length && has_voeux !== false) {
                     $('#editVoeuxBtn').prop('disabled', false).prop('hidden', false).show();
+                }
+                if ($('#resetVoeuxBtn').length && has_voeux !== false) {
+                    $('#resetVoeuxBtn').prop('disabled', false).prop('hidden', false).show();
                 }
                 if ($('#inscriptionCursusBtn').length) {
                     $('#inscriptionCursusBtn').prop('hidden', false).show();
@@ -2412,10 +2454,12 @@
                 success : function(response){
                     if (response.status == "success"){
                         document.getElementById('editVoeuxBtn').hidden = false
+                        if(document.getElementById('resetVoeuxBtn')) document.getElementById('resetVoeuxBtn').hidden = false
                         has_voeux=true
                        
                     }else{
                         document.getElementById('editVoeuxBtn').hidden = true
+                        if(document.getElementById('resetVoeuxBtn')) document.getElementById('resetVoeuxBtn').hidden = true
                         has_voeux=false
                         
                     }
@@ -2816,6 +2860,41 @@
             })
         });
 
+        // Gestion de la réinitialisation des voeux
+        $(document).on('click', '#resetVoeuxBtn', function(){
+            $('#resetVoeuxModal').modal('show');
+        });
+
+        $(document).on('click', '#confirmResetVoeuxBtn', function(){
+            var btn = $(this);
+            btn.prop('disabled', true).html('<i class="ri-loader-4-line spinner"></i> Patientez...');
+            $.ajax({
+                url: "{% url 't_crm:ApiResetVoeuxProspectDouble' %}",
+                type: "POST",
+                dataType: "JSON",
+                data: {
+                    'id_prospect': id,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response){
+                    if(response.status === "success"){
+                        alertify.success(response.message || "Fiche de voeux réinitialisée avec succès");
+                        $('#resetVoeuxModal').modal('hide');
+                        setTimeout(function(){
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        alertify.error(response.message || "Une erreur est survenue.");
+                        btn.prop('disabled', false).html('<i class="ri-delete-bin-line me-1"></i> Confirmer la réinitialisation');
+                    }
+                },
+                error: function(){
+                    alertify.error("Erreur serveur lors de la réinitialisation");
+                    btn.prop('disabled', false).html('<i class="ri-delete-bin-line me-1"></i> Confirmer la réinitialisation');
+                }
+            });
+        });
+
         // Gestion de la modification des voeux
         $(document).on('click', '#editVoeuxBtn', function(){
             var id_voeux = $(this).data('id');
@@ -3041,7 +3120,7 @@
             var commentaires = $('#commentaires_voeux').val();
             var promo  = $('#promo_voeux').val();
             var id_voeux = $(this).data('id');
-            var id_formation = $(this).data('id-formation');
+            var id_formation = $('#formation_voeux').val();
             $.ajax({
                 url : "{% url 't_crm:ApiUpdateDoubleVoeux' %}",
                 dataType: "JSON",

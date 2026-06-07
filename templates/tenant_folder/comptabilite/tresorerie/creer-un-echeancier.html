@@ -608,13 +608,13 @@
                           <div class="form-text">Sélectionnez un modèle d'échéancier existant</div>
                         </div>
                         <div class="row g-3 mb-3">
-                            <div class="col-lg-4">
+                            <div class="col-lg-4" id="fraisInscriptionContainer" style="display:none;">
                                 <label class="form-label fw-medium" for="frais_inscription">Frais d'inscription</label>
-                                <input type="number" step="0.1" class="form-control py-2" id="frais_inscription">
+                                <input type="number" step="0.1" class="form-control py-2" id="frais_inscription" value="0">
                                 <div class="form-text">Montant des frais</div>
                             </div>
 
-                            <div class="col-lg-4">
+                            <div class="col-lg-4" id="entiteFraisContainer" style="display:none;">
                                 <label class="form-label fw-medium" for="entiteEcheancier">Entité (Frais d'inscription)</label>
                                 <select class="form-select py-2" id="entiteEcheancier" name="entite">
                                     <option value="">Sélectionnez l'entité</option>
@@ -1025,7 +1025,7 @@ $(document).ready(function () {
                     var typeLabel = item.is_double_diplomation ? "Double" : "Standard";
                     var promoDisplay = item.promo__label || item.promo__code || "Sans promo";
                     var displayText = item.label + " [" + promoDisplay + "] - " + typeLabel;
-                    option += "<option value='"+item.id+"' data-is-double-diplomation='"+item.is_double_diplomation+"'>"+displayText+"</option>";
+                    option += "<option value='"+item.id+"' data-is-double-diplomation='"+item.is_double_diplomation+"' data-has-frais='"+item.has_frais_inscription+"'>"+displayText+"</option>";
                 });
                 $('#modeleEcheancier').html(option);
             },
@@ -1057,6 +1057,7 @@ $(document).ready(function () {
     // Initialiser les données
     // Variable globale pour suivre l'état du mode double diplomation
     var isDoubleDiplomationMode = false;
+    var hasFraisMode = false;
     var globalSpecialites = [];
     var hasPriceDifferences = false;
 
@@ -1481,9 +1482,24 @@ $(document).ready(function () {
     $('#modeleEcheancier').on('change', function() {
         var selectedOption = $(this).find('option:selected');
         var isDoubleDiplomation = selectedOption.data('is-double-diplomation');
+        var hasFrais = selectedOption.data('has-frais');
 
         // Mettre à jour la variable globale
         isDoubleDiplomationMode = isDoubleDiplomation;
+        hasFraisMode = (hasFrais === true || hasFrais === "true" || hasFrais === "True");
+
+        if (hasFraisMode) {
+            $('#fraisInscriptionContainer').show();
+            $('#entiteFraisContainer').show();
+            if ($('#frais_inscription').val() === '0') {
+                $('#frais_inscription').val('');
+            }
+        } else {
+            $('#fraisInscriptionContainer').hide();
+            $('#entiteFraisContainer').hide();
+            $('#frais_inscription').val('0');
+            $('#entiteEcheancier').val('');
+        }
 
         if (isDoubleDiplomation) {
             $('#formationField').hide();
@@ -1835,20 +1851,22 @@ $(document).ready(function () {
             return;
         }
 
-        if(!entite) {
-            alertify.error("Veuillez sélectionner l'entité d'encaissement");
-            return;
+        if (hasFraisMode) {
+            if(!entite) {
+                alertify.error("Veuillez sélectionner l'entité d'encaissement pour les frais d'inscription");
+                return;
+            }
+
+            if (!frais_inscription && frais_inscription !== "0"){
+              alertify.error("Veuillez donner le montant des frais d'inscription");
+              return;
+            }
         }
 
         // Vérifier la formation seulement si ce n'est pas un mode double diplomation
         if (!isDoubleDiplomationMode && !formationId) {
             alertify.error("Veuillez sélectionner une formation");
             return;
-        }
-
-        if (!frais_inscription){
-          alertify.error("Veuillez donner le montant des frais d'inscription");
-          return;
         }
         
         // Récupérer les données des tranches

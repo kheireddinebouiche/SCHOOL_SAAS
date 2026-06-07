@@ -23,7 +23,9 @@ from .views import (
     api_tenant_formations_list_view, api_tenant_delete_formation_view,
     api_tenant_delete_specialite_view,
     saas_export_prospects_view, saas_force_user_password_change_view,
-    saas_reset_tresorerie_view
+    saas_reset_tresorerie_view,
+    saas_announcements_view, ApiGetTenantUsers, ApiToggleAnnouncementStatus,
+    ApiDeleteAnnouncement, ApiResendAnnouncement, ApiGetActiveAnnouncement, ApiMarkAnnouncementRead
 )
 
 app_name = 'saas_admin_app'
@@ -92,4 +94,13 @@ urlpatterns = [
     path('api/tenant/<int:tenant_id>/reset-tresorerie/', saas_reset_tresorerie_view, name='saas_reset_tresorerie_action'),
     path('changelog/', saas_changelog_view, name='saas_changelog'),
     path('changelog/action/', saas_changelog_action_view, name='saas_changelog_action'),
+
+    # Annonces SaaS
+    path('announcements/', saas_announcements_view, name='saas_announcements'),
+    path('api/tenant-users/', ApiGetTenantUsers, name='ApiGetTenantUsers'),
+    path('api/announcements/toggle/', ApiToggleAnnouncementStatus, name='ApiToggleAnnouncementStatus'),
+    path('api/announcements/delete/', ApiDeleteAnnouncement, name='ApiDeleteAnnouncement'),
+    path('api/announcements/resend/', ApiResendAnnouncement, name='ApiResendAnnouncement'),
+    path('api/announcements/active/', ApiGetActiveAnnouncement, name='ApiGetActiveAnnouncement'),
+    path('api/announcements/mark-read/', ApiMarkAnnouncementRead, name='ApiMarkAnnouncementRead'),
 ]

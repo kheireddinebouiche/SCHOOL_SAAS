@@ -19,7 +19,7 @@ def ApiLoadModelEcheancier(request):
     if promo_id and promo_id != '0':
         query = query.filter(promo_id=promo_id)
         
-    liste = query.values('id','promo__label','promo__code','promo__id','promo','promo__begin_year','promo__end_year','nombre_tranche','label','created_at','is_active','is_double_diplomation')
+    liste = query.values('id','promo__label','promo__code','promo__id','promo','promo__begin_year','promo__end_year','nombre_tranche','label','created_at','is_active','is_double_diplomation','has_frais_inscription')
     for i in liste:
         i_obj = ModelEcheancier.objects.get(id = i['id'])
         i['promo_session_label'] = i_obj.promo.get_session_display()
@@ -327,10 +327,14 @@ def ApiSaveModeleEcheancier(request):
         nbtranche = request.POST.get('nbtranche')
         doubleDiplomation = request.POST.get('doubleDiplomation')
 
+        hasFraisInscription = request.POST.get('hasFraisInscription')
+
         if doubleDiplomation == "true":
             double = True
         else:
             double = False
+
+        has_frais = hasFraisInscription == "true"
 
         try:
             promo_obj = Promos.objects.get(id=promo)
@@ -341,7 +345,8 @@ def ApiSaveModeleEcheancier(request):
                 promo = promo_obj,
                 nombre_tranche = nbtranche,
                 description = description,
-                is_double_diplomation = double
+                is_double_diplomation = double,
+                has_frais_inscription = has_frais
             )
 
             return JsonResponse({"status" : 'success'})
@@ -372,6 +377,7 @@ def ApiLoadModeleEcheancierDetails(request):
             'description': model.description,
             'is_active': model.is_active,
             'double_diplomation' : model.is_double_diplomation,
+            'has_frais_inscription' : model.has_frais_inscription,
             'created_at': model.created_at.strftime('%d/%m/%Y') if model.created_at else ''
         }
 
@@ -390,6 +396,7 @@ def ApiUpdateModeleEcheancier(request):
     description = request.POST.get('description')
     nbtranche = request.POST.get('nbtranche')
     doubleDiplomation = request.POST.get('doubleDiplomation')
+    hasFraisInscription = request.POST.get('hasFraisInscription')
 
     modelEcheance = ModelEcheancier.objects.get(id = echeancierId)
 
@@ -402,6 +409,7 @@ def ApiUpdateModeleEcheancier(request):
         modelEcheance.description = description
         modelEcheance.nombre_tranche = nbtranche
         modelEcheance.is_double_diplomation = doubleDiplomation == "true"
+        modelEcheance.has_frais_inscription = hasFraisInscription == "true"
 
         modelEcheance.save()
 

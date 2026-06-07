@@ -111,6 +111,114 @@
         <script src="{% static 'design/assets/js/session_lock.js' %}?v=1.7"></script>
     {% endif %}
 
+    <!-- Modal Annonce Globale Modernisée -->
+    <div class="modal fade" id="globalAnnouncementModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);">
+                <div class="position-relative text-center pt-5 pb-4" style="background-color: #f8f9fa;">
+                    <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(135deg, rgba(13, 110, 253, 0.05) 0%, rgba(13, 202, 240, 0.05) 100%);"></div>
+                    <div class="d-inline-flex align-items-center justify-content-center bg-white text-primary rounded-circle shadow mb-3 position-relative" style="width: 80px; height: 80px; z-index: 1;">
+                        <i class="ri-notification-3-line fs-1" style="color: #0d6efd;"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger border border-light rounded-circle animate-pulse">
+                            <span class="visually-hidden">New alerts</span>
+                        </span>
+                    </div>
+                    <h4 class="fw-bold mb-0 px-4 position-relative" id="globalAnnouncementTitle" style="z-index: 1; color: #0d6efd;">Annonce importante</h4>
+                </div>
+                
+                <div class="modal-body p-4 p-md-5 text-center">
+                    <div class="d-inline-flex mb-4 px-3 py-1 bg-light rounded-pill border align-items-center text-muted">
+                        <i class="ri-calendar-event-line me-2" style="color: #0d6efd;"></i>
+                        <small id="globalAnnouncementDate" class="fw-semibold text-uppercase letter-spacing-1"></small>
+                    </div>
+                    
+                    <div id="globalAnnouncementMessage" class="fs-15 text-secondary lh-lg mb-0 text-start bg-white p-4 rounded-3 border" style="white-space: pre-wrap; font-weight: 500;"></div>
+                </div>
+                
+                <div class="modal-footer border-0 pb-4 pt-0 justify-content-center bg-transparent">
+                    <button type="button" class="btn btn-lg rounded-pill px-5 shadow-lg fw-semibold w-75 border-0 transition-all text-white" id="markAnnouncementReadBtn" style="background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);">
+                        <i class="ri-check-double-line me-2"></i> J'ai bien lu cette annonce
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .animate-pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(var(--bs-danger-rgb), 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(var(--bs-danger-rgb), 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(var(--bs-danger-rgb), 0); }
+        }
+    </style>
+
+    <script>
+        $(document).ready(function() {
+            {% if request.user.is_authenticated %}
+            var annModal = null;
+
+            function checkAnnouncements() {
+                // Ne pas vérifier si la modale est déjà ouverte
+                if ($('#globalAnnouncementModal').hasClass('show')) {
+                    return;
+                }
+                
+                $.ajax({
+                    url: "{% url 'institut_app:api_get_active_announcement' %}",
+                    type: "GET",
+                    success: function(res) {
+                        if (res.status === 'success' && res.announcement) {
+                            $('#globalAnnouncementTitle').text(res.announcement.title);
+                            $('#globalAnnouncementDate').text(res.announcement.date);
+                            $('#globalAnnouncementMessage').html(res.announcement.message);
+                            $('#markAnnouncementReadBtn').data('id', res.announcement.id);
+                            
+                            if (!annModal) {
+                                annModal = new bootstrap.Modal(document.getElementById('globalAnnouncementModal'));
+                            }
+                            annModal.show();
+                        }
+                    }
+                });
+            }
+
+            // Exposer la fonction pour être appelée par le WebSocket
+            window.checkAnnouncements = checkAnnouncements;
+
+            // Vérifier immédiatement au chargement
+            checkAnnouncements();
+
+            $('#markAnnouncementReadBtn').click(function() {
+                var btn = $(this);
+                var ann_id = btn.data('id');
+                btn.prop('disabled', true).html('<i class="ri-loader-4-line spinner me-2"></i> Traitement...');
+                
+                $.ajax({
+                    url: "{% url 'institut_app:api_mark_announcement_read' %}",
+                    type: "POST",
+                    data: {
+                        'announcement_id': ann_id,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function(res) {
+                        if(res.status === 'success') {
+                            if (annModal) annModal.hide();
+                            else $('#globalAnnouncementModal').modal('hide');
+                        }
+                        btn.prop('disabled', false).html('<i class="ri-check-double-line me-2"></i> J\'ai lu cette annonce');
+                    },
+                    error: function() {
+                        btn.prop('disabled', false).html('<i class="ri-check-double-line me-2"></i> J\'ai lu cette annonce');
+                    }
+                });
+            });
+            {% endif %}
+        });
+    </script>
+
     {% block extra_js %}
     {% endblock %}
 

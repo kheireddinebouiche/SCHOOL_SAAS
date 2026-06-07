@@ -18,7 +18,7 @@ from .f_views.prospects import (
     ApiValidateProspectDouble, ApiUpdateProspectData,
     ApiCreateDoubleDiplomation, ApiLoadFicheVoeuxProspect, ApiLoadFicheVoeuxDoubleProspect,
     ApiConfirmeDoubleDiplome, ApiLoadDoubleDiplomations, ApiLoadDoubleSpecialite,
-    ApiUpdateDoubleVoeux, ApiChangeToStandardCursus,
+    ApiUpdateDoubleVoeux, ApiChangeToStandardCursus, ApiResetVoeuxProspectDouble, ApiResetVoeuxProspect,
     ApiLoadPromos, ApiCheckStatutProspect, ApiLoadFormationAndSpecialite,
     ApiLoadSpecialiteProspect, ApiUpdateVoeux, ApiCreateVoeux,
     ApiLoadNote, ApiStoreNote, ApiDeleteNote, ApiUpdateNote,
@@ -128,6 +128,8 @@ urlpatterns = [
     path('ApiLoadDoubleSpecialite', ApiLoadDoubleSpecialite, name="ApiLoadDoubleSpecialite"),
     path('ApiUpdateDoubleVoeux',ApiUpdateDoubleVoeux, name="ApiUpdateDoubleVoeux"),
     path('ApiChangeToStandardCursus', ApiChangeToStandardCursus, name="ApiChangeToStandardCursus"),
+    path('ApiResetVoeuxProspectDouble', ApiResetVoeuxProspectDouble, name="ApiResetVoeuxProspectDouble"),
+    path('ApiResetVoeuxProspect', ApiResetVoeuxProspect, name="ApiResetVoeuxProspect"),
     ########################################## Fiche des voeux###################################################
     
 

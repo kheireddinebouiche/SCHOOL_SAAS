@@ -151,6 +151,9 @@
                                 <div class="d-flex align-items-center justify-content-between mb-4">
                                     <h5 class="fw-bold mb-0 text-dark">Orientation Académique</h5>
                                     <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-soft-danger btn-sm rounded-pill px-3" id="resetVoeuxBtn">
+                                            <i class="ri-delete-bin-line me-1"></i> Réinitialiser vœux
+                                        </button>
                                         <button type="button" class="btn btn-soft-info btn-sm rounded-pill px-3" id="editVoeuxBtn">
                                             <i class="ri-edit-line me-1"></i> Modifier vœux
                                         </button>
@@ -1000,6 +1003,33 @@
                             </button>
                             <button type="button" class="btn btn-success px-4 py-2" id="confirmValidateReminderBtn">
                                 <i class="ri-check-line me-2"></i>Valider
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Réinitialiser Voeux -->
+            <div class="modal fade" id="resetVoeuxModal" tabindex="-1" aria-labelledby="resetVoeuxModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content premium-card border-0 shadow-lg">
+                        <div class="modal-header border-bottom pb-3">
+                            <h5 class="modal-title fw-bold text-danger" id="resetVoeuxModalLabel">
+                                <i class="ri-alert-line me-2"></i>Réinitialiser les vœux
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4 text-center">
+                            <div class="mb-3 text-danger">
+                                <i class="ri-error-warning-line" style="font-size: 3rem;"></i>
+                            </div>
+                            <h5 class="fw-bold mb-3">Êtes-vous sûr de vouloir réinitialiser les vœux ?</h5>
+                            <p class="text-muted mb-0">Cette action va supprimer complètement la fiche de vœux et ramener le prospect à l'état visiteur. Cette action est <strong>irréversible</strong>.</p>
+                        </div>
+                        <div class="modal-footer border-top pt-3">
+                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+                            <button type="button" class="btn btn-danger rounded-pill px-4" id="confirmResetVoeuxBtn">
+                                <i class="ri-delete-bin-line me-1"></i> Confirmer la réinitialisation
                             </button>
                         </div>
                     </div>
@@ -1971,6 +2001,9 @@
                 if ($('#editVoeuxBtn').length) {
                     $('#editVoeuxBtn').prop('disabled', true).prop('hidden', true).hide();
                 }
+                if ($('#resetVoeuxBtn').length) {
+                    $('#resetVoeuxBtn').prop('disabled', true).prop('hidden', true).hide();
+                }
                 if ($('#inscriptionDoubleDiplomation').length) {
                     $('#inscriptionDoubleDiplomation').prop('hidden', true).hide();
                 }
@@ -1979,8 +2012,11 @@
             } else if (isSimpleCancelled) {
                 $('#validateProspectBtn').prop('hidden', false).show();
                 $('#udapteProspectDetailsBtn').prop('hidden', false).show();
-                if ($('#editVoeuxBtn').length) {
+                if ($('#editVoeuxBtn').length && has_voeux !== false) {
                     $('#editVoeuxBtn').prop('disabled', false).prop('hidden', false).show();
+                }
+                if ($('#resetVoeuxBtn').length && has_voeux !== false) {
+                    $('#resetVoeuxBtn').prop('disabled', false).prop('hidden', false).show();
                 }
                 if ($('#inscriptionDoubleDiplomation').length) {
                     $('#inscriptionDoubleDiplomation').prop('hidden', false).show();
@@ -1990,8 +2026,11 @@
             } else {
                 $('#validateProspectBtn').prop('hidden', false).show();
                 $('#udapteProspectDetailsBtn').prop('hidden', false).show();
-                if ($('#editVoeuxBtn').length) {
+                if ($('#editVoeuxBtn').length && has_voeux !== false) {
                     $('#editVoeuxBtn').prop('disabled', false).prop('hidden', false).show();
+                }
+                if ($('#resetVoeuxBtn').length && has_voeux !== false) {
+                    $('#resetVoeuxBtn').prop('disabled', false).prop('hidden', false).show();
                 }
                 if ($('#inscriptionDoubleDiplomation').length) {
                     $('#inscriptionDoubleDiplomation').prop('hidden', false).show();
@@ -2777,6 +2816,41 @@ loadNotes();
                     }
                 }
             })
+        });
+
+        // Gestion de la réinitialisation des voeux
+        $(document).on('click', '#resetVoeuxBtn', function(){
+            $('#resetVoeuxModal').modal('show');
+        });
+
+        $(document).on('click', '#confirmResetVoeuxBtn', function(){
+            var btn = $(this);
+            btn.prop('disabled', true).html('<i class="ri-loader-4-line spinner"></i> Patientez...');
+            $.ajax({
+                url: "{% url 't_crm:ApiResetVoeuxProspect' %}",
+                type: "POST",
+                dataType: "JSON",
+                data: {
+                    'id_prospect': id,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response){
+                    if(response.status === "success"){
+                        alertify.success(response.message || "Fiche de voeux réinitialisée avec succès");
+                        $('#resetVoeuxModal').modal('hide');
+                        setTimeout(function(){
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        alertify.error(response.message || "Une erreur est survenue.");
+                        btn.prop('disabled', false).html('<i class="ri-delete-bin-line me-1"></i> Confirmer la réinitialisation');
+                    }
+                },
+                error: function(){
+                    alertify.error("Erreur serveur lors de la réinitialisation");
+                    btn.prop('disabled', false).html('<i class="ri-delete-bin-line me-1"></i> Confirmer la réinitialisation');
+                }
+            });
         });
 
         // Gestion de la modification des voeux

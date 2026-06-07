@@ -301,8 +301,9 @@ def ApiChangeToStandardCursus(request):
                 commentaire = commentaires
             )
 
-            fiche_double = FicheVoeuxDouble.objects.get(prospect_id = id_prospect, is_confirmed=False, promo__code = promo)
-            fiche_double.delete()
+            fiche_double = FicheVoeuxDouble.objects.filter(prospect_id=id_prospect)
+            if fiche_double.exists():
+                fiche_double.delete()
 
             prosepect = Prospets.objects.get(id = id_prospect)
             prosepect.is_double = False
@@ -318,12 +319,56 @@ def ApiChangeToStandardCursus(request):
         return JsonResponse({"status":"error"})
 
 @login_required(login_url='institut_app:login')
+def ApiResetVoeuxProspectDouble(request):
+    if request.method == "POST":
+        id_prospect = request.POST.get('id_prospect')
+        if not id_prospect:
+            return JsonResponse({"status":"error", "message":"Identifiant prospect manquant"})
+        
+        try:
+            FicheVoeuxDouble.objects.filter(prospect_id=id_prospect).delete()
+            FicheDeVoeux.objects.filter(prospect_id=id_prospect).delete()
+            
+            prospect = Prospets.objects.get(id=id_prospect)
+            prospect.is_double = False
+            prospect.has_second_wish = False
+            # Optionnel: on peut aussi reinitialiser le statut si besoin
+            # prospect.statut = 'visiteur'
+            prospect.save()
+            
+            messages.success(request, "Les fiches de vœux ont été supprimées et le prospect a été réinitialisé.")
+            return JsonResponse({"status":"success"})
+        except Exception as e:
+            return JsonResponse({"status":"error", "message":str(e)})
+    else:
+        return JsonResponse({"status":"error", "message":"Requête invalide"})
+
+@login_required(login_url='institut_app:login')
 def ApiUpdateFicheVoeuxProspect(request):
     pass
 
 @login_required(login_url='institut_app:login')
-def ApiDeleteFicheVoeuxProspect(request):
-    pass
+def ApiResetVoeuxProspect(request):
+    if request.method == "POST":
+        id_prospect = request.POST.get('id_prospect')
+        if not id_prospect:
+            return JsonResponse({"status":"error", "message":"Identifiant prospect manquant"})
+        
+        try:
+            FicheVoeuxDouble.objects.filter(prospect_id=id_prospect).delete()
+            FicheDeVoeux.objects.filter(prospect_id=id_prospect).delete()
+            
+            prospect = Prospets.objects.get(id=id_prospect)
+            prospect.is_double = False
+            prospect.has_second_wish = False
+            prospect.save()
+            
+            messages.success(request, "Les fiches de vœux ont été supprimées et le prospect a été réinitialisé.")
+            return JsonResponse({"status":"success"})
+        except Exception as e:
+            return JsonResponse({"status":"error", "message":str(e)})
+    else:
+        return JsonResponse({"status":"error", "message":"Requête invalide"})
 
 
 @login_required(login_url='institut_app:login')

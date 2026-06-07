@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.contrib.auth.models import User
 
 class SaaSEmailConfiguration(models.Model):
     """Configuration email globale pour le SaaS Admin (schéma public)."""
@@ -212,3 +213,46 @@ class SystemUpdate(models.Model):
 
     def __str__(self):
         return f"{self.version} - {self.title}"
+
+
+class SystemAnnouncement(models.Model):
+    TARGET_ALL = 'all'
+    TARGET_TENANT = 'tenant'
+    TARGET_USER = 'user'
+    
+    TARGET_CHOICES = [
+        (TARGET_ALL, 'Tous les utilisateurs'),
+        (TARGET_TENANT, 'Utilisateurs d\'un Tenant spécifique'),
+        (TARGET_USER, 'Un utilisateur spécifique dans un Tenant'),
+    ]
+    
+    title = models.CharField(max_length=255, verbose_name="Titre")
+    message = models.TextField(verbose_name="Message")
+    target_type = models.CharField(max_length=20, choices=TARGET_CHOICES, default=TARGET_ALL, verbose_name="Cible")
+    
+    target_tenant = models.ForeignKey('app.Institut', on_delete=models.CASCADE, null=True, blank=True, verbose_name="Tenant ciblé")
+    target_user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur ciblé")
+    
+    is_active = models.BooleanField(default=True, verbose_name="Actif")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Annonce Système"
+        verbose_name_plural = "Annonces Système"
+
+    def __str__(self):
+        return self.title
+
+class AnnouncementRead(models.Model):
+    announcement = models.ForeignKey(SystemAnnouncement, on_delete=models.CASCADE, related_name='reads')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    read_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('announcement', 'user')
+        verbose_name = "Lecture d'annonce"
+        verbose_name_plural = "Lectures d'annonces"
+
+    def __str__(self):
+        return f"{self.user.username} a lu '{self.announcement.title}'"

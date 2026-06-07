@@ -14,6 +14,16 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 self.group_name,
                 self.channel_name
             )
+            # Add to tenant-wide group
+            await self.channel_layer.group_add(
+                f"{self.schema_name}_all_users",
+                self.channel_name
+            )
+            # Add to global group
+            await self.channel_layer.group_add(
+                "global_all_users",
+                self.channel_name
+            )
             await self.accept()
             print(f"DEBUG WS: Connection accepted for user {self.user.username} in group {self.group_name}")
 
@@ -21,6 +31,14 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         if hasattr(self, 'group_name'):
             await self.channel_layer.group_discard(
                 self.group_name,
+                self.channel_name
+            )
+            await self.channel_layer.group_discard(
+                f"{self.schema_name}_all_users",
+                self.channel_name
+            )
+            await self.channel_layer.group_discard(
+                "global_all_users",
                 self.channel_name
             )
 

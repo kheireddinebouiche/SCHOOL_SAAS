@@ -8,6 +8,7 @@ from .f_views.entreprise import *
 from .f_views.permissions import *
 from .f_views.users import *
 from .f_views.config import general_settings_view, api_update_global_settings, api_update_tenant_settings
+from saas_admin_app.views import ApiGetActiveAnnouncement, ApiMarkAnnouncementRead
 
 app_name="institut_app"
 
@@ -159,7 +160,10 @@ urlpatterns = [
     path('api/update-tenant-settings/', api_update_tenant_settings, name="api_update_tenant_settings"),
     path('api/verify-password/', ApiVerifyPassword, name="ApiVerifyPassword"),
     path('centre-de-connaissance/', knowledge_center_view, name="knowledge_center"),
-    ########################################## Configuration Globale ##########################################
+
+    ########################################## SaaS Announcements API ##########################################
+    path('api/announcements/active/', ApiGetActiveAnnouncement, name="api_get_active_announcement"),
+    path('api/announcements/mark-read/', ApiMarkAnnouncementRead, name="api_mark_announcement_read"),
 ]
 
 
