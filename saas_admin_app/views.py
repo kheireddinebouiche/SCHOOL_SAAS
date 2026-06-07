@@ -3186,7 +3186,7 @@ def saas_announcements_view(request):
         return JsonResponse({'status': 'success', 'message': 'Annonce créée avec succès.'})
 
     announcements = SystemAnnouncement.objects.all().order_by('-created_at')
-    tenants = Institut.objects.filter(schema_name__startswith='t_')
+    tenants = Institut.objects.exclude(schema_name='public')
     
     context = {
         'announcements': announcements,
