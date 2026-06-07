@@ -244,7 +244,7 @@ def get_instructor_assignments_api(request):
                 plan_data = None
                 if plan:
                     plan_data = {
-                        'type_plan': plan.type_plan or 'text',
+                        'type_plan': plan.type_plan or 'pdf',
                         'titre': plan.titre or '',
                         'objectifs': plan.objectifs or '',
                         'competences_visees': plan.competences_visees or '',

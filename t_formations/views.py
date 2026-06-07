@@ -1181,7 +1181,7 @@ def ApiAddModule(request):
             )
 
             # Gestion du plan cadre
-            type_plan = request.POST.get('type_plan', 'text')
+            type_plan = request.POST.get('type_plan', 'pdf')
             plan = PlansCadre.objects.create(
                 module=new_module,
                 type_plan=type_plan
@@ -1592,7 +1592,7 @@ def ApiGetModuleDetails(request):
         plan_data = {}
         if plan:
             plan_data = {
-                'type_plan': plan.type_plan or 'text',
+                'type_plan': plan.type_plan or 'pdf',
                 'titre': plan.titre or '',
                 'objectifs': plan.objectifs or '',
                 'competences_visees': plan.competences_visees or '',
@@ -1604,7 +1604,7 @@ def ApiGetModuleDetails(request):
             }
         else:
             plan_data = {
-                'type_plan': 'text',
+                'type_plan': 'pdf',
                 'titre': '',
                 'objectifs': '',
                 'competences_visees': '',

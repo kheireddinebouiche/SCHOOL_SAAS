@@ -232,7 +232,7 @@ class PlansCadre(models.Model):
     modalites_evaluation = models.TextField(null=True, blank=True)
     bibliographie = models.TextField(blank=True, null=True)
     responsable = models.CharField(max_length=255, null=True, blank=True)       
-    type_plan = models.CharField(max_length=10, choices=[('text', 'Formulaire texte'), ('pdf', 'Fichier PDF')], default='text', null=True, blank=True)
+    type_plan = models.CharField(max_length=10, choices=[('pdf', 'Fichier PDF')], default='pdf', null=True, blank=True)
     fichier_pdf = models.FileField(upload_to='plans_cadre/pdf/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
