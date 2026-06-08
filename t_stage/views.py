@@ -108,10 +108,31 @@ def print_stage_document(request, stage_id):
 def focus_group_detail(request, pk):
     """Détail d'un Focus Group et ses séances."""
     fg = get_object_or_404(FocusGroup, pk=pk)
+    
+    if request.method == 'POST' and request.POST.get('action') == 'add_stages':
+        stages_ids = request.POST.getlist('stages')
+        if stages_ids:
+            stages_to_add = Stage.objects.filter(id__in=stages_ids)
+            fg.stages.add(*stages_to_add)
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='FocusGroup',
+                target_id=str(fg.id),
+                details=f"Affectation de {stages_to_add.count()} stage(s) au Focus Group: {fg.nom}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+        return redirect('t_stage:focus_group_detail', pk=pk)
+
     seances = fg.seances.all().order_by('-date_seance')
+    available_stages = Stage.objects.exclude(focus_groups_membership=fg).exclude(statut='annule')
+    
     return render(request, 't_stage/focus_group_detail.html', {
         'focus_group': fg,
-        'seances': seances
+        'seances': seances,
+        'available_stages': available_stages
     })
 
 @login_required
@@ -138,8 +159,17 @@ def progressive_presentation_form(request, stage_id):
         # Mise à jour de l'avancement global du stage basé sur le maximum des présentations
         from django.db.models import Max
         max_taux = stage.presentations.aggregate(Max('taux_avancement_declare'))['taux_avancement_declare__max'] or 0
-        stage.taux_avancement = max_taux
         stage.save()
+            
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='PresentationProgressive',
+            target_id=str(stage.id),
+            details=f"Mise à jour de la présentation progressive étape {etape} pour le stage {stage.sujet}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
             
         return redirect('t_stage:presentation_form', stage_id=stage.id)
     
@@ -178,30 +208,79 @@ def delete_presentation(request, pk):
     stage.taux_avancement = max_taux
     stage.save()
     
+    from t_crm.models import UserActionLog
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='DELETE',
+        target_model='PresentationProgressive',
+        target_id=str(pk),
+        details=f"Suppression d'une présentation progressive pour le stage {stage.sujet}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+    
     return redirect('t_stage:presentation_form', stage_id=stage.id)
 
 @login_required
 @module_permission_required('sta', 'approuv')
 def validation_council(request):
     """Gestion du conseil de validation de fin de stage."""
+    # Check if there is an open council
+    active_council = ConseilValidation.objects.filter(statut='ouvert').order_by('-date_conseil').first()
+
     if request.method == 'POST':
         date_conseil = request.POST.get('date_conseil')
         observations = request.POST.get('observations')
-        if date_conseil:
-            ConseilValidation.objects.create(
+        if date_conseil and not active_council:
+            conseil = ConseilValidation.objects.create(
                 date_conseil=date_conseil,
-                observations_generales=observations
+                observations_generales=observations,
+                statut='ouvert'
             )
-            # On peut ajouter un message de succès ici si nécessaire
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='ConseilValidation',
+                target_id=str(conseil.id),
+                details=f"Création d'un conseil de validation (Ouvert) pour la date {date_conseil}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return redirect('t_stage:validation_council')
 
-    # Sélectionner les stages qui ne sont pas encore soutenus/annulés
-    stages = Stage.objects.exclude(statut__in=['soutenu', 'annule']).order_by('date_debut')
-    conseils = ConseilValidation.objects.all().order_by('-date_conseil')
+    # Sélectionner les stages uniquement si un conseil est actif
+    if active_council:
+        stages = Stage.objects.exclude(statut__in=['soutenu', 'annule']).order_by('date_debut')
+    else:
+        stages = []
+        
+    conseils = ConseilValidation.objects.filter(statut='cloture').order_by('-date_conseil')
     return render(request, 't_stage/council.html', {
         't_stage_list': stages,
+        'active_council': active_council,
         'conseils': conseils
     })
+
+@login_required
+@module_permission_required('sta', 'approuv')
+def close_council(request, pk):
+    """Clôture un conseil de validation."""
+    conseil = get_object_or_404(ConseilValidation, pk=pk)
+    if request.method == 'POST':
+        conseil.statut = 'cloture'
+        conseil.save()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='ConseilValidation',
+            target_id=str(conseil.id),
+            details=f"Clôture du conseil de validation du {conseil.date_conseil}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+    return redirect('t_stage:validation_council')
 
 @login_required
 @module_permission_required('sta', 'approuv')
@@ -216,20 +295,26 @@ def quick_decision(request):
 
         stage = get_object_or_404(Stage, pk=stage_id)
         
-        # Determine council: specific ID or latest open one
-        if council_id:
-            council = get_object_or_404(ConseilValidation, pk=council_id)
-        else:
-            # Fallback to latest
-            council = ConseilValidation.objects.all().order_by('-date_conseil').first()
+        # Enforce binding to the active council
+        council = ConseilValidation.objects.filter(statut='ouvert').order_by('-date_conseil').first()
         
         if council:
-            DecisionConseil.objects.create(
+            decision_obj = DecisionConseil.objects.create(
                 conseil=council,
                 stage=stage,
                 decision=decision_statut,
                 taux_final=taux_final,
                 commentaire=commentaire
+            )
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='DecisionConseil',
+                target_id=str(decision_obj.id),
+                details=f"Décision rapide '{decision_statut}' prise pour le stage {stage.sujet}",
+                ip_address=request.META.get('REMOTE_ADDR')
             )
             
             # Update stage status if needed (e.g. soutenable -> soutenu or just marked as validated)
@@ -265,6 +350,16 @@ def launch_stage(request):
         if focus_group_id:
             fg = get_object_or_404(FocusGroup, pk=focus_group_id)
             fg.stages.add(stage)
+            
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='Stage',
+            target_id=str(stage.id),
+            details=f"Lancement d'un nouveau stage: {stage.sujet}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
             
         return redirect('t_stage:stage_dashboard')
 
@@ -315,6 +410,16 @@ def edit_stage(request, stage_id):
              for fg in FocusGroup.objects.filter(stages=stage):
                 fg.stages.remove(stage)
 
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Stage',
+            target_id=str(stage.id),
+            details=f"Modification du stage: {stage.sujet}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
         return redirect('t_stage:stage_dashboard')
 
     # Prepare context with existing data
@@ -333,6 +438,27 @@ def edit_stage(request, stage_id):
         'current_fg_id': current_fg.id if current_fg else None
     }
     return render(request, 't_stage/stage_form.html', context)
+
+@login_required
+@module_permission_required('sta', 'delete')
+def delete_stage(request, stage_id):
+    """Suppression d'un stage existant (POST only via form)."""
+    stage = get_object_or_404(Stage, pk=stage_id)
+    if request.method == 'POST':
+        from t_crm.models import UserActionLog
+        sujet = stage.sujet
+        stage.delete()
+        
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='Stage',
+            target_id=str(stage_id),
+            details=f"Suppression du stage: {sujet}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        return redirect('t_stage:list_stages')
+    return redirect('t_stage:list_stages')
 
 @login_required
 @module_permission_required('sta', 'view')
@@ -376,6 +502,17 @@ def create_focus_group(request):
             encadrant_id=encadrant_id,
             thematique=thematique
         )
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='FocusGroup',
+            target_id=str(fg.id),
+            details=f"Création d'un Focus Group: {nom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return redirect('t_stage:focus_group_detail', pk=fg.pk)
     
     return redirect('t_stage:list_focus_groups')
@@ -400,9 +537,40 @@ def add_seance(request, fg_id):
         if stages_ids:
             seance.stages.set(stages_ids)
             
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='SeanceFocusGroup',
+            target_id=str(seance.id),
+            details=f"Ajout d'une séance pour le Focus Group: {fg.nom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+            
         return redirect('t_stage:focus_group_detail', pk=fg.pk)
     
     return render(request, 't_stage/seance_form.html', {'focus_group': fg})
+
+@login_required
+@module_permission_required('sta', 'delete')
+def delete_seance(request, seance_id):
+    """Suppression d'une séance de Focus Group (POST only)."""
+    seance = get_object_or_404(SeanceFocusGroup, pk=seance_id)
+    fg_id = seance.focus_group.id
+    if request.method == 'POST':
+        seance_str = str(seance)
+        seance.delete()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='SeanceFocusGroup',
+            target_id=str(seance_id),
+            details=f"Suppression de la séance: {seance_str}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+    return redirect('t_stage:focus_group_detail', pk=fg_id)
 
 @login_required
 @module_permission_required('sta', 'view')
@@ -440,6 +608,17 @@ def toggle_concerne_examen(request, groupe_id):
         groupe = get_object_or_404(Groupe, pk=groupe_id)
         groupe.concerne_examen_final = not groupe.concerne_examen_final
         groupe.save()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Groupe',
+            target_id=str(groupe.id),
+            details=f"Toggle de l'admissibilité examen final pour le groupe: {groupe.nom} ({groupe.concerne_examen_final})",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({'status': 'success', 'concerne_examen_final': groupe.concerne_examen_final})
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
 
@@ -496,6 +675,16 @@ def saisie_notes_examen_final(request, groupe_id):
             else:
                 bulletin.moyenne_ponderee = None
             bulletin.save()
+            
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='BulletinStage',
+            target_id=str(groupe.id),
+            details=f"Saisie/Mise à jour des notes d'examen final pour le groupe: {groupe.nom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
             
         return redirect('t_stage:bulletins_examen_final', groupe_id=groupe.id)
 

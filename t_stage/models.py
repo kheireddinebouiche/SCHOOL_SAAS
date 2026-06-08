@@ -38,10 +38,15 @@ class Stage(models.Model):
         verbose_name_plural = "Stages"
 
     def __str__(self):
-        membres = f"{self.etudiant1}"
-        if self.etudiant2:
-            membres += f" & {self.etudiant2}"
-        return f"{membres} - {self.sujet[:50]}..."
+        try:
+            if self.pk:
+                noms = [str(e) for e in self.etudiants.all()]
+                membres = " & ".join(noms) if noms else "Aucun étudiant"
+            else:
+                membres = "Nouveau stage"
+            return f"{membres} - {self.sujet[:50]}..."
+        except Exception:
+            return f"Stage - {self.sujet[:50]}..."
 
 class FocusGroup(models.Model):
     nom = models.CharField(max_length=255)
@@ -70,7 +75,11 @@ class SeanceFocusGroup(models.Model):
         verbose_name_plural = "Séances Focus Groups"
 
     def __str__(self):
-        return f"Séance {self.focus_group.nom} du {self.date_seance.strftime('%d/%m/%Y')}"
+        if hasattr(self.date_seance, 'strftime'):
+            date_str = self.date_seance.strftime('%d/%m/%Y')
+        else:
+            date_str = str(self.date_seance)[:10] if self.date_seance else "inconnue"
+        return f"Séance {self.focus_group.nom} du {date_str}"
 
 class PresentationProgressive(models.Model):
     CHOICES_ETAPE = [
@@ -102,16 +111,29 @@ class PresentationProgressive(models.Model):
         return f"P{self.etape} - {self.stage}"
 
 class ConseilValidation(models.Model):
+    CHOICES_STATUT = [
+        ('ouvert', 'Ouvert'),
+        ('cloture', 'Clôturé')
+    ]
     date_conseil = models.DateField()
     observations_generales = models.TextField(null=True, blank=True)
+    statut = models.CharField(max_length=10, choices=CHOICES_STATUT, default='ouvert')
     
     class Meta:
         verbose_name = "Conseil de Validation"
         verbose_name_plural = "Conseils de Validation"
 
     def __str__(self):
-        return f"Conseil du {self.date_conseil.strftime('%d/%m/%Y')}"
-
+        if isinstance(self.date_conseil, str):
+            try:
+                from datetime import datetime
+                d = datetime.strptime(self.date_conseil, '%Y-%m-%d').date()
+                return f"Conseil du {d.strftime('%d/%m/%Y')}"
+            except ValueError:
+                return f"Conseil du {self.date_conseil}"
+        elif self.date_conseil:
+            return f"Conseil du {self.date_conseil.strftime('%d/%m/%Y')}"
+        return "Conseil de Validation"
 class DecisionConseil(models.Model):
     CHOICES_DECISION = [
         ('soutenable', 'Soutenable (Lancement de la soutenance officielle)'),
