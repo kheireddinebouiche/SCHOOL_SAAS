@@ -1,6 +1,7 @@
 # 🗓️ Journal des Mises à Jour (Changelog)
 
 ## [Unreleased]
+- **Sécurité & Audit (Executive Education)** : Ajout de la journalisation complète (via `UserActionLog`) pour toutes les actions de mutation effectuées dans le module Executive Education (t_conseil). Cela inclut les actions sur les prospects, les opportunités, les devis (création, validation, acceptation/rejet), les factures (création, validation, annulation, suppression), les groupes, les paiements, les thématiques, et les informations liées (participants, DAS, infos bancaires).
 - **Sécurité & Audit** : Ajout de la journalisation complète (logs d'accès et de modification via `UserActionLog`) pour toutes les actions effectuées dans le menu Configuration (gestion des utilisateurs, rôles, modules, sessions actives, édition des documents PDF, informations de l'entreprise et paramètres généraux).
 - **Ajout** : Fonctionnalité d'impression (génération de rapport) du taux d'utilisation de l'ERP avec possibilité de sélectionner spécifiquement un ou plusieurs instituts via une fenêtre modale.
 - **Modification** : Refonte de l'affichage de la page `platform_usage_rate` pour utiliser des onglets (tabs) par tenant et ajout de la pagination DataTables.

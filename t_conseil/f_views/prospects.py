@@ -36,7 +36,7 @@ def ApiCreateProspect(request):
         code_zip = request.POST.get('code_zip')
 
         try:
-            Prospets.objects.create(
+            prospect = Prospets.objects.create(
                 entreprise=entreprise,
                 nom=nom,
                 prenom=prenom,
@@ -51,6 +51,17 @@ def ApiCreateProspect(request):
                 code_zip=code_zip,
                 context='con'
             )
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Prospets',
+                target_id=str(prospect.id),
+                details=f"Création d'un prospect (Conseil): {entreprise} - {nom} {prenom}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Prospect créé avec succès.'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': f'Erreur lors de la création : {str(e)}'}, status=500)

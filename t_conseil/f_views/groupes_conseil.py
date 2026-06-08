@@ -178,6 +178,17 @@ def ApiSaveConseilGroupe(request):
                 date_fin=groupe.end_date
             )
             
+            
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='GroupeConseil',
+            target_id=str(groupe.id),
+            details=f"Création d'un groupe conseil: {groupe.nom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+            
         messages.success(request, f"Le groupe {groupe.nom} a été créé avec succès.")
         return JsonResponse({'status': 'success', 'message': 'Groupe créé avec succès', 'groupe_id': groupe.id})
         
@@ -196,7 +207,19 @@ def ApiDeleteGroupeConseil(request):
         try:
             groupe = GroupeConseil.objects.get(id=id)
             # Remove state restriction to allow deletion of active/closed groups
+            nom_groupe = groupe.nom
             groupe.delete()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='GroupeConseil',
+                target_id=str(id),
+                details=f"Suppression du groupe conseil: {nom_groupe}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             messages.success(request, "Le groupe a été supprimé avec succès")
             return JsonResponse({"status": "success"})
         except GroupeConseil.DoesNotExist:
@@ -218,6 +241,16 @@ def ApiCloturerGroupeConseil(request):
         # We allow closing even if the end date hasn't passed
         groupe.etat = 'cloture'
         groupe.save()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='GroupeConseil',
+            target_id=str(groupe.id),
+            details=f"Clôture du groupe conseil: {groupe.nom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
         
         return JsonResponse({"status": "success", "message": "Le groupe a été clôturé avec succès."})
     except GroupeConseil.DoesNotExist:
@@ -245,6 +278,16 @@ def ApiUpdateGroupeSettings(request):
         groupe.lieu_formation = lieu
         groupe.jours_travail = jours
         groupe.save()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='GroupeConseil',
+            target_id=str(groupe.id),
+            details=f"Mise à jour des paramètres du groupe conseil: {groupe.nom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
         
         return JsonResponse({'status': 'success', 'message': 'Paramètres mis à jour'})
     except Exception as e:
@@ -305,6 +348,16 @@ def ApiAddPlanningSession(request):
             note=data.get('note')
         )
         
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='GroupeConseilPlanning',
+            target_id=str(session.id),
+            details=f"Ajout d'une session de planning au groupe: {groupe.nom} (Date: {date_obj})",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({
             'status': 'success', 
             'message': 'Session ajoutée au planning',
@@ -333,7 +386,20 @@ def ApiDeletePlanningSession(request):
             session = GroupeConseilPlanning.objects.get(id=data.get('session_id')) 
         except GroupeConseilPlanning.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'GroupeConseilPlanning introuvable.'})
+            
+        session_info = f"{session.groupe.nom} (Date: {session.date})"
         session.delete()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='GroupeConseilPlanning',
+            target_id=str(data.get('session_id')),
+            details=f"Suppression d'une session de planning: {session_info}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({'status': 'success', 'message': 'Session supprimée'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
@@ -407,6 +473,16 @@ def ApiConfirmParticipantForScolarite(request):
         participant.scolarite_note = request.POST.get('note', '')
         participant.save()
         
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Participant',
+            target_id=str(participant.id),
+            details=f"Confirmation scolarité pour le participant: {participant.nom} {participant.prenom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({'status': 'success', 'message': 'Participant confirmé pour la Scolarité'})
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
 
@@ -423,6 +499,16 @@ def ApiCancelParticipantConfirmationForScolarite(request):
         participant.is_confirmed_for_scolarite = False
         participant.scolarite_note = None
         participant.save()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Participant',
+            target_id=str(participant.id),
+            details=f"Annulation confirmation scolarité pour le participant: {participant.nom} {participant.prenom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
         
         return JsonResponse({'status': 'success', 'message': 'Confirmation annulée avec succès'})
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)

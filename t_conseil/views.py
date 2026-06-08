@@ -44,13 +44,23 @@ def ApiSaveThematique(request):
     default_tva = request.POST.get('default_tva', 19.00)
     categorie = request.POST.get('categorie', 'service')
 
-    Thematiques.objects.create(
+    thematique = Thematiques.objects.create(
         label = label,
         description = description,
         prix = prix,
         billing_type = billing_type,
         default_tva = default_tva,
         categorie = categorie
+    )
+
+    from t_crm.models import UserActionLog
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='CREATE',
+        target_model='Thematiques',
+        target_id=str(thematique.id),
+        details=f"Création de la thématique: {label}",
+        ip_address=request.META.get('REMOTE_ADDR')
     )
 
     return JsonResponse({'status': 'success', 'message': 'Thématique ajoutée avec succès.'})
@@ -175,6 +185,16 @@ def AddNewDevis(request):
             except Exception as e:
                 # Log error but don't crash
                 print(f"Error creating opportunity: {e}")
+                
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Devis',
+                target_id=str(devis.num_devis),
+                details=f"Création d'un devis: {devis.num_devis} (Montant: {devis.montant})",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             messages.success(request, "Devis ajouté avec succès.")
             return redirect('t_conseil:configure-devis', pk=form.instance.num_devis)
@@ -208,6 +228,17 @@ def AddNewFacture(request):
                 facture.conditions_commerciales = config.default_conditions_commerciales
                 
             facture.save()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Facture',
+                target_id=str(facture.num_facture),
+                details=f"Création d'une nouvelle facture: {facture.num_facture}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             messages.success(request, "Facture ajoutée avec succès.")
             return redirect('t_conseil:configure-facture', pk=form.instance.num_facture)
         else:
@@ -343,6 +374,17 @@ def ApiArchiveThematique(request):
         return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
     thematique.etat = "archive"
     thematique.save()
+    
+    from t_crm.models import UserActionLog
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='UPDATE',
+        target_model='Thematiques',
+        target_id=str(id_thematique),
+        details=f"Archivage de la thématique: {thematique.label}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+    
     return JsonResponse({'status': 'success', 'message': 'Thématique archivée avec succès.'})   
     
 @login_required(login_url='institut_app:login')
@@ -356,6 +398,17 @@ def ApiActivateThematique(request):
         return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
     thematique.etat = "active"
     thematique.save()
+    
+    from t_crm.models import UserActionLog
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='UPDATE',
+        target_model='Thematiques',
+        target_id=str(id_thematique),
+        details=f"Activation de la thématique: {thematique.label}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+    
     return JsonResponse({'status': 'success', 'message': 'Thématique activée avec succès.'})
 
 @login_required(login_url='institut_app:login')
@@ -367,7 +420,19 @@ def ApiDeleteFinalThematique(request):
         thematique = Thematiques.objects.get(id=id_thematique) 
     except Thematiques.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
+    label = thematique.label
     thematique.delete()
+    
+    from t_crm.models import UserActionLog
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='DELETE',
+        target_model='Thematiques',
+        target_id=str(id_thematique),
+        details=f"Suppression définitive de la thématique: {label}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+    
     return JsonResponse({'status': 'success', 'message': 'Thématique supprimée définitivement.'})
 
 @module_permission_required('con', 'change')
@@ -403,6 +468,17 @@ def ApiUpdateThematique(request):
             
         thematique.description = description
         thematique.save()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Thematiques',
+            target_id=str(id_thematique),
+            details=f"Mise à jour de la thématique: {label}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({'status': 'success', 'message': 'Thématique mise Ã  jour avec succès.'})
     except Thematiques.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': f'Thématique introuvable (ID: {id_thematique})'})
@@ -462,6 +538,17 @@ def ApiTransformeToClient(request):
         prospect.statut = 'convertit'
         prospect.convertit_date = timezone.now().date()
         prospect.save()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Prospets',
+            target_id=str(prospect.id),
+            details=f"Conversion du prospect en client: {prospect.nom} {prospect.prenom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({'status': 'success', 'message': 'Prospect converti en client.'})
     except Prospets.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
@@ -614,6 +701,16 @@ def ApiStartTransformationDevisToFacture(request):
             nin=part.nin
         )
         
+    from t_crm.models import UserActionLog
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='CREATE',
+        target_model='Facture',
+        target_id=str(facture.num_facture),
+        details=f"Transformation du devis {devis.num_devis} en facture: {facture.num_facture}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+        
     return JsonResponse({'status': 'success', 'message': 'Devis transformé en facture avec succès.', 'facture_num': facture.num_facture})
 
 @login_required(login_url="institut_app:login")
@@ -724,6 +821,16 @@ def ApiSaveDevisItems(request):
             if devis.opportunite:
                 devis.opportunite.budget = total_montant
                 devis.opportunite.save()
+                
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Devis',
+                target_id=str(devis.num_devis),
+                details=f"Mise à jour des éléments du devis: {devis.num_devis}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
         return JsonResponse({'status': 'success', 'message': 'Devis enregistré avec succès.'})
         
@@ -809,6 +916,16 @@ def ApiValidateDevis(request):
                     )
                     devis.opportunite = new_opp
                     devis.save()
+                    
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Devis',
+                target_id=str(devis.num_devis),
+                details=f"Validation et envoi du devis: {devis.num_devis}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({'status': 'success', 'message': 'Devis validé avec succès.'})
         except Devis.DoesNotExist:
@@ -829,6 +946,17 @@ def ApiRevertDevisToDraft(request):
             
             devis.etat = 'brouillon'
             devis.save()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Devis',
+                target_id=str(devis.num_devis),
+                details=f"Repassage en brouillon du devis: {devis.num_devis}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Devis repassé en brouillon.'})
         except Devis.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Devis non trouvé.'}, status=404)
@@ -927,6 +1055,16 @@ def ApiQuickCreateProspect(request):
             poste_dans_entreprise=poste,
         )
         
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='Prospets',
+            target_id=str(prospect.id),
+            details=f"Création rapide d'un prospect (Conseil): {entreprise_nom} - {nom} {prenom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({
             'status': 'success', 
             'message': 'Prospect créé avec succès.',
@@ -951,7 +1089,19 @@ def ApiDeleteOpportunite(request):
         id_opp = request.POST.get('id')
         try:
             opp = Opportunite.objects.get(id=id_opp)
+            nom_opp = opp.nom
             opp.delete()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='Opportunite',
+                target_id=str(id_opp),
+                details=f"Suppression de l'opportunité: {nom_opp}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Opportunité supprimée.'})
         except Opportunite.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Opportunité non trouvée.'})
@@ -1001,6 +1151,16 @@ def ApiAddPaiement(request):
                 facture.etat = 'battente'
             
             facture.save()
+
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Paiement',
+                target_id=str(paiement.id),
+                details=f"Ajout d'un paiement de {montant} pour la facture: {facture.num_facture}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({
                 'status': 'success', 
@@ -1178,6 +1338,17 @@ def ApiToggleFavorite(request):
         prospect = Prospets.objects.get(id=prospect_id)
         prospect.conseil_is_favorite = not prospect.conseil_is_favorite
         prospect.save()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Prospets',
+            target_id=str(prospect.id),
+            details=f"Modification favori pipeline: {prospect.nom} (Favori: {prospect.conseil_is_favorite})",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({'status': 'success', 'is_favorite': prospect.conseil_is_favorite})
     except Prospets.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
@@ -1258,6 +1429,17 @@ def ApiDeleteDevis(request):
     try:
         devis = Devis.objects.get(num_devis=num_devis)
         devis.delete()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='Devis',
+            target_id=str(num_devis),
+            details=f"Suppression du devis: {num_devis}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({'status': 'success', 'message': 'Devis supprimé avec succès.'})
     except Devis.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Devis non trouvé.'})
@@ -1277,6 +1459,17 @@ def ApiUpdatePipelineStage(request):
             opp = Opportunite.objects.get(id=opp_id)
             opp.stage = new_stage
             opp.save()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Opportunite',
+                target_id=str(opp.id),
+                details=f"Mise à jour du statut de l'opportunité {opp.nom} vers {new_stage}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Statut mis à jour.'})
         except Opportunite.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Opportunité non trouvée.'})
@@ -1304,6 +1497,16 @@ def ApiCreateOpportunite(request):
                 budget=budget,
                 stage='entrant',
                 commercial=request.user
+            )
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Opportunite',
+                target_id=str(opp.id),
+                details=f"Création d'une opportunité: {nom} pour {prospect.entreprise}",
+                ip_address=request.META.get('REMOTE_ADDR')
             )
             
             # Get initials
@@ -1370,6 +1573,17 @@ def ApiUpdateOpportunite(request):
                 opp.closing_date = None
             
             opp.save()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Opportunite',
+                target_id=str(opp.id),
+                details=f"Mise à jour de l'opportunité: {nom}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Opportunité mise à jour.'})
         except Opportunite.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Opportunité non trouvée.'})
@@ -1528,6 +1742,17 @@ def AddNewFacture(request):
                 facture.conditions_commerciales = config.default_conditions_commerciales
                 
             facture.save()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Facture',
+                target_id=str(facture.num_facture),
+                details=f"Création d'une nouvelle facture: {facture.num_facture}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return redirect('t_conseil:configure-facture', pk=facture.num_facture)
     else:
         form = NewFactureForms()
@@ -1725,6 +1950,16 @@ def ApiSaveFactureItems(request):
 
         facture.save()
         
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Facture',
+            target_id=str(facture.num_facture),
+            details=f"Mise à jour des éléments de la facture: {facture.num_facture}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({'status': 'success', 'message': 'Facture enregistrée avec succès.'})
         
     except Exception as e:
@@ -1774,6 +2009,16 @@ def ApiValidateFacture(request):
                         opp.stage = 'recouvrement'
                         opp.save()
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Facture',
+                target_id=str(facture.num_facture),
+                details=f"Validation de la facture: {facture.num_facture}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Facture validée et en attente de paiement.'})
         except Facture.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Facture non trouvée.'}, status=404)
@@ -1789,6 +2034,17 @@ def ApiRevertFactureToDraft(request):
             facture = Facture.objects.get(num_facture=facture_id)
             facture.etat = 'brouillon'
             facture.save()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Facture',
+                target_id=str(facture.num_facture),
+                details=f"Repassage en brouillon de la facture: {facture.num_facture}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Facture repassée en brouillon.'})
         except Facture.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Facture non trouvée.'}, status=404)
@@ -1837,6 +2093,16 @@ def ApiDeleteFacture(request):
 
         # 5. Delete the Facture itself
         facture.delete()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='Facture',
+            target_id=str(facture_id),
+            details=f"Suppression de la facture: {facture_id}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
         
         return JsonResponse({'status': 'success', 'message': 'Facture et informations liées supprimées avec succès.'})
     except Facture.DoesNotExist:
@@ -1955,6 +2221,16 @@ def ApiSaveDAS(request):
                 )
                 message = "Nouveau mapping DAS créé avec succès."
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE' if das_id else 'CREATE',
+                target_model='DASMapping',
+                target_id=str(mapping.id if das_id else category.id), # Note: using category id if creating as we don't return the new mapping id
+                details=f"Création/Mise à jour d'un mapping DAS: {designation}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({'status': 'success', 'message': message})
 
         except (Thematiques.DoesNotExist, PaymentCategory.DoesNotExist):
@@ -1977,7 +2253,19 @@ def ApiDeleteDAS(request):
         das_id = request.POST.get('das_id')
         try:
             mapping = DASMapping.objects.get(id=das_id)
+            designation = mapping.designation
             mapping.delete()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='DASMapping',
+                target_id=str(das_id),
+                details=f"Suppression d'un mapping DAS: {designation}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Mapping supprimé avec succès.'})
         except DASMapping.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Mapping introuvable.'})
@@ -2084,6 +2372,16 @@ def ApiSaveParticipants(request):
                     poste=p.get('poste'),
                     nin=p.get('nin')
                 )
+            
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='Participant',
+            target_id=str(devis_id or facture_id),
+            details=f"Sauvegarde en masse des participants pour Devis/Facture.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
             
         return JsonResponse({'status': 'success', 'message': 'Participants enregistrés avec succès.'})
     except Exception as e:
@@ -2195,6 +2493,17 @@ def ApiEnrollToGroup(request):
                     GroupeLine.objects.create(groupe=groupe, student=prospect)
                     prospect.statut = 'convertit'
                     prospect.save()
+                    
+                    from t_crm.models import UserActionLog
+                    UserActionLog.objects.create(
+                        user=request.user,
+                        action_type='CREATE',
+                        target_model='GroupeLine',
+                        target_id=str(groupe.id),
+                        details=f"Inscription de {prospect.nom} {prospect.prenom} au groupe {groupe.nom}",
+                        ip_address=request.META.get('REMOTE_ADDR')
+                    )
+                    
                     return JsonResponse({'status': 'success', 'message': f'{prospect.nom} {prospect.prenom} inscrit au groupe {groupe.nom} avec succès.'})
                 else:
                     return JsonResponse({'status': 'error', 'message': 'DéjÃ  inscrit Ã  ce groupe.'})
@@ -2266,6 +2575,16 @@ def ApiSaveParticipant(request):
         participant.nin = data.get('nin')
         participant.save()
         
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE' if p_id else 'CREATE',
+            target_model='Participant',
+            target_id=str(participant.id),
+            details=f"Création/Mise à jour du participant: {participant.nom} {participant.prenom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({'status': 'success', 'message': 'Participant enregistré avec succès.', 'id': participant.id})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
@@ -2286,6 +2605,17 @@ def ApiDeleteParticipant(request):
             return JsonResponse({'status': 'error', 'message': 'Participant ID required'}, status=400)
             
         Participant.objects.filter(id=p_id).delete()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='Participant',
+            target_id=str(p_id),
+            details=f"Suppression du participant {p_id}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({'status': 'success', 'message': 'Participant supprimé avec succès.'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
@@ -2306,6 +2636,17 @@ def ApiSaveEtsDetails(request):
             prospect.art_imp = request.POST.get('art_imp')
             prospect.observation = request.POST.get('observation')
             prospect.save()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Prospets',
+                target_id=str(prospect.id),
+                details=f"Mise à jour des informations entreprise du prospect: {prospect.entreprise}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Informations entreprise mises Ã  jour.'})
         except Prospets.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
@@ -2348,6 +2689,16 @@ def ApiSaveBankAccount(request):
         account.bank_address = request.POST.get('bank_address')
         account.save()
         
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE' if account_id else 'CREATE',
+            target_model='ProspectBankAccount',
+            target_id=str(account.id),
+            details=f"Mise à jour du compte bancaire {account.bank_name}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({'status': 'success', 'message': 'Compte bancaire enregistré.'})
     return JsonResponse({'status': 'error', 'message': 'Invalid request'})
 
@@ -2360,7 +2711,19 @@ def ApiDeleteBankAccount(request):
         account_id = request.POST.get('account_id')
         try:
             account = ProspectBankAccount.objects.get(id=account_id)
+            bank_name = account.bank_name
             account.delete()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='ProspectBankAccount',
+                target_id=str(account_id),
+                details=f"Suppression du compte bancaire: {bank_name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Compte bancaire supprimé.'})
         except ProspectBankAccount.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Compte non trouvé.'})
@@ -2528,6 +2891,16 @@ def ApiCreateGroupFromParticipants(request):
                 print(f"Error adding participant {pid_str}: {e}")
                 continue
         
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='Groupe',
+            target_id=str(groupe.id),
+            details=f"Création d'un groupe conseil en masse: {group_name} avec {count} participants",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({
             'status': 'success', 
             'message': f'Groupe "{group_name}" créé avec succès. {count} participants ajoutés.',
@@ -2555,6 +2928,16 @@ def ApiAcceptDevis(request):
                 devis.opportunite.stage = 'facture'
                 devis.opportunite.save()
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Devis',
+                target_id=str(devis.num_devis),
+                details=f"Acceptation du devis: {devis.num_devis}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Le devis a été accepté avec succès.'})
         except Devis.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Devis introuvable.'}, status=404)
@@ -2578,6 +2961,16 @@ def ApiRejectDevis(request):
             if devis.opportunite:
                 devis.opportunite.stage = 'perdu'
                 devis.opportunite.save()
+
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Devis',
+                target_id=str(devis.num_devis),
+                details=f"Rejet du devis: {devis.num_devis}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({'status': 'success', 'message': 'Le devis a été rejeté.'})
         except Devis.DoesNotExist:
