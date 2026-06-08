@@ -88,6 +88,16 @@ def ApiUpdateEntrepriseData(request):
         entreprise.representant = representant
         entreprise.save()
 
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Entreprise',
+            target_id=str(entreprise.id),
+            details=f"Mise à jour des informations de l'entreprise {entreprise.designation}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
         return JsonResponse({'status':"success",'message':'Les informations ont été mis a jour avec succès'})
     else:
         return JsonResponse({'status':"error",'message':'Methode non autoriser'})
@@ -119,6 +129,16 @@ def ApiSaveBankAccount(request):
             bank_currency = bank_currency,
             bank_observations = bank_observations
         )
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='BankAccount',
+            details=f"Ajout d'un compte bancaire {bank_name} pour l'entreprise {entreprise.designation}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
         return JsonResponse({"status" : "success"})
 
     except:
@@ -146,6 +166,16 @@ def ApiArchiveBankAccount(request):
     account.is_archived = True
     account.save()
 
+    from t_crm.models import UserActionLog
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='UPDATE',
+        target_model='BankAccount',
+        target_id=str(account.id),
+        details=f"Archivage du compte bancaire {account.bank_name}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+
     return JsonResponse({"status" : "success"})
 
 
@@ -168,6 +198,16 @@ def ApiUpdateEntrepriseLogos(request):
         
         entreprise.save()
         
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Entreprise',
+            target_id=str(entreprise.id),
+            details=f"Mise à jour des logos de l'entreprise {entreprise.designation}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
         return JsonResponse({
             'status': 'success', 
             'message': 'Logos mis à jour avec succès',

@@ -53,6 +53,17 @@ def api_update_global_settings(request):
                 try:
                     val_list = json.loads(setting_value)
                     getattr(config, setting_name).set(val_list)
+                    
+                    from t_crm.models import UserActionLog
+                    UserActionLog.objects.create(
+                        user=request.user,
+                        action_type='UPDATE',
+                        target_model='GlobalConfiguration',
+                        target_id=str(config.id),
+                        details=f"Mise à jour du paramètre global (relation multiple) {setting_name}",
+                        ip_address=request.META.get('REMOTE_ADDR')
+                    )
+
                     return JsonResponse({'status': 'success', 'message': 'Paramètre mis à jour avec succès.'})
                 except Exception as e:
                     return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
@@ -61,6 +72,17 @@ def api_update_global_settings(request):
                 
             setattr(config, setting_name, val)
             config.save()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='GlobalConfiguration',
+                target_id=str(config.id),
+                details=f"Mise à jour du paramètre global {setting_name} = {val}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({'status': 'success', 'message': 'Paramètre mis à jour avec succès.'})
         
         return JsonResponse({'status': 'error', 'message': 'Paramètre non trouvé.'}, status=400)
@@ -88,6 +110,17 @@ def api_update_tenant_settings(request):
             tenant.telephone = telephone
             
         tenant.save()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Institut',
+            target_id=str(tenant.id),
+            details=f"Mise à jour des informations de l'établissement {tenant.nom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
         return JsonResponse({
             'status': 'success', 
             'message': 'Détails de l\'établissement mis à jour avec succès.'

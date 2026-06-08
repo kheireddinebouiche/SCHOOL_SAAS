@@ -1,6 +1,7 @@
 # 🗓️ Journal des Mises à Jour (Changelog)
 
 ## [Unreleased]
+- **Sécurité & Audit** : Ajout de la journalisation complète (logs d'accès et de modification via `UserActionLog`) pour toutes les actions effectuées dans le menu Configuration (gestion des utilisateurs, rôles, modules, sessions actives, édition des documents PDF, informations de l'entreprise et paramètres généraux).
 - **Ajout** : Fonctionnalité d'impression (génération de rapport) du taux d'utilisation de l'ERP avec possibilité de sélectionner spécifiquement un ou plusieurs instituts via une fenêtre modale.
 - **Modification** : Refonte de l'affichage de la page `platform_usage_rate` pour utiliser des onglets (tabs) par tenant et ajout de la pagination DataTables.
 - **Modification** : Le menu "Satisfaction" a été renommé en "Mesure de satisfaction" dans `menu.html`.

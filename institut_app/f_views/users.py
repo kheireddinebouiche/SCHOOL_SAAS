@@ -123,6 +123,16 @@ def ApiUpdateUser(request):
             
             user.save()
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='User',
+                target_id=str(user.id),
+                details=f"Modification des informations de l'utilisateur {user.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({"status": "success", "message": "User updated successfully"})
         except User.DoesNotExist:
             return JsonResponse({"status": "error", "message": "User not found"})
@@ -148,8 +158,19 @@ def ApiDeleteUser(request):
             if user.is_superuser:
                 return JsonResponse({"status": "error", "message": "Cannot delete superuser account"})
             
+            username = user.username
             user.delete()
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='User',
+                target_id=str(user_id),
+                details=f"Suppression de l'utilisateur {username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({"status": "success", "message": "User deleted successfully"})
         except User.DoesNotExist:
             return JsonResponse({"status": "error", "message": "User not found"})
@@ -181,6 +202,16 @@ def ApiChangeUserStatus(request):
             user.save()
 
             status_text = "activé" if new_status else "désactivé"
+
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='User',
+                target_id=str(user.id),
+                details=f"Statut {status_text} pour l'utilisateur {user.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({
                 "status": "success",
@@ -240,6 +271,16 @@ def ApiCreateUser(request):
                 last_password_change=timezone.now()
             )
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='User',
+                target_id=str(user.id),
+                details=f"Création de l'utilisateur {user.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 "status": "success",
                 "message": "Utilisateur créé avec succès",
@@ -289,6 +330,16 @@ def ApiChangeUserPassword(request):
                 handled_by=request.user
             )
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='User',
+                target_id=str(user.id),
+                details=f"Modification du mot de passe de l'utilisateur {user.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 "status": "success",
                 "message": "Mot de passe changé avec succès"
@@ -316,6 +367,16 @@ def ApiForcePasswordChangeAdmin(request):
             profile, created = Profile.objects.get_or_create(user=user)
             profile.force_password_change = True
             profile.save()
+
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='User',
+                target_id=str(user.id),
+                details=f"Changement de mot de passe forcé pour l'utilisateur {user.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({
                 "status": "success",
@@ -347,6 +408,16 @@ def ApiResetDeviceLock(request):
             session_info.last_session_key = None # On force aussi la déconnexion
             session_info.save()
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='UserSession',
+                target_id=str(user_id),
+                details=f"Réinitialisation du verrouillage appareil pour l'utilisateur (ID: {user_id})",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 "status": "success", 
                 "message": "Le verrouillage de l'appareil a été réinitialisé. L'utilisateur peut maintenant se connecter sur un nouveau poste."
@@ -399,6 +470,17 @@ def ApiToggleDeviceLock(request):
             session_info.save()
             
             status_text = "activé" if session_info.is_device_lock_enabled else "désactivé"
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='UserSession',
+                target_id=str(user_id),
+                details=f"Verrouillage appareil {status_text} pour l'utilisateur {user.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 "status": "success", 
                 "message": f"Le verrouillage par appareil a été {status_text} pour {user.username}.",
@@ -424,6 +506,16 @@ def LoginAsUser(request, user_id):
     login(request, target_user, backend='django.contrib.auth.backends.ModelBackend')
     request.session['impersonator_id'] = original_user_id
     
+    from t_crm.models import UserActionLog
+    UserActionLog.objects.create(
+        user=User.objects.get(id=original_user_id),
+        action_type='LOGIN',
+        target_model='User',
+        target_id=str(target_user.id),
+        details=f"Connexion en tant que l'utilisateur {target_user.username}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+    
     messages.success(request, f"Vous êtes maintenant connecté(e) en tant que {target_user.username}.")
     return redirect('institut_app:index')
 
@@ -436,6 +528,16 @@ def RestoreOriginalUser(request):
             login(request, impersonator, backend='django.contrib.auth.backends.ModelBackend')
             if 'impersonator_id' in request.session:
                 del request.session['impersonator_id']
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=impersonator,
+                action_type='OTHER',
+                target_model='User',
+                details="Restauration de la session administrateur d'origine",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             messages.success(request, f"De retour sur votre compte administrateur ({impersonator.username}).")
         except User.DoesNotExist:
             messages.error(request, "Impossible de retrouver le compte d'origine.")
@@ -506,6 +608,16 @@ def ApiToggleSubMenuAccess(request):
             access.is_active = is_active
             access.save()
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='UserSubMenuAccess',
+                target_id=str(target_user.id),
+                details=f"Mise à jour de l'accès au sous-menu {submenu_code} (Module {module_code}) pour {target_user.username}: {'Activé' if is_active else 'Désactivé'}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({"status": "success", "message": "Paramètre mis à jour"})
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)})

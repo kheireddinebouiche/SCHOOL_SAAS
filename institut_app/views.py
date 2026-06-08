@@ -1132,6 +1132,16 @@ def terminate_session_api(request):
                 us.last_session_key = None
                 us.save(update_fields=["last_session_key"])
                 
+                from t_crm.models import UserActionLog
+                UserActionLog.objects.create(
+                    user=request.user,
+                    action_type='UPDATE',
+                    target_model='UserSession',
+                    target_id=str(us.user.id),
+                    details=f"Terminaison de la session pour l'utilisateur {us.user.username}",
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+                
                 return JsonResponse({'status': 'success', 'message': 'Session terminée avec succès.'})
             return JsonResponse({'status': 'success', 'message': 'Session terminée avec succès.'})
         except UserSession.DoesNotExist:

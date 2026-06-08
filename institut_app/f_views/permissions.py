@@ -60,6 +60,15 @@ def ApiAddModule(request):
                 is_active = addModuleStatus,
             )
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Module',
+                details=f"Création du module {addModuleName}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({"status":"success",'message':"Le module a été crée avec succès"})
 
         except Exception as e:
@@ -117,6 +126,16 @@ def ApiAddRole(request):
                 is_active=is_active in ['1', 'true', 'True', True, 'on']
             )
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Role',
+                target_id=str(role.id),
+                details=f"Création du rôle {name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({'status':'success', 'message':'Le rôle a été créé avec succès'})
 
         except ValueError:
@@ -155,6 +174,16 @@ def ApiUpdateRole(request):
                 role.description = description
 
             role.save()
+
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Role',
+                target_id=str(role.id),
+                details=f"Mise à jour du rôle {role.name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({'status':'success', 'message':'Le rôle a été mis à jour avec succès'})
 
@@ -218,7 +247,18 @@ def ApiDeleteRole(request):
                     'message': 'Impossible de supprimer un rôle actif. Veuillez désactiver le rôle avant de le supprimer.'
                 })
 
+            role_name = role.name
             role.delete()
+
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='Role',
+                target_id=str(role_id),
+                details=f"Suppression du rôle {role_name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({'status':'success', 'message':'Le rôle a été supprimé avec succès'})
 
@@ -253,6 +293,16 @@ def ApiChangeRoleStatus(request):
 
             # Déterminer le texte de statut pour la réponse
             status_text = 'activé' if new_status else 'désactivé'
+
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Role',
+                target_id=str(role.id),
+                details=f"Statut {status_text} pour le rôle {role.name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({
                 'status': 'success',
@@ -310,6 +360,16 @@ def ApiUpdateModule(request):
                 module.description = description
 
             module.save()
+
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Module',
+                target_id=str(module.id),
+                details=f"Mise à jour du module {module.name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({"status":"success", 'message':"Le module a été mis à jour avec succès"})
 
@@ -373,6 +433,16 @@ def ApiChangeModuleStatus(request):
 
             # Determine the status text for the response
             status_text = "activé" if new_status else "désactivé"
+
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Module',
+                target_id=str(module.id),
+                details=f"Statut {status_text} pour le module {module.name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({
                 "status": "success",
@@ -823,7 +893,18 @@ def ApiDeleteModule(request):
                     "message": "Impossible de supprimer un module actif. Veuillez désactiver le module avant de le supprimer."
                 })
 
+            module_name = module.name
             module.delete()
+
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='Module',
+                target_id=str(module_id),
+                details=f"Suppression du module {module_name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({"status":"success", 'message':"Le module a été supprimé avec succès"})
 
@@ -948,6 +1029,16 @@ def ApiAddAttribution(request):
                     defaults={'is_active': True}
                 )
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='UserModuleRole',
+                target_id=str(attribution.id),
+                details=f"Attribution du rôle {role.name} au module {module.get_name_display()} pour l'utilisateur {user.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 'status': 'success',
                 'message': 'Attribution créée avec succès',
@@ -1025,6 +1116,15 @@ def ApiBulkAddAttribution(request):
                 except Module.DoesNotExist:
                     errors.append(f"ID Module {m_id} non trouvé")
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='UserModuleRole',
+                details=f"Attribution en masse du rôle {role.name} pour l'utilisateur {user.username} ({created_count} modules)",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 'status': 'success',
                 'message': f'{created_count} attribution(s) créée(s) avec succès',
@@ -1085,6 +1185,16 @@ def ApiUpdateAttribution(request):
             attribution.assigned_by = request.user
             attribution.save()
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='UserModuleRole',
+                target_id=str(attribution.id),
+                details=f"Mise à jour de l'attribution pour l'utilisateur {user.username} (Module: {module.get_name_display()}, Rôle: {role.name})",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 'status': 'success',
                 'message': 'Attribution mise à jour avec succès'
@@ -1133,6 +1243,16 @@ def ApiDeleteAttribution(request):
         try:
             attribution = UserModuleRole.objects.get(id=attribution_id)
             attribution.delete()
+
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='UserModuleRole',
+                target_id=str(attribution_id),
+                details=f"Suppression d'une attribution",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({
                 'status': 'success',
@@ -1379,6 +1499,16 @@ def ApiTogglePermissionDenial(request):
                 message = "Permission désactivée"
                 is_denied = True
                 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='UserModuleRole',
+                target_id=str(attribution_id),
+                details=f"Bascule de désactivation de permission : {message} pour l'attribution ID {attribution_id}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 'status': 'success', 
                 'message': message,
