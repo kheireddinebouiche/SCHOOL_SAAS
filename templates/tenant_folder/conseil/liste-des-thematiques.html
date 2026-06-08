@@ -4,7 +4,7 @@
 
 {% block content %}
 <style>
-    /* Premium Look & Feel - Harmonized with Tresorerie */
+    /* Premium Look & Feel - Modal */
     .glass-card {
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
@@ -12,6 +12,7 @@
         border-radius: 1.25rem;
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
     }
+
 
     .nav-pills .nav-link {
         border-radius: 0.75rem;
@@ -58,6 +59,36 @@
         border-radius: 0.75rem;
     }
 
+    .form-control-custom {
+        border-radius: 0.75rem !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 0.6rem 1rem !important;
+        background-color: #f8fafc !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .form-control-custom:focus {
+        background-color: #fff !important;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    }
+    
+    .custom-input-group {
+        border-radius: 0.75rem !important;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+    }
+    .custom-input-group .form-control-custom {
+        border: none !important;
+        border-radius: 0 !important;
+    }
+    .custom-input-group .input-group-text {
+        border: none !important;
+        background-color: #f1f5f9;
+        font-weight: 600;
+        color: #64748b;
+    }
+
     .folder-card {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         border: 1px solid #f1f5f9;
@@ -81,8 +112,9 @@
             <!-- start page title -->
             <div class="row mb-4">
                 <div class="col-12">
-                    <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
+                    <div class="card shadow-sm border-0 rounded-4 p-4">
+                        <div class="d-sm-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
                             <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
                                 <i class="ri-lightbulb-line text-primary fs-3"></i>
                             </div>
@@ -102,12 +134,13 @@
                     </div>
                 </div>
             </div>
-            <!-- end page title -->
+        </div>
+        <!-- end page title -->
 
             <!-- Action Bar -->
             <div class="row mb-4">
                 <div class="col-12">
-                    <div class="glass-card p-4">
+                    <div class="card shadow-sm border-0 rounded-4 p-4">
                         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                             <ul class="nav nav-pills" id="pills-tab" role="tablist">
                                 <li class="nav-item">
@@ -127,6 +160,17 @@
                                     <i class="ri-search-line"></i>
                                     <input type="text" id="table-filter" class="form-control" placeholder="Rechercher..." style="width: 250px;">
                                 </div>
+                                
+                                <div class="dropdown" id="optionsThematiquesBtn">
+                                    <button class="btn btn-light d-flex align-items-center py-2 px-3 btn-rounded shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="ri-settings-4-line me-1 fs-5"></i> <span>Options</span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                        <li><a class="dropdown-item fw-medium" href="{% url 't_conseil:ApiExportThematique' %}"><i class="ri-download-line me-2 text-primary"></i> Exporter en Excel</a></li>
+                                        <li><button class="dropdown-item fw-medium" type="button" id="btnImportThematique"><i class="ri-upload-line me-2 text-success"></i> Importer via Excel</button></li>
+                                    </ul>
+                                </div>
+
                                 <button class="btn btn-primary d-flex align-items-center py-2 px-3 btn-rounded shadow-sm" id="btnAddThematique">
                                     <i class="ri-add-line me-1 fs-5"></i> <span>Nouvelle Thématique</span>
                                 </button>
@@ -140,17 +184,73 @@
       <div class="row" id="listItem">
           <!-- Data loaded via AJAX -->
       </div>
+      
+      <!-- Pagination Controls -->
+      <div class="row">
+          <div class="col-12 d-flex justify-content-center mt-4">
+              <ul class="pagination pagination-rounded" id="paginationControls">
+              </ul>
+          </div>
+      </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- Modal Import -->
+<div id="importThematique" class="modal fade" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header bg-light p-4 border-bottom-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-soft-success p-3 rounded-pill me-3">
+            <i class="ri-upload-cloud-line fs-2 text-success"></i>
+          </div>
+          <div>
+            <h4 class="modal-title mb-0 text-dark fw-bold">Importer des thématiques</h4>
+            <p class="mb-0 text-muted small">Importation en masse via fichier Excel</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="alert alert-info border-0 bg-info bg-opacity-10 d-flex align-items-start mb-4">
+            <i class="ri-information-line fs-4 me-3 text-info"></i>
+            <div>
+                <p class="mb-1 text-info fw-medium">Utilisez le modèle Excel !</p>
+                <p class="mb-0 text-info small">Téléchargez le template ci-dessous, remplissez-le et importez-le ici. Seule la colonne <strong>Label</strong> est obligatoire, la <strong>Description</strong> est optionnelle.</p>
+            </div>
+        </div>
+        
+        <div class="text-center mb-4">
+            <a href="{% url 't_conseil:ApiDownloadThematiqueTemplate' %}" class="btn btn-soft-info btn-rounded fw-medium">
+                <i class="ri-file-download-line align-bottom me-1"></i> Télécharger le modèle Excel
+            </a>
+        </div>
+
+        <form id="formImportThematique" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="fileImport" class="form-label fw-bold">Fichier Excel (.xlsx)</label>
+                <input class="form-control" type="file" id="fileImport" name="file" accept=".xlsx">
+            </div>
+        </form>
+      </div>
+      <div class="modal-footer bg-transparent p-4 border-top-0">
+        <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-success px-4 shadow-sm btn-rounded" id="btnSubmitImport">
+            <i class="ri-upload-line align-bottom me-1"></i> Importer les données
+        </button>
+      </div>
     </div>
   </div>
 </div>
 
 <div id="newThematique" class="modal fade" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content shadow-lg border-0">
-      <div class="modal-header bg-primary bg-opacity-5 p-4 border-bottom-0">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header bg-light p-4 border-bottom-0">
         <div class="d-flex align-items-center">
-          <div class="bg-primary bg-opacity-10 p-3 rounded-pill me-3">
+          <div class="bg-soft-primary p-3 rounded-pill me-3">
             <i class="ri-add-circle-line fs-2 text-primary"></i>
           </div>
           <div>
@@ -164,18 +264,18 @@
         <form id="formNewThematique">
           <div class="row g-4">
             <div class="col-md-12">
-              <label class="form-label fw-semibold">Désignation</label>
+              <label class="form-label fw-semibold text-muted">Désignation</label>
               <input type="text" class="form-control form-control-custom" id="labelThematique" placeholder="Ex: Audit de performance">
             </div>
             <div class="col-md-12">
-              <label class="form-label fw-semibold">Prix Unitaire (HT)</label>
-              <div class="input-group">
+              <label class="form-label fw-semibold text-muted">Prix Unitaire (HT)</label>
+              <div class="input-group custom-input-group">
                 <input type="number" class="form-control form-control-custom" id="prixThematique">
-                <span class="input-group-text bg-light border-start-0">DZD</span>
+                <span class="input-group-text">DZD</span>
               </div>
             </div>
             <div class="col-md-6">
-              <label class="form-label fw-semibold">TVA par défaut (%)</label>
+              <label class="form-label fw-semibold text-muted">TVA par défaut (%)</label>
               <select class="form-select form-control-custom" id="tvaThematique">
                 {% for tva in tvas %}
                 <option value="{{ tva.valeur|stringformat:'.2f' }}">{{ tva.label }} ({{ tva.valeur }}%)</option>
@@ -183,22 +283,22 @@
               </select>
             </div>
             <div class="col-md-6">
-              <label class="form-label fw-semibold">Catégorie</label>
+              <label class="form-label fw-semibold text-muted">Catégorie</label>
               <select class="form-select form-control-custom" id="categorieThematique">
                 <option value="service">Service</option>
                 <option value="produit">Produit</option>
               </select>
             </div>
             <div class="col-12">
-              <label class="form-label fw-semibold">Description</label>
+              <label class="form-label fw-semibold text-muted">Description</label>
               <textarea class="form-control form-control-custom" id="descriptionThematique" rows="3"></textarea>
             </div>
           </div>
         </form>
       </div>
-      <div class="modal-footer bg-light p-3 border-top-0">
+      <div class="modal-footer bg-transparent p-4 border-top-0">
         <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-primary px-4 shadow-sm" id="saveThematique">Enregistrer</button>
+        <button type="button" class="btn btn-primary px-4 shadow-sm btn-rounded" id="saveThematique">Enregistrer</button>
       </div>
     </div>
   </div>
@@ -207,10 +307,10 @@
 <!-- Modal Edition -->
 <div id="updateThematique" class="modal fade" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content shadow-lg border-0">
-      <div class="modal-header bg-info bg-opacity-5 p-4 border-bottom-0">
+    <div class="modal-content glass-card border-0">
+      <div class="modal-header bg-light p-4 border-bottom-0">
         <div class="d-flex align-items-center">
-          <div class="bg-info bg-opacity-10 p-3 rounded-pill me-3">
+          <div class="bg-soft-info p-3 rounded-pill me-3">
             <i class="ri-edit-line fs-2 text-info"></i>
           </div>
           <div>
@@ -224,15 +324,18 @@
         <input type="hidden" id="updateIdThematique">
         <div class="row g-4">
           <div class="col-md-12">
-            <label class="form-label fw-semibold">Désignation</label>
+            <label class="form-label fw-semibold text-muted">Désignation</label>
             <input type="text" class="form-control form-control-custom" id="updatelabelThematique">
           </div>
           <div class="col-md-12">
-            <label class="form-label fw-semibold">Prix Unitaire (HT)</label>
-            <input type="number" class="form-control form-control-custom" id="updateprixThematique">
+            <label class="form-label fw-semibold text-muted">Prix Unitaire (HT)</label>
+            <div class="input-group custom-input-group">
+                <input type="number" class="form-control form-control-custom" id="updateprixThematique">
+                <span class="input-group-text">DZD</span>
+            </div>
           </div>
           <div class="col-md-6">
-            <label class="form-label fw-semibold">TVA par défaut (%)</label>
+            <label class="form-label fw-semibold text-muted">TVA par défaut (%)</label>
             <select class="form-select form-control-custom" id="updatetvaThematique">
                 {% for tva in tvas %}
                 <option value="{{ tva.valeur|stringformat:'.2f' }}">{{ tva.label }} ({{ tva.valeur }}%)</option>
@@ -240,21 +343,21 @@
             </select>
           </div>
           <div class="col-md-6">
-            <label class="form-label fw-semibold">Catégorie</label>
+            <label class="form-label fw-semibold text-muted">Catégorie</label>
             <select class="form-select form-control-custom" id="updatecategorieThematique">
               <option value="service">Service</option>
               <option value="produit">Produit</option>
             </select>
           </div>
           <div class="col-12">
-            <label class="form-label fw-semibold">Description</label>
+            <label class="form-label fw-semibold text-muted">Description</label>
             <textarea class="form-control form-control-custom" id="updatedescriptionThematique" rows="3"></textarea>
           </div>
         </div>
       </div>
-      <div class="modal-footer bg-light p-3 border-top-0">
+      <div class="modal-footer bg-transparent p-4 border-top-0">
         <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-info text-white px-4 shadow-sm" id="saveUpdateThematique">Mettre à jour</button>
+        <button type="button" class="btn btn-info text-white px-4 shadow-sm btn-rounded" id="saveUpdateThematique">Mettre à jour</button>
       </div>
     </div>
   </div>
@@ -300,7 +403,7 @@
 <!-- Modal Details Specialty -->
 <div id="specDetailsModal" class="modal fade" tabindex="-1">
   <div class="modal-dialog modal-xl modal-dialog-centered">
-    <div class="modal-content glass-card border-0">
+    <div class="modal-content shadow-lg border-0 rounded-4">
       <div class="modal-header bg-primary bg-opacity-5 p-4 border-bottom-0">
         <div class="mx-auto text-center">
             <div class="avatar-md mx-auto mb-3">
@@ -420,23 +523,21 @@
   $(document).ready(function(){
 
     let currentType = 'thematique';
+    let allData = [];
+    let filteredData = [];
+    let currentPage = 1;
+    const itemsPerPage = 8;
 
-    function loadData(type){
-        currentType = type;
-        let url = "";
-        if(type === 'thematique') url = "{% url 't_conseil:ApiLoadThematique' %}";
-        else if(type === 'formation') url = "{% url 't_conseil:ApiLoadDegreeFormationsList' %}";
-        else if(type === 'specialite') url = "{% url 't_conseil:ApiGetDegreeFormations' %}";
+    function renderPage() {
+        var row = "";
+        let startIndex = (currentPage - 1) * itemsPerPage;
+        let endIndex = startIndex + itemsPerPage;
+        let pageData = filteredData.slice(startIndex, endIndex);
 
-        $.ajax({
-            url : url,
-            type : "GET",
-            dataType : 'JSON',
-            success : function(data){
-                var row = "";
-                if (data.length > 0){
-                    $.each(data, function(index, p){
-                        let label = type === 'thematique' ? p.label : (type === 'formation' ? p.nom : p.label);
+        if (pageData.length > 0){
+            $.each(pageData, function(index, p){
+                let type = currentType;
+                let label = type === 'thematique' ? p.label : (type === 'formation' ? p.nom : p.label);
                         let description = p.description || (type === 'specialite' ? 'Spécialité liée à ' + p.formation__nom : 'Aucune description');
                         let prix = type === 'thematique' ? p.prix : (type === 'formation' ? p.prix_formation : p.prix);
                         let date = type === 'thematique' ? p.created_at : (type === 'formation' ? p.date_creation : p.created_at);
@@ -448,7 +549,7 @@
                         let catLabel = type === 'thematique' ? (p.categorie || 'service') : (type === 'formation' ? 'FORMATION' : 'SPECIALITE');
 
                         row += '<div class="col-xxl-3 col-xl-4 col-sm-6 mb-4 card-item" data-category="'+catLabel+'" data-type="'+type+'" data-id="'+p.id+'" style="cursor: '+(type === 'specialite' ? 'pointer' : 'default')+';">';
-                        row += '  <div class="card glass-card border-0 h-100 folder-card">';
+                        row += '  <div class="card border-0 h-100 folder-card shadow-sm rounded-4">';
                         row += '    <div class="card-body pb-0 pt-4">';
                         row += '      <div class="d-flex justify-content-between align-items-start mb-3">';
                         row += '        <div class="avatar-sm flex-shrink-0">';
@@ -509,6 +610,7 @@
                         row += '</div>';
                     });
                 } else {
+                    let type = currentType;
                     let msg = type === 'thematique' ? 'Aucune thématique trouvée' : (type === 'formation' ? 'Aucune formation trouvée' : 'Aucune spécialité trouvée');
                     let subMsg = type === 'thematique' ? 'Commencez par ajouter votre première proposition de conseil.' : 'Les données seront synchronisées depuis le module de formation.';
                     
@@ -531,12 +633,82 @@
                           '  </div>' +
                           '</div>';
                 }
-                $('#listItem').fadeOut(200, function(){
-                    $(this).html(row).fadeIn(200);
-                });
+                
+                $('#listItem').html(row);
+                renderPagination();
+    }
+
+    function renderPagination() {
+        let totalPages = Math.ceil(filteredData.length / itemsPerPage);
+        let paginationHtml = "";
+
+        if (totalPages > 1) {
+            paginationHtml += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${currentPage - 1}"><i class="ri-arrow-left-s-line"></i></a>
+            </li>`;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                paginationHtml += `<li class="page-item ${currentPage === i ? 'active' : ''}">
+                    <a class="page-link" href="#" data-page="${i}">${i}</a>
+                </li>`;
+            }
+
+            paginationHtml += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${currentPage + 1}"><i class="ri-arrow-right-s-line"></i></a>
+            </li>`;
+        }
+
+        $('#paginationControls').html(paginationHtml);
+    }
+
+    $(document).on('click', '.page-link', function(e) {
+        e.preventDefault();
+        let page = $(this).data('page');
+        let totalPages = Math.ceil(filteredData.length / itemsPerPage);
+        
+        if (page > 0 && page <= totalPages && page !== currentPage) {
+            currentPage = page;
+            renderPage();
+            $('html, body').animate({ scrollTop: 0 }, 'slow');
+        }
+    });
+
+    function loadData(type){
+        currentType = type;
+        let url = "";
+        if(type === 'thematique') url = "{% url 't_conseil:ApiLoadThematique' %}";
+        else if(type === 'formation') url = "{% url 't_conseil:ApiLoadDegreeFormationsList' %}";
+        else if(type === 'specialite') url = "{% url 't_conseil:ApiGetDegreeFormations' %}";
+
+        $.ajax({
+            url : url,
+            type : "GET",
+            dataType : 'JSON',
+            success : function(data){
+                allData = data;
+                filteredData = [...allData];
+                currentPage = 1;
+                renderPage();
             }
         });
     }
+
+    // Filter function
+    function filterThematiques() {
+      var searchValue = $("#table-filter").val().toLowerCase();
+      
+      filteredData = allData.filter(function(item) {
+          let label = currentType === 'thematique' ? item.label : (currentType === 'formation' ? item.nom : item.label);
+          let desc = item.description || "";
+          return (label && label.toLowerCase().includes(searchValue)) || (desc && desc.toLowerCase().includes(searchValue));
+      });
+      
+      currentPage = 1;
+      renderPage();
+    }
+
+    // Event listeners for filters
+    $("#table-filter").on("keyup", filterThematiques);
 
     loadData('thematique');
 
@@ -593,29 +765,60 @@
         const type = $(this).data('type');
         loadData(type);
         
-        // Show/Hide Add button only for thématique
-        if(type === 'thematique') $('#btnAddThematique').fadeIn();
-        else $('#btnAddThematique').fadeOut();
+        if(type === 'thematique') {
+            $('#btnAddThematique').fadeIn();
+            $('#optionsThematiquesBtn').fadeIn();
+        } else {
+            $('#btnAddThematique').fadeOut();
+            $('#optionsThematiquesBtn').fadeOut();
+        }
     });
 
-    // Filter function
-    function filterThematiques() {
-      var searchValue = $("#table-filter").val().toLowerCase();
+    $(document).on('click', '#btnImportThematique', function(){
+        $('#importThematique').modal('show');
+    });
 
-      $("#listItem .card-item").each(function() {
-        var text = $(this).text().toLowerCase();
-        var matchesSearch = text.indexOf(searchValue) > -1;
-
-        if (matchesSearch) {
-          $(this).show();
-        } else {
-          $(this).hide();
+    $(document).on('click', '#btnSubmitImport', function(){
+        var fileInput = $('#fileImport')[0].files[0];
+        
+        if(!fileInput){
+            alertify.error('Veuillez sélectionner un fichier Excel.');
+            return;
         }
-      });
-    }
 
-    // Event listeners for filters
-    $("#table-filter").on("keyup", filterThematiques);
+        var formData = new FormData();
+        formData.append('file', fileInput);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        var btn = $(this);
+        btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Importation...');
+        btn.prop('disabled', true);
+
+        $.ajax({
+            url: "{% url 't_conseil:ApiImportThematique' %}",
+            type: "POST",
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response){
+                if(response.status === 'success'){
+                    alertify.success(response.message);
+                    loadData('thematique');
+                    $('#importThematique').modal('hide');
+                    $('#formImportThematique')[0].reset();
+                } else {
+                    alertify.error(response.message);
+                }
+            },
+            error: function(){
+                alertify.error("Une erreur s'est produite lors de l'importation.");
+            },
+            complete: function(){
+                btn.html('<i class="ri-upload-line align-bottom me-1"></i> Importer les données');
+                btn.prop('disabled', false);
+            }
+        });
+    });
 
     $(document).on('click', '#btnAddThematique', function(){
         $('#newThematique').modal('show');
@@ -630,6 +833,11 @@
 
         if(label == ""){
             alertify.error('Le label est obligatoire');
+            return false;
+        }
+        
+        if(prix == ""){
+            alertify.error('Le prix est obligatoire');
             return false;
         }
 
@@ -693,6 +901,16 @@
         var description = $('#updatedescriptionThematique').val();
         var default_tva = $('#updatetvaThematique').val();
         var categorie = $('#updatecategorieThematique').val();
+
+        if(label == ""){
+            alertify.error('Le label est obligatoire');
+            return false;
+        }
+        
+        if(prix == ""){
+            alertify.error('Le prix est obligatoire');
+            return false;
+        }
 
         $.ajax({
             url: "{% url 't_conseil:ApiUpdateThematique' %}",

@@ -1047,9 +1047,13 @@ def GetMyProfile(request):
                 'permissions': permissions
             })
 
+        from .models import Entreprise
+        entreprise = Entreprise.objects.first()
+
         context = {
             'obj': obj,
             'detailed_roles': detailed_roles,
+            'entreprise': entreprise,
         }
         return render(request, 'tenant_folder/users/mon-profile.html', context)
     
@@ -1060,10 +1064,13 @@ def GetMyProfile(request):
 @login_required(login_url='institut_app:login')    
 def UpdateMyProfile(request):
     form = UserProfileEditForm(instance=request.user)
+    profile_form = ProfileUpdateForm(instance=request.user.profile)
     if request.method == "POST":
-        form = UserProfileEditForm(request.POST, request.FILES, instance=request.user)
-        if form.is_valid():
+        form = UserProfileEditForm(request.POST, instance=request.user)
+        profile_form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user.profile)
+        if form.is_valid() and profile_form.is_valid():
             form.save()
+            profile_form.save()
             messages.success(request, "Votre profile a été mis à jour avec succès")
             return redirect('institut_app:profile')
         else:
@@ -1071,6 +1078,7 @@ def UpdateMyProfile(request):
 
     context ={
         'form' : form,
+        'profile_form': profile_form,
         'tenant' : request.tenant,
     }
 
@@ -1277,6 +1285,14 @@ def directeur_dashboard(request):
     # Derniers rappels
     recent_reminders = RendezVous.objects.filter(archived=False).select_related('prospect').order_by('-created_at')[:5]
 
+    # --- 6. Executive Education ---
+    from t_conseil.models import Devis, Facture, GroupeConseil
+    exec_prospects = Prospets.objects.filter(context='con').count()
+    exec_clients = Prospets.objects.filter(context='con', is_client=True).count()
+    exec_devis_attente = Devis.objects.filter(etat='attente').count()
+    exec_ca = Facture.objects.filter(type_facture='standard', etat='valide').aggregate(ca=Sum('lignes_facture__montant_ht'))['ca'] or 0
+    exec_groupes_enc = GroupeConseil.objects.filter(etat='enc').count()
+
     context = {
         'tenant': request.tenant,
         'kpis': {
@@ -1304,6 +1320,13 @@ def directeur_dashboard(request):
             'exam': {
                 'success_rate': round(success_rate, 1),
                 'pending_pvs': pending_pvs
+            },
+            'executive': {
+                'prospects': exec_prospects,
+                'clients': exec_clients,
+                'devis_attente': exec_devis_attente,
+                'ca': exec_ca,
+                'groupes_enc': exec_groupes_enc,
             }
         },
         # CRM Data Injection

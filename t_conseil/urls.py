@@ -29,7 +29,9 @@ urlpatterns = [
   path('ApiUpdateThematique', ApiUpdateThematique, name="ApiUpdateThematique"),
   path('ApiDeleteFinalThematique', ApiDeleteFinalThematique, name="ApiDeleteFinalThematique"),
 
-
+  path('api/thematiques/template/', ApiDownloadThematiqueTemplate, name="ApiDownloadThematiqueTemplate"),
+  path('api/thematiques/export/', ApiExportThematique, name="ApiExportThematique"),
+  path('api/thematiques/import/', ApiImportThematique, name="ApiImportThematique"),
 
   path('details-prospect/<str:slug>/', DetailsProspectConseil, name="DetailsProspectConseil"),
   path('prospects-en-instance/',ListeProspectConseil, name="prospectInstance"),
@@ -68,6 +70,7 @@ urlpatterns = [
   path('api/pipeline/get-opportunite/', ApiGetOpportunite, name="ApiGetOpportunite"),
   path('api/pipeline/update-opportunite/', ApiUpdateOpportunite, name="ApiUpdateOpportunite"),
   path('api/pipeline/delete/', ApiDeleteOpportunite, name="ApiDeleteOpportunite"),
+  path('api/pipeline/create-rendezvous/', ApiCreateRendezVousPipeline, name="ApiCreateRendezVousPipeline"),
   path('api/facture/add-paiement/', ApiAddPaiement, name="ApiAddPaiement"),
   path('api/devis/delete/', ApiDeleteDevis, name="ApiDeleteDevis"),
   path('api/devis/validate/', ApiValidateDevis, name="ApiValidateDevis"),
@@ -119,6 +122,7 @@ urlpatterns = [
     path('api/groupes/update-settings/', ApiUpdateGroupeSettings, name="ApiUpdateGroupeSettings"),
     path('api/groupes/planning/add/', ApiAddPlanningSession, name="ApiAddPlanningSession"),
     path('api/groupes/planning/delete/', ApiDeletePlanningSession, name="ApiDeletePlanningSession"),
+    path('api/groupes/planning/report/', ApiUpdateSessionReport, name="ApiUpdateSessionReport"),
     path('groupes/planning/session-pdf/<int:session_id>/', SessionAttendancePDF, name="SessionAttendancePDF"),
     path('api/participants/confirm-scolarite/', ApiConfirmParticipantForScolarite, name="ApiConfirmParticipantForScolarite"),
     path('api/participants/cancel-scolarite-confirmation/', ApiCancelParticipantConfirmationForScolarite, name="ApiCancelParticipantConfirmationForScolarite"),

@@ -1,51 +1,325 @@
 {% extends "tenant_folder/base.html" %}
 {% load static %}
+{% load custom_filters %}
+{% load accounting_filters %}
 
-{% block title %}Tableau de bord Conseil | {{ tenant.name }}{% endblock %}
+{% block title %}{{ page_title }} | {{ tenant.name }}{% endblock %}
 
 {% block content %}
+<style>
+    :root {
+        --primary-color: #4361ee;
+        --secondary-color: #3f37c9;
+        --accent-color: #4895ef;
+        --success-color: #4cc9f0;
+        --warning-color: #f72585;
+        --info-color: #480ca8;
+        --danger-color: #ef233c;
+    }
+
+    .modern-card {
+        border-radius: 16px;
+        border: none;
+        background: white;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.01);
+    }
+    
+    .modern-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .card-header-modern {
+        background: transparent;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 1.5rem;
+    }
+
+    .icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .icon-box.primary { background: rgba(67, 97, 238, 0.1); color: var(--primary-color); }
+    .icon-box.success { background: rgba(76, 201, 240, 0.1); color: var(--success-color); }
+    .icon-box.warning { background: rgba(247, 37, 133, 0.1); color: var(--warning-color); }
+    .icon-box.info { background: rgba(72, 149, 239, 0.1); color: var(--accent-color); }
+    .icon-box.danger { background: rgba(239, 35, 60, 0.1); color: var(--danger-color); }
+
+    /* Stats Tile Specific */
+    .stat-tile-title {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #878a99;
+        font-weight: 600;
+    }
+    .stat-tile-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #212529;
+        margin-top: 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+</style>
+
 <div class="main-content">
 <div class="page-content">
     <div class="container-fluid">
-        <!-- Page Header -->
+        <!-- Page Title -->
         <div class="row mb-4">
             <div class="col-12">
-                <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h4 class="mb-1 fw-bold text-dark">Tableau de bord Conseil</h4>
-                        <p class="text-muted small mb-0">Vue d'ensemble de l'activité Executive Education.</p>
+                        <h4 class="fs-24 fw-bold text-dark mb-1">Tableau de bord Executive Education</h4>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb m-0 bg-transparent p-0">
+                                <li class="breadcrumb-item"><a href="javascript: void(0);" class="text-muted">Tableau de bord</a></li>
+                                <li class="breadcrumb-item active text-primary" aria-current="page">Vue d'ensemble</li>
+                            </ol>
+                        </nav>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Placeholder for Stats -->
-        <div class="row">
-            <div class="col-md-3">
-                <div class="card card-animate border-0 shadow-sm">
+        <!-- 1. TOP KPIs -->
+        <div class="row g-4 mb-4">
+            <!-- CA -->
+            <div class="col-xl-3 col-md-6">
+                <div class="card modern-card h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="stat-tile-title mb-0">CA Validé</h5>
+                            <div class="icon-box success" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                <i class="ri-money-dollar-circle-line"></i>
+                            </div>
+                        </div>
+                        <h2 class="stat-tile-value">{{ ventes.ca_global|floatformat:2 }} <small class="fs-14 text-muted fw-normal">DZD</small></h2>
+                        <div class="text-muted mt-2 fs-12">
+                            <i class="ri-bill-line text-warning me-1"></i> <a href="{% url 't_conseil:ListeDesFactures' %}" class="text-muted text-decoration-underline">{{ ventes.factures_attente }} factures en brouillon</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nouveaux Prospects -->
+            <div class="col-xl-3 col-md-6">
+                <div class="card modern-card h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="stat-tile-title mb-0">Prospects (Mois)</h5>
+                            <div class="icon-box primary" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                <i class="ri-user-add-line"></i>
+                            </div>
+                        </div>
+                        <h2 class="stat-tile-value">{{ crm.new_prospects }}</h2>
+                        <div class="text-muted mt-2 fs-12">
+                            <i class="ri-user-line text-primary me-1"></i> <strong>{{ crm.total_prospects }}</strong> prospects au total
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Devis -->
+            <div class="col-xl-3 col-md-6">
+                <div class="card modern-card h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="stat-tile-title mb-0">Devis en attente</h5>
+                            <div class="icon-box warning" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                <i class="ri-file-text-line"></i>
+                            </div>
+                        </div>
+                        <h2 class="stat-tile-value text-warning">{{ ventes.devis_attente }} <small class="fs-14 text-muted fw-normal">dossiers</small></h2>
+                        <div class="text-muted mt-2 fs-12">
+                            Potentiel : <strong>{{ ventes.devis_attente_montant|floatformat:2 }} DZD</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Groupes en cours -->
+            <div class="col-xl-3 col-md-6">
+                <div class="card modern-card h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="stat-tile-title mb-0">Groupes en Cours</h5>
+                            <div class="icon-box info" style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                <i class="ri-team-line"></i>
+                            </div>
+                        </div>
+                        <h2 class="stat-tile-value">{{ formation.groupes_en_cours }}</h2>
+                        <div class="text-muted mt-2 fs-12">
+                            <i class="ri-contacts-line me-1 text-info"></i> <strong>{{ formation.total_participants }}</strong> participants inscrits
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <!-- Pipeline Chart -->
+            <div class="col-xl-8">
+                <div class="card modern-card h-100">
+                    <div class="card-header card-header-modern align-items-center d-flex">
+                        <h5 class="card-title mb-0 flex-grow-1">
+                            <i class="ri-bar-chart-fill me-2 text-primary"></i>
+                            Répartition du Pipeline (Opportunités)
+                        </h5>
+                    </div>
                     <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-grow-1 overflow-hidden">
-                                <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Prospects Actifs</p>
+                        <div id="pipelineChart" class="apex-charts" dir="ltr"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Links -->
+            <div class="col-xl-4">
+                <!-- Convertis -->
+                <div class="card modern-card mb-4">
+                    <div class="card-body p-4 text-center">
+                        <div class="avatar-md mx-auto mb-3">
+                            <div class="avatar-title bg-success-subtle text-success rounded-circle fs-24">
+                                <i class="ri-building-line"></i>
                             </div>
                         </div>
-                        <div class="d-flex align-items-end justify-content-between mt-4">
-                            <div>
-                                <h4 class="fs-22 fw-semibold ff-secondary mb-4">0</h4>
-                                <a href="{% url 't_conseil:PipelineConseil' %}" class="text-decoration-underline">Voir le pipeline</a>
-                            </div>
-                            <div class="avatar-sm flex-shrink-0">
-                                <span class="avatar-title bg-soft-primary rounded fs-3">
-                                    <i class="bx bx-user-circle text-primary"></i>
-                                </span>
-                            </div>
+                        <h3 class="fw-bold">{{ crm.total_clients }}</h3>
+                        <p class="text-muted mb-0">Clients Convertis</p>
+                        <div class="mt-3">
+                            <a href="{% url 't_conseil:ListeDesClients' %}" class="btn btn-sm btn-light border">Voir la base de données</a>
                         </div>
-                    </div><!-- end card body -->
-                </div><!-- end card -->
-            </div><!-- end col -->
+                    </div>
+                </div>
+                
+                <div class="card modern-card mt-4">
+                    <div class="card-header card-header-modern align-items-center d-flex">
+                        <h5 class="card-title mb-0 flex-grow-1">
+                            <i class="ri-links-line me-2 text-info"></i>
+                            Raccourcis
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="d-grid">
+                            <a href="{% url 't_conseil:PipelineConseil' %}" class="btn btn-ghost-primary d-flex justify-content-between align-items-center p-3 rounded-0 border-bottom">
+                                <span class="fw-medium text-dark"><i class="ri-filter-3-line text-primary me-2"></i> Gérer le Pipeline</span>
+                                <i class="ri-arrow-right-s-line text-muted"></i>
+                            </a>
+                            <a href="{% url 't_conseil:ListeGroupesConseil' %}" class="btn btn-ghost-primary d-flex justify-content-between align-items-center p-3 rounded-0 border-bottom">
+                                <span class="fw-medium text-dark"><i class="ri-team-line text-info me-2"></i> Voir les Groupes</span>
+                                <i class="ri-arrow-right-s-line text-muted"></i>
+                            </a>
+                            <a href="{% url 't_conseil:ListeDesFactures' %}" class="btn btn-ghost-primary d-flex justify-content-between align-items-center p-3 rounded-0">
+                                <span class="fw-medium text-dark"><i class="ri-bill-line text-success me-2"></i> Facturation</span>
+                                <i class="ri-arrow-right-s-line text-muted"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card modern-card mt-4">
+                    <div class="card-header card-header-modern align-items-center d-flex">
+                        <h5 class="card-title mb-0 flex-grow-1">
+                            <i class="ri-calendar-event-line me-2 text-warning"></i>
+                            Prochains Rendez-vous
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush border-dashed">
+                            {% for rdv in upcoming_rendez_vous %}
+                            <div class="list-group-item d-flex align-items-center p-3">
+                                <div class="avatar-sm flex-shrink-0 me-3">
+                                    <div class="avatar-title bg-{% if rdv.type == 'appel' %}info{% elif rdv.type == 'email' %}warning{% else %}primary{% endif %}-subtle text-{% if rdv.type == 'appel' %}info{% elif rdv.type == 'email' %}warning{% else %}primary{% endif %} rounded-circle fs-4">
+                                        <i class="ri-{% if rdv.type == 'appel' %}phone{% elif rdv.type == 'email' %}mail{% else %}calendar{% endif %}-line"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <h6 class="mb-1 text-truncate"><a href="{% url 't_conseil:DetailsProspectConseil' rdv.prospect.slug %}" class="text-reset">{{ rdv.prospect.nom }} {{ rdv.prospect.prenom }}</a></h6>
+                                    <p class="text-muted mb-0 fs-12 text-truncate">{{ rdv.object|default:"Aucun objet" }}</p>
+                                </div>
+                                <div class="flex-shrink-0 text-end">
+                                    <h6 class="mb-0">{{ rdv.date_rendez_vous|date:"d/m" }}</h6>
+                                    <small class="text-muted">{{ rdv.heure_rendez_vous|time:"H:i" }}</small>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="p-4 text-center text-muted">
+                                <p class="mb-0">Aucun rendez-vous à venir.</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>
 </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Pipeline Chart Data
+    const labels = {{ charts.pipeline_labels|safe }};
+    const dataVals = {{ charts.pipeline_data|safe }};
+    const chartColors = ['#4361ee', '#4cc9f0', '#f72585', '#7209b7', '#3f37c9', '#4895ef', '#560bad', '#480ca8', '#b5179e', '#f15bb5'];
+
+    var pipelineOptions = {
+        chart: {
+            height: 350,
+            type: 'bar',
+            toolbar: { show: false },
+            fontFamily: 'inherit'
+        },
+        plotOptions: {
+            bar: {
+                borderRadius: 4,
+                distributed: true,
+                columnWidth: '50%'
+            }
+        },
+        colors: chartColors,
+        dataLabels: {
+            enabled: true,
+            style: { colors: ['#fff'] }
+        },
+        series: [{
+            name: 'Opportunités',
+            data: dataVals
+        }],
+        xaxis: {
+            categories: labels,
+            axisBorder: { show: false },
+            axisTicks: { show: false }
+        },
+        yaxis: {
+            labels: {
+                formatter: function (val) {
+                    return Math.floor(val);
+                }
+            }
+        },
+        grid: {
+            borderColor: '#f1f1f1'
+        },
+        legend: { show: false }
+    };
+
+    var pipelineChart = new ApexCharts(
+        document.querySelector("#pipelineChart"),
+        pipelineOptions
+    );
+    pipelineChart.render();
+});
+</script>
 {% endblock %}

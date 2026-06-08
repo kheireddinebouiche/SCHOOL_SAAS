@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.contrib import messages
 from t_crm.models import Prospets
-from t_conseil.models import Devis, Participant, Thematiques, GroupeConseil, GroupeConseilParticipant, GroupeConseilThematique
+from t_conseil.models import Devis, Participant, Thematiques, GroupeConseil, GroupeConseilParticipant, GroupeConseilThematique, Facture
 from t_formations.models import Formateurs
 
 @login_required(login_url="institut_app:login")
@@ -47,11 +47,17 @@ def DetailsGroupeConseil(request, pk):
     affectations_thematiques = groupe.affectations_thematiques.all()
     planning_sessions = groupe.planning.all().order_by('date', 'heure_debut')
 
+    # Find the linked standard invoice, if any
+    facture = None
+    if hasattr(groupe.devis, 'facture'):
+        facture = groupe.devis.facture.filter(type_facture='standard').exclude(etat='annule').first()
+
     context = {
         'groupe': groupe,
         'participants_associes': participants_associes,
         'affectations_thematiques': affectations_thematiques,
         'planning_sessions': planning_sessions,
+        'facture_liee': facture,
         'tenant': request.tenant,
         'context_type': 'con',
     }
@@ -65,7 +71,26 @@ def ApiGetClientDevis(request):
         return JsonResponse({'status': 'error', 'message': 'Client ID manquant'})
     
     devis = Devis.objects.filter(client_id=client_id, etat='accepte').values('id', 'num_devis', 'date_emission')
-    return JsonResponse(list(devis), safe=False)
+    factures = Facture.objects.filter(client_id=client_id, type_facture='standard').exclude(etat='annule').values('id', 'num_facture', 'date_emission', 'devis_source__id', 'etat')
+    
+    # Check if the client already has active groups
+    active_groups = GroupeConseil.objects.filter(devis__client_id=client_id).exclude(etat='cloture')
+    has_active_group = active_groups.exists()
+    active_group_info = None
+    if has_active_group:
+        g = active_groups.first()
+        active_group_info = {
+            'id': g.id,
+            'nom': g.nom,
+            'etat': g.get_etat_display()
+        }
+    
+    return JsonResponse({
+        'devis': list(devis),
+        'factures': list(factures),
+        'has_active_group': has_active_group,
+        'active_group_info': active_group_info
+    })
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'view')
@@ -512,3 +537,27 @@ def ApiCancelParticipantConfirmationForScolarite(request):
         
         return JsonResponse({'status': 'success', 'message': 'Confirmation annulée avec succès'})
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('con', 'approuv')
+def ApiUpdateSessionReport(request):
+    import json
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
+        
+    try:
+        data = json.loads(request.body)
+        session_id = data.get('session_id')
+        realisee = data.get('realisee', False)
+        resume_seance = data.get('resume_seance', '')
+        
+        session = GroupeConseilPlanning.objects.get(id=session_id)
+        session.realisee = realisee
+        session.resume_seance = resume_seance
+        session.save()
+        
+        return JsonResponse({'status': 'success', 'message': 'Compte rendu enregistré avec succès'})
+    except GroupeConseilPlanning.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Session introuvable'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})

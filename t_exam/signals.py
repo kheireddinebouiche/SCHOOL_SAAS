@@ -40,7 +40,13 @@ def log_exam_action_delete(sender, instance, **kwargs):
     user = get_current_user()
     request = get_current_request()
     ip = get_client_ip(request)
-    details = f"{sender.__name__} supprimé: {str(instance)}"
+    
+    try:
+        instance_str = str(instance)
+    except Exception:
+        instance_str = f"ID: {instance.id}" if hasattr(instance, 'id') else "Objet inconnu"
+        
+    details = f"{sender.__name__} supprimé: {instance_str}"
     
     UserActionLog.objects.create(
         user=user if user and user.is_authenticated else None,

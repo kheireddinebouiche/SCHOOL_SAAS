@@ -118,6 +118,8 @@ class ConseilValidation(models.Model):
     date_conseil = models.DateField()
     observations_generales = models.TextField(null=True, blank=True)
     statut = models.CharField(max_length=10, choices=CHOICES_STATUT, default='ouvert')
+    stages = models.ManyToManyField(Stage, related_name='conseils_validation', blank=True)
+    focus_groups = models.ManyToManyField('FocusGroup', related_name='conseils_validation', blank=True)
     
     class Meta:
         verbose_name = "Conseil de Validation"

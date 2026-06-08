@@ -131,6 +131,77 @@
 
     .btn-rounded { border-radius: 10px; }
     .btn-pill { border-radius: 50px; }
+
+    /* Modern Filter Bar */
+    .modern-filter-bar {
+        background: #fff;
+        border-radius: 100px;
+        padding: 0.5rem 1rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(0,0,0,0.03);
+    }
+    
+    .modern-search-input {
+        background: transparent;
+        border: none;
+        box-shadow: none !important;
+        padding-left: 0;
+        font-size: 0.95rem;
+    }
+    
+    .modern-search-icon {
+        color: var(--primary-color);
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+    }
+    
+    .modern-select {
+        border-radius: 50px;
+        border: 1px solid #eef0f7;
+        background-color: #f8f9fa;
+        padding: 0.5rem 2.5rem 0.5rem 1rem;
+        font-weight: 500;
+        color: #495057;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.85rem;
+    }
+    
+    .modern-select:hover, .modern-select:focus {
+        background-color: #fff;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+    }
+    
+    .view-toggler-modern {
+        background: #f8f9fa;
+        border-radius: 50px;
+        padding: 4px;
+        display: flex;
+        gap: 2px;
+    }
+    
+    .view-toggler-modern .btn {
+        border-radius: 50px;
+        padding: 0.4rem 1rem;
+        color: #6c757d;
+        border: none;
+        background: transparent;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .view-toggler-modern .btn.active {
+        background: #fff;
+        color: var(--primary-color);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        font-weight: 600;
+    }
 </style>
 
 <div class="main-content">
@@ -216,33 +287,36 @@
       </div>
          <div class="row">
         <div class="col-lg-12">
-          <div class="filter-bar p-3 mb-4">
+          <div class="modern-filter-bar mb-4">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
               
-              <div class="search-input-group flex-grow-1">
-                <i class="ri-search-line"></i>
-                <input type="text" id="table-filter" class="form-control" placeholder="Rechercher un groupe...">
+              <div class="d-flex align-items-center flex-grow-1 px-2">
+                <div class="modern-search-icon">
+                  <i class="ri-search-2-line"></i>
+                </div>
+                <input type="text" id="table-filter" class="form-control modern-search-input" placeholder="Rechercher un groupe, un statut...">
               </div>
 
-              <div class="d-flex flex-wrap align-items-center gap-2">
-                <select id="filter-specialty" class="form-select border-0 bg-light w-auto" style="min-width: 180px;">
-                  <option value="">Spécialité (Toutes)</option>
-                </select>
+              <div class="d-flex flex-wrap align-items-center gap-3 px-2">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="input-group align-items-center">
+                        <span class="bg-transparent border-0 pe-2 text-muted"><i class="ri-sort-desc"></i></span>
+                        <select id="date_filter-group" class="form-select modern-select" style="min-width: 150px;">
+                          <option value="">Trier par date</option>
+                          <option value="-created_at">Plus récents</option>
+                          <option value="created_at">Plus anciens</option>
+                        </select>
+                    </div>
+                </div>
 
-                <select id="date_filter-group" class="form-select border-0 bg-light w-auto" style="min-width: 180px;">
-                  <option value="">Trier par date</option>
-                  <option value="-created_at">Plus récents</option>
-                  <option value="created_at">Plus anciens</option>
-                </select>
+                <div class="vr mx-1 d-none d-md-block" style="height: 24px; opacity: 0.1;"></div>
 
-                <div class="vr mx-1 d-none d-md-block" style="height: 24px;"></div>
-
-                <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group">
-                  <button type="button" class="btn btn-white border-0 px-3 active" id="btn-grid-view" title="Vue Grille">
-                    <i class="ri-grid-fill"></i>
+                <div class="view-toggler-modern">
+                  <button type="button" class="btn active" id="btn-grid-view" title="Vue Grille">
+                    <i class="ri-grid-fill fs-5"></i>
                   </button>
-                  <button type="button" class="btn btn-white border-0 px-3" id="btn-list-view" title="Vue Liste">
-                    <i class="ri-list-check"></i>
+                  <button type="button" class="btn" id="btn-list-view" title="Vue Liste">
+                    <i class="ri-list-check fs-5"></i>
                   </button>
                 </div>
               </div>
@@ -259,6 +333,7 @@
                       <th class="border-0">Date de début</th>
                       <th class="border-0">Date de fin</th>
                       <th class="border-0">Devis</th>
+                      <th class="border-0">Facturation</th>
                       <th class="border-0">Etat</th>
                       <th class="border-0 text-end">Actions</th>
                     </tr>
@@ -271,6 +346,13 @@
                         <td>{{i.start_date}}</td>
                         <td>{{i.end_date}}</td>
                         <td><span class="badge badge-soft-primary"><i class="ri-file-text-line me-1"></i> {{i.devis.num_devis}}</span></td>
+                        <td>
+                            {% if i.devis.facture.all %}
+                                <span class="badge badge-soft-success"><i class="ri-bill-line me-1"></i> Facturé</span>
+                            {% else %}
+                                <span class="badge badge-soft-warning"><i class="ri-error-warning-line me-1"></i> Non facturé</span>
+                            {% endif %}
+                        </td>
                         <td>
                           {% if i.etat == "brouillon" %}   
                               <span class="badge bg-secondary bg-opacity-10 text-secondary">{{i.get_etat_display}}</span>
@@ -480,7 +562,8 @@
                   start_date: cells.eq(1).text().trim(),
                   end_date: cells.eq(2).text().trim(),
                   devis: cells.eq(3).text().trim(),
-                  etat: cells.eq(4).find('span').text().trim()
+                  facture_status: cells.eq(4).html().trim(),
+                  etat: cells.eq(5).find('span').text().trim()
               });
           }
       });
@@ -537,8 +620,8 @@
             <td><div class="fw-bold text-dark">${item.nom}</div></td>
             <td class="text-muted">${item.start_date}</td>
             <td class="text-muted">${item.end_date}</td>
-            <td><span class="badge badge-soft-primary">${item.specialite}</span></td>
-            <td><span class="text-muted">${item.annee_scolaire}</span></td>
+            <td><span class="badge badge-soft-primary">${item.devis}</span></td>
+            <td>${item.facture_status}</td>
             <td>${statusBadge}</td>
             <td class="text-end">
               <div class="dropdown">
@@ -570,7 +653,8 @@
                 </div>
                 
                 <h5 class="fw-bold mb-1 text-truncate">${item.nom}</h5>
-                <p class="text-muted fs-13 mb-3 text-truncate"><i class="ri-file-text-line me-1"></i> ${item.devis}</p>
+                <p class="text-muted fs-13 mb-2 text-truncate"><i class="ri-file-text-line me-1"></i> ${item.devis}</p>
+                <div class="mb-3">${item.facture_status}</div>
                 
                 <div class="d-flex align-items-center gap-3 mb-4">
                   <div class="flex-grow-1">

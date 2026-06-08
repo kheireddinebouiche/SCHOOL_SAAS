@@ -86,12 +86,15 @@ def ApiLoadThematiqueDetails(request):
 @module_permission_required('con', 'view')
 def DetailsProspectConseil(request, slug):
     prospect = get_object_or_404(Prospets, slug=slug)
+    from t_crm.models import RendezVous
+    rendez_vous = RendezVous.objects.filter(prospect=prospect).order_by('-date_rendez_vous', '-heure_rendez_vous')
     
     context = {
         'tenant': request.tenant,
         'prospect': prospect,
         'pk': prospect.id,
         'slug': prospect.slug,
+        'rendez_vous': rendez_vous,
     }
     
     # Use dedicated template for Conseil/Executive Education
@@ -342,9 +345,14 @@ def ListeDesDevis(request):
         'rejete': devis.filter(etat='rejete').count(),
     }
     
+    # Get distinct issuing entities (entreprises)
+    from institut_app.models import Entreprise
+    entites = Entreprise.objects.filter(devis_entreprise__isnull=False).distinct()
+    
     context = {
         "devis" : devis,
         "stats": stats,
+        "entites": entites,
     }
     return render(request,'tenant_folder/conseil/liste_des_devis.html', context)
 
@@ -485,7 +493,94 @@ def ApiUpdateThematique(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': f'Erreur lors de la mise Ã  jour : {str(e)}'})
 
+import openpyxl
+from django.http import HttpResponse
 
+@login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
+def ApiDownloadThematiqueTemplate(request):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Thematiques"
+    
+    headers = ['Label', 'Description']
+    ws.append(headers)
+    
+    for cell in ws[1]:
+        cell.font = openpyxl.styles.Font(bold=True)
+        
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=thematiques_template.xlsx'
+    wb.save(response)
+    return response
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
+def ApiExportThematique(request):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Thematiques"
+    
+    headers = ['Label', 'Description']
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = openpyxl.styles.Font(bold=True)
+        
+    thematiques = Thematiques.objects.all()
+    for t in thematiques:
+        ws.append([
+            t.label, 
+            t.description
+        ])
+        
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=export_thematiques.xlsx'
+    wb.save(response)
+    return response
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
+def ApiImportThematique(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        excel_file = request.FILES['file']
+        if not excel_file.name.endswith('.xlsx'):
+            return JsonResponse({'status': 'error', 'message': 'Le fichier doit être au format Excel (.xlsx)'})
+            
+        try:
+            wb = openpyxl.load_workbook(excel_file)
+            ws = wb.active
+            
+            imported_count = 0
+            skipped_count = 0
+            
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                label = row[0]
+                description = row[1] if len(row) > 1 else None
+                
+                if not label:
+                    skipped_count += 1
+                    continue
+                    
+                if Thematiques.objects.filter(label=label).exists():
+                    skipped_count += 1
+                    continue
+                    
+                Thematiques.objects.create(
+                    label=str(label),
+                    description=str(description) if description else None,
+                    etat='active'
+                )
+                imported_count += 1
+                
+            return JsonResponse({
+                'status': 'success', 
+                'message': f'Importation terminée : {imported_count} thématiques ajoutées, {skipped_count} ignorées.'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Erreur lors de l\'importation : {str(e)}'})
+            
+    return JsonResponse({'status': 'error', 'message': 'Requête invalide ou fichier manquant'})
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'view')
@@ -512,10 +607,14 @@ def ListeDesClients(request):
 @module_permission_required('con', 'view')
 def DetailsClient(request, slug):
     client = get_object_or_404(Prospets, slug=slug)
+    from t_crm.models import RendezVous
+    rendez_vous = RendezVous.objects.filter(prospect=client).order_by('-date_rendez_vous', '-heure_rendez_vous')
+    
     context = {
         'tenant': request.tenant,
         'client': client,
         'pk': client.id,
+        'rendez_vous': rendez_vous,
     }
     return render(request, "tenant_folder/conseil/clients/details_client.html", context)
 
@@ -1232,8 +1331,82 @@ def DetailsFacture(request, pk):
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'view')
 def ConseilDashboard(request):
+    from django.db.models import Count, Sum, Q
+    from t_crm.models import Prospets, RendezVous
+    from t_conseil.models import Opportunite, Devis, Facture, GroupeConseil, Participant
+    from django.utils import timezone
+    import json
+    
+    now = timezone.now()
+    first_day_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # 1. CRM & Pipeline Stats
+    prospects = Prospets.objects.filter(context='con')
+    total_prospects = prospects.filter(is_client=False).count()
+    new_prospects_this_month = prospects.filter(is_client=False, created_at__gte=first_day_of_month).count()
+    
+    pipeline_stats = Opportunite.objects.filter(prospect__context='con').values('stage').annotate(count=Count('id'))
+    pipeline_dict = {item['stage']: item['count'] for item in pipeline_stats}
+    
+    # 2. Ventes (Devis & Factures)
+    total_clients = prospects.filter(is_client=True).count()
+    devis_stats = Devis.objects.aggregate(
+        total_attente=Count('id', filter=Q(etat='attente')),
+        montant_attente=Sum('montant', filter=Q(etat='attente')),
+        total_accepte=Count('id', filter=Q(etat='accepte')),
+        total_refuse=Count('id', filter=Q(etat='refuse')),
+    )
+    
+    # Chiffre d'affaires (Factures validées)
+    factures = Facture.objects.filter(type_facture='standard', etat__in=['brouillon', 'valide', 'annule']) 
+    ca_global = Facture.objects.filter(type_facture='standard', etat='valide').aggregate(ca=Sum('lignes_facture__montant_ht'))['ca'] or 0
+    factures_attente = Facture.objects.filter(type_facture='standard', etat='brouillon').count()
+    
+    # 3. Formation (Groupes & Participants)
+    groupes_stats = GroupeConseil.objects.aggregate(
+        en_cours=Count('id', filter=Q(etat='enc')),
+        brouillon=Count('id', filter=Q(etat='brouillon')),
+        cloture=Count('id', filter=Q(etat='cloture')),
+    )
+    
+    # Total participants uniques
+    total_participants = Participant.objects.count()
+    
+    # JSON for Charts
+    stages = ['entrant', 'contacte', 'negociation', 'devis_envoye', 'facture', 'recouvrement']
+    stages_labels = ['Entrant', 'Contacté', 'Négociation', 'Devis envoyé', 'Facturé', 'Recouvrement']
+    pipeline_data = [pipeline_dict.get(stage, 0) for stage in stages]
+
+    # Prochains Rendez-vous
+    upcoming_rendez_vous = RendezVous.objects.filter(context='con', date_rendez_vous__gte=now.date()).order_by('date_rendez_vous', 'heure_rendez_vous')[:5]
+    
     context = {
         'tenant': request.tenant,
+        'page_title': 'Tableau de Bord - Executive Education',
+        'crm': {
+            'total_prospects': total_prospects,
+            'new_prospects': new_prospects_this_month,
+            'total_clients': total_clients,
+        },
+        'ventes': {
+            'devis_attente': devis_stats['total_attente'] or 0,
+            'devis_attente_montant': devis_stats['montant_attente'] or 0,
+            'devis_accepte': devis_stats['total_accepte'] or 0,
+            'devis_refuse': devis_stats['total_refuse'] or 0,
+            'ca_global': ca_global,
+            'factures_attente': factures_attente,
+        },
+        'formation': {
+            'groupes_en_cours': groupes_stats['en_cours'] or 0,
+            'groupes_brouillon': groupes_stats['brouillon'] or 0,
+            'groupes_cloture': groupes_stats['cloture'] or 0,
+            'total_participants': total_participants,
+        },
+        'charts': {
+            'pipeline_labels': json.dumps(stages_labels),
+            'pipeline_data': json.dumps(pipeline_data),
+        },
+        'upcoming_rendez_vous': upcoming_rendez_vous,
     }
     return render(request, 'tenant_folder/conseil/dashboard.html', context)
 
@@ -1407,7 +1580,7 @@ def ApiConvertProspectToDevis(request):
         )
         
         # Update Opportunity Stage
-        opp.stage = 'devis_envoye'
+        opp.stage = 'negociation'
         opp.save()
         
         redirect_url = reverse('t_conseil:configure-devis', kwargs={'pk': new_devis.num_devis})
@@ -2553,9 +2726,10 @@ def ApiSaveParticipant(request):
         data = json.loads(request.body)
         p_id = data.get('id')
         prospect_id = data.get('prospect_id')
+        devis_id = data.get('devis_id')
         
-        if not prospect_id and not p_id:
-            return JsonResponse({'status': 'error', 'message': 'Prospect ID required'}, status=400)
+        if not prospect_id and not p_id and not devis_id:
+            return JsonResponse({'status': 'error', 'message': 'Prospect ID ou Devis ID requis'}, status=400)
             
         if p_id:
             try:
@@ -2563,7 +2737,11 @@ def ApiSaveParticipant(request):
             except Participant.DoesNotExist:
                 return JsonResponse({'status': 'error', 'message': 'Participant introuvable.'})
         else:
-            participant = Participant(prospect_id=prospect_id)
+            participant = Participant()
+            if prospect_id:
+                participant.prospect_id = prospect_id
+            if devis_id:
+                participant.devis_id = devis_id
             
         participant.nom = data.get('nom')
         participant.prenom = data.get('prenom')
@@ -2990,3 +3168,33 @@ def PaiementsConseilListe(request):
     }
     return render(request, 'tenant_folder/conseil/liste_des_paiements.html', context)
 
+
+@login_required(login_url="institut_app:login")
+def ApiCreateRendezVousPipeline(request):
+    if request.method == "POST":
+        from t_crm.models import RendezVous, Prospets
+        prospect_id = request.POST.get('prospect_id')
+        date_rendez_vous = request.POST.get('date_rendez_vous')
+        heure_rendez_vous = request.POST.get('heure_rendez_vous')
+        type_rdv = request.POST.get('type')
+        object_rdv = request.POST.get('object')
+        
+        if not prospect_id or not date_rendez_vous or not heure_rendez_vous:
+            return JsonResponse({'status': 'error', 'message': 'Veuillez remplir les champs obligatoires.'})
+            
+        try:
+            prospect = Prospets.objects.get(id=prospect_id)
+            RendezVous.objects.create(
+                created_by=request.user,
+                prospect=prospect,
+                date_rendez_vous=date_rendez_vous,
+                heure_rendez_vous=heure_rendez_vous,
+                type=type_rdv,
+                object=object_rdv,
+                context='con',
+                statut='en_attente'
+            )
+            return JsonResponse({'status': 'success', 'message': 'Rendez-vous planifié avec succès.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})

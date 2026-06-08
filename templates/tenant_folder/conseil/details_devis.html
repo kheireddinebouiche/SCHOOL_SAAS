@@ -379,20 +379,67 @@
 <!-- Modal Conversion -->
 <div class="modal fade" id="convertModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-            <div class="modal-header border-0 bg-primary text-white p-4">
-                <h5 class="modal-title fw-bold"><i class="ri-exchange-line me-2"></i>Conversion en Facture</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="text-center">
-                     <p class="text-muted fs-14 mb-0">Cette action génèrera une facture définitive basée sur les articles de ce devis.</p>
-                     <input type="hidden" id="selectTvaConversion" value="{{ config.default_tva_percent|stringformat:'f' }}">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(10px);">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-exchange-line text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-primary mb-0">Conversion en Facture</h5>
+                    </div>
                 </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-footer border-0 p-4 pt-0">
-                <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-primary px-4 fw-bold shadow" id="confirmConversionBtn">Confirmer la transformation</button>
+            <div class="modal-body p-4 text-center">
+                <div class="mb-3">
+                    <div class="avatar-md mx-auto bg-primary bg-opacity-10 rounded-circle p-3 mb-3 d-inline-flex">
+                        <i class="ri-file-text-line text-primary fs-1"></i>
+                    </div>
+                </div>
+                <h5 class="mb-3">Créer une facture définitive ?</h5>
+                <p class="text-muted fs-14 mb-4" style="line-height: 1.6;">Cette action générera une facture définitive basée sur les articles de ce devis. Vous serez ensuite redirigé vers la liste des factures.</p>
+                <input type="hidden" id="selectTvaConversion" value="{{ config.default_tva_percent|stringformat:'f' }}">
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0 justify-content-center">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal" style="border-radius: 12px; font-weight: 500;">Annuler</button>
+                <button type="button" class="btn btn-primary px-4 py-2 shadow-sm d-flex align-items-center" id="confirmConversionBtn" style="border-radius: 12px; font-weight: 600;">
+                    <i class="ri-check-line me-2"></i> Confirmer la transformation
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Retour en Brouillon -->
+<div class="modal fade" id="revertDraftModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(10px);">
+            <div class="modal-header border-0 bg-warning bg-opacity-10 px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <div class="bg-warning bg-opacity-10 rounded-3 p-3 me-3">
+                        <i class="ri-refresh-line text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-warning mb-0">Retour en Brouillon</h5>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="mb-3">
+                    <div class="avatar-md mx-auto bg-warning bg-opacity-10 rounded-circle p-3 mb-3 d-inline-flex">
+                        <i class="ri-edit-2-line text-warning fs-1"></i>
+                    </div>
+                </div>
+                <h5 class="mb-3">Remettre ce devis en brouillon ?</h5>
+                <p class="text-muted fs-14 mb-4" style="line-height: 1.6;">Voulez-vous vraiment remettre ce devis en état brouillon ? Cela annulera sa validation actuelle et vous permettra de le modifier à nouveau.</p>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0 justify-content-center">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal" style="border-radius: 12px; font-weight: 500;">Annuler</button>
+                <button type="button" class="btn btn-warning px-4 py-2 shadow-sm d-flex align-items-center text-white" id="confirmRevertDraftBtn" style="border-radius: 12px; font-weight: 600;">
+                    <i class="ri-check-line me-2"></i> Confirmer
+                </button>
             </div>
         </div>
     </div>
@@ -442,30 +489,43 @@
         const revertBtn = document.getElementById('btnRevertToDraft');
         if(revertBtn) {
             revertBtn.addEventListener('click', function() {
-                alertify.confirm("Retour en brouillon", "Voulez-vous vraiment remettre ce devis en état brouillon ? Cela permettra de le modifier à nouveau.", 
-                function() {
-                    const formData = new FormData();
-                    formData.append('devis_id', '{{ devis.num_devis }}');
-                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                const modalEl = document.getElementById('revertDraftModal');
+                if(modalEl) {
+                    let modal = bootstrap.Modal.getInstance(modalEl);
+                    if (!modal) {
+                        modal = new bootstrap.Modal(modalEl);
+                    }
+                    modal.show();
+                }
+            });
+        }
 
-                    fetch("{% url 't_conseil:ApiRevertDevisToDraft' %}", {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': '{{ csrf_token }}',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: formData
-                    }).then(r => r.json()).then(d => {
-                        if(d.status === 'success') {
-                            alertify.success(d.message);
-                            setTimeout(() => {
-                                window.location.href = "{% url 't_conseil:configure-devis' devis.num_devis %}";
-                            }, 800);
-                        } else {
-                            alertify.error(d.message);
-                        }
-                    });
-                }, null).set('labels', {ok:'Confirmer', cancel:'Annuler'});
+        const confirmRevertDraftBtn = document.getElementById('confirmRevertDraftBtn');
+        if (confirmRevertDraftBtn) {
+            confirmRevertDraftBtn.addEventListener('click', function() {
+                this.disabled = true;
+                const formData = new FormData();
+                formData.append('devis_id', '{{ devis.num_devis }}');
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                fetch("{% url 't_conseil:ApiRevertDevisToDraft' %}", {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                }).then(r => r.json()).then(d => {
+                    if(d.status === 'success') {
+                        alertify.success(d.message);
+                        setTimeout(() => {
+                            window.location.href = "{% url 't_conseil:configure-devis' devis.num_devis %}";
+                        }, 800);
+                    } else {
+                        alertify.error(d.message);
+                        this.disabled = false;
+                    }
+                });
             });
         }
 

@@ -498,6 +498,9 @@ class GroupeConseilPlanning(models.Model):
     
     note = models.TextField(null=True, blank=True)
     
+    realisee = models.BooleanField(default=False, help_text="La séance a bien été tenue")
+    resume_seance = models.TextField(null=True, blank=True, help_text="Éléments réellement abordés")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

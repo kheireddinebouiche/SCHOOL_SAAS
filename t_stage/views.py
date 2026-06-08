@@ -230,12 +230,21 @@ def validation_council(request):
     if request.method == 'POST':
         date_conseil = request.POST.get('date_conseil')
         observations = request.POST.get('observations')
+        selection_mode = request.POST.get('selection_mode', 'stages')
+        
+        stages_ids = request.POST.getlist('stages') if selection_mode == 'stages' else []
+        focus_groups_ids = request.POST.getlist('focus_groups') if selection_mode == 'focus_groups' else []
+        
         if date_conseil and not active_council:
             conseil = ConseilValidation.objects.create(
                 date_conseil=date_conseil,
                 observations_generales=observations,
                 statut='ouvert'
             )
+            if stages_ids:
+                conseil.stages.set(stages_ids)
+            if focus_groups_ids:
+                conseil.focus_groups.set(focus_groups_ids)
             
             from t_crm.models import UserActionLog
             UserActionLog.objects.create(
@@ -250,16 +259,39 @@ def validation_council(request):
             return redirect('t_stage:validation_council')
 
     # Sélectionner les stages uniquement si un conseil est actif
+    all_stages = []
+    all_focus_groups = []
+    
     if active_council:
-        stages = Stage.objects.exclude(statut__in=['soutenu', 'annule']).order_by('date_debut')
+        decisions = active_council.decisions.all()
+        stages_with_decisions = decisions.values_list('stage_id', flat=True)
+        
+        stages_direct = active_council.stages.all()
+        focus_groups_stages = Stage.objects.filter(focus_groups_membership__in=active_council.focus_groups.all())
+        
+        stages = (stages_direct | focus_groups_stages).distinct()
+        stages = stages.exclude(statut__in=['soutenu', 'annule']).exclude(id__in=stages_with_decisions).order_by('date_debut')
+        decisions_prises = decisions.select_related('stage')
+        soutenables = decisions_prises.filter(decision='soutenable')
+        ajournes = decisions_prises.filter(decision='ajourne')
     else:
         stages = []
+        decisions_prises = []
+        soutenables = []
+        ajournes = []
+        all_stages = Stage.objects.exclude(statut__in=['soutenu', 'annule']).order_by('date_debut')
+        all_focus_groups = FocusGroup.objects.all().order_by('nom')
         
     conseils = ConseilValidation.objects.filter(statut='cloture').order_by('-date_conseil')
     return render(request, 't_stage/council.html', {
         't_stage_list': stages,
+        'decisions_prises': decisions_prises,
+        'soutenables': soutenables,
+        'ajournes': ajournes,
         'active_council': active_council,
-        'conseils': conseils
+        'conseils': conseils,
+        'all_stages': all_stages,
+        'all_focus_groups': all_focus_groups
     })
 
 @login_required
@@ -299,18 +331,20 @@ def quick_decision(request):
         council = ConseilValidation.objects.filter(statut='ouvert').order_by('-date_conseil').first()
         
         if council:
-            decision_obj = DecisionConseil.objects.create(
+            decision_obj, created = DecisionConseil.objects.update_or_create(
                 conseil=council,
                 stage=stage,
-                decision=decision_statut,
-                taux_final=taux_final,
-                commentaire=commentaire
+                defaults={
+                    'decision': decision_statut,
+                    'taux_final': taux_final,
+                    'commentaire': commentaire
+                }
             )
             
             from t_crm.models import UserActionLog
             UserActionLog.objects.create(
                 user=request.user,
-                action_type='CREATE',
+                action_type='CREATE' if created else 'UPDATE',
                 target_model='DecisionConseil',
                 target_id=str(decision_obj.id),
                 details=f"Décision rapide '{decision_statut}' prise pour le stage {stage.sujet}",

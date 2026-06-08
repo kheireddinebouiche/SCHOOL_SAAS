@@ -228,8 +228,8 @@
 <div class="modal fade" id="quickAddParticipantModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content glass-card border-0 overflow-hidden" style="border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1);">
-            <div class="modal-header border-0 bg-primary bg-opacity-10 p-4">
-                <h5 class="modal-title fw-bold d-flex align-items-center text-primary">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 p-4 pb-3">
+                <h5 class="modal-title fw-bold text-primary d-flex align-items-center">
                     <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
                         <i class="ri-user-add-line fs-4"></i>
                     </div>
@@ -237,39 +237,43 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4 p-md-5">
+            <div class="modal-body p-4">
                 <form id="quickAddParticipantForm">
                     <div class="row g-4">
                         <div class="col-md-6">
-                            <div class="form-floating">
-                                <input type="text" class="form-control bg-light border-0 shadow-sm rounded-3 px-4" id="qa_nom" placeholder="Nom" required>
-                                <label for="qa_nom" class="text-muted"><i class="ri-user-3-line me-1 text-primary"></i> Nom <span class="text-danger">*</span></label>
+                            <label class="form-label text-muted fw-bold small text-uppercase">Nom <span class="text-danger">*</span></label>
+                            <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                                <span class="input-group-text bg-light border-0"><i class="ri-user-3-line text-primary"></i></span>
+                                <input type="text" class="form-control bg-light border-0 px-3" id="qa_nom" placeholder="Ex: Dupont" required>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="form-floating">
-                                <input type="text" class="form-control bg-light border-0 shadow-sm rounded-3 px-4" id="qa_prenom" placeholder="Prénom" required>
-                                <label for="qa_prenom" class="text-muted"><i class="ri-user-smile-line me-1 text-primary"></i> Prénom <span class="text-danger">*</span></label>
+                            <label class="form-label text-muted fw-bold small text-uppercase">Prénom <span class="text-danger">*</span></label>
+                            <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                                <span class="input-group-text bg-light border-0"><i class="ri-user-smile-line text-primary"></i></span>
+                                <input type="text" class="form-control bg-light border-0 px-3" id="qa_prenom" placeholder="Ex: Jean" required>
                             </div>
                         </div>
                         <div class="col-md-12">
-                            <div class="form-floating">
-                                <input type="email" class="form-control bg-light border-0 shadow-sm rounded-3 px-4" id="qa_email" placeholder="Email">
-                                <label for="qa_email" class="text-muted"><i class="ri-mail-line me-1 text-primary"></i> Adresse Email</label>
+                            <label class="form-label text-muted fw-bold small text-uppercase">Adresse Email</label>
+                            <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                                <span class="input-group-text bg-light border-0"><i class="ri-mail-line text-primary"></i></span>
+                                <input type="email" class="form-control bg-light border-0 px-3" id="qa_email" placeholder="jean.dupont@example.com">
                             </div>
                         </div>
                         <div class="col-md-12">
-                            <div class="form-floating">
-                                <input type="text" class="form-control bg-light border-0 shadow-sm rounded-3 px-4" id="qa_poste" placeholder="Poste">
-                                <label for="qa_poste" class="text-muted"><i class="ri-briefcase-line me-1 text-primary"></i> Poste / Fonction</label>
+                            <label class="form-label text-muted fw-bold small text-uppercase">Poste / Fonction</label>
+                            <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                                <span class="input-group-text bg-light border-0"><i class="ri-briefcase-line text-primary"></i></span>
+                                <input type="text" class="form-control bg-light border-0 px-3" id="qa_poste" placeholder="Ex: Directeur Général">
                             </div>
                         </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer border-0 p-4 pt-0 bg-white">
-                <button type="button" class="btn btn-soft-secondary btn-rounded px-4" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-primary btn-rounded px-4" id="btnSaveQuickParticipant">
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="button" class="btn btn-light btn-rounded px-4 shadow-sm" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary btn-rounded px-4 shadow-sm" id="btnSaveQuickParticipant">
                     <i class="ri-save-line me-1"></i> Enregistrer
                 </button>
             </div>
@@ -356,26 +360,93 @@
         function loadClientDevis() {
             $('#devisList').html('<div class="col-12 text-center"><div class="spinner-border text-primary"></div></div>');
             $.get("{% url 't_conseil:ApiGetClientDevis' %}", {client_id: selectedClient}, function(data) {
-                if(data.length == 0) {
-                    $('#devisList').html('<div class="col-12 text-center py-4"><p class="text-danger">Aucun devis accepté trouvé pour ce client.</p></div>');
-                } else {
-                    let html = '';
-                    data.forEach(d => {
+                let html = '';
+                
+                if (data.has_active_group) {
+                    alertify.warning(`Ce client possède déjà un groupe actif : ${data.active_group_info.nom}`, 5);
+                    html += `
+                        <div class="col-12 mb-3">
+                            <div class="alert alert-warning d-flex align-items-center shadow-sm" style="border-radius:14px; border: 1px solid #fcd34d; background: #fffbeb;">
+                                <i class="ri-alert-line fs-3 me-3 text-warning"></i>
+                                <div>
+                                    <h6 class="fw-bold mb-1 text-warning-emphasis">Attention : Groupe existant</h6>
+                                    <p class="mb-0 small text-warning-emphasis">
+                                        Ce client possède déjà le groupe <strong>${data.active_group_info.nom}</strong> en cours.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (data.factures && data.factures.length > 0) {
+                    // Client a été facturé : Afficher factures et devis reliés
+                    html += '<div class="col-12 mb-2"><h6 class="text-primary fw-bold"><i class="ri-bill-line me-2"></i>Documents Facturés</h6></div>';
+                    data.factures.forEach(f => {
+                        // Find linked devis
+                        let linkedDevis = data.devis.find(d => d.id === f.devis_source__id);
+                        let devisText = linkedDevis ? `(Devis lié : ${linkedDevis.num_devis})` : '(Aucun devis lié)';
+                        // Value MUST be the devis_source__id because the backend needs a devis_id
+                        let valId = f.devis_source__id ? f.devis_source__id : '';
+                        
                         html += `
                             <div class="col-md-6">
                                 <div class="glass-card p-3 d-flex align-items-center">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="devisRadio" id="devis_${d.id}" value="${d.id}">
-                                        <label class="form-check-label ms-2 h6 mb-0" for="devis_${d.id}">
-                                            ${d.num_devis} <small class="text-muted d-block">Émis le ${d.date_emission}</small>
+                                        <input class="form-check-input" type="radio" name="devisRadio" id="doc_${f.id}" value="${valId}">
+                                        <label class="form-check-label ms-2 h6 mb-0" for="doc_${f.id}">
+                                            Facture ${f.num_facture} <span class="badge bg-success-subtle text-success ms-2">${f.etat}</span>
+                                            <small class="text-muted d-block mt-1">Émise le ${f.date_emission} <span class="text-primary fw-medium">${devisText}</span></small>
                                         </label>
                                     </div>
                                 </div>
                             </div>
                         `;
                     });
-                    $('#devisList').html(html);
+                    
+                    // Show remaining devis not linked to factures
+                    let devisNonFactures = data.devis.filter(d => !data.factures.some(f => f.devis_source__id === d.id));
+                    if (devisNonFactures.length > 0) {
+                        html += '<div class="col-12 mt-4 mb-2"><h6 class="text-muted fw-bold"><i class="ri-file-list-3-line me-2"></i>Devis Acceptés (Non facturés)</h6></div>';
+                        devisNonFactures.forEach(d => {
+                            html += `
+                                <div class="col-md-6">
+                                    <div class="glass-card p-3 d-flex align-items-center bg-light bg-opacity-50">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="devisRadio" id="devis_${d.id}" value="${d.id}">
+                                            <label class="form-check-label ms-2 h6 mb-0" for="devis_${d.id}">
+                                                ${d.num_devis}
+                                                <small class="text-muted d-block mt-1">Émis le ${d.date_emission}</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                } else if (data.devis && data.devis.length > 0) {
+                    // Aucune facture, afficher uniquement les devis
+                    html += '<div class="col-12 mb-2"><h6 class="text-muted fw-bold"><i class="ri-file-list-3-line me-2"></i>Devis Acceptés</h6></div>';
+                    data.devis.forEach(d => {
+                        html += `
+                            <div class="col-md-6">
+                                <div class="glass-card p-3 d-flex align-items-center">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="devisRadio" id="devis_${d.id}" value="${d.id}">
+                                        <label class="form-check-label ms-2 h6 mb-0" for="devis_${d.id}">
+                                            ${d.num_devis}
+                                            <small class="text-muted d-block mt-1">Émis le ${d.date_emission}</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html = '<div class="col-12 text-center py-4"><p class="text-danger">Aucun document (Devis/Facture) trouvé pour ce client.</p></div>';
                 }
+                
+                $('#devisList').html(html);
             });
         }
 

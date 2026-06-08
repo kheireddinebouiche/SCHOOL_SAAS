@@ -3,7 +3,7 @@
 
 {% block title %} Conseil de Validation {% endblock title %}
 
-{% block extra_css %}
+{% block content %}
 <style>
     /* Premium Look & Feel Integration */
     .glass-card {
@@ -13,6 +13,23 @@
         border-radius: 1.25rem;
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
     }
+    
+    .kanban-col {
+        background-color: rgba(248, 250, 252, 0.6);
+        border-radius: 1rem;
+        padding: 1rem;
+        min-height: 500px;
+    }
+
+    .kanban-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+    
+    .kanban-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    }
 
     .badge-soft-primary { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; }
     .badge-soft-success { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
@@ -20,44 +37,31 @@
     .badge-soft-warning { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
     .badge-soft-secondary { background-color: rgba(100, 116, 139, 0.1); color: #64748b; }
 
-    .table thead th {
-        background: #f8fafc;
-        color: #475569;
-        font-weight: 700;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.025em;
-        border-top: none;
-    }
-
     .btn-rounded {
         border-radius: 0.75rem;
     }
 </style>
-{% endblock extra_css %}
-
-{% block content %}
 <div class="main-content">
     <div class="page-content bg-light">
         <div class="container-fluid">
             <!-- Header Section -->
             <div class="row mb-4">
                 <div class="col-12">
-                    <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between mb-4">
+                    <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center">
                             <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
                                 <i class="ri-government-line text-primary fs-3"></i>
                             </div>
                             <div>
                                 <h4 class="mb-1 fw-bold">Conseil de Validation</h4>
-                                <p class="text-muted mb-0">Commissions de délibération des projets de fin d'études</p>
+                                <p class="text-muted mb-0">Board Kanban des décisions de fin d'études</p>
                             </div>
                         </div>
                         <div class="mt-3 mt-sm-0">
                             <nav aria-label="breadcrumb">
                                 <ol class="breadcrumb m-0">
                                     <li class="breadcrumb-item"><a href="{% url 't_stage:stage_dashboard' %}">Stages</a></li>
-                                    <li class="breadcrumb-item active">Conseil de Validation</li>
+                                    <li class="breadcrumb-item active">Conseil</li>
                                 </ol>
                             </nav>
                         </div>
@@ -67,9 +71,9 @@
 
             {% if not active_council %}
             <!-- State: No Active Council -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card glass-card border-0 text-center py-5">
+            <div class="row">
+                <div class="col-lg-8 mb-4">
+                    <div class="card glass-card border-0 text-center py-5 h-100">
                         <div class="card-body py-5">
                             <div class="avatar-lg mx-auto mb-4">
                                 <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded-circle" style="font-size: 2.5rem;">
@@ -77,51 +81,20 @@
                                 </div>
                             </div>
                             <h3 class="fw-bold mb-3">Aucun Conseil de Validation Actif</h3>
-                            <p class="text-muted mb-4 fs-15">Pour évaluer les stages et prendre des décisions, vous devez d'abord ouvrir un nouveau Conseil.</p>
+                            <p class="text-muted mb-4 fs-15">Pour évaluer les stages, vous devez ouvrir un nouveau Conseil.</p>
                             <button type="button" class="btn btn-primary btn-rounded btn-lg px-5 shadow-sm" data-bs-toggle="modal" data-bs-target="#newCouncilModal">
                                 <i class="ri-add-line align-bottom me-2"></i> Ouvrir un nouveau Conseil
                             </button>
                         </div>
                     </div>
                 </div>
-            </div>
-            {% else %}
-            <!-- State: Active Council -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card glass-card border-0 mb-0" style="background: rgba(59, 130, 246, 0.05); border-left: 5px solid #405189;">
-                        <div class="card-body d-flex flex-column flex-sm-row align-items-center justify-content-between p-4">
-                            <div class="d-flex align-items-center mb-3 mb-sm-0">
-                                <div class="bg-primary p-2 rounded-circle me-3 text-white shadow-sm">
-                                    <i class="ri-record-circle-line fs-4"></i>
-                                </div>
-                                <div>
-                                    <h5 class="fw-bold mb-1">Conseil Actif : Commission du {{ active_council.date_conseil|date:"d F Y" }}</h5>
-                                    <p class="text-muted mb-0 fs-13">{{ active_council.observations_generales|default:"Aucune observation" }}</p>
-                                </div>
-                            </div>
-                            <div>
-                                <form method="POST" action="{% url 't_stage:close_council' active_council.id %}" onsubmit="return confirm('Voulez-vous vraiment clôturer ce conseil ? Les décisions ne pourront plus y être ajoutées.');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline-danger btn-rounded px-4 fw-medium bg-white">
-                                        <i class="ri-lock-2-line align-bottom me-1"></i> Clôturer le Conseil
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <div class="row">
-                <!-- Left Column: History Section -->
-                <div class="col-lg-4">
-                    <div class="card glass-card border-0 mb-4">
+                <!-- Historique quand aucun conseil actif -->
+                <div class="col-lg-4 mb-4">
+                    <div class="card glass-card border-0 h-100">
                         <div class="card-header bg-transparent border-0 p-4 pb-2">
-                            <h5 class="card-title mb-0 fw-bold"><i class="ri-history-line me-2 text-primary align-bottom"></i>Historique des Conseils</h5>
+                            <h5 class="card-title mb-0 fw-bold"><i class="ri-history-line me-2 text-primary align-bottom"></i>Historique</h5>
                         </div>
-                        <div class="card-body p-4 pt-2">
+                        <div class="card-body p-4 pt-2" style="max-height: 400px; overflow-y: auto;">
                             {% for c in conseils %}
                             <div class="d-flex align-items-start p-3 rounded-3 mb-3 border border-light" style="background: rgba(248, 250, 252, 0.5);">
                                 <div class="bg-white p-2 rounded-2 shadow-sm me-3 text-center border" style="min-width: 60px;">
@@ -130,102 +103,206 @@
                                 </div>
                                 <div class="flex-grow-1">
                                     <h6 class="mb-1 fw-bold text-dark">Commission clôturée</h6>
-                                    <p class="text-muted mb-0 fs-12 text-truncate" style="max-width: 180px;">{{ c.observations_generales|default:"Aucune observation" }}</p>
-                                    <div class="mt-2">
-                                        <span class="badge bg-light text-secondary border"><i class="ri-lock-line align-bottom me-1"></i>Clôturé</span>
-                                    </div>
+                                    <p class="text-muted mb-0 fs-12 text-truncate" style="max-width: 150px;">{{ c.observations_generales|default:"Aucune observation" }}</p>
                                 </div>
                             </div>
                             {% empty %}
                             <div class="text-center py-4">
-                                <div class="avatar-sm mx-auto mb-2">
-                                    <div class="avatar-title bg-light text-muted rounded-circle fs-4">
-                                        <i class="ri-history-line"></i>
-                                    </div>
-                                </div>
-                                <p class="text-muted fs-13">Aucun conseil clôturé</p>
+                                <p class="text-muted fs-13 mb-0">Aucun historique</p>
                             </div>
                             {% endfor %}
                         </div>
                     </div>
                 </div>
-
-                <!-- Right Column: Action Section (Only if Active Council) -->
-                {% if active_council %}
-                <div class="col-lg-8">
-                    <div class="card glass-card border-0 mb-4">
-                        <div class="card-header bg-transparent border-0 p-4 d-flex align-items-center justify-content-between pb-2">
-                            <h5 class="card-title mb-0 fw-bold"><i class="ri-time-line me-2 text-warning align-bottom"></i>Stages en attente de décision</h5>
-                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-3 py-1 fs-12">{{ t_stage_list|length }} en attente</span>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table align-middle table-nowrap mb-0 table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th class="ps-4">Binôme</th>
-                                            <th>Sujet</th>
-                                            <th style="width: 200px;">Avancement</th>
-                                            <th class="text-center pe-4">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for stage in t_stage_list %}
-                                        <tr>
-                                            <td class="ps-4">
-                                                <div class="d-flex align-items-center">
-                                                    <div>
-                                                        <h6 class="fs-13 mb-0 fw-bold">{% for etudiant in stage.etudiants.all %}{{ etudiant.nom }} {{ etudiant.prenom }}{% if not forloop.last %} & {% endif %}{% endfor %}</h6>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span class="d-block text-truncate fs-13 text-muted" style="max-width: 250px;">{{ stage.sujet }}</span>
-                                            </td>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="progress progress-sm flex-grow-1 animated-progress bg-light">
-                                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ stage.taux_avancement }}%" aria-valuenow="{{ stage.taux_avancement }}" aria-valuemin="0" aria-valuemax="100"></div>
-                                                    </div>
-                                                    <span class="ms-2 fs-12 fw-bold text-dark">{{ stage.taux_avancement }}%</span>
-                                                </div>
-                                            </td>
-                                            <td class="text-center pe-4">
-                                               <button class="btn btn-sm border-0 bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center mx-auto" style="width: 32px; height: 32px;" onclick="openDecisionModal('{{ stage.id }}', '{{ stage.sujet|escapejs }}')" title="Décider">
-                                                    <i class="ri-scales-3-line fs-15"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        {% empty %}
-                                        <tr>
-                                            <td colspan="4" class="text-center py-5">
-                                                <div class="text-muted">
-                                                    <i class="ri-check-double-line fs-24 mb-3 text-success"></i>
-                                                    <h5 class="fs-14 fw-bold">Tout est à jour !</h5>
-                                                    <p class="mb-0 fs-13">Aucun stage ne nécessite de décision pour ce conseil.</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+            </div>
+            {% else %}
+            <!-- State: Active Council -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card glass-card border-0 mb-0" style="background: rgba(59, 130, 246, 0.02); border-left: 5px solid #405189;">
+                        <div class="card-body d-flex flex-column flex-sm-row align-items-center justify-content-between p-3">
+                            <div class="d-flex align-items-center mb-3 mb-sm-0">
+                                <div class="bg-primary p-2 rounded-circle me-3 text-white shadow-sm">
+                                    <i class="ri-record-circle-line fs-4"></i>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold mb-1">Conseil Actif : {{ active_council.date_conseil|date:"d F Y" }}</h5>
+                                    <p class="text-muted mb-0 fs-13">{{ active_council.observations_generales|default:"Délibérations en cours" }}</p>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-primary btn-rounded bg-white fw-medium shadow-sm" data-bs-toggle="modal" data-bs-target="#historyModal">
+                                    <i class="ri-history-line align-bottom me-1"></i> Historique
+                                </button>
+                                <form method="POST" action="{% url 't_stage:close_council' active_council.id %}" onsubmit="return confirm('Voulez-vous clôturer ce conseil ?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-rounded px-4 fw-medium shadow-sm">
+                                        <i class="ri-lock-2-line align-bottom me-1"></i> Clôturer
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     </div>
                 </div>
-                {% else %}
-                <div class="col-lg-8">
-                     <!-- Empty placeholder for alignment -->
-                </div>
-                {% endif %}
             </div>
+
+            <!-- Kanban Board -->
+            <div class="row g-4">
+                <!-- Colonne : À évaluer -->
+                <div class="col-lg-4">
+                    <div class="kanban-col border">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="text-uppercase fw-bold text-muted mb-0"><i class="ri-time-line text-warning me-1"></i> À évaluer</h6>
+                            <span class="badge bg-warning text-white rounded-pill">{{ t_stage_list|length }}</span>
+                        </div>
+                        
+                        {% for stage in t_stage_list %}
+                        <div class="card kanban-card bg-white rounded-3 mb-3" onclick="openDecisionModal('{{ stage.id }}', '{{ stage.sujet|escapejs }}')" style="cursor: pointer;">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="d-flex -space-x-2 overflow-hidden">
+                                        {% for etudiant in stage.etudiants.all %}
+                                        <div class="avatar-xs d-inline-block" data-bs-toggle="tooltip" title="{{ etudiant.nom }} {{ etudiant.prenom }}">
+                                            <div class="avatar-title rounded-circle bg-primary-subtle text-primary fw-bold border border-2 border-white">
+                                                {{ etudiant.nom|slice:":1" }}
+                                            </div>
+                                        </div>
+                                        {% empty %}
+                                        <span class="badge bg-light text-muted">Non assigné</span>
+                                        {% endfor %}
+                                    </div>
+                                    <span class="badge badge-soft-warning px-2">En attente</span>
+                                </div>
+                                <h6 class="fs-13 fw-bold text-dark mb-2 line-clamp-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="{{ stage.sujet }}">{{ stage.sujet }}</h6>
+                                
+                                <div class="mt-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="fs-11 text-muted fw-medium text-uppercase">Avancement</span>
+                                        <span class="fs-11 fw-bold text-dark">{{ stage.taux_avancement }}%</span>
+                                    </div>
+                                    <div class="progress progress-sm bg-light rounded-pill" style="height: 4px;">
+                                        <div class="progress-bar bg-primary rounded-pill" role="progressbar" style="width: {{ stage.taux_avancement }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center p-4">
+                            <i class="ri-check-double-line fs-1 text-success opacity-50 mb-2"></i>
+                            <p class="text-muted fs-13 mb-0">Tous les stages ont été évalués.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Colonne : Soutenables -->
+                <div class="col-lg-4">
+                    <div class="kanban-col border">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="text-uppercase fw-bold text-muted mb-0"><i class="ri-check-line text-success me-1"></i> Soutenables</h6>
+                            <span class="badge bg-success text-white rounded-pill">
+                                {{ soutenables|length }}
+                            </span>
+                        </div>
+
+                        {% for decision in soutenables %}
+                            <div class="card kanban-card bg-white rounded-3 mb-3 border-success border-opacity-25" onclick="openDecisionModal('{{ decision.stage.id }}', '{{ decision.stage.sujet|escapejs }}')" style="cursor: pointer;">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex -space-x-2 overflow-hidden">
+                                            {% for etudiant in decision.stage.etudiants.all %}
+                                            <div class="avatar-xs d-inline-block" data-bs-toggle="tooltip" title="{{ etudiant.nom }} {{ etudiant.prenom }}">
+                                                <div class="avatar-title rounded-circle bg-success-subtle text-success fw-bold border border-2 border-white">
+                                                    {{ etudiant.nom|slice:":1" }}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge badge-soft-success px-2">Soutenable</span>
+                                            <span class="fw-bold text-dark fs-12">{{ decision.taux_final }}%</span>
+                                        </div>
+                                    </div>
+                                    <h6 class="fs-13 fw-bold text-dark mb-0 line-clamp-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{{ decision.stage.sujet }}</h6>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Colonne : Ajournés -->
+                <div class="col-lg-4">
+                    <div class="kanban-col border">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="text-uppercase fw-bold text-muted mb-0"><i class="ri-close-line text-danger me-1"></i> Ajournés</h6>
+                            <span class="badge bg-danger text-white rounded-pill">
+                                {{ ajournes|length }}
+                            </span>
+                        </div>
+
+                        {% for decision in ajournes %}
+                            <div class="card kanban-card bg-white rounded-3 mb-3 border-danger border-opacity-25" onclick="openDecisionModal('{{ decision.stage.id }}', '{{ decision.stage.sujet|escapejs }}')" style="cursor: pointer;">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex -space-x-2 overflow-hidden">
+                                            {% for etudiant in decision.stage.etudiants.all %}
+                                            <div class="avatar-xs d-inline-block" data-bs-toggle="tooltip" title="{{ etudiant.nom }} {{ etudiant.prenom }}">
+                                                <div class="avatar-title rounded-circle bg-danger-subtle text-danger fw-bold border border-2 border-white">
+                                                    {{ etudiant.nom|slice:":1" }}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge badge-soft-danger px-2">Ajourné</span>
+                                            <span class="fw-bold text-dark fs-12">{{ decision.taux_final }}%</span>
+                                        </div>
+                                    </div>
+                                    <h6 class="fs-13 fw-bold text-dark mb-0 line-clamp-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{{ decision.stage.sujet }}</h6>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
         </div>
     </div>
 </div>
 
+<!-- Modal: History (si actif) -->
+{% if active_council %}
+<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 1.5rem; border: none;">
+            <div class="modal-header bg-light border-0 p-4 pb-3">
+                <h5 class="modal-title fw-bold"><i class="ri-history-line me-2 text-primary align-bottom"></i>Historique des Conseils</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                {% for c in conseils %}
+                <div class="d-flex align-items-start p-3 rounded-3 mb-3 border border-light bg-light">
+                    <div class="bg-white p-2 rounded-2 shadow-sm me-3 text-center border" style="min-width: 60px;">
+                        <span class="d-block fw-bold text-primary fs-16">{{ c.date_conseil|date:"d" }}</span>
+                        <span class="d-block text-muted small text-uppercase">{{ c.date_conseil|date:"M" }}</span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1 fw-bold text-dark">Commission clôturée</h6>
+                        <p class="text-muted mb-0 fs-12">{{ c.observations_generales|default:"Aucune observation" }}</p>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center fs-13">Aucun historique</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Modal: Nouveau Conseil -->
-<div class="modal fade" id="newCouncilModal" tabindex="-1" aria-labelledby="newCouncilModalLabel" aria-hidden="true">
+<div class="modal fade" id="newCouncilModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 1.5rem; overflow: hidden; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
             <div class="modal-header bg-light border-0 p-4 pb-3">
@@ -239,9 +316,44 @@
                         <label for="date_conseil" class="form-label fw-bold text-muted text-uppercase fs-12">Date du Conseil</label>
                         <input type="date" class="form-control btn-rounded" id="date_conseil" name="date_conseil" required value="{% now 'Y-m-d' %}">
                     </div>
-                    <div class="mb-0">
+                    <div class="mb-3">
                         <label for="obs" class="form-label fw-bold text-muted text-uppercase fs-12">Observations / Ordre du jour</label>
                         <textarea class="form-control btn-rounded" id="obs" name="observations" rows="3" placeholder="Ex: Validation de la session de Juin..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted text-uppercase fs-12">Mode de sélection</label>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="selection_mode" id="mode_stages" value="stages" checked>
+                                <label class="form-check-label" for="mode_stages">
+                                    Sélection par Stages
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="selection_mode" id="mode_focus" value="focus_groups">
+                                <label class="form-check-label" for="mode_focus">
+                                    Sélection par Groupes Focus
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="div_stages">
+                        <label class="form-label fw-bold text-muted text-uppercase fs-12">Stages à évaluer</label>
+                        <select class="form-select select2" name="stages" multiple data-placeholder="Sélectionner des stages" id="select_stages">
+                            {% for stage in all_stages %}
+                            <option value="{{ stage.id }}">{{ stage.sujet }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text mt-1">Vous pouvez sélectionner des stages individuellement.</div>
+                    </div>
+                    <div class="mb-0 d-none" id="div_focus_groups">
+                        <label class="form-label fw-bold text-muted text-uppercase fs-12">Groupes Focus à évaluer</label>
+                        <select class="form-select select2" name="focus_groups" multiple data-placeholder="Sélectionner des groupes focus" id="select_focus_groups" disabled>
+                            {% for fg in all_focus_groups %}
+                            <option value="{{ fg.id }}">{{ fg.nom }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text mt-1">Sélectionner un groupe focus inclura automatiquement tous ses stages.</div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
@@ -253,64 +365,58 @@
     </div>
 </div>
 
-<!-- Modal: Decision Rapide -->
-<div class="modal fade" id="decisionModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 1.5rem; overflow: hidden; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
-            <div class="modal-header bg-light border-0 p-4 pb-3">
-                <h5 class="modal-title fw-bold">Saisir une Décision</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Modal / Offcanvas : Decision Rapide -->
+<div class="offcanvas offcanvas-end border-0 shadow-lg" tabindex="-1" id="decisionOffcanvas" style="border-radius: 1.5rem 0 0 1.5rem;">
+    <div class="offcanvas-header bg-light p-4 pb-3">
+        <h5 class="offcanvas-title fw-bold">Saisir une Décision</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <form method="POST" action="{% url 't_stage:quick_decision' %}" class="h-100 d-flex flex-column">
+            {% csrf_token %}
+            <input type="hidden" name="stage_id" id="decisionStageId">
+            <div class="p-4 flex-grow-1">
+                <div class="alert alert-info border-0 mb-4" style="border-radius: 1rem; background: rgba(59, 130, 246, 0.1);">
+                    <strong class="text-primary">Sujet :</strong> <span id="decisionStageSubject" class="text-dark"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-muted text-uppercase fs-12">Conseil de rattachement</label>
+                    <input type="text" class="form-control btn-rounded bg-light text-muted" value="{% if active_council %}Commission du {{ active_council.date_conseil|date:'d F Y' }}{% else %}Aucun{% endif %}" readonly>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-muted text-uppercase fs-12">Décision du Jury</label>
+                    <div class="d-flex gap-2">
+                        <input type="radio" class="btn-check" name="decision" id="decSoutenable" value="soutenable" checked>
+                        <label class="btn btn-outline-success flex-grow-1 btn-rounded fw-bold py-3" for="decSoutenable">
+                            <i class="ri-check-line d-block fs-2 mb-1"></i> Soutenable
+                        </label>
+
+                        <input type="radio" class="btn-check" name="decision" id="decAjourne" value="ajourne">
+                        <label class="btn btn-outline-danger flex-grow-1 btn-rounded fw-bold py-3" for="decAjourne">
+                            <i class="ri-close-line d-block fs-2 mb-1"></i> Ajourné
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-muted text-uppercase fs-12">Taux Final (%)</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control btn-rounded text-center fw-bold form-control-lg" name="taux_final" min="0" max="100" required>
+                        <span class="input-group-text bg-light border-0 fw-bold">%</span>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label fw-bold text-muted text-uppercase fs-12">Commentaire</label>
+                    <textarea class="form-control btn-rounded" name="commentaire" rows="3" placeholder="Motif ou remarque..."></textarea>
+                </div>
             </div>
-            <form method="POST" action="{% url 't_stage:quick_decision' %}">
-                {% csrf_token %}
-                <input type="hidden" name="stage_id" id="decisionStageId">
-                <div class="modal-body p-4">
-                    <div class="alert alert-info border-0 mb-4" style="border-radius: 1rem; background: rgba(59, 130, 246, 0.1);">
-                        <strong class="text-primary">Sujet :</strong> <span id="decisionStageSubject" class="text-dark"></span>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-bold text-muted text-uppercase fs-12">Conseil de rattachement</label>
-                        <input type="text" class="form-control btn-rounded bg-light text-muted" value="{% if active_council %}Commission du {{ active_council.date_conseil|date:'d F Y' }}{% else %}Aucun{% endif %}" readonly>
-                        <div class="form-text mt-2"><i class="ri-information-line align-bottom me-1"></i> La décision sera automatiquement ajoutée au conseil actif.</div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-bold text-muted text-uppercase fs-12">Décision du Jury</label>
-                        <div class="d-flex gap-2">
-                             <input type="radio" class="btn-check" name="decision" id="decSoutenable" value="soutenable" checked>
-                            <label class="btn btn-outline-success flex-grow-1 btn-rounded fw-bold" for="decSoutenable">
-                                <i class="ri-check-line align-bottom me-1 fs-5"></i> Soutenable
-                            </label>
-
-                            <input type="radio" class="btn-check" name="decision" id="decAjourne" value="ajourne">
-                            <label class="btn btn-outline-warning flex-grow-1 btn-rounded fw-bold" for="decAjourne">
-                                <i class="ri-close-line align-bottom me-1 fs-5"></i> Ajourné
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="row mb-4">
-                        <div class="col-6">
-                            <label class="form-label fw-bold text-muted text-uppercase fs-12">Taux Final (%)</label>
-                            <div class="input-group">
-                                <input type="number" class="form-control btn-rounded text-center fw-bold" name="taux_final" min="0" max="100" required>
-                                <span class="input-group-text bg-white border-0 fw-bold">%</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-2">
-                        <label class="form-label fw-bold text-muted text-uppercase fs-12">Commentaire</label>
-                        <textarea class="form-control btn-rounded" name="commentaire" rows="2" placeholder="Motif ou remarque..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 p-4 pt-0">
-                    <button type="button" class="btn btn-light btn-rounded fw-medium" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary btn-rounded fw-medium">Enregistrer la décision</button>
-                </div>
-            </form>
-        </div>
+            <div class="p-4 bg-white border-top">
+                <button type="submit" class="btn btn-primary btn-rounded btn-lg w-100 fw-bold shadow-sm">Enregistrer la décision</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -318,8 +424,32 @@
     function openDecisionModal(id, subject) {
         document.getElementById('decisionStageId').value = id;
         document.getElementById('decisionStageSubject').innerText = subject;
-        var myModal = new bootstrap.Modal(document.getElementById('decisionModal'));
-        myModal.show();
+        var myOffcanvas = new bootstrap.Offcanvas(document.getElementById('decisionOffcanvas'));
+        myOffcanvas.show();
     }
+
+    $(document).ready(function() {
+        if ($('.select2').length) {
+            $('.select2').select2({
+                dropdownParent: $('#newCouncilModal')
+            });
+        }
+
+        $('input[name="selection_mode"]').change(function() {
+            if ($(this).val() === 'stages') {
+                $('#div_stages').removeClass('d-none');
+                $('#select_stages').prop('disabled', false);
+                
+                $('#div_focus_groups').addClass('d-none');
+                $('#select_focus_groups').prop('disabled', true).val(null).trigger('change');
+            } else {
+                $('#div_focus_groups').removeClass('d-none');
+                $('#select_focus_groups').prop('disabled', false);
+                
+                $('#div_stages').addClass('d-none');
+                $('#select_stages').prop('disabled', true).val(null).trigger('change');
+            }
+        });
+    });
 </script>
 {% endblock content %}
