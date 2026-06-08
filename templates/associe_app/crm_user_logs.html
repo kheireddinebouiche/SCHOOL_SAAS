@@ -1,0 +1,187 @@
+{% extends 'public_folder/base.html' %}
+{% block title %} {{ title }} {% endblock title %}
+
+{% block content %}
+<style>
+    .dashboard-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%) !important;
+        border-radius: var(--card-radius) !important;
+        padding: 2rem !important;
+        position: relative;
+        overflow: hidden;
+        border: none !important;
+        box-shadow: 0 10px 30px rgba(var(--vz-primary-rgb), 0.15);
+        margin-bottom: 2rem;
+    }
+    .header-title {
+        font-family: 'Outfit', sans-serif !important;
+        font-weight: 800;
+        color: white;
+    }
+    .stat-card {
+        background: #ffffff !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: var(--card-radius) !important;
+        box-shadow: var(--card-shadow);
+        padding: 1.5rem !important;
+        margin-bottom: 2rem;
+    }
+    .custom-table thead th {
+        border: none;
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+    }
+    .custom-table tbody td {
+        border-top: 1px solid var(--border-color);
+        padding: 1rem !important;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <div class="row mb-5">
+                <div class="col-12">
+                    <div class="dashboard-header d-lg-flex align-items-center justify-content-between">
+                        <div>
+                            <h1 class="header-title mb-1 display-5">{{ title }}</h1>
+                            <p class="text-white-50 mb-0 fs-18">Historique complet des actions utilisateurs par tenant</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="stat-card">
+                        <form method="GET" class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label for="tenant" class="form-label">Institut (Tenant)</label>
+                                <select name="tenant" id="tenant" class="form-select">
+                                    <option value="">Tous les instituts</option>
+                                    {% for t in all_tenants %}
+                                    <option value="{{ t.id }}" {% if filter_tenant == t.id|stringformat:"s" %}selected{% endif %}>{{ t.nom }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="user" class="form-label">Utilisateur</label>
+                                <select name="user" id="user" class="form-select">
+                                    <option value="">Tous les utilisateurs</option>
+                                    {% for u in all_users %}
+                                    <option value="{{ u.id }}" {% if filter_user == u.id|stringformat:"s" %}selected{% endif %}>{{ u.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="action" class="form-label">Type d'action</label>
+                                <select name="action" id="action" class="form-select">
+                                    <option value="">Toutes les actions</option>
+                                    {% for act_val, act_label in action_choices %}
+                                    <option value="{{ act_val }}" {% if filter_action == act_val %}selected{% endif %}>{{ act_label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="ri-filter-3-line me-1"></i> Filtrer
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    {% if institutes_logs %}
+                    <!-- Tabs Navigation -->
+                    <ul class="nav nav-pills nav-custom-pills mb-4" id="tenantTabs" role="tablist">
+                        {% for institute in institutes_logs %}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {% if forloop.first %}active{% endif %}" id="tab-{{ institute.id }}" data-bs-toggle="pill" data-bs-target="#content-{{ institute.id }}" type="button" role="tab" aria-controls="content-{{ institute.id }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                                <i class="ri-building-4-line me-1"></i> {{ institute.name }}
+                            </button>
+                        </li>
+                        {% endfor %}
+                    </ul>
+
+                    <!-- Tabs Content -->
+                    <div class="tab-content text-muted" id="tenantTabsContent">
+                        {% for institute in institutes_logs %}
+                        <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="content-{{ institute.id }}" role="tabpanel" aria-labelledby="tab-{{ institute.id }}">
+                            <div class="stat-card">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h4 class="mb-0 text-primary fw-bold">{{ institute.name }}</h4>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table custom-table table-hover align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Utilisateur</th>
+                                                <th>Action</th>
+                                                <th>Cible</th>
+                                                <th>Détails</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for log in institute.logs %}
+                                            <tr>
+                                                <td>{{ log.date|date:"d/m/Y H:i" }}</td>
+                                                <td class="fw-bold">{{ log.user }}</td>
+                                                <td><span class="badge bg-soft-primary text-primary">{{ log.action }}</span></td>
+                                                <td>{{ log.target_model|default:"-" }}</td>
+                                                <td>{{ log.details|default:"-" }}</td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted py-4">
+                                                    <i class="ri-file-search-line fs-24 d-block mb-2 text-warning"></i>
+                                                    Aucun log trouvé pour ce tenant.
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info border-0 shadow-sm">
+                        <i class="ri-information-line me-2"></i> Aucun institut trouvé avec ces filtres.
+                    </div>
+                    {% endif %}
+
+                    <!-- Removed Django Pagination -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DataTables Scripts -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('.custom-table').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
+            },
+            pageLength: 10,
+            ordering: false,
+            info: true,
+            lengthChange: false
+        });
+    });
+</script>
+{% endblock %}

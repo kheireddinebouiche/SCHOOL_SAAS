@@ -63,7 +63,9 @@ from .views import (
     api_mark_saas_notification_read,
     api_mark_all_saas_notifications_read,
     api_delete_saas_notification,
-    satisfaction_pending
+    satisfaction_pending,
+    crm_user_logs,
+    platform_usage_rate
 )
 
 
@@ -132,6 +134,8 @@ urlpatterns = [
     # CRM Statistics
     path('crm-statistics/', crm_statistics, name='crm_statistics'),
     path('crm-statistics/api/<int:tenant_id>/', get_crm_stats_api, name='get_crm_stats_api'),
+    path('crm-user-logs/', crm_user_logs, name='crm_user_logs'),
+    path('platform-usage-rate/', platform_usage_rate, name='platform_usage_rate'),
 
     # User Management
     path('users/', user_list, name='user_list'),

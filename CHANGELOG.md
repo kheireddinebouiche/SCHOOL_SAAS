@@ -1,8 +1,20 @@
-# Ã°Å¸â€œï¿½ Journal des Mises ÃƒÂ  Jour (Changelog)
-
 # 🗓️ Journal des Mises à Jour (Changelog)
 
-Ce fichier recense toutes les modifications, corrections de bugs et nouvelles fonctionnalités apportées au projet `SCHOOL_SAAS` par l'assistant Antigravity. Ce journal peut être utilisé pour alimenter la vue "Nouveautés" des superutilisateurs.
+## [Unreleased]
+- **Ajout** : Fonctionnalité d'impression (génération de rapport) du taux d'utilisation de l'ERP avec possibilité de sélectionner spécifiquement un ou plusieurs instituts via une fenêtre modale.
+- **Modification** : Refonte de l'affichage de la page `platform_usage_rate` pour utiliser des onglets (tabs) par tenant et ajout de la pagination DataTables.
+- **Modification** : Le menu "Satisfaction" a été renommé en "Mesure de satisfaction" dans `menu.html`.
+- **Modification** : Remplacement de la pagination serveur des tenants par une pagination locale (DataTables) des logs à l'intérieur de chaque onglet tenant sur la page `crm_user_logs`.
+- **Modification** : Refonte de l'affichage de la page `crm_user_logs` pour utiliser des onglets (tabs) par tenant au lieu d'une liste verticale.
+- **Modification** : Regroupement de "Stats CRM", "Logs" et "Taux d'utilisation" sous un seul menu déroulant "Statistiques" dans `menu.html` et `saas_menu.html`.
+- **Ajout** : Nouvelle vue et page `platform_usage_rate` (Taux d'utilisation de l'ERP) calculant les actions/jour par utilisateur depuis la création du tenant.
+- **Ajout** : Mise en place de filtres par institut, par utilisateur et par type d'action sur la page `crm_user_logs`.
+- **Modification** : Le titre de la vue `crm_user_logs` a été changé de "Logs Utilisateurs CRM par Institut" à "Logs".
+- **Correction** : Résolution de l'erreur `ModuleNotFoundError` en utilisant `app.models` au lieu de `school.models` pour `Institut`.
+- **Modification** : Le lien de menu a été renommé en "Logs" (dans `menu.html` et `saas_menu.html`).
+- **Modification** : La vue `crm_user_logs` récupère désormais tous les logs (sans limite de 100).
+- **Ajout** : Lien vers `crm_user_logs` ajouté dans le menu `saas_menu.html`.
+- **Ajout** : Nouvelle vue et page `crm_user_logs` dans `associe_app` pour afficher les logs utilisateurs (`UserActionLog`) CRM par tenant.
 
 ---
 

@@ -2332,3 +2332,150 @@ def api_delete_saas_notification(request):
 def satisfaction_pending(request):
     return render(request, 'associe_app/satisfaction_pending.html', {'title': 'Satisfaction'})
 
+@login_required(login_url='login')
+def crm_user_logs(request):
+    from app.models import Institut
+    from t_crm.models import UserActionLog
+    from django_tenants.utils import schema_context
+    from django.contrib.auth.models import User
+    
+    filter_tenant = request.GET.get('tenant')
+    filter_user = request.GET.get('user')
+    filter_action = request.GET.get('action')
+
+    if filter_tenant:
+        tenants = Institut.objects.filter(id=filter_tenant, is_visible=True).exclude(schema_name='public')
+    else:
+        tenants = Institut.objects.filter(is_visible=True).exclude(schema_name='public').order_by('nom')
+        
+    all_tenants = Institut.objects.filter(is_visible=True).exclude(schema_name='public').order_by('nom')
+    all_users = User.objects.all().order_by('username')
+    action_choices = UserActionLog.ACTION_CHOICES
+    
+    institutes_logs = []
+
+    for tenant in tenants:
+        try:
+            with schema_context(tenant.schema_name):
+                logs = UserActionLog.objects.all().select_related('user').order_by('-created_at')
+                
+                if filter_user:
+                    logs = logs.filter(user_id=filter_user)
+                if filter_action:
+                    logs = logs.filter(action_type=filter_action)
+                    
+                logs_data = []
+                for log in logs:
+                    logs_data.append({
+                        'user': log.user.username if log.user else 'Système',
+                        'action': log.get_action_type_display(),
+                        'target_model': log.target_model,
+                        'details': log.details,
+                        'date': log.created_at,
+                    })
+                
+                if logs_data or not (filter_user or filter_action):
+                    institutes_logs.append({
+                        'id': tenant.id,
+                        'name': tenant.nom,
+                        'logs': logs_data
+                    })
+        except Exception as e:
+            continue
+
+    context = {
+        'institutes_logs': institutes_logs,
+        'title': 'Logs',
+        'all_tenants': all_tenants,
+        'all_users': all_users,
+        'action_choices': action_choices,
+        'filter_tenant': filter_tenant,
+        'filter_user': filter_user,
+        'filter_action': filter_action,
+    }
+    return render(request, 'associe_app/crm_user_logs.html', context)
+
+
+@login_required(login_url='login')
+def platform_usage_rate(request):
+    from app.models import Institut
+    from t_crm.models import UserActionLog
+    from django_tenants.utils import schema_context
+    from django.utils import timezone
+    from django.db.models import Count
+
+    tenants = Institut.objects.filter(is_visible=True).exclude(schema_name='public').order_by('nom')
+    all_tenants = tenants # For the modal selection
+
+    is_print = request.GET.get('print') == 'true'
+    if is_print:
+        tenant_ids = request.GET.getlist('tenants')
+        if tenant_ids:
+            tenants = tenants.filter(id__in=tenant_ids)
+
+    usage_data = []
+
+    now = timezone.now()
+
+    for tenant in tenants:
+        try:
+            with schema_context(tenant.schema_name):
+                creation_date = tenant.date_creation
+                if not creation_date:
+                    continue
+                
+                delta = now - creation_date
+                days_active = max(delta.days, 1)
+
+                user_actions = UserActionLog.objects.values(
+                    'user__username', 'user__first_name', 'user__last_name'
+                ).annotate(total_actions=Count('id')).order_by('-total_actions')
+
+                users_data = []
+                for ua in user_actions:
+                    username = ua['user__username'] if ua['user__username'] else 'Système'
+                    total = ua['total_actions']
+                    rate = round(total / days_active, 2)
+                    
+                    if rate >= 10:
+                        status = 'Excellent'
+                        color = 'success'
+                    elif rate >= 2:
+                        status = 'Actif'
+                        color = 'primary'
+                    elif rate > 0:
+                        status = 'Faible'
+                        color = 'warning'
+                    else:
+                        status = 'Inactif'
+                        color = 'danger'
+
+                    users_data.append({
+                        'username': username,
+                        'first_name': ua['user__first_name'],
+                        'last_name': ua['user__last_name'],
+                        'total_actions': total,
+                        'rate': rate,
+                        'status': status,
+                        'color': color
+                    })
+
+                usage_data.append({
+                    'id': tenant.id,
+                    'name': tenant.nom,
+                    'days_active': days_active,
+                    'users': users_data,
+                    'creation_date': creation_date
+                })
+        except Exception as e:
+            continue
+
+    context = {
+        'title': "Taux d'utilisation",
+        'usage_data': usage_data,
+        'all_tenants': all_tenants
+    }
+    
+    if is_print:
+        return render(request, 'associe_app/platform_usage_rate_print.html', context)
+    return render(request, 'associe_app/platform_usage_rate.html', context)
