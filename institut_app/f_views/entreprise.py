@@ -38,6 +38,8 @@ def ApiLoadEntrepriseData(request):
         'code_wilaya' : entreprise.code_wilaya,
         'representant' : entreprise.representant,
         'agrement' : entreprise.agrement,
+        'quittance_prefix' : entreprise.quittance_prefix,
+        'quittance_suffix' : entreprise.quittance_suffix,
     }
 
     return JsonResponse(data, safe=False)
@@ -65,6 +67,8 @@ def ApiUpdateEntrepriseData(request):
         numero = request.POST.get('numero')
         code_wilaya = request.POST.get('code_wilaya')
         representant = request.POST.get('representant')
+        quittance_prefix = request.POST.get('quittance_prefix')
+        quittance_suffix = request.POST.get('quittance_suffix')
 
         entreprise = Entreprise.objects.get(id = id_entreprise)
         
@@ -86,6 +90,8 @@ def ApiUpdateEntrepriseData(request):
         entreprise.numero = numero
         entreprise.code_wilaya = code_wilaya
         entreprise.representant = representant
+        entreprise.quittance_prefix = quittance_prefix
+        entreprise.quittance_suffix = quittance_suffix
         entreprise.save()
 
         from t_crm.models import UserActionLog

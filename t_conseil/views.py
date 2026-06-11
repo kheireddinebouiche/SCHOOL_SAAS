@@ -982,6 +982,113 @@ def DetailsDevis(request, pk):
     }
     return render(request, 'tenant_folder/conseil/details_devis.html', context)
 
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
+def PrintDevisConseil(request, pk):
+    from .models import Devis
+    from pdf_editor.models import DocumentTemplate, DocumentGeneration
+    from pdf_editor.utils import render_template_with_context
+    from django.utils import timezone
+    from django.contrib import messages
+
+    try:
+        devis = Devis.objects.get(num_devis=pk)
+    except Devis.DoesNotExist:
+        messages.error(request, 'Devis introuvable.')
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    # Retrieve the dolibare template
+    try:
+        template_obj = DocumentTemplate.objects.get(slug='dolibare', is_active=True)
+    except DocumentTemplate.DoesNotExist:
+        messages.error(request, "Template 'dolibare' introuvable dans l'éditeur de documents.")
+        return redirect('t_conseil:DetailsDevis', pk=pk)
+
+    lignes_devis = devis.lignes_devis.all()
+    
+    total_ht = 0
+    total_tva = 0
+    tva_breakdown = {}
+    
+    for ligne in lignes_devis:
+        total_ht += float(ligne.montant)
+        if devis.show_tva:
+            rate = float(getattr(ligne, 'tva_percent', 0))
+            amount = float(ligne.montant) * (rate / 100)
+            if rate > 0:
+                tva_breakdown[rate] = tva_breakdown.get(rate, 0) + amount
+
+    total_tva = sum(tva_breakdown.values())
+    total_ttc = total_ht + total_tva
+    total_remise = 0 # Not present in Devis model
+
+    emetteur = getattr(devis, 'entreprise', None)
+
+    # Context mapping
+    context_data = {
+        'entreprise_nom': emetteur.designation if emetteur else 'SALDAE',
+        'entreprise_adresse': getattr(emetteur, 'adresse', ''),
+        'entreprise_telephone': getattr(emetteur, 'telephone', ''),
+        'entreprise_email': getattr(emetteur, 'email', ''),
+        'entreprise_rc': getattr(emetteur, 'rc', ''),
+        'entreprise_nif': getattr(emetteur, 'nif', ''),
+        'entreprise_nis': getattr(emetteur, 'nis', ''),
+        'entreprise_art_imp': getattr(emetteur, 'art', ''), # the model uses 'art'
+        'entreprise_logo': request.build_absolute_uri(emetteur.logo.url) if emetteur and hasattr(emetteur, 'logo') and emetteur.logo else '',
+        
+        'devis_numero': devis.num_devis,
+        'date_emission': devis.date_emission.strftime("%d/%m/%Y") if devis.date_emission else "",
+        'date_echeance': devis.date_echeance.strftime("%d/%m/%Y") if devis.date_echeance else "",
+        'conditions_commerciales': devis.conditions_commerciales,
+        
+        'client_nom': str(devis.client.entreprise) if devis.client.entreprise else f"{devis.client.nom} {devis.client.prenom}",
+        'client_adresse': devis.client.adresse,
+        'client_telephone': devis.client.telephone,
+        'client_email': devis.client.email,
+        'client_rc': getattr(devis.client, 'rc', ''),
+        'client_nif': getattr(devis.client, 'nif', ''),
+        'client_nis': getattr(devis.client, 'nis', ''),
+        'client_art_imp': getattr(devis.client, 'art_imp', ''),
+        'client_logo': request.build_absolute_uri(devis.client.logo_entreprise.url) if hasattr(devis.client, 'logo_entreprise') and devis.client.logo_entreprise else '',
+        
+        'lignes': [
+            {
+                'designation': getattr(ligne.thematique, 'label', '') if hasattr(ligne, 'thematique') and ligne.thematique else getattr(ligne, 'description', ''),
+                'description': getattr(ligne, 'long_description', getattr(ligne, 'description', '')),
+                'quantite': float(ligne.quantite),
+                'prix_unitaire': float(ligne.prix_unitaire),
+                'tva_percent': float(getattr(ligne, 'tva_percent', 0)) if devis.show_tva else 0,
+                'remise_percent': float(getattr(ligne, 'remise_percent', 0)) if devis.show_remise else 0,
+                'montant': float(ligne.montant)
+            } for ligne in lignes_devis
+        ],
+        'total_ht': round(total_ht, 2),
+        'total_tva': round(total_tva, 2),
+        'total_ttc': round(total_ttc, 2),
+        'total_remise': round(total_remise, 2),
+        'show_tva': devis.show_tva,
+        'show_remise': devis.show_remise,
+    }
+
+    try:
+        rendered_content, error = render_template_with_context(template_obj.content, context_data)
+        if error:
+            messages.error(request, f"Erreur de génération : {error}")
+            return redirect('t_conseil:DetailsDevis', pk=pk)
+
+        doc_gen = DocumentGeneration.objects.create(
+            template=template_obj,
+            context_data=context_data,
+            rendered_content=rendered_content,
+            generated_by=request.user
+        )
+
+        return redirect('pdf_editor:document-export', pk=doc_gen.pk)
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la génération PDF : {str(e)}")
+        return redirect('t_conseil:DetailsDevis', pk=pk)
+
 @login_required(login_url='institut_app:login')
 @module_permission_required('con', 'approuv')
 @transaction.atomic
@@ -1327,6 +1434,129 @@ def DetailsFacture(request, pk):
         "tva_breakdown": sorted_tva
     }
     return render(request, 'tenant_folder/conseil/details_facture.html', context)
+
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
+def PrintFactureConseil(request, pk):
+    from t_conseil.models import Facture
+    from pdf_editor.models import DocumentTemplate, DocumentGeneration
+    from pdf_editor.utils import render_template_with_context
+    from django.utils import timezone
+    from django.contrib import messages
+
+    try:
+        facture = Facture.objects.get(num_facture=pk)
+    except Facture.DoesNotExist:
+        messages.error(request, 'Facture introuvable.')
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    # Retrieve the dolibare_facture template
+    try:
+        template_obj = DocumentTemplate.objects.get(slug='dolibare_facture', is_active=True)
+    except DocumentTemplate.DoesNotExist:
+        messages.error(request, "Template 'dolibare_facture' introuvable dans l'éditeur de documents.")
+        return redirect('t_conseil:DetailsFacture', pk=pk)
+
+    lignes_facture = facture.lignes_facture.all()
+    
+    total_ht = 0
+    total_tva = 0
+    tva_breakdown = {}
+    
+    for ligne in lignes_facture:
+        total_ht += float(ligne.montant_ht)
+        if facture.show_tva:
+            rate = float(getattr(ligne, 'tva_percent', 0))
+            amount = float(ligne.montant_ht) * (rate / 100)
+            if rate > 0:
+                tva_breakdown[rate] = tva_breakdown.get(rate, 0) + amount
+
+    total_tva = sum(tva_breakdown.values())
+    timbre = float(facture.get_timbre()) if hasattr(facture, 'get_timbre') else 0
+    total_ttc = total_ht + total_tva + timbre
+    total_remise = getattr(facture, 'montant_remise_globale', 0)
+
+    emetteur = getattr(facture, 'entreprise', None)
+    
+    # Retrieve configuration for bank account
+    from t_conseil.models import ConseilConfiguration
+    config_fin = ConseilConfiguration.objects.filter(entreprise=emetteur).first() if emetteur else ConseilConfiguration.objects.filter(entreprise=None).first()
+    
+    banque_nom = ''
+    banque_iban = ''
+    if config_fin and config_fin.compte_bancaire_defaut:
+        banque_nom = config_fin.compte_bancaire_defaut.bank_name
+        banque_iban = config_fin.compte_bancaire_defaut.bank_iban
+
+    # Context mapping
+    context_data = {
+        'entreprise_nom': emetteur.designation if emetteur else 'SALDAE',
+        'entreprise_adresse': getattr(emetteur, 'adresse', ''),
+        'entreprise_telephone': getattr(emetteur, 'telephone', ''),
+        'entreprise_email': getattr(emetteur, 'email', ''),
+        'entreprise_rc': getattr(emetteur, 'rc', ''),
+        'entreprise_nif': getattr(emetteur, 'nif', ''),
+        'entreprise_nis': getattr(emetteur, 'nis', ''),
+        'entreprise_art_imp': getattr(emetteur, 'art', ''), # the model uses 'art'
+        'entreprise_logo': request.build_absolute_uri(emetteur.logo.url) if emetteur and hasattr(emetteur, 'logo') and emetteur.logo else '',
+        
+        'banque_nom': banque_nom,
+        'banque_iban': banque_iban,
+        
+        'facture_numero': facture.num_facture,
+        'date_emission': facture.date_facturation.strftime("%d/%m/%Y") if hasattr(facture, 'date_facturation') and facture.date_facturation else "",
+        'date_echeance': facture.date_echeance.strftime("%d/%m/%Y") if facture.date_echeance else "",
+        'conditions_commerciales': getattr(facture, 'conditions_commerciales', ''),
+        'mode_paiement': facture.get_mode_paiement_display() if hasattr(facture, 'get_mode_paiement_display') else getattr(facture, 'mode_paiement', ''),
+        
+        'client_nom': str(facture.client.entreprise) if getattr(facture.client, 'entreprise', None) else f"{getattr(facture.client, 'nom', '')} {getattr(facture.client, 'prenom', '')}",
+        'client_adresse': getattr(facture.client, 'adresse', ''),
+        'client_telephone': getattr(facture.client, 'telephone', ''),
+        'client_email': getattr(facture.client, 'email', ''),
+        'client_rc': getattr(facture.client, 'rc', ''),
+        'client_nif': getattr(facture.client, 'nif', ''),
+        'client_nis': getattr(facture.client, 'nis', ''),
+        'client_art_imp': getattr(facture.client, 'art_imp', ''),
+        'client_logo': request.build_absolute_uri(facture.client.logo_entreprise.url) if hasattr(facture.client, 'logo_entreprise') and getattr(facture.client, 'logo_entreprise') else '',
+        
+        'lignes': [
+            {
+                'designation': getattr(ligne.thematique, 'label', '') if hasattr(ligne, 'thematique') and ligne.thematique else getattr(ligne, 'description', ''),
+                'description': getattr(ligne, 'long_description', getattr(ligne, 'description', '')),
+                'quantite': float(ligne.quantite),
+                'prix_unitaire': float(ligne.prix_unitaire_ht) if hasattr(ligne, 'prix_unitaire_ht') else float(getattr(ligne, 'prix_unitaire', 0)),
+                'tva_percent': float(getattr(ligne, 'tva_percent', 0)) if facture.show_tva else 0,
+                'remise_percent': float(getattr(ligne, 'remise_percent', 0)) if getattr(facture, 'show_remise', False) else 0,
+                'montant': float(ligne.montant_ht) if hasattr(ligne, 'montant_ht') else float(getattr(ligne, 'montant', 0))
+            } for ligne in lignes_facture
+        ],
+        'total_ht': round(total_ht, 2),
+        'total_tva': round(total_tva, 2),
+        'total_ttc': round(total_ttc, 2),
+        'total_remise': round(total_remise, 2),
+        'timbre': round(timbre, 2),
+        'show_tva': facture.show_tva,
+        'show_remise': getattr(facture, 'show_remise', False),
+    }
+
+    try:
+        rendered_content, error = render_template_with_context(template_obj.content, context_data)
+        if error:
+            messages.error(request, f"Erreur de génération : {error}")
+            return redirect('t_conseil:DetailsFacture', pk=pk)
+
+        doc_gen = DocumentGeneration.objects.create(
+            template=template_obj,
+            context_data=context_data,
+            rendered_content=rendered_content,
+            generated_by=request.user
+        )
+
+        return redirect('pdf_editor:document-export', pk=doc_gen.pk)
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la génération PDF : {str(e)}")
+        return redirect('t_conseil:DetailsFacture', pk=pk)
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'view')
@@ -1809,10 +2039,20 @@ def ConfigurationConseil(request):
                 config.default_conditions_commerciales = request.POST.get('default_conditions_commerciales', '')
                 config.payment_methods = request.POST.get('payment_methods', '')
                 
+                compte_bancaire_id = request.POST.get('compte_bancaire_defaut')
+                if compte_bancaire_id:
+                    from institut_app.models import BankAccount
+                    try:
+                        config.compte_bancaire_defaut = BankAccount.objects.get(id=compte_bancaire_id)
+                    except BankAccount.DoesNotExist:
+                        pass
+                else:
+                    config.compte_bancaire_defaut = None
+                
                 config.save()
-                messages.success(request, "Configuration mise Ã  jour avec succès.")
+                messages.success(request, "Configuration mise à jour avec succès.")
             except Exception as e:
-                messages.error(request, f"Erreur lors de la mise Ã  jour : {e}")
+                messages.error(request, f"Erreur lors de la mise à jour : {e}")
                 
         elif action == 'add_tva':
             label = request.POST.get('tva_label')
@@ -1834,6 +2074,11 @@ def ConfigurationConseil(request):
             
         return redirect('t_conseil:ConfigurationConseil')
 
+    from institut_app.models import BankAccount
+    comptes_bancaires = BankAccount.objects.filter(is_archived=False)
+    if enterprise:
+        comptes_bancaires = comptes_bancaires.filter(entreprise=enterprise)
+    
     context = {
         "tenant": request.tenant,
         'config': config,
@@ -1841,6 +2086,7 @@ def ConfigurationConseil(request):
         'tvas': tvas,
         'enterprises': enterprises,
         'current_enterprise': enterprise,
+        'comptes_bancaires': comptes_bancaires,
     }
     return render(request, 'tenant_folder/conseil/configuration.html', context)
 
@@ -2050,6 +2296,7 @@ def ApiSaveFactureItems(request):
                 description=description,
                 long_description=long_description,
                 quantite=qty,
+                prix_unitaire=unit_price,
                 montant_ht=montant_ht,
                 remise_percent=remise_percent,
                 tva_percent=tva_percent
@@ -2726,10 +2973,18 @@ def ApiSaveParticipant(request):
         data = json.loads(request.body)
         p_id = data.get('id')
         prospect_id = data.get('prospect_id')
-        devis_id = data.get('devis_id')
+        doc_id = data.get('devis_id') # Could be devis_123 or facture_123
         
-        if not prospect_id and not p_id and not devis_id:
-            return JsonResponse({'status': 'error', 'message': 'Prospect ID ou Devis ID requis'}, status=400)
+        is_facture = False
+        actual_id = doc_id
+        if doc_id and str(doc_id).startswith('devis_'):
+            actual_id = str(doc_id).replace('devis_', '')
+        elif doc_id and str(doc_id).startswith('facture_'):
+            is_facture = True
+            actual_id = str(doc_id).replace('facture_', '')
+        
+        if not prospect_id and not p_id and not doc_id:
+            return JsonResponse({'status': 'error', 'message': 'Prospect ID ou Document ID requis'}, status=400)
             
         if p_id:
             try:
@@ -2740,8 +2995,11 @@ def ApiSaveParticipant(request):
             participant = Participant()
             if prospect_id:
                 participant.prospect_id = prospect_id
-            if devis_id:
-                participant.devis_id = devis_id
+            if actual_id:
+                if is_facture:
+                    participant.facture_id = actual_id
+                else:
+                    participant.devis_id = actual_id
             
         participant.nom = data.get('nom')
         participant.prenom = data.get('prenom')
@@ -3170,6 +3428,7 @@ def PaiementsConseilListe(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
 def ApiCreateRendezVousPipeline(request):
     if request.method == "POST":
         from t_crm.models import RendezVous, Prospets

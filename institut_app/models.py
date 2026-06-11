@@ -99,6 +99,9 @@ class Entreprise(models.Model):
 
     entite_afficher = models.CharField(max_length=100, null=True, blank=True, help_text="Abreviation a afficher sur les rapport ex: INSIM")
 
+    quittance_format = models.CharField(max_length=200, null=True, blank=True, default="N°{seq}/ST/{entite}/{wilaya}/{annexe}/{mois}/{annee}", verbose_name="Format de Quittance")
+    quittance_sequence_length = models.IntegerField(default=6, verbose_name="Longueur de la séquence")
+
     class Meta:
         verbose_name="Entreprise"
         verbose_name_plural = "Entreprises"

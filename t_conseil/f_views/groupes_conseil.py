@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.contrib import messages
 from t_crm.models import Prospets
-from t_conseil.models import Devis, Participant, Thematiques, GroupeConseil, GroupeConseilParticipant, GroupeConseilThematique, Facture
+from t_conseil.models import Devis, Participant, Thematiques, GroupeConseil, GroupeConseilParticipant, GroupeConseilThematique, Facture, Consultant
 from t_formations.models import Formateurs
 
 @login_required(login_url="institut_app:login")
@@ -49,8 +49,10 @@ def DetailsGroupeConseil(request, pk):
 
     # Find the linked standard invoice, if any
     facture = None
-    if hasattr(groupe.devis, 'facture'):
+    if groupe.devis and hasattr(groupe.devis, 'facture'):
         facture = groupe.devis.facture.filter(type_facture='standard').exclude(etat='annule').first()
+    elif groupe.facture:
+        facture = groupe.facture
 
     context = {
         'groupe': groupe,
@@ -58,6 +60,8 @@ def DetailsGroupeConseil(request, pk):
         'affectations_thematiques': affectations_thematiques,
         'planning_sessions': planning_sessions,
         'facture_liee': facture,
+        'formateurs': Formateurs.objects.all(),
+        'consultants': Consultant.objects.all(),
         'tenant': request.tenant,
         'context_type': 'con',
     }
@@ -70,11 +74,14 @@ def ApiGetClientDevis(request):
     if not client_id:
         return JsonResponse({'status': 'error', 'message': 'Client ID manquant'})
     
-    devis = Devis.objects.filter(client_id=client_id, etat='accepte').values('id', 'num_devis', 'date_emission')
+    devis = Devis.objects.filter(client_id=client_id, etat__in=['accepte', 'envoye']).values('id', 'num_devis', 'date_emission')
     factures = Facture.objects.filter(client_id=client_id, type_facture='standard').exclude(etat='annule').values('id', 'num_facture', 'date_emission', 'devis_source__id', 'etat')
     
     # Check if the client already has active groups
-    active_groups = GroupeConseil.objects.filter(devis__client_id=client_id).exclude(etat='cloture')
+    from django.db.models import Q
+    active_groups = GroupeConseil.objects.filter(
+        Q(devis__client_id=client_id) | Q(facture__client_id=client_id)
+    ).exclude(etat='cloture')
     has_active_group = active_groups.exists()
     active_group_info = None
     if has_active_group:
@@ -95,39 +102,76 @@ def ApiGetClientDevis(request):
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'view')
 def ApiGetDevisDetails(request):
-    devis_id = request.GET.get('devis_id')
-    if not devis_id:
-        return JsonResponse({'status': 'error', 'message': 'Devis ID manquant'})
+    doc_id = request.GET.get('devis_id') # format is either "devis_id" or "facture_id" or just id
+    if not doc_id:
+        return JsonResponse({'status': 'error', 'message': 'Document ID manquant'})
     
-    try:
-        devis = Devis.objects.get(id=devis_id)
-    except Devis.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'Devis non trouvé'})
+    is_facture = False
+    actual_id = doc_id
+    if str(doc_id).startswith('devis_'):
+        actual_id = str(doc_id).replace('devis_', '')
+    elif str(doc_id).startswith('facture_'):
+        is_facture = True
+        actual_id = str(doc_id).replace('facture_', '')
+        
+    thematics = []
+    participants = []
     
-    thematics = devis.lignes_devis.filter(thematique__isnull=False).values(
-        'thematique__id', 'thematique__label'
-    ).distinct()
-    
-    participants = Participant.objects.filter(devis=devis).values(
-        'id', 'nom', 'prenom', 'email', 'poste'
-    )
-    
-    if devis.client.type_prospect == 'particulier':
+    if is_facture:
+        try:
+            facture = Facture.objects.get(id=actual_id)
+        except Facture.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Facture non trouvée'})
+            
+        thematics = facture.lignes_facture.filter(thematique__isnull=False).values(
+            'thematique__id', 'thematique__label'
+        ).distinct()
+        
+        # Participants might be on facture or its devis_source
+        if facture.devis_source:
+            parts = Participant.objects.filter(devis=facture.devis_source)
+        else:
+            parts = Participant.objects.filter(facture=facture)
+            
+        participants = parts.values('id', 'nom', 'prenom', 'email', 'poste')
+        
+        client = facture.client
+    else:
+        try:
+            devis = Devis.objects.get(id=actual_id)
+        except Devis.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Devis non trouvé'})
+            
+        thematics = devis.lignes_devis.filter(thematique__isnull=False).values(
+            'thematique__id', 'thematique__label'
+        ).distinct()
+        
+        participants = Participant.objects.filter(devis=devis).values(
+            'id', 'nom', 'prenom', 'email', 'poste'
+        )
+        
+        client = devis.client
+        
+    if client.type_prospect == 'particulier':
         participants = list(participants)
         participants.append({
-            'id': f"prospect_{devis.client.id}",
-            'nom': devis.client.nom,
-            'prenom': devis.client.prenom,
-            'email': devis.client.email,
+            'id': f"prospect_{client.id}",
+            'nom': client.nom,
+            'prenom': client.prenom,
+            'email': client.email,
             'is_prospect': True
         })
 
-    trainers = Formateurs.objects.all().values('id', 'nom', 'prenom')
+    trainers_list = []
+    for f in Formateurs.objects.all():
+        trainers_list.append({'id': f"f_{f.id}", 'nom': f.nom, 'prenom': f.prenom, 'type': 'Formateur'})
+    for c in Consultant.objects.all():
+        trainers_list.append({'id': f"c_{c.id}", 'nom': c.nom, 'prenom': c.prenom, 'type': 'Consultant'})
     
     return JsonResponse({
         'thematics': list(thematics),
         'participants': list(participants),
-        'trainers': list(trainers)
+        'trainers': trainers_list
     }, safe=False)
 
 @login_required(login_url="institut_app:login")
@@ -140,15 +184,33 @@ def ApiSaveConseilGroupe(request):
         
     try:
         data = json.loads(request.body)
+        doc_id = data.get('devis_id')
         
-        try:
-            devis = Devis.objects.get(id=data.get('devis_id')) 
-        except Devis.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Devis introuvable.'})
+        is_facture = False
+        actual_id = doc_id
+        if str(doc_id).startswith('devis_'):
+            actual_id = str(doc_id).replace('devis_', '')
+        elif str(doc_id).startswith('facture_'):
+            is_facture = True
+            actual_id = str(doc_id).replace('facture_', '')
+            
+        devis = None
+        facture = None
+        if is_facture:
+            try:
+                facture = Facture.objects.get(id=actual_id) 
+            except Facture.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Facture introuvable.'})
+        else:
+            try:
+                devis = Devis.objects.get(id=actual_id) 
+            except Devis.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Devis introuvable.'})
         
         groupe = GroupeConseil.objects.create(
             nom=data.get('nom'),
             devis=devis,
+            facture=facture,
             start_date=data.get('start_date'),
             end_date=data.get('end_date'),
             created_by=request.user,
@@ -158,7 +220,7 @@ def ApiSaveConseilGroupe(request):
         # Participants
         for p_id in data.get('participants', []):
             if str(p_id).startswith('prospect_'):
-                real_id = p_id.split('_')[1]
+                real_id = str(p_id).split('_')[1]
                 try:
                     prospect = Prospets.objects.get(id=real_id) 
                 except Prospets.DoesNotExist:
@@ -167,6 +229,7 @@ def ApiSaveConseilGroupe(request):
                 participant, created = Participant.objects.get_or_create(
                     prospect=prospect,
                     devis=devis,
+                    facture=facture,
                     defaults={
                         'nom': prospect.nom,
                         'prenom': prospect.prenom,
@@ -189,16 +252,34 @@ def ApiSaveConseilGroupe(request):
             except Thematiques.DoesNotExist:
                 return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
             formateur = None
-            if assign.get('formateur_id'):
-                try:
-                    formateur = Formateurs.objects.get(id=assign.get('formateur_id')) 
-                except Formateurs.DoesNotExist:
-                    return JsonResponse({'status': 'error', 'message': 'Formateurs introuvable.'})
+            consultant = None
+            
+            intervenant_id = assign.get('formateur_id')
+            if intervenant_id:
+                if str(intervenant_id).startswith('f_'):
+                    real_id = str(intervenant_id).replace('f_', '')
+                    try:
+                        formateur = Formateurs.objects.get(id=real_id) 
+                    except Formateurs.DoesNotExist:
+                        return JsonResponse({'status': 'error', 'message': 'Formateur introuvable.'})
+                elif str(intervenant_id).startswith('c_'):
+                    real_id = str(intervenant_id).replace('c_', '')
+                    try:
+                        consultant = Consultant.objects.get(id=real_id)
+                    except Consultant.DoesNotExist:
+                        return JsonResponse({'status': 'error', 'message': 'Consultant introuvable.'})
+                else:
+                    # Rétrocompatibilité au cas où l'ID est brut
+                    try:
+                        formateur = Formateurs.objects.get(id=intervenant_id)
+                    except Formateurs.DoesNotExist:
+                        pass
                 
             GroupeConseilThematique.objects.create(
                 groupe=groupe,
                 thematique=thematique,
                 formateur=formateur,
+                consultant=consultant,
                 date_debut=groupe.start_date,
                 date_fin=groupe.end_date
             )
@@ -341,6 +422,7 @@ def ApiAddPlanningSession(request):
         # Auto-detect formateur from the group's thematic association
         assoc = GroupeConseilThematique.objects.filter(groupe=groupe, thematique=thematique).first()
         formateur = assoc.formateur if assoc else None
+        consultant = assoc.consultant if assoc else None
 
         try:
             date_obj = datetime.strptime(data.get('date'), '%Y-%m-%d').date()
@@ -367,6 +449,7 @@ def ApiAddPlanningSession(request):
             groupe=groupe,
             thematique=thematique,
             formateur=formateur,
+            consultant=consultant,
             date=date_obj,
             heure_debut=time_start_obj,
             heure_fin=time_end_obj,
@@ -391,7 +474,7 @@ def ApiAddPlanningSession(request):
                 'date': date_obj.strftime('%d/%m/%Y'),
                 'heure': f"{time_start_obj.strftime('%H:%M')} - {time_end_obj.strftime('%H:%M')}",
                 'thematique': session.thematique.label,
-                'formateur': str(session.formateur) if session.formateur else "N/A"
+                'formateur': str(session.consultant) if session.consultant else (str(session.formateur) if session.formateur else "N/A")
             }
         })
     except Exception as e:
@@ -443,8 +526,11 @@ def SessionAttendancePDF(request, session_id):
         GroupeConseilPlanning.objects.select_related(
             'groupe__devis__client', 
             'groupe__devis__entreprise',
+            'groupe__facture__client',
+            'groupe__facture__entreprise',
             'thematique',
-            'formateur'
+            'formateur',
+            'consultant'
         ), 
         id=session_id
     )
@@ -452,16 +538,19 @@ def SessionAttendancePDF(request, session_id):
     participants = groupe.participants_groupe.all().select_related('participant')
 
     client_logo_path = None
-    if groupe.devis.client.logo_entreprise:
+    enterprise_logo_path = None
+    
+    doc = groupe.devis if groupe.devis else groupe.facture
+    
+    if doc and doc.client and doc.client.logo_entreprise:
         try:
-            client_logo_path = Path(groupe.devis.client.logo_entreprise.path).as_uri()
+            client_logo_path = Path(doc.client.logo_entreprise.path).as_uri()
         except ValueError:
             pass
 
-    enterprise_logo_path = None
-    if groupe.devis.entreprise and groupe.devis.entreprise.logo:
+    if doc and doc.entreprise and doc.entreprise.logo:
         try:
-            enterprise_logo_path = Path(groupe.devis.entreprise.logo.path).as_uri()
+            enterprise_logo_path = Path(doc.entreprise.logo.path).as_uri()
         except ValueError:
             pass
 
@@ -559,5 +648,63 @@ def ApiUpdateSessionReport(request):
         return JsonResponse({'status': 'success', 'message': 'Compte rendu enregistré avec succès'})
     except GroupeConseilPlanning.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Session introuvable'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('con', 'change')
+@transaction.atomic
+def ApiUpdateThematiqueIntervenant(request):
+    if request.method != "POST":
+        return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+        
+    try:
+        data = json.loads(request.body)
+        affectation_id = data.get('affectation_id')
+        intervenant_id = data.get('intervenant_id')
+        
+        try:
+            affectation = GroupeConseilThematique.objects.get(id=affectation_id)
+        except GroupeConseilThematique.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Affectation introuvable.'})
+            
+        formateur = None
+        consultant = None
+        
+        if intervenant_id:
+            if str(intervenant_id).startswith('f_'):
+                real_id = str(intervenant_id).replace('f_', '')
+                try:
+                    formateur = Formateurs.objects.get(id=real_id) 
+                except Formateurs.DoesNotExist:
+                    return JsonResponse({'status': 'error', 'message': 'Formateur introuvable.'})
+            elif str(intervenant_id).startswith('c_'):
+                real_id = str(intervenant_id).replace('c_', '')
+                try:
+                    consultant = Consultant.objects.get(id=real_id)
+                except Consultant.DoesNotExist:
+                    return JsonResponse({'status': 'error', 'message': 'Consultant introuvable.'})
+            else:
+                # Rétrocompatibilité
+                try:
+                    formateur = Formateurs.objects.get(id=intervenant_id)
+                except Formateurs.DoesNotExist:
+                    pass
+                    
+        affectation.formateur = formateur
+        affectation.consultant = consultant
+        affectation.save()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='GroupeConseilThematique',
+            target_id=str(affectation.id),
+            details=f"Modification de l'intervenant pour la thématique: {affectation.thematique.label}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        return JsonResponse({'status': 'success', 'message': 'Intervenant mis à jour avec succès'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})

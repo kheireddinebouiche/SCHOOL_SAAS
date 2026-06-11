@@ -100,6 +100,31 @@
         text-transform: uppercase;
         letter-spacing: 0.025em;
     }
+
+    /* Select2 Customization */
+    .select2-container--default .select2-selection--single {
+        border: 1px solid #e9ecef;
+        height: 42px;
+        padding: 6px 12px;
+        font-size: 14px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        background-color: #fff;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: normal;
+        padding-left: 0;
+        color: #495057;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 100%;
+        right: 12px;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--single {
+        border-color: #405189;
+        box-shadow: 0 0 0 3px rgba(64, 81, 137, 0.1);
+    }
 </style>
 
 <div class="main-content">
@@ -169,7 +194,13 @@
 
                             <!-- Step 3: Participants -->
                             <div class="wizard-step" id="step3">
-                                <h5 class="fw-bold mb-4">Étape 3 : Sélection des Participants</h5>
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold mb-0">Étape 3 : Sélection des Participants</h5>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="skipParticipants">
+                                        <label class="form-check-label text-muted" for="skipParticipants">Passer pour le moment</label>
+                                    </div>
+                                </div>
                                 <div id="participantsList" class="row g-3">
                                     <!-- Dynamic -->
                                 </div>
@@ -334,13 +365,17 @@
                 loadDevisDetails();
             }
             if(currentStep == 3) {
-                selectedParticipants = [];
-                $('.participant-check:checked').each(function() {
-                    selectedParticipants.push($(this).val());
-                });
-                if(selectedParticipants.length == 0) {
-                    alertify.error('Veuillez sélectionner au moins un participant');
-                    return;
+                if ($('#skipParticipants').is(':checked')) {
+                    selectedParticipants = [];
+                } else {
+                    selectedParticipants = [];
+                    $('.participant-check:checked').each(function() {
+                        selectedParticipants.push($(this).val());
+                    });
+                    if(selectedParticipants.length == 0) {
+                        alertify.error('Veuillez sélectionner au moins un participant, ou cochez l\'option pour passer.');
+                        return;
+                    }
                 }
             }
             
@@ -379,60 +414,60 @@
                     `;
                 }
 
-                if (data.factures && data.factures.length > 0) {
-                    // Client a été facturé : Afficher factures et devis reliés
-                    html += '<div class="col-12 mb-2"><h6 class="text-primary fw-bold"><i class="ri-bill-line me-2"></i>Documents Facturés</h6></div>';
-                    data.factures.forEach(f => {
-                        // Find linked devis
-                        let linkedDevis = data.devis.find(d => d.id === f.devis_source__id);
-                        let devisText = linkedDevis ? `(Devis lié : ${linkedDevis.num_devis})` : '(Aucun devis lié)';
-                        // Value MUST be the devis_source__id because the backend needs a devis_id
-                        let valId = f.devis_source__id ? f.devis_source__id : '';
-                        
-                        html += `
-                            <div class="col-md-6">
-                                <div class="glass-card p-3 d-flex align-items-center">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="devisRadio" id="doc_${f.id}" value="${valId}">
-                                        <label class="form-check-label ms-2 h6 mb-0" for="doc_${f.id}">
-                                            Facture ${f.num_facture} <span class="badge bg-success-subtle text-success ms-2">${f.etat}</span>
-                                            <small class="text-muted d-block mt-1">Émise le ${f.date_emission} <span class="text-primary fw-medium">${devisText}</span></small>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    
-                    // Show remaining devis not linked to factures
-                    let devisNonFactures = data.devis.filter(d => !data.factures.some(f => f.devis_source__id === d.id));
-                    if (devisNonFactures.length > 0) {
-                        html += '<div class="col-12 mt-4 mb-2"><h6 class="text-muted fw-bold"><i class="ri-file-list-3-line me-2"></i>Devis Acceptés (Non facturés)</h6></div>';
-                        devisNonFactures.forEach(d => {
+                    if (data.factures && data.factures.length > 0) {
+                        // Client a été facturé : Afficher factures et devis reliés
+                        html += '<div class="col-12 mb-2"><h6 class="text-primary fw-bold"><i class="ri-bill-line me-2"></i>Documents Facturés / Payés</h6></div>';
+                        data.factures.forEach(f => {
+                            // Find linked devis
+                            let linkedDevis = data.devis.find(d => d.id === f.devis_source__id);
+                            let devisText = linkedDevis ? `(Devis lié : ${linkedDevis.num_devis})` : '(Aucun devis lié)';
+                            
+                            let valId = f.devis_source__id ? 'devis_' + f.devis_source__id : 'facture_' + f.id;
+                            
                             html += `
                                 <div class="col-md-6">
-                                    <div class="glass-card p-3 d-flex align-items-center bg-light bg-opacity-50">
+                                    <div class="glass-card p-3 d-flex align-items-center">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="devisRadio" id="devis_${d.id}" value="${d.id}">
-                                            <label class="form-check-label ms-2 h6 mb-0" for="devis_${d.id}">
-                                                ${d.num_devis}
-                                                <small class="text-muted d-block mt-1">Émis le ${d.date_emission}</small>
+                                            <input class="form-check-input" type="radio" name="devisRadio" id="doc_${f.id}" value="${valId}">
+                                            <label class="form-check-label ms-2 h6 mb-0" for="doc_${f.id}">
+                                                Facture ${f.num_facture} <span class="badge bg-success-subtle text-success ms-2">${f.etat}</span>
+                                                <small class="text-muted d-block mt-1">Émise le ${f.date_emission} <span class="text-primary fw-medium">${devisText}</span></small>
                                             </label>
                                         </div>
                                     </div>
                                 </div>
                             `;
                         });
-                    }
-                } else if (data.devis && data.devis.length > 0) {
-                    // Aucune facture, afficher uniquement les devis
-                    html += '<div class="col-12 mb-2"><h6 class="text-muted fw-bold"><i class="ri-file-list-3-line me-2"></i>Devis Acceptés</h6></div>';
-                    data.devis.forEach(d => {
-                        html += `
-                            <div class="col-md-6">
-                                <div class="glass-card p-3 d-flex align-items-center">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="devisRadio" id="devis_${d.id}" value="${d.id}">
+                        
+                        // Show remaining devis not linked to factures
+                        let devisNonFactures = data.devis.filter(d => !data.factures.some(f => f.devis_source__id === d.id));
+                        if (devisNonFactures.length > 0) {
+                            html += '<div class="col-12 mt-4 mb-2"><h6 class="text-muted fw-bold"><i class="ri-file-list-3-line me-2"></i>Devis Acceptés (Non facturés)</h6></div>';
+                            devisNonFactures.forEach(d => {
+                                html += `
+                                    <div class="col-md-6">
+                                        <div class="glass-card p-3 d-flex align-items-center bg-light bg-opacity-50">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="devisRadio" id="devis_${d.id}" value="devis_${d.id}">
+                                                <label class="form-check-label ms-2 h6 mb-0" for="devis_${d.id}">
+                                                    ${d.num_devis}
+                                                    <small class="text-muted d-block mt-1">Émis le ${d.date_emission}</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        }
+                    } else if (data.devis && data.devis.length > 0) {
+                        // Aucune facture, afficher uniquement les devis
+                        html += '<div class="col-12 mb-2"><h6 class="text-muted fw-bold"><i class="ri-file-list-3-line me-2"></i>Devis Acceptés</h6></div>';
+                        data.devis.forEach(d => {
+                            html += `
+                                <div class="col-md-6">
+                                    <div class="glass-card p-3 d-flex align-items-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="devisRadio" id="devis_${d.id}" value="devis_${d.id}">
                                         <label class="form-check-label ms-2 h6 mb-0" for="devis_${d.id}">
                                             ${d.num_devis}
                                             <small class="text-muted d-block mt-1">Émis le ${d.date_emission}</small>
@@ -507,10 +542,24 @@
                 // Thematics for Assignments
                 let a_html = '';
                 data.thematics.forEach(th => {
-                    let trainerOptions = '<option value="">-- Sélectionner un formateur --</option>';
+                    let f_options = '';
+                    let c_options = '';
+                    
                     data.trainers.forEach(tr => {
-                        trainerOptions += `<option value="${tr.id}">${tr.nom} ${tr.prenom}</option>`;
+                        if(tr.type === 'Formateur') {
+                            f_options += `<option value="${tr.id}">${tr.nom} ${tr.prenom}</option>`;
+                        } else if (tr.type === 'Consultant') {
+                            c_options += `<option value="${tr.id}">${tr.nom} ${tr.prenom}</option>`;
+                        } else {
+                            // Rétrocompatibilité
+                            f_options += `<option value="${tr.id}">${tr.nom} ${tr.prenom}</option>`;
+                        }
                     });
+                    
+                    let trainerOptions = '<option value="">-- Sélectionner un intervenant --</option>';
+                    if(f_options) trainerOptions += `<optgroup label="Formateurs (Pédagogie)">${f_options}</optgroup>`;
+                    if(c_options) trainerOptions += `<optgroup label="Consultants (Conseil)">${c_options}</optgroup>`;
+                    
                     a_html += `
                         <div class="col-md-6 assignment-block" data-th-id="${th.thematique__id}">
                             <div class="glass-card p-3">
@@ -528,6 +577,13 @@
                     `;
                 });
                 $('#thematicAssignments').html(a_html);
+                
+                // Initialize Select2 on the dynamically added selects
+                $('.trainer-select').select2({
+                    width: '100%',
+                    placeholder: "-- Sélectionner un intervenant --",
+                    allowClear: true
+                });
 
                 // Auto-fill metadata suggestions
                 if(data.thematics.length > 0) {
@@ -549,7 +605,6 @@
                 nom: $('#groupName').val(),
                 devis_id: selectedDevis,
                 start_date: $('#startDate').val(),
-                start_date: $('#startDate').val(),
                 end_date: $('#endDate').val(),
                 participants: selectedParticipants,
                 assignments: assignments
@@ -557,6 +612,11 @@
 
             if(!groupData.nom || !groupData.start_date) {
                 alertify.error('Veuillez remplir le nom et la date de début');
+                return;
+            }
+
+            if(groupData.end_date && new Date(groupData.start_date) > new Date(groupData.end_date)) {
+                alertify.error('La date de début ne peut pas être supérieure à la date de fin');
                 return;
             }
 

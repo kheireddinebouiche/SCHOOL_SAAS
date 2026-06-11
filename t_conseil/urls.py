@@ -3,16 +3,19 @@ from institut_app.decorators import module_permission_required
 from .views import *
 from .f_views.prospects import *
 from .f_views.groupes_conseil import *
+from .f_views.consultants import *
 
 app_name="t_conseil"
 
 urlpatterns = [
 
   path('liste-des-thematiques/',ListeThematique, name="ListeThematique"),
+  path('consultants/', ListeConsultants, name="ListeConsultants"),
 
   path('nouveau-devis/', AddNewDevis, name="AddNewDevis"),
   path('configuration-devis/<str:pk>/', configure_devis , name="configure-devis"),
   path('details-devis/<str:pk>/', DetailsDevis, name="DetailsDevis"),
+  path('print-devis/<str:pk>/', PrintDevisConseil, name="PrintDevisConseil"),
   path('liste-des-devis/', module_permission_required('con', 'view')(ListeDesDevis), name="ListeDesDevis"),
 
   path('ApiSaveThematique' , ApiSaveThematique, name="ApiSaveThematique"),
@@ -59,6 +62,7 @@ urlpatterns = [
   path('nouvelle-facture/', AddNewFacture, name="AddNewFacture"),
   path('configuration-facture/<str:pk>/', configure_facture, name="configure-facture"),
   path('details-facture/<str:pk>/', DetailsFacture, name="DetailsFacture"),
+  path('print-facture/<str:pk>/', PrintFactureConseil, name="PrintFactureConseil"),
   path('configuration/', ConfigurationConseil, name="ConfigurationConseil"),
   
   path('dashboard/', ConseilDashboard, name="ConseilDashboard"),
@@ -126,6 +130,7 @@ urlpatterns = [
     path('groupes/planning/session-pdf/<int:session_id>/', SessionAttendancePDF, name="SessionAttendancePDF"),
     path('api/participants/confirm-scolarite/', ApiConfirmParticipantForScolarite, name="ApiConfirmParticipantForScolarite"),
     path('api/participants/cancel-scolarite-confirmation/', ApiCancelParticipantConfirmationForScolarite, name="ApiCancelParticipantConfirmationForScolarite"),
+    path('api/groupes/update-thematique-intervenant/', ApiUpdateThematiqueIntervenant, name="ApiUpdateThematiqueIntervenant"),
     
     path('liste-des-paiements/', PaiementsConseilListe, name="PaiementsConseilListe"),
 ]

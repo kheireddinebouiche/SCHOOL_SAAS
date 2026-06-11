@@ -230,7 +230,7 @@ urlpatterns = [
     path('facturation/avoir/liste/', submenu_access_required("tre", "factures")(facturation.PageFacturesAvoir), name="PageFacturesAvoir"),
     path('ApiListeDesFactures', facturation.ApiListeDesFactures, name="ApiListeDesFactures"),
     path('ApiDemanderRemboursement', facturation.ApiDemanderRemboursement, name="ApiDemanderRemboursement"),
-    path('details-facture/<str:pk>/', submenu_access_required("tre", "factures")(facturation.DetailsFactureTresorerie), name="DetailsFactureTresorerie"),
+    path('details-facture/<str:pk>/', submenu_access_required("tre", "factures")(facturation.TresorerieViewFacture), name="TresorerieViewFacture"),
     path('ApiDeleteFacture', facturation.ApiDeleteFacture, name="ApiDeleteFacture"),
     path('ApiValidateFacture', facturation.ApiValidateFacture, name="ApiValidateFacture"),
     path('ApiGetDraftInvoiceDetails', facturation.ApiGetDraftInvoiceDetails, name="ApiGetDraftInvoiceDetails"),
@@ -308,6 +308,7 @@ urlpatterns = [
     # Paramètres Financiers Généraux
     path('api/get-parametre-financier/', ApiGetParametreFinancier, name='ApiGetParametreFinancier'),
     path('api/update-parametre-financier/', ApiUpdateParametreFinancier, name='ApiUpdateParametreFinancier'),
+    path('api/update-quittance-format/', ApiUpdateQuittanceFormat, name='ApiUpdateQuittanceFormat'),
 
     path('api/get-prospect-payments-by-nin/', facturation.ApiGetProspectPaymentsByNin, name='ApiGetProspectPaymentsByNin'),
 

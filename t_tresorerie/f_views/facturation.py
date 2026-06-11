@@ -70,7 +70,7 @@ def ApiListeDesFactures(request):
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('tre', 'view')
-def DetailsFactureTresorerie(request, pk):
+def TresorerieViewFacture(request, pk):
     try:
         facture = Facture.objects.get(num_facture=pk, module_source='tresorerie')
     except Facture.DoesNotExist:

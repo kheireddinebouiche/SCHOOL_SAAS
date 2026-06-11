@@ -1048,12 +1048,16 @@ def PageConfigPaiementFacturation(request):
         tvas = []
         comptes_comptables = []
         
+    from institut_app.models import Entreprise
+    entreprises = Entreprise.objects.all().order_by('designation')
+
     return render(request, 'tenant_folder/comptabilite/tresorerie/config_paiement_facturation.html', {
         'tenant': request.tenant,
         'config': config,
         'tvas': tvas,
         'recettes_categories': recettes_categories,
-        'depenses_categories': depenses_categories
+        'depenses_categories': depenses_categories,
+        'entreprises': entreprises,
     })
 
 @module_permission_required('tre', 'view')
@@ -1562,3 +1566,20 @@ def ApiUpdateParametreFinancier(request):
             'activer_timbre': params.activer_timbre
         })
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
+
+@module_permission_required('tre', 'change')
+def ApiUpdateQuittanceFormat(request):
+    if request.method == 'POST':
+        try:
+            entreprise_id = request.POST.get('entreprise_id')
+            format_str = request.POST.get('quittance_format', 'N°{seq}/ST/{entite}/{wilaya}/{annexe}/{mois}/{annee}')
+            seq_length = int(request.POST.get('quittance_sequence_length', 6))
+            from institut_app.models import Entreprise
+            entreprise = Entreprise.objects.get(id=entreprise_id)
+            entreprise.quittance_format = format_str
+            entreprise.quittance_sequence_length = seq_length
+            entreprise.save()
+            return JsonResponse({'status': 'success', 'message': 'Format mis à jour avec succès'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})

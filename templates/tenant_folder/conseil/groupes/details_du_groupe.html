@@ -299,15 +299,27 @@
                         </p>
                         <h1 class="banner-title">{{ groupe.nom }}</h1>
                         <div>
-                            <span class="banner-badge"><i class="ri-file-text-line"></i> {{ groupe.devis.num_devis }}</span>
-                            <span class="banner-badge">
-                                <i class="ri-building-line"></i> 
-                                {% if groupe.devis.client.type_prospect == 'entreprise' %}
-                                    {{ groupe.devis.client.entreprise }}
-                                {% else %}
-                                    {{ groupe.devis.client.nom }} {{ groupe.devis.client.prenom }}
-                                {% endif %}
-                            </span>
+                            {% if groupe.devis %}
+                                <span class="banner-badge"><i class="ri-file-text-line"></i> {{ groupe.devis.num_devis }}</span>
+                                <span class="banner-badge">
+                                    <i class="ri-building-line"></i> 
+                                    {% if groupe.devis.client.type_prospect == 'entreprise' %}
+                                        {{ groupe.devis.client.entreprise }}
+                                    {% else %}
+                                        {{ groupe.devis.client.nom }} {{ groupe.devis.client.prenom }}
+                                    {% endif %}
+                                </span>
+                            {% elif groupe.facture %}
+                                <span class="banner-badge"><i class="ri-bill-line"></i> {{ groupe.facture.num_facture }}</span>
+                                <span class="banner-badge">
+                                    <i class="ri-building-line"></i> 
+                                    {% if groupe.facture.client.type_prospect == 'entreprise' %}
+                                        {{ groupe.facture.client.entreprise }}
+                                    {% else %}
+                                        {{ groupe.facture.client.nom }} {{ groupe.facture.client.prenom }}
+                                    {% endif %}
+                                </span>
+                            {% endif %}
                             {% if groupe.etat == "brouillon" %}
                                 <span class="banner-badge" style="background:rgba(255,255,255,0.15)"><i class="ri-pencil-line"></i> {{ groupe.get_etat_display }}</span>
                             {% elif groupe.etat == "enc" %}
@@ -323,9 +335,15 @@
                                 <i class="ri-lock-line me-1"></i> Clôturer
                             </button>
                         {% endif %}
+                        {% if groupe.devis %}
                         <a href="{% url 't_conseil:DetailsDevis' pk=groupe.devis.num_devis %}" class="btn-ghost-white">
                             <i class="ri-file-text-line me-1"></i> Voir le devis
                         </a>
+                        {% elif groupe.facture %}
+                        <a href="{% url 't_conseil:DetailsFacture' pk=groupe.facture.num_facture %}" class="btn-ghost-white">
+                            <i class="ri-bill-line me-1"></i> Voir la facture
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -462,12 +480,19 @@
                                                 <div class="thematique-dot"></div>
                                                 <div>
                                                     <div class="thematique-name">{{ aff.thematique.label }}</div>
-                                                    <div class="thematique-formateur">
-                                                        {% if aff.formateur %}
-                                                            <i class="ri-user-voice-line me-1" style="color:var(--success)"></i>{{ aff.formateur }}
-                                                        {% else %}
-                                                            <span style="color:var(--warning)"><i class="ri-user-unfollow-line me-1"></i>Formateur non affecté</span>
-                                                        {% endif %}
+                                                    <div class="thematique-formateur d-flex align-items-center">
+                                                        <div class="flex-grow-1">
+                                                            {% if aff.consultant %}
+                                                                <i class="ri-user-voice-line me-1" style="color:var(--success)"></i>{{ aff.consultant }}
+                                                            {% elif aff.formateur %}
+                                                                <i class="ri-user-voice-line me-1" style="color:var(--success)"></i>{{ aff.formateur }}
+                                                            {% else %}
+                                                                <span style="color:var(--warning)"><i class="ri-user-unfollow-line me-1"></i>Intervenant non affecté</span>
+                                                            {% endif %}
+                                                        </div>
+                                                        <button class="btn btn-sm btn-link text-primary p-0 ms-2" onclick="openChangeIntervenantModal({{ aff.id }}, '{% if aff.consultant %}c_{{ aff.consultant.id }}{% elif aff.formateur %}f_{{ aff.formateur.id }}{% else %}{% endif %}')" title="Changer l'intervenant">
+                                                            <i class="ri-edit-line"></i>
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -524,7 +549,9 @@
                                                     </td>
                                                     <td class="fw-medium">{{ session.thematique.label }}</td>
                                                     <td>
-                                                        {% if session.formateur %}
+                                                        {% if session.consultant %}
+                                                            <i class="ri-user-voice-line me-1 text-success"></i>{{ session.consultant }}
+                                                        {% elif session.formateur %}
                                                             <i class="ri-user-voice-line me-1 text-success"></i>{{ session.formateur }}
                                                         {% else %}
                                                             <span class="text-muted italic small">N/A</span>
@@ -624,10 +651,10 @@
                             <div class="devis-num text-success"><i class="ri-bill-line me-1"></i> Facture {{ facture_liee.num_facture }}</div>
                             <div class="devis-client">
                                 <i class="ri-building-line me-1"></i>
-                                {% if groupe.devis.client.type_prospect == 'entreprise' %}
-                                    {{ groupe.devis.client.entreprise }}
+                                {% if facture_liee.client.type_prospect == 'entreprise' %}
+                                    {{ facture_liee.client.entreprise }}
                                 {% else %}
-                                    {{ groupe.devis.client.nom }} {{ groupe.devis.client.prenom }}
+                                    {{ facture_liee.client.nom }} {{ facture_liee.client.prenom }}
                                 {% endif %}
                             </div>
                             <div class="devis-state mt-2">
@@ -641,6 +668,7 @@
                         </div>
                         {% endif %}
 
+                        {% if groupe.devis %}
                         <div class="devis-card" {% if facture_liee %}style="background: #f8fafc; border-color: #e2e8f0; opacity: 0.9;"{% endif %}>
                             <div class="devis-num {% if facture_liee %}text-muted{% endif %}"><i class="ri-file-text-line me-1"></i> Devis {{ groupe.devis.num_devis }}</div>
                             {% if not facture_liee %}
@@ -660,6 +688,7 @@
                                 <i class="ri-eye-line me-1"></i> Consulter le devis
                             </a>
                         </div>
+                        {% endif %}
                     </div>
 
                     <!-- Synthèse -->
@@ -818,6 +847,45 @@
                 <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" style="border-radius:12px">Annuler</button>
                 <button type="button" class="btn btn-danger px-4" id="btnConfirmDeleteSession" style="border-radius:12px">
                     <i class="ri-delete-bin-line me-1"></i> Supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal CHANGE INTERVENANT -->
+<div class="modal fade" id="modalChangeIntervenant" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0">
+            <div class="modal-header px-4 pt-4 border-0">
+                <h5 class="fw-bold m-0"><i class="ri-user-voice-line me-2 text-indigo"></i>Changer l'intervenant</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4">
+                <form id="formChangeIntervenant">
+                    <input type="hidden" name="affectation_id" id="changeIntervenantAffectationId">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Intervenant</label>
+                        <select class="form-select" name="intervenant_id" id="changeIntervenantSelect">
+                            <option value="">-- Aucun intervenant --</option>
+                            <optgroup label="Consultants">
+                                {% for c in consultants %}
+                                    <option value="c_{{ c.id }}">{{ c.nom }} {{ c.prenom }}</option>
+                                {% endfor %}
+                            </optgroup>
+                            <optgroup label="Formateurs">
+                                {% for f in formateurs %}
+                                    <option value="f_{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>
+                                {% endfor %}
+                            </optgroup>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" style="border-radius:10px">Annuler</button>
+                <button type="button" id="btnSaveChangeIntervenant" class="btn btn-primary px-4" style="border-radius:10px">
+                    <i class="ri-save-line me-1"></i> Enregistrer
                 </button>
             </div>
         </div>
@@ -1190,6 +1258,44 @@ $(document).ready(function () {
             }
         });
     };
+    // ─── Change Intervenant ───────────────────────
+    window.openChangeIntervenantModal = function(affectationId, currentIntervenantId) {
+        $('#changeIntervenantAffectationId').val(affectationId);
+        $('#changeIntervenantSelect').val(currentIntervenantId);
+        $('#modalChangeIntervenant').modal('show');
+    };
+
+    $('#btnSaveChangeIntervenant').click(function() {
+        const affectationId = $('#changeIntervenantAffectationId').val();
+        const intervenantId = $('#changeIntervenantSelect').val();
+        const $btn = $(this);
+        
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+        
+        $.ajax({
+            url: '{% url "t_conseil:ApiUpdateThematiqueIntervenant" %}',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ 
+                'affectation_id': affectationId,
+                'intervenant_id': intervenantId
+            }),
+            headers: {"X-CSRFToken": '{{ csrf_token }}'},
+            success: function(res) {
+                if (res.status === 'success') {
+                    alertify.success(res.message);
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    alertify.error(res.message);
+                    $btn.prop('disabled', false).html('<i class="ri-save-line me-1"></i> Enregistrer');
+                }
+            },
+            error: function() {
+                alertify.error('Une erreur est survenue.');
+                $btn.prop('disabled', false).html('<i class="ri-save-line me-1"></i> Enregistrer');
+            }
+        });
+    });
 });
 </script>
 

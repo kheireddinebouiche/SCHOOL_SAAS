@@ -131,9 +131,9 @@
                     <h5 class="mb-0 fw-bold text-dark">Détails de la Proposition</h5>
                 </div>
                 <div class="col-auto d-flex gap-2">
-                    <button class="btn btn-primary px-4 shadow" onclick="window.print()">
+                    <a href="{% url 't_conseil:PrintDevisConseil' devis.num_devis %}" class="btn btn-primary px-4 shadow">
                         <i class="ri-printer-line me-2"></i> Imprimer / PDF
-                    </button>
+                    </a>
                     {% if devis.etat == 'envoye' or devis.etat == 'accepte' %}
                         {% if not has_facture %}
                             {% if devis.etat == 'envoye' %}
@@ -399,6 +399,21 @@
                 </div>
                 <h5 class="mb-3">Créer une facture définitive ?</h5>
                 <p class="text-muted fs-14 mb-4" style="line-height: 1.6;">Cette action générera une facture définitive basée sur les articles de ce devis. Vous serez ensuite redirigé vers la liste des factures.</p>
+                
+                {% if devis.client.type_prospect == 'entreprise' %}
+                    {% if not devis.client.rc or not devis.client.nif or not devis.client.nis or not devis.client.art_imp %}
+                        <div class="alert alert-warning text-start fs-13 mb-4 rounded-3 border-warning border-opacity-50" role="alert" style="background-color: rgba(255, 193, 7, 0.1);">
+                            <div class="d-flex">
+                                <i class="ri-error-warning-fill text-warning fs-4 me-2"></i>
+                                <div>
+                                    <strong>Informations manquantes !</strong><br>
+                                    Les informations légales de cette entreprise (RC, NIF, NIS, N° ART) sont incomplètes. Pensez à les renseigner dans la fiche du client.
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+
                 <input type="hidden" id="selectTvaConversion" value="{{ config.default_tva_percent|stringformat:'f' }}">
             </div>
             <div class="modal-footer border-0 p-4 pt-0 justify-content-center">
