@@ -214,6 +214,7 @@ class Formateurs(models.Model):
 class EnseignantModule(models.Model):
     module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True, related_name="affect_module")
     formateur = models.ForeignKey(Formateurs, on_delete=models.CASCADE, null=True, blank=True)
+    demande_plan_cours = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -235,6 +236,8 @@ class PlansCadre(models.Model):
     modalites_evaluation = models.TextField(null=True, blank=True)
     bibliographie = models.TextField(blank=True, null=True)
     responsable = models.CharField(max_length=255, null=True, blank=True)       
+    type_plan = models.CharField(max_length=10, choices=[('pdf', 'Fichier PDF')], default='pdf', null=True, blank=True)
+    fichier_pdf = models.FileField(upload_to='plans_cadre/pdf/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
@@ -256,7 +259,21 @@ class ProgrammePlanCadre(models.Model):
         return f"{self.plan_cadre.module.label} {self.plan_cadre.module.code} - {self.element_competence}"
 
 class PlansCours(models.Model):
-    pass
+    assignment = models.ForeignKey('EnseignantModule', on_delete=models.CASCADE, null=True, blank=True, related_name="plans_cours")
+    general = models.JSONField(null=True, blank=True, default=dict)
+    deroulment = models.JSONField(null=True, blank=True, default=list)
+    evaluation = models.JSONField(null=True, blank=True, default=list)
+    autres = models.JSONField(null=True, blank=True, default=dict)
+    
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Plan de cours"
+        verbose_name_plural = "Plans de cours"
+
+    def __str__(self):
+        return f"Plan de cours pour l'affectation {self.assignment_id if self.assignment else 'N/A'}"
 
 class FraisInscription(models.Model):
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)

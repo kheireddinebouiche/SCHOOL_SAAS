@@ -1170,19 +1170,39 @@ def ApiAddModule(request):
 
     specialite = Specialites.objects.get(id = id)
     try:
-        new_module = Modules.objects.create(
-            label = label,
-            coef = coef if coef != '' else None,
-            duree = duree,
-            specialite = specialite,
-            code_interne = code,
-            created_by = request.user,
-        )
+        with transaction.atomic():
+            new_module = Modules.objects.create(
+                label = label,
+                coef = coef if coef != '' else None,
+                duree = duree,
+                specialite = specialite,
+                code_interne = code,
+                created_by = request.user,
+            )
 
-        new_module.save()
+            # Gestion du plan cadre
+            type_plan = request.POST.get('type_plan', 'pdf')
+            plan = PlansCadre.objects.create(
+                module=new_module,
+                type_plan=type_plan
+            )
+            if type_plan == 'text':
+                plan.titre = request.POST.get('plan_titre')
+                plan.objectifs = request.POST.get('plan_objectifs')
+                plan.competences_visees = request.POST.get('plan_competences_visees')
+                plan.prerequis = request.POST.get('plan_prerequis')
+                plan.contenus = request.POST.get('plan_contenus')
+                plan.responsable = request.POST.get('plan_responsable')
+            elif type_plan == 'pdf':
+                if 'plan_fichier_pdf' in request.FILES:
+                    plan.fichier_pdf = request.FILES['plan_fichier_pdf']
+            plan.save()
+
         return JsonResponse({'success' : True})
     except IntegrityError:
         return JsonResponse({'success' : False, 'message' : "Le module existe déjà"})
+    except Exception as e:
+        return JsonResponse({'success' : False, 'message' : str(e)})
 
 @login_required(login_url='institut_app:login')
 def deleteModule(request):
@@ -1245,6 +1265,23 @@ def ApiUpdateModule(request):
     # module.est_valider = False
 
     module.save()
+
+    # Mise à jour ou création du plan cadre
+    type_plan = request.POST.get('type_plan')
+    if type_plan:
+        plan, created = PlansCadre.objects.get_or_create(module=module)
+        plan.type_plan = type_plan
+        if type_plan == 'text':
+            plan.titre = request.POST.get('plan_titre')
+            plan.objectifs = request.POST.get('plan_objectifs')
+            plan.competences_visees = request.POST.get('plan_competences_visees')
+            plan.prerequis = request.POST.get('plan_prerequis')
+            plan.contenus = request.POST.get('plan_contenus')
+            plan.responsable = request.POST.get('plan_responsable')
+        elif type_plan == 'pdf':
+            if 'plan_fichier_pdf' in request.FILES:
+                plan.fichier_pdf = request.FILES['plan_fichier_pdf']
+        plan.save()
 
     return JsonResponse({'success' : True, 'message' : "Les informations du module ont été mises à jour avec succès"})
 
@@ -1458,7 +1495,11 @@ def SpecialitePromo(request):
     return render(request, 'tenant_folder/formations/promos/specialite_promo.html', context)
 
 def PageListeModules(request):
-    return render(request, 'tenant_folder/formations/modules/modules.html', {'tenant' : request.tenant})
+    specialites = Specialites.objects.all().order_by('label')
+    return render(request, 'tenant_folder/formations/modules/modules.html', {
+        'tenant' : request.tenant,
+        'specialites': specialites
+    })
 
 def ApiGetModules(request):
     try:
@@ -1547,6 +1588,33 @@ def ApiGetModuleDetails(request):
                 'diplome': trainer.diplome,
             })
         
+        plan = PlansCadre.objects.filter(module=details).first()
+        plan_data = {}
+        if plan:
+            plan_data = {
+                'type_plan': plan.type_plan or 'pdf',
+                'titre': plan.titre or '',
+                'objectifs': plan.objectifs or '',
+                'competences_visees': plan.competences_visees or '',
+                'prerequis': plan.prerequis or '',
+                'contenus': plan.contenus or '',
+                'responsable': plan.responsable or '',
+                'fichier_pdf': plan.fichier_pdf.url if plan.fichier_pdf else None,
+                'fichier_pdf_name': plan.fichier_pdf.name.split('/')[-1] if plan.fichier_pdf else ''
+            }
+        else:
+            plan_data = {
+                'type_plan': 'pdf',
+                'titre': '',
+                'objectifs': '',
+                'competences_visees': '',
+                'prerequis': '',
+                'contenus': '',
+                'responsable': '',
+                'fichier_pdf': None,
+                'fichier_pdf_name': ''
+            }
+
         data = {
             'id': details.id,
             'code': details.code,
@@ -1557,7 +1625,8 @@ def ApiGetModuleDetails(request):
             'n_elimate': details.n_elimate,
             'systeme_eval': details.systeme_eval,
             'specialite_label': details.specialite.label if details.specialite else 'N/A',
-            'associated_trainers': trainers_list
+            'associated_trainers': trainers_list,
+            'plan_cadre': plan_data
         }
         
         return JsonResponse(data, safe=False)

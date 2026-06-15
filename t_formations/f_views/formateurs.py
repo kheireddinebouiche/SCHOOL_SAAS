@@ -674,95 +674,80 @@ def delete_availability(request):
     else:
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
+
 @login_required(login_url="institut_app:login")
-@module_permission_required('int', 'view')
-def ChargeHoraireFormateur(request):
-    from t_timetable.models import TimetableEntry
-    
-    # Récupérer tous les formateurs pour le menu déroulant
-    formateurs = Formateurs.objects.all().order_by('nom', 'prenom')
-    
-    selected_formateur_id = request.GET.get('formateur_id')
-    mode_calcul = request.GET.get('mode', 'standard') # 'standard' (Hebdo x 4), 'reel' (Mois en cours), 'semestre' (Hebdo x 14)
-    
-    data = []
-    formateur = None
-    totaux = {
-        'hebdo': 0,
-        'mensuel_standard': 0,
-        'mensuel_reel': 0,
-        'semestre': 0
-    }
+def get_formateur_assignments(request):
+    formateur_id = request.GET.get('formateur_id')
+    if not formateur_id:
+        return JsonResponse({'status': 'error', 'message': 'ID formateur requis'})
+    try:
+        formateur = Formateurs.objects.get(id=formateur_id)
+        assignments = EnseignantModule.objects.filter(formateur=formateur).select_related('module', 'module__specialite')
+        
+        assignments_data = []
+        for ass in assignments:
+            has_plan = PlansCours.objects.filter(assignment=ass).exists()
+            assignments_data.append({
+                'assignment_id': ass.id,
+                'module_code': ass.module.code if ass.module else 'N/A',
+                'module_label': ass.module.label if ass.module else 'N/A',
+                'specialite': ass.module.specialite.label if ass.module and ass.module.specialite else 'N/A',
+                'has_plan': has_plan,
+            })
+            
+        return JsonResponse({
+            'status': 'success',
+            'formateur_name': f"{formateur.nom} {formateur.prenom}",
+            'assignments': assignments_data
+        })
+    except Formateurs.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Formateur introuvable'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
 
-    if selected_formateur_id:
-        formateur = Formateurs.objects.filter(id=selected_formateur_id).first()
-        if formateur:
-            # Récupérer toutes les affectations du formateur dans les emplois du temps
-            entries = TimetableEntry.objects.filter(formateur=formateur).select_related('timetable', 'timetable__groupe', 'cours')
-            
-            # Structurer les données par (Groupe, Semestre)
-            grouped_data = {}
-            
-            for entry in entries:
-                if not entry.heure_debut or not entry.heure_fin or not entry.jour:
-                    continue
-                    
-                groupe_nom = entry.timetable.groupe.nom if entry.timetable.groupe else "Non assigné"
-                semestre = entry.timetable.get_semestre_display() if entry.timetable.semestre else "N/A"
-                
-                key = f"{groupe_nom}_{semestre}"
-                
-                if key not in grouped_data:
-                    grouped_data[key] = {
-                        'groupe': groupe_nom,
-                        'semestre': semestre,
-                        'jour_stats': {'lundi': 0, 'mardi': 0, 'mercredi': 0, 'jeudi': 0, 'vendredi': 0, 'samedi': 0, 'dimanche': 0},
-                        'total_hebdomadaire': 0,
-                    }
-                
-                jour = entry.jour.lower()
-                
-                # Calcul de la durée en heures
-                dt = datetime.combine(datetime.min, entry.heure_fin) - datetime.combine(datetime.min, entry.heure_debut)
-                hours = dt.total_seconds() / 3600.0
-                
-                # S'assurer que le jour est standard
-                for standard_jour in grouped_data[key]['jour_stats'].keys():
-                    if standard_jour in jour:
-                        grouped_data[key]['jour_stats'][standard_jour] += hours
-                        grouped_data[key]['total_hebdomadaire'] += hours
-                        break
-            
-            # Calculer les volumes selon le mode
-            for key, v in grouped_data.items():
-                v['total_hebdomadaire'] = round(v['total_hebdomadaire'], 2)
-                
-                # 1. Mode Standard (Hebdo x 4)
-                v['mensuel_standard'] = round(v['total_hebdomadaire'] * 4, 2)
-                
-                # 2. Mode Réel (Estimation sur le mois actuel : on compte ~4.3 semaines en moyenne, ou on pourrait calculer les jours réels du mois)
-                # Pour l'instant, on utilise 4.33 (30.4 jours / 7)
-                v['mensuel_reel'] = round(v['total_hebdomadaire'] * 4.33, 2)
-                
-                # 3. Mode Semestriel (Généralement 14 semaines)
-                v['semestre_total'] = round(v['total_hebdomadaire'] * 14, 2)
-                
-                data.append(v)
-                
-                # Ajouter aux totaux globaux
-                totaux['hebdo'] += v['total_hebdomadaire']
-                totaux['mensuel_standard'] += v['mensuel_standard']
-                totaux['mensuel_reel'] += v['mensuel_reel']
-                totaux['semestre'] += v['semestre_total']
-                
-            # Arrondir les totaux
-            totaux = {k: round(v, 2) for k, v in totaux.items()}
 
-    context = {
-        'formateurs': formateurs,
-        'selected_formateur': formateur,
-        'workload_data': data,
-        'mode_calcul': mode_calcul,
-        'totaux': totaux
-    }
-    return render(request, 'tenant_folder/formateur/charge_horaire.html', context)
+@login_required(login_url="institut_app:login")
+def demand_plan_cours(request):
+    if request.method == "POST":
+        assignment_id = request.POST.get('assignment_id')
+        if not assignment_id:
+            return JsonResponse({'status': 'error', 'message': 'ID d\'affectation requis'})
+        try:
+            assignment = EnseignantModule.objects.get(id=assignment_id)
+            assignment.demande_plan_cours = True
+            assignment.save()
+            
+            formateur = assignment.formateur
+            return JsonResponse({'status': 'success', 'message': f'Demande envoyée à {formateur.nom} {formateur.prenom}.'})
+        except EnseignantModule.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Affectation introuvable'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
+
+@login_required(login_url="institut_app:login")
+def get_plan_cours_details(request):
+    assignment_id = request.GET.get('assignment_id')
+    if not assignment_id:
+        return JsonResponse({'status': 'error', 'message': 'ID d\'affectation requis'})
+    try:
+        assignment = EnseignantModule.objects.get(id=assignment_id)
+        plan_cours = PlansCours.objects.filter(assignment=assignment).first()
+        if not plan_cours:
+            return JsonResponse({'status': 'error', 'message': 'Plan de cours non rédigé.'})
+        
+        return JsonResponse({
+            'status': 'success',
+            'module_label': assignment.module.label if assignment.module else '',
+            'module_code': assignment.module.code if assignment.module else '',
+            'formateur_name': f"{assignment.formateur.nom} {assignment.formateur.prenom}" if assignment.formateur else '',
+            'general': plan_cours.general or {},
+            'deroulment': plan_cours.deroulment or [],
+            'evaluation': plan_cours.evaluation or [],
+            'autres': plan_cours.autres or {}
+        })
+    except EnseignantModule.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Affectation introuvable'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})

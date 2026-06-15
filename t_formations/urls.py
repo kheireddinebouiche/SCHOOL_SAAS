@@ -116,6 +116,9 @@ urlpatterns = [
     path('create_availability', create_availability, name="create_availability"),
     path('get_availability', get_availability, name="get_availability"),
     path('delete_availability', delete_availability, name="delete_availability"),
+    path('get_formateur_assignments/', get_formateur_assignments, name="get_formateur_assignments"),
+    path('demand_plan_cours/', demand_plan_cours, name="demand_plan_cours"),
+    path('get_plan_cours_details/', get_plan_cours_details, name="get_plan_cours_details"),
 
 
     path('ApiGetSpecialitesFromCombinaison',ApiGetSpecialitesFromCombinaison ,name="ApiGetSpecialitesFromCombinaison"),
