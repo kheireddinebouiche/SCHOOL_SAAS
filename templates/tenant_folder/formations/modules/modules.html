@@ -318,6 +318,85 @@
     </div>
 </div>
 
+<!-- Modal Ajout -->
+<div id="addModule" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-success"><i class="ri-add-circle-line me-2"></i>Nouveau Module</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="addModuleForm">
+                    {% csrf_token %}
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Spécialité</label>
+                            <select class="form-select btn-rounded" id="add_specialite_id" required>
+                                <option value="">Choisir une spécialité...</option>
+                                {% for spec in specialites %}
+                                    <option value="{{ spec.id }}">{{ spec.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Code Interne</label>
+                            <input type="text" class="form-control btn-rounded" id="add_code" required placeholder="Ex: MOD-101">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Libellé</label>
+                            <input type="text" class="form-control btn-rounded" id="add_label" required placeholder="Nom du module">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Volume Horaire</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control btn-rounded" id="add_duree" required placeholder="Ex: 40">
+                                <span class="input-group-text bg-light border-start-0 rounded-end-3">heures</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Coefficient</label>
+                            <input type="number" class="form-control btn-rounded" id="add_coef" placeholder="Ex: 2">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Note Éliminatoire</label>
+                            <input type="number" step="0.5" class="form-control btn-rounded" id="add_eliminatoire" placeholder="Ex: 5">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Mode d'Évaluation</label>
+                            <select class="form-select btn-rounded" id="add_evaluation">
+                                <option value="examen">Examen</option>
+                                <option value="cc">Contrôle Continu</option>
+                                <option value="examen_cc" selected>Examen + CC</option>
+                                <option value="tp">TP</option>
+                                <option value="projet">Projet</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Section Plan Cadre -->
+                        <div class="col-12 mt-4 pt-3 border-top">
+                            <h5 class="fw-bold mb-3 text-primary"><i class="ri-article-line me-2"></i>Plan Cadre</h5>
+                            <div class="row g-3">
+                                <input type="hidden" id="add_type_plan" name="type_plan" value="pdf">
+                                
+                                <!-- Champ Upload PDF du Plan Cadre -->
+                                <div class="col-md-12 plan_cadre_pdf_fields" id="add_plan_pdf_fields">
+                                    <label class="form-label fw-semibold">Télécharger le plan cadre (PDF)</label>
+                                    <input type="file" class="form-control btn-rounded" id="add_plan_fichier_pdf" accept=".pdf">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light border-0 rounded-bottom-4">
+                <button type="button" class="btn btn-light btn-rounded px-4" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success btn-rounded px-4" id="saveModuleAddBtn">Créer le Module</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Edition -->
 <div id="editModule" class="modal fade" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -363,6 +442,24 @@
                                 <option value="tp">TP</option>
                                 <option value="projet">Projet</option>
                             </select>
+                        </div>
+                        
+                        <!-- Section Plan Cadre -->
+                        <div class="col-12 mt-4 pt-3 border-top">
+                            <h5 class="fw-bold mb-3 text-primary"><i class="ri-article-line me-2"></i>Plan Cadre</h5>
+                            <div class="row g-3">
+                                <input type="hidden" id="edit_type_plan" name="type_plan" value="pdf">
+                                
+                                <!-- Champ Upload PDF du Plan Cadre -->
+                                <div class="col-md-12 plan_cadre_pdf_fields" id="edit_plan_pdf_fields">
+                                    <label class="form-label fw-semibold">Télécharger le plan cadre (PDF)</label>
+                                    <input type="file" class="form-control btn-rounded" id="edit_plan_fichier_pdf" accept=".pdf">
+                                    <div class="mt-2" id="edit_pdf_preview_area" style="display: none;">
+                                        <span class="text-muted small"><i class="ri-file-pdf-line text-danger me-1"></i> Fichier actuel : </span>
+                                        <a href="#" id="edit_plan_pdf_link" target="_blank" class="btn btn-sm btn-link text-primary fw-medium px-0">Voir le PDF actuel</a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -554,6 +651,10 @@ $(document).ready(function() {
         });
     });
 
+    function togglePlanFields(prefix) {
+        $(`#${prefix}_plan_pdf_fields`).show();
+    }
+
     // Edit logic
     $(document).on('click','#btnUpdate', function(){
         const id = $(this).data('id');
@@ -569,6 +670,23 @@ $(document).ready(function() {
                 $('#edit_coef').val(res.coef);
                 $('#edit_eliminatoire').val(res.n_elimate);
                 $('#edit_evaluation').val(res.systeme_eval);
+                
+                // Remplissage du Plan Cadre
+                if (res.plan_cadre) {
+                    $('#edit_type_plan').val(res.plan_cadre.type_plan || 'pdf');
+                    
+                    if (res.plan_cadre.fichier_pdf) {
+                        $('#edit_plan_pdf_link').attr('href', res.plan_cadre.fichier_pdf);
+                        $('#edit_pdf_preview_area').show();
+                    } else {
+                        $('#edit_pdf_preview_area').hide();
+                    }
+                } else {
+                    $('#edit_type_plan').val('pdf');
+                    $('#edit_pdf_preview_area').hide();
+                }
+                
+                togglePlanFields('edit');
                 $('#editModule').modal('show');
             }
         });
@@ -587,23 +705,89 @@ $(document).ready(function() {
             return;
         }
 
+        let formData = new FormData();
+        formData.append('id', $('#edit_module_id').val());
+        formData.append('code', $('#edit_code').val());
+        formData.append('label', $('#edit_label').val());
+        formData.append('duree', $('#edit_duree').val());
+        formData.append('coef', $('#edit_coef').val());
+        formData.append('n_elimate', $('#edit_eliminatoire').val());
+        formData.append('systeme_eval', $('#edit_evaluation').val());
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        
+        formData.append('type_plan', 'pdf');
+        let fileInput = $('#edit_plan_fichier_pdf')[0];
+        if (fileInput.files.length > 0) {
+            formData.append('plan_fichier_pdf', fileInput.files[0]);
+        }
+
         $.ajax({
             url: '{% url "t_formations:ApiUpdateModule" %}',
             type: 'POST',
-            data: {
-                id: $('#edit_module_id').val(),
-                code: $('#edit_code').val(),
-                label: $('#edit_label').val(),
-                duree: $('#edit_duree').val(),
-                coef: $('#edit_coef').val(),
-                n_elimate: $('#edit_eliminatoire').val(),
-                systeme_eval: $('#edit_evaluation').val(),
-                csrfmiddlewaretoken: '{{ csrf_token }}'
-            },
+            data: formData,
+            processData: false,
+            contentType: false,
             success: function(r) {
                 if (r.success) {
                     alertify.success('Module mis à jour');
                     $('#editModule').modal('hide');
+                    loadItems();
+                } else alertify.error(r.message);
+            }
+        });
+    });
+
+    // Add logic
+    $('#saveModuleAddBtn').on('click', function() {
+        let spec_id = $('#add_specialite_id').val();
+        let label = $('#add_label').val().trim();
+        let duree = $('#add_duree').val();
+        let code = $('#add_code').val().trim();
+
+        if(!spec_id) {
+            alertify.error("Veuillez sélectionner une spécialité.");
+            return;
+        }
+        if(!code) {
+            alertify.error("Le code interne du module est obligatoire.");
+            return;
+        }
+        if(!label) {
+            alertify.error("Le libellé du module est obligatoire.");
+            return;
+        }
+        if(!duree || duree <= 0) {
+            alertify.error("Le volume horaire doit être supérieur à 0.");
+            return;
+        }
+
+        let formData = new FormData();
+        formData.append('id', spec_id);
+        formData.append('code_module', code);
+        formData.append('label', label);
+        formData.append('duree', duree);
+        formData.append('coef', $('#add_coef').val());
+        formData.append('n_elimate', $('#add_eliminatoire').val());
+        formData.append('systeme_eval', $('#add_evaluation').val());
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        
+        formData.append('type_plan', 'pdf');
+        let fileInput = $('#add_plan_fichier_pdf')[0];
+        if (fileInput.files.length > 0) {
+            formData.append('plan_fichier_pdf', fileInput.files[0]);
+        }
+
+        $.ajax({
+            url: '{% url "t_formations:ApiAddModule" %}',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(r) {
+                if (r.success) {
+                    alertify.success('Module créé avec succès');
+                    $('#addModule').modal('hide');
+                    $('#addModuleForm')[0].reset();
                     loadItems();
                 } else alertify.error(r.message);
             }
@@ -635,7 +819,11 @@ $(document).ready(function() {
       });
     });
 
-    $('#newModuleBtn').on('click', function(){ alertify.info('Création de module bientôt disponible'); });
+    $('#newModuleBtn').on('click', function(){ 
+        $('#addModuleForm')[0].reset();
+        togglePlanFields('add');
+        $('#addModule').modal('show'); 
+    });
 });
 </script>
 {% endblock content %}

@@ -18,7 +18,14 @@ def verify_institute(request):
         if not getattr(institut, 'is_portail_active', True):
             return JsonResponse({'error': "L'institut a désactivé l'accès à la plateforme"}, status=403)
             
-        return JsonResponse({'name': institut.nom,'status': 'success'})
+        domain_obj = Domaine.objects.filter(tenant=institut).first()
+        domain_name = domain_obj.domain if domain_obj else ''
+        
+        return JsonResponse({
+            'name': institut.nom,
+            'domain': domain_name,
+            'status': 'success'
+        })
         
     except Institut.DoesNotExist:
         return JsonResponse({'error': 'Institut non trouvé'}, status=404)
@@ -127,7 +134,7 @@ def login_student(request):
             return JsonResponse({'error': 'Étudiant introuvable'}, status=404)
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 
-from t_formations.models import Formateurs
+from t_formations.models import Formateurs, PlansCadre, PlansCours
 
 def verify_formateur(request):
     institute_code = request.GET.get('institute_code')
@@ -194,6 +201,7 @@ def login_formateur(request):
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 
 
+from app.models import Institut, Domaine
 from t_groupe.models import EnseignantModule
 
 def get_instructor_assignments_api(request):
@@ -212,14 +220,65 @@ def get_instructor_assignments_api(request):
             # Fetch formateur dispo
             formateur = Formateurs.objects.get(id=instructor_id)
             
+            # Récupérer le domaine du tenant
+            domain_obj = Domaine.objects.filter(tenant=tenant).first()
+            domain_name = domain_obj.domain if domain_obj else ''
+            
+            # Déterminer le protocole et le port
+            protocol = 'https' if request.is_secure() else 'http'
+            host = request.get_host()
+            
+            if domain_name:
+                if ':' in host:
+                    port = host.split(':')[-1]
+                    domain_with_port = f"{domain_name}:{port}"
+                else:
+                    domain_with_port = domain_name
+                base_media_url = f"{protocol}://{domain_with_port}"
+            else:
+                base_media_url = f"{protocol}://{host}"
+
             data = []
             for assignment in assignments:
+                plan = PlansCadre.objects.filter(module=assignment.module).first()
+                plan_data = None
+                if plan:
+                    plan_data = {
+                        'type_plan': plan.type_plan or 'pdf',
+                        'titre': plan.titre or '',
+                        'objectifs': plan.objectifs or '',
+                        'competences_visees': plan.competences_visees or '',
+                        'prerequis': plan.prerequis or '',
+                        'contenus': plan.contenus or '',
+                        'responsable': plan.responsable or '',
+                        'fichier_pdf': f"{base_media_url}{plan.fichier_pdf.url}" if plan.fichier_pdf else None
+                    }
+                plan_cours = PlansCours.objects.filter(assignment=assignment).first()
+                plan_cours_data = None
+                if plan_cours:
+                    plan_cours_data = {
+                        'general': plan_cours.general or {},
+                        'deroulment': plan_cours.deroulment or [],
+                        'evaluation': plan_cours.evaluation or [],
+                        'autres': plan_cours.autres or {}
+                    }
+                else:
+                    plan_cours_data = {
+                        'general': {},
+                        'deroulment': [],
+                        'evaluation': [],
+                        'autres': {}
+                    }
+
                 data.append({
                     'id': assignment.id,
                     'module_id': assignment.module.id,
                     'module_code': assignment.module.code,
                     'module_label': assignment.module.label,
-                    'specialite': assignment.module.specialite.label if assignment.module.specialite else 'N/A'
+                    'specialite': assignment.module.specialite.label if assignment.module.specialite else 'N/A',
+                    'plan_cadre': plan_data,
+                    'plan_cours': plan_cours_data,
+                    'demande_plan_cours': getattr(assignment, 'demande_plan_cours', False)
                 })
                 
             return JsonResponse({
@@ -305,6 +364,33 @@ def get_instructor_notifications_api(request):
                     'action_url': "/disponibilites",
                     'date_raw': datetime.datetime.now().isoformat()
                 })
+                
+            # Check for pending plan de cours requests
+            assignments = EnseignantModule.objects.filter(formateur=formateur).select_related('module')
+            for assignment in assignments:
+                if getattr(assignment, 'demande_plan_cours', False):
+                    plan_cours = PlansCours.objects.filter(assignment=assignment).first()
+                    has_note = plan_cours and plan_cours.general and plan_cours.general.get('note') and plan_cours.general.get('note').strip() != ''
+                    has_schedule = False
+                    if plan_cours and plan_cours.deroulment:
+                        for row in plan_cours.deroulment:
+                            if isinstance(row, dict) and (row.get('duree', '').strip() != '' or row.get('contenu', '').strip() != ''):
+                                has_schedule = True
+                                break
+                    
+                    is_plan_empty = not has_note and not has_schedule
+                    if is_plan_empty:
+                        notifications.append({
+                            'id': f"plan_cours_{assignment.id}",
+                            'title': f"Plan de cours demandé — {assignment.module.label if assignment.module else ''}",
+                            'desc': f"L'administration attend la rédaction du plan de cours pour le module {assignment.module.label if assignment.module else ''} ({assignment.module.code if assignment.module else ''}).",
+                            'time': "Aujourd'hui",
+                            'category': "urgent",
+                            'icon': "assignment_late",
+                            'badge': "Rédaction requise",
+                            'action_url': f"/plan-cours/{assignment.id}",
+                            'date_raw': datetime.datetime.now().isoformat()
+                        })
                 
             return JsonResponse({
                 'status': 'success',
@@ -909,5 +995,49 @@ def submit_instructor_notes_api(request):
 
     except Institut.DoesNotExist:
         return JsonResponse({'error': 'Institut invalide'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def submit_instructor_plan_cours_api(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        institute_code = data.get('institute_code')
+        assignment_id = data.get('assignment_id')
+        general = data.get('general', {})
+        deroulment = data.get('deroulment', [])
+        evaluation = data.get('evaluation', [])
+        autres = data.get('autres', {})
+
+        if not institute_code or not assignment_id:
+            return JsonResponse({'error': 'Paramètres manquants'}, status=400)
+
+        tenant = Institut.objects.get(code_tenant=institute_code)
+        with schema_context(tenant.schema_name):
+            assignment = EnseignantModule.objects.get(id=assignment_id)
+            
+            plan_cours, created = PlansCours.objects.get_or_create(assignment=assignment)
+            plan_cours.general = general
+            plan_cours.deroulment = deroulment
+            plan_cours.evaluation = evaluation
+            plan_cours.autres = autres
+            plan_cours.save()
+
+            assignment.demande_plan_cours = False
+            assignment.save()
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Plan de cours enregistré avec succès'
+            })
+
+    except Institut.DoesNotExist:
+        return JsonResponse({'error': 'Institut invalide'}, status=404)
+    except EnseignantModule.DoesNotExist:
+        return JsonResponse({'error': 'Affectation introuvable'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
