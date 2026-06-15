@@ -159,6 +159,116 @@ def PageFormateurs(request):
     return render(request, 'tenant_folder/formateur/liste_des_formateur.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
+def ChargeHoraireFormateur(request):
+    from t_timetable.models import TimetableEntry
+    from datetime import date
+
+    formateur_id = request.GET.get('formateur_id')
+    mode_calcul = request.GET.get('mode', 'standard')
+
+    # Get list of all formateurs for the dropdown select list
+    formateurs = Formateurs.objects.all().order_by('nom', 'prenom')
+
+    selected_formateur = None
+    workload_data = []
+    totaux = {
+        'hebdo': 0,
+        'mensuel_standard': 0,
+        'mensuel_reel': 0,
+        'semestre': 0,
+    }
+
+    if formateur_id:
+        try:
+            selected_formateur = Formateurs.objects.get(id=formateur_id)
+            # Find timetable entries for this formateur, but only in active/en cours timetables
+            # and order them to get consistent output
+            entries = TimetableEntry.objects.filter(
+                formateur=selected_formateur,
+                timetable__status__in=['enc', 'val']
+            ).select_related('timetable', 'timetable__groupe')
+
+            workload_by_group_sem = {}
+
+            for entry in entries:
+                if not entry.heure_debut or not entry.heure_fin or not entry.jour:
+                    continue
+
+                # Calculate duration in hours
+                t1 = datetime.combine(date(2000, 1, 1), entry.heure_debut)
+                t2 = datetime.combine(date(2000, 1, 1), entry.heure_fin)
+                duration_hours = (t2 - t1).total_seconds() / 3600.0
+
+                timetable = entry.timetable
+                groupe_name = timetable.groupe.nom if (timetable and timetable.groupe) else "N/A"
+                semestre_name = timetable.get_semestre_display() if hasattr(timetable, 'get_semestre_display') else f"Semestre {timetable.semestre}"
+
+                key = (groupe_name, semestre_name)
+                if key not in workload_by_group_sem:
+                    workload_by_group_sem[key] = {
+                        'groupe': groupe_name,
+                        'semestre': semestre_name,
+                        'jour_stats': {
+                            'lundi': 0.0,
+                            'mardi': 0.0,
+                            'mercredi': 0.0,
+                            'jeudi': 0.0,
+                            'vendredi': 0.0,
+                            'samedi': 0.0,
+                            'dimanche': 0.0,
+                        },
+                        'total_hebdomadaire': 0.0,
+                    }
+
+                day = entry.jour.strip().lower()
+                if day in workload_by_group_sem[key]['jour_stats']:
+                    workload_by_group_sem[key]['jour_stats'][day] += duration_hours
+                    workload_by_group_sem[key]['total_hebdomadaire'] += duration_hours
+
+            totaux_hebdo = 0.0
+            for key, data in workload_by_group_sem.items():
+                # Format each day's hour values
+                for d in data['jour_stats']:
+                    val = data['jour_stats'][d]
+                    data['jour_stats'][d] = int(val) if val.is_integer() else round(val, 2)
+
+                tot_hebdo = data['total_hebdomadaire']
+                data['total_hebdomadaire'] = int(tot_hebdo) if tot_hebdo.is_integer() else round(tot_hebdo, 2)
+                totaux_hebdo += tot_hebdo
+
+                # Mode-specific calculations for row totals
+                m_std = tot_hebdo * 4
+                m_reel = tot_hebdo * 4.33
+                sem_tot = tot_hebdo * 14
+
+                data['mensuel_standard'] = int(m_std) if m_std.is_integer() else round(m_std, 2)
+                data['mensuel_reel'] = int(m_reel) if m_reel.is_integer() else round(m_reel, 2)
+                data['semestre_total'] = int(sem_tot) if sem_tot.is_integer() else round(sem_tot, 2)
+
+                workload_data.append(data)
+
+            # Global totals
+            totaux = {
+                'hebdo': int(totaux_hebdo) if totaux_hebdo.is_integer() else round(totaux_hebdo, 2),
+                'mensuel_standard': int(totaux_hebdo * 4) if (totaux_hebdo * 4).is_integer() else round(totaux_hebdo * 4, 2),
+                'mensuel_reel': int(totaux_hebdo * 4.33) if (totaux_hebdo * 4.33).is_integer() else round(totaux_hebdo * 4.33, 2),
+                'semestre': int(totaux_hebdo * 14) if (totaux_hebdo * 14).is_integer() else round(totaux_hebdo * 14, 2),
+            }
+
+        except Formateurs.DoesNotExist:
+            messages.error(request, "Formateur introuvable.")
+
+    context = {
+        'formateurs': formateurs,
+        'selected_formateur': selected_formateur,
+        'mode_calcul': mode_calcul,
+        'workload_data': workload_data,
+        'totaux': totaux,
+    }
+    return render(request, 'tenant_folder/formateur/charge_horaire.html', context)
+
+@login_required(login_url="institut_app:login")
 @module_permission_required('int', 'change')
 def request_formateur_dispo(request):
     if request.method == "POST":
