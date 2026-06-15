@@ -139,6 +139,41 @@
         font-weight: 600;
     }
 
+    /* Select2 Customization */
+    .select2-container--default .select2-selection--single {
+        border: 1px solid var(--border-color);
+        height: 42px;
+        padding: 6px 12px;
+        font-size: 14px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        background-color: #fff;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: normal;
+        padding-left: 0;
+        color: #495057;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 100%;
+        right: 12px;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--single {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px var(--primary-soft);
+    }
+    
+    /* Fix Select2 inside Input Group */
+    .input-group > .select2-container--default {
+        width: auto !important;
+        flex: 1 1 auto;
+    }
+    .input-group > .select2-container--default .select2-selection--single {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+
     /* Enhanced Modal Inputs */
     .modal-input-group {
         position: relative;
@@ -461,6 +496,12 @@
         const modalEl = document.getElementById('newProspectModal');
         const modal = new bootstrap.Modal(modalEl);
 
+        // Init Select2
+        $(clientSelect).select2({
+            placeholder: "Rechercher ou sélectionner un client...",
+            allowClear: true
+        });
+
         saveProspectBtn.addEventListener('click', function() {
             if (!quickProspectForm.checkValidity()) {
                 quickProspectForm.reportValidity();
@@ -489,7 +530,7 @@
                     const label = data.prospect.entreprise ? `${data.prospect.entreprise} (Entreprise)` : `${data.prospect.nom} ${data.prospect.prenom || ''}`;
                     const option = new Option(label, data.prospect.id, true, true);
                     clientSelect.add(option, undefined);
-                    clientSelect.dispatchEvent(new Event('change'));
+                    $(clientSelect).val(data.prospect.id).trigger('change');
                     quickProspectForm.reset();
                 } else {
                     errorText.textContent = data.message || 'Erreur inconnue.';

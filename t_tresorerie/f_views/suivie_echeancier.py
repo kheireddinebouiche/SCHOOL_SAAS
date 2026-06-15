@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -14,6 +15,7 @@ from datetime import datetime
 from django.utils.timezone import now
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadConvertedProspects(request):
 
     # Total payé par étudiant (tous contextes confondus, hors remboursements)
@@ -89,6 +91,7 @@ def ApiLoadConvertedProspects(request):
     return JsonResponse(data, safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiStats(request):
     nombre_inscrit = Prospets.objects.filter(statut="convertit").count()
     nombre_paiement = Paiements.objects.filter(is_refund=False, prospect__statut="convertit").count()
@@ -112,6 +115,7 @@ def ApiStats(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def DetailsEcheancierClient(request, pk):
     context = {
         'pk': pk,
@@ -120,6 +124,7 @@ def DetailsEcheancierClient(request, pk):
     return render(request, 'tenant_folder/comptabilite/echeancier/details-suivie-echeancier.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def DetailsEcheancierClientDouble(request, pk):
     context = {
         'pk' : pk,
@@ -130,6 +135,7 @@ def DetailsEcheancierClientDouble(request, pk):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetLunchedSpec(request):
     if request.method == "GET":
         id_promo = request.GET.get("id_promo")
@@ -201,6 +207,7 @@ def ApiGetLunchedSpec(request):
 from t_groupe.models import GroupeLine
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetClientEcheancier(request):
     if request.method == "GET":
 
@@ -458,6 +465,7 @@ def ApiGetClientEcheancier(request):
         return JsonResponse(data, safe=False)
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetClientEcheancierDouble(request):
     if request.method == "GET":
 
@@ -713,11 +721,12 @@ def ApiGetClientEcheancierDouble(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiSaveRefundOperation(request):
     if request.method == "POST":
         id_client = request.POST.get('id_client')
         amount = request.POST.get('refund_amount')
-        amount = amount if amount else 0
+        amount = str(amount).replace(',', '.') if amount else 0
         mode_rembourssement = request.POST.get('mode_rembourssement')
         id_refund = request.POST.get('id_refund')
         entite_select = request.POST.get('entite_select')
@@ -726,7 +735,7 @@ def ApiSaveRefundOperation(request):
         allocations_str = request.POST.get('allocations')
         allocations = json.loads(allocations_str) if allocations_str else {}
 
-        if not entite_select and not allocations:
+        if float(amount) > 0 and not entite_select and not allocations:
             return JsonResponse({"status":"error",'message':"Entité prenant en charge le rembourssement manquante"})
         prospect = Prospets.objects.get(id=id_client)
         if prospect.is_double:
@@ -745,8 +754,11 @@ def ApiSaveRefundOperation(request):
         # If there are allocations, we'll try to find the entity with the max amount later or just use entite_select if available
         if entite_select:
             obj_refund.entite = Entreprise.objects.get(id = entite_select)
-            obj_refund.save()
-
+        
+        if category_id:
+            obj_refund.category_id = category_id
+            
+        obj_refund.save()
         # refund_paiement = Paiements(
         #     prospect = Prospets.objects.get(id = id_client),
         #     paiement_label = "Rembourssement",
@@ -780,20 +792,35 @@ def ApiSaveRefundOperation(request):
                     if p.mode_paiement in ['che', 'vir']:
                         op_bancaire = OperationsBancaire.objects.filter(paiement=p, operation_type='entree').first()
                         if op_bancaire and not op_bancaire.is_paid:
-                            is_cashed = False
-                            # It's an annulation of an uncashed payment!
+                            # Pour la contre-passation, on laisse is_cashed=True afin que le script 
+                            # génère automatiquement une "sortie" (OperationsBancaire) de même montant,
+                            # ce qui viendra équilibrer l' "entrée" en attente de recouvrement (511).
                             if float(p_amount) >= float(op_bancaire.montant):
-                                # Full annulment
-                                op_bancaire.delete()
+                                op_bancaire.justification = (op_bancaire.justification or '') + f" (Annulé par remboursement {obj_refund.id})"
+                                op_bancaire.save()
                                 p.is_done = True
                                 p.is_refund = True
                                 p.save()
+                                is_cashed = False
                             else:
-                                # Partial annulment
                                 op_bancaire.montant = float(op_bancaire.montant) - float(p_amount)
                                 op_bancaire.save()
-                                p.montant_paye = float(p.montant_paye) - float(p_amount)
-                                p.save()
+                                is_cashed = False
+
+                    # Génération de la quittance d'annulation (montant négatif)
+                    Paiements.objects.create(
+                        prospect=p.prospect,
+                        paiement_label=f"Annulation (Remboursement #{obj_refund.id})",
+                        montant_paye=-float(p_amount),
+                        date_paiement=now().date(),
+                        mode_paiement=p.mode_paiement,
+                        is_refund=True,
+                        refund_id=obj_refund,
+                        promo=p.promo,
+                        entite=p.entite,
+                        context=p.context,
+                        is_done=True
+                    )
 
                     if is_cashed or p.mode_paiement not in ['che', 'vir']:
                         if e_id:
@@ -813,27 +840,13 @@ def ApiSaveRefundOperation(request):
             obj_refund.entite = Entreprise.objects.get(id=max_entite_id)
             obj_refund.save()
 
-        # Create distinct expenses ONLY for cashed amounts
+        # Create distinct OperationsBancaire ONLY for cashed amounts
         for e_id, e_amount in entite_amounts_for_depense.items():
             if e_amount > 0:
-                depense = Depenses(
-                    client_id=id_client,
-                    label="Remboursement partiel (Multi-Entité)" if len(entite_amounts_for_depense) > 1 else "Remboursement",
-                    montant_ht=e_amount,
-                    montant_ttc=e_amount,
-                    tva=0,
-                    mode_paiement=mode_rembourssement,
-                    entite_id=e_id,
-                    category_id=category_id,
-                    date_paiement=datetime.now(),
-                    etat=True
-                )
-                depense.save()
-
                 if mode_rembourssement in ["che", "vir"]:
                     OperationsBancaire.objects.create(
                         operation_type="sortie",
-                        depense=depense,
+                        remboursement=obj_refund,
                         montant=e_amount,
                     )
 
@@ -907,6 +920,15 @@ def ApiSaveRefundOperation(request):
             DuePaiements.objects.filter(client_id=prospect.id, type="frais_f").update(is_annulated=True)
             ClientPaiementsRequest.objects.filter(client_id=prospect.id).update(etat='annulation_approuver')
             
+            # Supprimer les opérations bancaires non encaissées (paiement en attente de recouvrement)
+            uncashed_payments = Paiements.objects.filter(prospect=prospect, is_done=False, is_refund=False)
+            for up in uncashed_payments:
+                OperationsBancaire.objects.filter(paiement=up, is_paid=False).delete()
+                up.is_done = True
+                up.is_refund = True
+                up.observation = (up.observation or "") + " (Annulé suite à l'annulation d'inscription)"
+                up.save()
+            
             # Archiver les demandes de dérogation en attente
             derogations = Derogations.objects.filter(demandeur=prospect, etat=False)
             for derog in derogations:
@@ -949,6 +971,7 @@ def ApiSaveRefundOperation(request):
         return JsonResponse({"status" : "error"})
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiShowRefundTraiteResult(request):
     id_demande = request.GET.get('id_demande')
     if not id_demande:
@@ -983,6 +1006,7 @@ def ApiShowRefundTraiteResult(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetEntrepriseInfos(request):
     id_client = request.GET.get('id_client')
     print(id_client)
@@ -1014,6 +1038,7 @@ def ApiGetEntrepriseInfos(request):
     return JsonResponse(data)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetProspectsList(request):
 
     if request.method == "GET":
@@ -1077,6 +1102,7 @@ def ApiGetProspectsList(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'change')
 def ApiToggleFinancialAlert(request):
     if request.method == "POST":
         id_client = request.POST.get('id_client')
@@ -1128,6 +1154,7 @@ def ApiToggleFinancialAlert(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'view')
 def ApiSendEmailRelance(request):
     if request.method == "POST":
         id_client = request.POST.get('client_id')
@@ -1282,6 +1309,7 @@ def ApiSendEmailRelance(request):
 
 @login_required(login_url="institut_app:login")
 @require_http_methods(["POST"])
+@module_permission_required('tre', 'view')
 def ApiMarkEngagementPrinted(request, prospect_id):
     try:
         data = json.loads(request.body)
@@ -1306,6 +1334,7 @@ def ApiMarkEngagementPrinted(request, prospect_id):
 
 @login_required(login_url="institut_app:login")
 @require_http_methods(["POST"])
+@module_permission_required('tre', 'view')
 def ApiMarkQuittancePrinted(request):
     try:
         data = json.loads(request.body)
@@ -1331,4 +1360,4 @@ def ApiMarkQuittancePrinted(request):
     except Paiements.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Paiement non trouvé'}, status=404)
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

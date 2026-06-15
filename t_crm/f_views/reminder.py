@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render,redirect
 from django.http import JsonResponse
 from ..models import *
@@ -15,6 +16,7 @@ from django.utils.dateformat import format
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('crm', 'approuv')
 def ApiValidateRemider(request):
 
     id_reminder  = request.POST.get('id_reminder')

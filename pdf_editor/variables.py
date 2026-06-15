@@ -71,16 +71,49 @@ TEMPLATE_VARIABLES = {
         {'category': 'Étudiant', 'vars': [
             {'tag': '{{ etudiant.nom }}', 'desc': 'Nom'},
             {'tag': '{{ etudiant.prenom }}', 'desc': 'Prénom'},
+            {'tag': '{{ etudiant.nom_arabe }}', 'desc': 'Nom (Arabe)'},
+            {'tag': '{{ etudiant.prenom_arabe }}', 'desc': 'Prénom (Arabe)'},
             {'tag': '{{ etudiant.matricule }}', 'desc': 'Numéro d\'inscription / Matricule'},
+            {'tag': '{{ etudiant.sexe }}', 'desc': 'Sexe'},
             {'tag': '{{ etudiant.date_naissance|date:"d/m/Y" }}', 'desc': 'Date de naissance'},
             {'tag': '{{ etudiant.lieu_naissance }}', 'desc': 'Lieu de naissance'},
+            {'tag': '{{ etudiant.groupe_sanguin }}', 'desc': 'Groupe sanguin'},
+            {'tag': '{{ etudiant.situation_familiale }}', 'desc': 'Situation familiale'},
+        ]},
+        {'category': 'Coordonnées Étudiant', 'vars': [
+            {'tag': '{{ etudiant.email }}', 'desc': 'Email'},
+            {'tag': '{{ etudiant.telephone }}', 'desc': 'Téléphone'},
             {'tag': '{{ etudiant.adresse }}', 'desc': 'Adresse'},
+            {'tag': '{{ etudiant.commune }}', 'desc': 'Commune'},
+            {'tag': '{{ etudiant.wilaya }}', 'desc': 'Wilaya'},
+            {'tag': '{{ etudiant.pays }}', 'desc': 'Pays'},
+        ]},
+        {'category': 'Parents / Tuteurs', 'vars': [
+            {'tag': '{{ etudiant.prenom_pere }}', 'desc': 'Prénom du père'},
+            {'tag': '{{ etudiant.nom_mere }}', 'desc': 'Nom de la mère'},
+            {'tag': '{{ etudiant.prenom_mere }}', 'desc': 'Prénom de la mère'},
+            {'tag': '{{ etudiant.tel_pere }}', 'desc': 'Téléphone du père'},
+            {'tag': '{{ etudiant.tel_mere }}', 'desc': 'Téléphone de la mère'},
         ]},
         {'category': 'Formation', 'vars': [
             {'tag': '{{ promo.specialite.label }}', 'desc': 'Spécialité / Formation'},
             {'tag': '{{ promo.label }}', 'desc': 'Promotion'},
             {'tag': '{{ promo.date_debut|date:"d/m/Y" }}', 'desc': 'Date début formation'},
             {'tag': '{{ promo.date_fin|date:"d/m/Y" }}', 'desc': 'Date fin formation'},
+            {'tag': '{{ etudiant.date_inscription|date:"d/m/Y" }}', 'desc': 'Date d\'inscription de l\'étudiant'},
+        ]},
+        {'category': 'Échéancier', 'vars': [
+            {'tag': '{{ echeancier.total }}', 'desc': 'Montant total de la formation'},
+            {'tag': '{{ echeancier.paye }}', 'desc': 'Montant déjà payé'},
+            {'tag': '{{ echeancier.restant }}', 'desc': 'Montant restant à payer'},
+            {'tag': '{{ echeance.date_echeance|date:"d/m/Y" }}', 'desc': 'Date de l\'échéance (utiliser dans une boucle)'},
+            {'tag': '{{ echeance.montant }}', 'desc': 'Montant de l\'échéance (utiliser dans une boucle)'},
+            {'tag': '{{ echeance.statut }}', 'desc': 'Statut de l\'échéance (Payé/Non payé)'},
+        ]},
+        {'category': 'Documents de Formation', 'vars': [
+            {'tag': '{{ document.nom }}', 'desc': 'Nom du document (utiliser dans une boucle)'},
+            {'tag': '{{ document.fourni }}', 'desc': 'Statut (Fourni: Oui/Non)'},
+            {'tag': '{{ document.date_depot|date:"d/m/Y" }}', 'desc': 'Date de dépôt du document'},
         ]}
     ],
     'certificate': [
@@ -113,6 +146,58 @@ TEMPLATE_VARIABLES = {
         ]},
         {'category': 'Divers', 'vars': [
             {'tag': '{{ current_user }}', 'desc': 'Agent de recouvrement'},
+        ]}
+    ],
+    'stage': [
+        {'category': 'Étudiant', 'vars': [
+            {'tag': '{{ etudiant.nom }}', 'desc': 'Nom de l\'étudiant'},
+            {'tag': '{{ etudiant.prenom }}', 'desc': 'Prénom de l\'étudiant'},
+            {'tag': '{{ etudiant.date_naissance|date:"d/m/Y" }}', 'desc': 'Date de naissance'},
+            {'tag': '{{ etudiant.lieu_naissance }}', 'desc': 'Lieu de naissance'},
+        ]},
+        {'category': 'Stage', 'vars': [
+            {'tag': '{{ stage.entreprise.designation }}', 'desc': 'Nom de l\'entreprise d\'accueil'},
+            {'tag': '{{ stage.date_debut|date:"d/m/Y" }}', 'desc': 'Date de début du stage'},
+            {'tag': '{{ stage.date_fin|date:"d/m/Y" }}', 'desc': 'Date de fin du stage'},
+            {'tag': '{{ stage.theme }}', 'desc': 'Thème du stage'},
+        ]},
+        {'category': 'Institut', 'vars': [
+            {'tag': '{{ entreprise.designation }}', 'desc': 'Nom de l\'institut'},
+            {'tag': '{{ entreprise.adresse }}', 'desc': 'Adresse de l\'institut'},
+            {'tag': '{{ date_impression }}', 'desc': 'Date d\'impression'},
+        ]}
+    ],
+    'bulletin': [
+        {'category': 'Étudiant', 'vars': [
+            {'tag': '{{ etudiant.nom }}', 'desc': 'Nom de l\'étudiant'},
+            {'tag': '{{ etudiant.prenom }}', 'desc': 'Prénom de l\'étudiant'},
+            {'tag': '{{ etudiant.matricule }}', 'desc': 'Matricule'},
+            {'tag': '{{ etudiant.date_naissance }}', 'desc': 'Date de naissance'},
+            {'tag': '{{ etudiant.lieu_naissance }}', 'desc': 'Lieu de naissance'},
+        ]},
+        {'category': 'Session / Groupe', 'vars': [
+            {'tag': '{{ groupe.nom_groupe }}', 'desc': 'Nom du groupe'},
+            {'tag': '{{ session_line.session.nom_session }}', 'desc': 'Nom de la session'},
+            {'tag': '{{ session_line.semestre }}', 'desc': 'Semestre'},
+        ]},
+        {'category': 'Résultats', 'vars': [
+            {'tag': '{{ moyenne_semestre }}', 'desc': 'Moyenne du semestre'},
+            {'tag': '{{ total_points }}', 'desc': 'Total des points'},
+            {'tag': '{{ total_coef }}', 'desc': 'Total des coefficients'},
+            {'tag': '{{ deliberation.decision }}', 'desc': 'Décision du jury'},
+        ]},
+        {'category': 'Modules (Boucle)', 'vars': [
+            {'tag': '{{ module.matiere }}', 'desc': 'Nom du module (utiliser dans une boucle: for module in modules_data)'},
+            {'tag': '{{ module.professeur }}', 'desc': 'Professeur'},
+            {'tag': '{{ module.coef }}', 'desc': 'Coefficient'},
+            {'tag': '{{ module.moyenne_matiere }}', 'desc': 'Moyenne du module'},
+            {'tag': '{{ module.observation }}', 'desc': 'Observation'},
+            {'tag': '{{ module.total_points }}', 'desc': 'Total des points pour ce module'},
+        ]},
+        {'category': 'Institut', 'vars': [
+            {'tag': '{{ entreprise.designation }}', 'desc': 'Nom de l\'institut'},
+            {'tag': '{{ entreprise.adresse }}', 'desc': 'Adresse de l\'institut'},
+            {'tag': '{{ date_impression }}', 'desc': 'Date d\'impression'},
         ]}
     ]
 }

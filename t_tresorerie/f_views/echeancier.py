@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -6,23 +7,26 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('tre', 'view')
 def ListeModelEcheancier(request):
     return render(request,'tenant_folder/comptabilite/tresorerie/gestion_echeancier.html')
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('tre', 'view')
 def ApiLoadModelEcheancier(request):
     promo_id = request.GET.get('promo_id')
     query = ModelEcheancier.objects.all()
     if promo_id and promo_id != '0':
         query = query.filter(promo_id=promo_id)
         
-    liste = query.values('id','promo__label','promo__code','promo__id','promo','promo__begin_year','promo__end_year','nombre_tranche','label','created_at','is_active','is_double_diplomation')
+    liste = query.values('id','promo__label','promo__code','promo__id','promo','promo__begin_year','promo__end_year','nombre_tranche','label','created_at','is_active','is_double_diplomation','has_frais_inscription')
     for i in liste:
         i_obj = ModelEcheancier.objects.get(id = i['id'])
         i['promo_session_label'] = i_obj.promo.get_session_display()
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadPromo(request):
     promo = Promos.objects.all().values('id','label','code','begin_year','end_year','session')
     for i in promo:
@@ -32,6 +36,7 @@ def ApiLoadPromo(request):
     return JsonResponse(list(promo), safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadSpecialites(request):
     if request.method == "GET":
         formation_id = request.GET.get('formation_id')
@@ -45,6 +50,7 @@ def ApiLoadSpecialites(request):
         return JsonResponse({"status": "error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadEcheancierDetails(request):
     try:
         ids_raw = request.GET.get("id")
@@ -121,6 +127,7 @@ def ApiLoadEcheancierDetails(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiSaveEcheancier(request):
     if request.method == 'POST':
         try:
@@ -302,6 +309,7 @@ def ApiSaveEcheancier(request):
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadFormations(request):
     try:
         formations = Formation.objects.all().values('id', 'nom', 'prix_formation', 'code')
@@ -311,6 +319,7 @@ def ApiLoadFormations(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiSaveModeleEcheancier(request):
     if request.method == "POST":
         promo = request.POST.get('promo')
@@ -318,10 +327,14 @@ def ApiSaveModeleEcheancier(request):
         nbtranche = request.POST.get('nbtranche')
         doubleDiplomation = request.POST.get('doubleDiplomation')
 
+        hasFraisInscription = request.POST.get('hasFraisInscription')
+
         if doubleDiplomation == "true":
             double = True
         else:
             double = False
+
+        has_frais = hasFraisInscription == "true"
 
         try:
             promo_obj = Promos.objects.get(id=promo)
@@ -332,7 +345,8 @@ def ApiSaveModeleEcheancier(request):
                 promo = promo_obj,
                 nombre_tranche = nbtranche,
                 description = description,
-                is_double_diplomation = double
+                is_double_diplomation = double,
+                has_frais_inscription = has_frais
             )
 
             return JsonResponse({"status" : 'success'})
@@ -343,6 +357,7 @@ def ApiSaveModeleEcheancier(request):
         return JsonResponse({"status":"error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadModeleEcheancierDetails(request):
     id = request.GET.get("id")
     try:
@@ -362,6 +377,7 @@ def ApiLoadModeleEcheancierDetails(request):
             'description': model.description,
             'is_active': model.is_active,
             'double_diplomation' : model.is_double_diplomation,
+            'has_frais_inscription' : model.has_frais_inscription,
             'created_at': model.created_at.strftime('%d/%m/%Y') if model.created_at else ''
         }
 
@@ -373,12 +389,14 @@ def ApiLoadModeleEcheancierDetails(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'change')
 def ApiUpdateModeleEcheancier(request):
     echeancierId = request.POST.get('id')
     promo = request.POST.get('promo')
     description = request.POST.get('description')
     nbtranche = request.POST.get('nbtranche')
     doubleDiplomation = request.POST.get('doubleDiplomation')
+    hasFraisInscription = request.POST.get('hasFraisInscription')
 
     modelEcheance = ModelEcheancier.objects.get(id = echeancierId)
 
@@ -391,6 +409,7 @@ def ApiUpdateModeleEcheancier(request):
         modelEcheance.description = description
         modelEcheance.nombre_tranche = nbtranche
         modelEcheance.is_double_diplomation = doubleDiplomation == "true"
+        modelEcheance.has_frais_inscription = hasFraisInscription == "true"
 
         modelEcheance.save()
 
@@ -401,14 +420,17 @@ def ApiUpdateModeleEcheancier(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def CreeEcheancier(request):
     return render(request,'tenant_folder/comptabilite/tresorerie/creer-un-echeancier.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'change')
 def ListeEcheanciersConfigures(request):
     return render(request,'tenant_folder/comptabilite/tresorerie/echeancier-configurer.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'change')
 def ApiLoadEcheanciersConfigures(request):
     try:
         echeanciers = EcheancierPaiement.objects.all().values(
@@ -544,6 +566,7 @@ def ApiLoadEcheanciersConfigures(request):
         return JsonResponse({'status': 'error', 'message': str(e)})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'delete')
 def ApiDeleteEcheancier(request):
     if request.method == "POST":
         ids_raw = request.POST.get('echeancierId')
@@ -569,6 +592,7 @@ def ApiDeleteEcheancier(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'delete')
 def ApiBulkDeleteEcheanciers(request):
     if request.method == "POST":
         try:
@@ -591,6 +615,7 @@ def ApiBulkDeleteEcheanciers(request):
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadEntiteLegal(request):
     if request.method == "GET":
         liste = Entreprise.objects.all().values('id','designation')
@@ -599,12 +624,14 @@ def ApiLoadEntiteLegal(request):
         return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def echeancierAppliquer(request):
 
     return render(request,'tenant_folder/comptabilite/tresorerie/echeancier-configurer.html')
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'view')
 def ApiSetEcheancierDefault(request):
     if request.method == 'POST':
         try:
@@ -634,6 +661,7 @@ def ApiSetEcheancierDefault(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'change')
 def ApiToggleEcheancierAvailability(request):
     if request.method == 'POST':
         try:
@@ -654,6 +682,7 @@ def ApiToggleEcheancierAvailability(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'change')
 def ApiUpdateEcheancier(request):
     if request.method == 'POST':
         try:
@@ -784,6 +813,7 @@ def ApiUpdateEcheancier(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiCheckEcheancierState(request):
     if request.method == "GET":
         id_echeancier = request.GET.get('id_echeancier')
@@ -801,6 +831,7 @@ def ApiCheckEcheancierState(request):
     
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiCheckStateModel(request):
     id_model = request.GET.get('id_model')
     model_obj = ModelEcheancier.objects.get(id = id_model)

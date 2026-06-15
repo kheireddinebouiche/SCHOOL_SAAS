@@ -132,14 +132,18 @@ def ApiStoreDerogation(request):
         ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
     )
 
-    # Send Notification to Supervisors (2) and Managers (3) of CRM module
+    # Send Notification
     try:
         link = reverse('t_crm:liste_derogations')
         message = f"Nouvelle demande de dérogation de {preinscrit.nom} {preinscrit.prenom}"
         
         config = GlobalConfiguration.get_solo()
         if config.crm_notifications_enabled:
-            send_notification_to_module_level('crm', [2, 3], message, link)
+            if config.derogation_notification_mode == 'specific':
+                for receiver in config.derogation_notification_receivers.all():
+                    send_notification_to_user(receiver, message, link)
+            else:
+                send_notification_to_module_level('crm', [2, 3], message, link)
     except Exception as e:
         print(f"Error sending notification: {e}")
 

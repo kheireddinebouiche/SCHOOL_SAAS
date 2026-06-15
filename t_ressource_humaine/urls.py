@@ -26,5 +26,10 @@ urlpatterns = [
     path('config/', views.config_paie, name='config_paie'),
     path('select-entreprise/', views.select_entreprise_paie, name='select_entreprise_paie'),
     path('rubriques/init-primes/', views.init_conventional_primes, name='init_conventional_primes'),
+    path('rubriques/reset/', views.reset_rubriques, name='reset_rubriques'),
     path('fiches-mensuelles/', views.fiches_mensuelles, name='fiches_mensuelles'),
+    path('fiches-mensuelles/valider/', views.valider_fiche_mensuelle_formateur, name='valider_fiche_mensuelle_formateur'),
+    
+    path('formateurs/fiches-paie/', views.FormateurFichePaieListView.as_view(), name='formateur_fiche_paie_list'),
+    path('formateurs/assistant-paie/', views.assistant_paie_formateur, name='assistant_paie_formateur'),
 ]

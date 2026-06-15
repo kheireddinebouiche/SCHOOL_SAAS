@@ -5,7 +5,7 @@ class NouveauEmploye(forms.ModelForm):
     class Meta:
         model = Employees
         fields = '__all__'
-        exclude = ['has_contract','created_by','updated_by','created_at','updated_at']
+        exclude = ['has_contract','created_by','updated_by','created_at','updated_at', 'is_teacher', 'date_debut_probation', 'date_fin_probation', 'solde_conge', 'solde_conge_annee_prec', 'rib', 'ccp']
         widgets = {
             'civilite' : forms.Select(attrs={'class' : 'form-control'}),
             'nom' : forms.TextInput(attrs={'class' : 'form-control'}),
@@ -26,6 +26,7 @@ class NouveauEmploye(forms.ModelForm):
             'prenom_pere' : forms.TextInput(attrs={'class' : 'form-control'}),
             'nom_mere' : forms.TextInput(attrs={'class' : 'form-control'}),
             'prenom_mere' : forms.TextInput(attrs={'class' : 'form-control'}),
+            'is_particular_irg' : forms.CheckboxInput(attrs={'class' : 'form-check-input'}),
         }
         labels = {
             'civilite' : "Civilité :",
@@ -44,7 +45,13 @@ class NouveauEmploye(forms.ModelForm):
             'date_naissance' : "Date de naissance :",
             'lieu_naissance' : "Lieu de naissance :",
             'bank' : "N° compte bancaire :",
+            'is_particular_irg' : "Cas particulier IRG (Retraité / Handicapé) :",
         }
+
+    def __init__(self, *args, **kwargs):
+        super(NouveauEmploye, self).__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.required = False
 
 class NouveauService(forms.ModelForm):
     class Meta:

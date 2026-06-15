@@ -1,0 +1,229 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Executive Education - Consultants{% endblock title %}
+
+{% block content %}
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+    .table-premium { border-collapse: separate; border-spacing: 0 0.5rem; }
+    .table-premium thead th { background: #f8fafc; border: none; color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.025em; padding: 1.25rem 1.5rem; }
+    .table-premium tbody tr { background: white; transition: all 0.2s ease; }
+    .table-premium tbody tr:hover { background: #f1f5f9; transform: scale(1.002); }
+    .table-premium tbody td { border: none; padding: 1.25rem 1.5rem; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; }
+    .table-premium tbody td:first-child { border-left: 1px solid #f1f5f9; border-top-left-radius: 1rem; border-bottom-left-radius: 1rem; }
+    .table-premium tbody td:last-child { border-right: 1px solid #f1f5f9; border-top-right-radius: 1rem; border-bottom-right-radius: 1rem; }
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid py-4">
+      <!-- start page title -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <div class="bg-warning bg-opacity-10 rounded-circle p-3 me-3">
+                <i class="ri-user-voice-line text-warning fs-3"></i>
+              </div>
+              <div>
+                <h4 class="mb-1 fw-bold">Consultants</h4>
+                <p class="text-muted mb-0">Gestion des intervenants spécifiques au conseil</p>
+              </div>
+            </div>
+            <div class="mt-3 mt-sm-0">
+                <button class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#addConsultantModal">
+                    <i class="bx bx-plus me-1"></i> Nouveau Consultant
+                </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    <div class="card glass-card border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-premium mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th>Consultant</th>
+                            <th>Email</th>
+                            <th>Téléphone</th>
+                            <th>Spécialité</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for consultant in consultants %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-3 fw-bold">
+                                        {{ consultant.prenom|first }}{{ consultant.nom|first }}
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-semibold text-dark">{{ consultant.prenom }} {{ consultant.nom }}</h6>
+                                        <small class="text-muted">ID: C-{{ consultant.id }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ consultant.email|default:"-" }}</td>
+                            <td>{{ consultant.telephone|default:"-" }}</td>
+                            <td>{{ consultant.specialite|default:"-" }}</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-light text-primary me-1 rounded-circle" data-bs-toggle="modal" data-bs-target="#editConsultantModal{{ consultant.id }}">
+                                    <i class="bx bx-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-light text-danger rounded-circle" data-bs-toggle="modal" data-bs-target="#deleteConsultantModal{{ consultant.id }}">
+                                    <i class="bx bx-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+
+
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <div class="avatar-lg mx-auto mb-3">
+                                    <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                        <i class="bx bx-user-x"></i>
+                                    </div>
+                                </div>
+                                <h5 class="text-muted fw-medium">Aucun consultant trouvé</h5>
+                                <p class="text-muted mb-0">Commencez par ajouter un nouveau consultant.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addConsultantModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 bg-light rounded-top-4 p-4">
+                <h5 class="modal-title fw-bold">Nouveau Consultant</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{% url 't_conseil:ListeConsultants' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Nom</label>
+                            <input type="text" class="form-control" name="nom" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Prénom</label>
+                            <input type="text" class="form-control" name="prenom" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Email</label>
+                            <input type="email" class="form-control" name="email">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Téléphone</label>
+                            <input type="text" class="form-control" name="telephone">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-medium">Spécialité</label>
+                            <input type="text" class="form-control" name="specialite">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% for consultant in consultants %}
+<!-- Edit Modal -->
+<div class="modal fade" id="editConsultantModal{{ consultant.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 bg-light rounded-top-4 p-4">
+                <h5 class="modal-title fw-bold">Modifier le consultant</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{% url 't_conseil:ListeConsultants' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="consultant_id" value="{{ consultant.id }}">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Nom</label>
+                            <input type="text" class="form-control" name="nom" value="{{ consultant.nom }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Prénom</label>
+                            <input type="text" class="form-control" name="prenom" value="{{ consultant.prenom }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Email</label>
+                            <input type="email" class="form-control" name="email" value="{{ consultant.email|default:'' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Téléphone</label>
+                            <input type="text" class="form-control" name="telephone" value="{{ consultant.telephone|default:'' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-medium">Spécialité</label>
+                            <input type="text" class="form-control" name="specialite" value="{{ consultant.specialite|default:'' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteConsultantModal{{ consultant.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body p-4 text-center">
+                <div class="avatar-lg mx-auto mb-3">
+                    <div class="avatar-title bg-danger bg-opacity-10 text-danger rounded-circle fs-1">
+                        <i class="bx bx-trash"></i>
+                    </div>
+                </div>
+                <h5 class="fw-bold mb-2">Supprimer le consultant ?</h5>
+                <p class="text-muted mb-4">Cette action est irréversible.</p>
+                <form method="POST" action="{% url 't_conseil:ListeConsultants' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="consultant_id" value="{{ consultant.id }}">
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-danger rounded-pill px-4">Supprimer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}

@@ -59,8 +59,7 @@ class RegistrePresence(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.label
-    
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class LigneRegistrePresence(models.Model):
     module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True, related_name="module_presence")
     teacher = models.ForeignKey(Formateurs, on_delete=models.CASCADE, null=True, blank=True)
@@ -160,8 +159,7 @@ class ModelContrat(models.Model):
     updated_at = models.DateField(auto_now=True)
 
     def __str__(self):
-        return self.label
-
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class ClauseContrat(models.Model):
     modele = models.ForeignKey(ModelContrat, on_delete=models.CASCADE, null=True, blank=True)
     titre  = models.CharField(max_length = 100,null=True, blank=True)

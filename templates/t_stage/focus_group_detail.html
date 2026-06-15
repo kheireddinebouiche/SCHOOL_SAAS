@@ -2,164 +2,148 @@
 {% load static %}
 {% block title %} Focus Group : {{ focus_group.nom }} {% endblock title %}
 {% block content %}
+<style>
+    /* Premium Look & Feel Integration */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .btn-rounded { border-radius: 0.75rem; }
+    .badge-soft-secondary { background-color: rgba(100, 116, 139, 0.1); color: #64748b; }
+    .form-control, .form-select {
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+    }
+    .modal-content {
+        border-radius: 1.5rem;
+        border: none;
+    }
+</style>
+
 <div class="main-content">
-    <div class="page-content">
+    <div class="page-content bg-light">
         <div class="container-fluid">
-            <!-- Header -->
-            <div class="row">
+            <!-- Header Section -->
+            <div class="row mb-4">
                 <div class="col-12">
-                    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                        <h4 class="mb-sm-0">Focus Group : {{ focus_group.nom }}</h4>
-                        <div class="page-title-right">
-                            <ol class="breadcrumb m-0">
-                                <li class="breadcrumb-item"><a href="{% url 't_stage:stage_dashboard' %}">Stages</a></li>
-                                <li class="breadcrumb-item active">Focus Group</li>
-                            </ol>
+                    <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                                <i class="ri-team-line text-primary fs-3"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-1 fw-bold">Focus Group : {{ focus_group.nom }}</h4>
+                                <p class="text-muted mb-0">{{ focus_group.thematique }}</p>
+                            </div>
+                        </div>
+                        <div class="mt-3 mt-sm-0">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0">
+                                    <li class="breadcrumb-item"><a href="{% url 't_stage:stage_dashboard' %}">Stages</a></li>
+                                    <li class="breadcrumb-item"><a href="{% url 't_stage:list_focus_groups' %}">Focus Groups</a></li>
+                                    <li class="breadcrumb-item active">Détails</li>
+                                </ol>
+                            </nav>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-lg-4">
-                    <div class="card">
-                        <div class="card-header bg-primary-subtle border-0">
-                            <h5 class="card-title mb-0 text-primary">Détails du Groupe</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="text-center mt-3 mb-4">
-                                <div class="avatar-md mx-auto mb-3">
-                                    <div class="avatar-title bg-light text-primary rounded-circle fs-1">
-                                        <i class="ri-team-line"></i>
-                                    </div>
+            <!-- Metrics Row -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card glass-card border-0 mb-3 mb-md-0">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="avatar-sm flex-shrink-0 me-3">
+                                <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded-circle fs-3">
+                                    <i class="ri-user-star-line"></i>
                                 </div>
-                                <h5 class="mb-1">{{ focus_group.nom }}</h5>
-                                <p class="text-muted mb-0">{{ focus_group.thematique }}</p>
                             </div>
-                            
-                            <div class="table-responsive">
-                                <table class="table table-borderless table-sm mb-0">
-                                    <tbody>
-                                        <tr>
-                                            <th class="ps-0" scope="row"><i class="ri-user-star-line align-middle text-primary me-2"></i>Encadrant :</th>
-                                            <td class="text-muted text-end">{{ focus_group.encadrant }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th class="ps-0" scope="row"><i class="ri-briefcase-line align-middle text-primary me-2"></i>Stages :</th>
-                                            <td class="text-muted text-end"><span class="badge bg-secondary-subtle text-secondary">{{ focus_group.stages.count }}</span></td>
-                                        </tr>
-                                        <tr>
-                                            <th class="ps-0" scope="row"><i class="ri-calendar-event-line align-middle text-primary me-2"></i>Séances :</th>
-                                            <td class="text-muted text-end"><span class="badge bg-info-subtle text-info">{{ seances.count }}</span></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header d-flex align-items-center border-0">
-                            <h5 class="card-title mb-0 flex-grow-1">Historique des Séances</h5>
-                            <div class="flex-shrink-0 d-flex gap-1">
-                                <a href="{% url 't_stage:print_sessions' focus_group.id %}" target="_blank" class="btn btn-soft-info btn-sm" data-bs-toggle="tooltip" title="Imprimer l'historique">
-                                    <i class="ri-printer-line align-bottom"></i>
-                                </a>
-                                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createSeanceModal" data-bs-toggle="tooltip" title="Nouvelle séance">
-                                    <i class="ri-add-line align-bottom"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="acitivity-timeline acitivity-main">
-                                {% for seance in seances %}
-                                <div class="acitivity-item d-flex">
-                                    <div class="flex-shrink-0 avatar-xs acitivity-avatar">
-                                        <div class="avatar-title bg-success-subtle text-success rounded-circle">
-                                            <i class="ri-calendar-event-line"></i>
-                                        </div>
-                                    </div>
-                                    <div class="flex-grow-1 ms-3">
-                                        <h6 class="mb-1">{{ seance.date_seance|date:"d M Y" }} <small class="text-muted">{{ seance.date_seance|date:"H:i" }}</small></h6>
-                                        <div class="mb-1">
-                                            {% for s in seance.stages.all %}
-                                                <span class="badge bg-primary-subtle text-primary fs-10">{{ s.sujet|truncatechars:20 }}</span>
-                                            {% endfor %}
-                                        </div>
-                                        <p class="text-muted mb-1">{{ seance.compte_rendu|truncatechars:80 }}</p>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="badge bg-secondary-subtle text-secondary">{{ seance.duree_heures }} h</span>
-                                            <a href="#" class="text-muted fs-12" data-bs-toggle="modal" data-bs-target="#seanceDetails{{ seance.id }}">Voir détail</a>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Modal for full details (kept inside loop for simplicity or move out if needed) -->
-                                <div class="modal fade" id="seanceDetails{{ seance.id }}" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog modal-dialog-centered">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Séance du {{ seance.date_seance|date:"d/m/Y" }}</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <p class="text-muted mb-2">Durée : {{ seance.duree_heures }} h</p>
-                                                {% if seance.stages.all %}
-                                                <div class="mb-3">
-                                                    <h6 class="fs-13">Stages abordés :</h6>
-                                                    <div class="d-flex flex-wrap gap-1">
-                                                        {% for s in seance.stages.all %}
-                                                            <span class="badge bg-info-subtle text-info">{{ s.sujet }}</span>
-                                                        {% endfor %}
-                                                    </div>
-                                                </div>
-                                                {% endif %}
-                                                <hr>
-                                                <p>{{ seance.compte_rendu|linebreaks }}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% empty %}
-                                <div class="text-center text-muted py-3">
-                                    Aucune séance enregistrée.
-                                </div>
-                                {% endfor %}
+                            <div class="flex-grow-1">
+                                <p class="text-muted mb-1 fs-13 fw-medium text-uppercase">Encadrant Principal</p>
+                                <h5 class="fs-15 fw-bold mb-0 text-truncate" title="{{ focus_group.encadrant }}">{{ focus_group.encadrant }}</h5>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <div class="col-lg-8">
-                    <div class="card">
-                        <div class="card-header border-0">
-                            <h5 class="card-title mb-0">Stages rattachés à ce groupe</h5>
+                <div class="col-md-4">
+                    <div class="card glass-card border-0 mb-3 mb-md-0">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="avatar-sm flex-shrink-0 me-3">
+                                <div class="avatar-title bg-secondary bg-opacity-10 text-secondary rounded-circle fs-3">
+                                    <i class="ri-briefcase-line"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <p class="text-muted mb-1 fs-13 fw-medium text-uppercase">Total Stages</p>
+                                <h5 class="fs-15 fw-bold mb-0">{{ focus_group.stages.count }} Stages Rattachés</h5>
+                            </div>
                         </div>
-                        <div class="card-body">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card glass-card border-0">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="avatar-sm flex-shrink-0 me-3">
+                                <div class="avatar-title bg-info bg-opacity-10 text-info rounded-circle fs-3">
+                                    <i class="ri-calendar-event-line"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <p class="text-muted mb-1 fs-13 fw-medium text-uppercase">Total Séances</p>
+                                <h5 class="fs-15 fw-bold mb-0">{{ seances.count }} Séances Enregistrées</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Row -->
+            <div class="row">
+                <!-- Left Col: Stages -->
+                <div class="col-xl-8">
+                    <div class="card glass-card border-0 mb-4">
+                        <div class="card-header border-0 d-flex align-items-center pb-2">
+                            <div class="d-flex align-items-center flex-grow-1">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                    <i class="ri-briefcase-line text-primary fs-5"></i>
+                                </div>
+                                <h5 class="card-title mb-0 fw-bold">Stages rattachés à ce groupe</h5>
+                            </div>
+                            <button type="button" class="btn btn-primary btn-sm btn-rounded flex-shrink-0 px-3" data-bs-toggle="modal" data-bs-target="#assignStagesModal">
+                                <i class="ri-add-line align-bottom me-1"></i> Affecter des stages
+                            </button>
+                        </div>
+                        <div class="card-body pt-0">
                             {% if focus_group.stages.all %}
-                            <div class="table-responsive table-card">
+                            <div class="table-responsive table-card rounded-3">
                                 <table class="table table-borderless table-centered align-middle table-nowrap mb-0">
-                                    <thead class="text-muted table-light">
+                                    <thead class="text-muted bg-light">
                                         <tr>
-                                            <th>Sujet</th>
+                                            <th class="ps-3">Sujet</th>
                                             <th>Étudiants</th>
                                             <th>Avancement</th>
-                                            <th>Action</th>
+                                            <th class="text-end pe-3">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {% for stage in focus_group.stages.all %}
-                                        <tr>
-                                            <td>
+                                        <tr class="border-bottom border-light">
+                                            <td class="ps-3">
                                                 <div class="d-flex align-items-center">
-                                                    <div class="avatar-sm flex-shrink-0 me-2">
+                                                    <div class="avatar-sm flex-shrink-0 me-3">
                                                         <div class="avatar-title bg-light text-primary rounded-3 fs-20">
                                                             <i class="ri-article-line"></i>
                                                         </div>
                                                     </div>
                                                     <div class="flex-grow-1">
-                                                        <h5 class="fs-14 mb-1">{{ stage.sujet|truncatechars:40 }}</h5>
-                                                        <p class="text-muted mb-0">PFE / PFA</p>
+                                                        <h5 class="fs-14 mb-1 fw-medium">{{ stage.sujet|truncatechars:45 }}</h5>
+                                                        <p class="text-muted mb-0 fs-12">PFE / PFA</p>
                                                     </div>
                                                 </div>
                                             </td>
@@ -168,7 +152,7 @@
                                                 {% for etudiant in stage.etudiants.all %}
                                                     <a href="javascript: void(0);" class="avatar-group-item" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ etudiant }}">
                                                         <div class="avatar-xs">
-                                                            <div class="avatar-title rounded-circle bg-primary text-white">
+                                                            <div class="avatar-title rounded-circle bg-primary text-white border border-2 border-white shadow-sm">
                                                                 {{ etudiant.nom|slice:":1" }}
                                                             </div>
                                                         </div>
@@ -177,13 +161,15 @@
                                                 </div>
                                             </td>
                                             <td style="width: 20%;">
-                                                <span class="fs-12 text-muted float-end">{{ stage.taux_avancement }}%</span>
-                                                <div class="progress progress-sm animated-progress">
-                                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ stage.taux_avancement }}%" aria-valuenow="{{ stage.taux_avancement }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="progress progress-sm animated-progress flex-grow-1 bg-light">
+                                                        <div class="progress-bar bg-success rounded-pill" role="progressbar" style="width: {{ stage.taux_avancement }}%" aria-valuenow="{{ stage.taux_avancement }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <span class="fs-12 fw-medium text-muted">{{ stage.taux_avancement }}%</span>
                                                 </div>
                                             </td>
-                                            <td>
-                                                <a href="{% url 't_stage:presentation_form' stage.id %}" class="btn btn-sm btn-subtle-primary">Gérer</a>
+                                            <td class="text-end pe-3">
+                                                <a href="{% url 't_stage:presentation_form' stage.id %}" class="btn btn-sm btn-soft-primary btn-rounded px-3">Gérer</a>
                                             </td>
                                         </tr>
                                         {% endfor %}
@@ -193,14 +179,117 @@
                             {% else %}
                             <div class="text-center py-5">
                                 <div class="avatar-lg mx-auto mb-3">
-                                    <div class="avatar-title bg-light text-primary rounded-circle fs-1">
+                                    <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded-circle fs-1">
                                         <i class="ri-folder-add-line"></i>
                                     </div>
                                 </div>
-                                <h5 class="mb-2">Aucun stage rattaché</h5>
+                                <h5 class="mb-2 fw-bold">Aucun stage rattaché</h5>
                                 <p class="text-muted mb-0">Ce Focus Group ne contient encore aucun stage pour le moment.</p>
                             </div>
                             {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Col: Séances -->
+                <div class="col-xl-4">
+                    <div class="card glass-card border-0 mb-4">
+                        <div class="card-header d-flex align-items-center border-0 pb-0">
+                            <div class="d-flex align-items-center flex-grow-1">
+                                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-2">
+                                    <i class="ri-history-line text-success fs-5"></i>
+                                </div>
+                                <h5 class="card-title mb-0 fw-bold">Historique</h5>
+                            </div>
+                            <div class="flex-shrink-0 d-flex gap-2">
+                                <a href="{% url 't_stage:print_sessions' focus_group.id %}" target="_blank" class="btn btn-soft-info btn-sm btn-rounded px-2" data-bs-toggle="tooltip" title="Imprimer l'historique">
+                                    <i class="ri-printer-line align-bottom"></i>
+                                </a>
+                                <button type="button" class="btn btn-success btn-sm btn-rounded px-2" data-bs-toggle="modal" data-bs-target="#createSeanceModal" data-bs-toggle="tooltip" title="Nouvelle séance">
+                                    <i class="ri-add-line align-bottom"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="acitivity-timeline acitivity-main">
+                                {% for seance in seances %}
+                                <div class="acitivity-item d-flex mb-4">
+                                    <div class="flex-shrink-0 avatar-xs acitivity-avatar mt-1">
+                                        <div class="avatar-title bg-success-subtle text-success rounded-circle">
+                                            <i class="ri-calendar-event-line"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h6 class="mb-0 fw-bold">{{ seance.date_seance|date:"d M Y" }} <small class="text-muted ms-1 fw-normal">{{ seance.date_seance|date:"H:i" }}</small></h6>
+                                            <div class="d-flex gap-2">
+                                                <a href="#" class="text-muted fs-14" data-bs-toggle="modal" data-bs-target="#seanceDetails{{ seance.id }}" title="Détails"><i class="ri-eye-line"></i></a>
+                                                <a href="#" class="text-danger fs-14" data-bs-toggle="modal" data-bs-target="#deleteSeanceModal{{ seance.id }}" title="Supprimer"><i class="ri-delete-bin-line"></i></a>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2 mt-2">
+                                            {% for s in seance.stages.all %}
+                                                <span class="badge bg-primary-subtle text-primary fs-11 me-1 mb-1">{{ s.sujet|truncatechars:25 }}</span>
+                                            {% endfor %}
+                                        </div>
+                                        <p class="text-muted mb-2 fs-13">{{ seance.compte_rendu|truncatechars:90 }}</p>
+                                        <div>
+                                            <span class="badge bg-secondary-subtle text-secondary fs-11"><i class="ri-time-line align-bottom me-1"></i>{{ seance.duree_heures }} h</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Modal for full details -->
+                                <div class="modal fade" id="seanceDetails{{ seance.id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content shadow-lg border-0" style="border-radius: 1.5rem;">
+                                            <div class="modal-header border-bottom-0 pb-0">
+                                                <h5 class="modal-title fw-bold">Détail de la Séance</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body p-4 pt-3">
+                                                <div class="d-flex align-items-center mb-3">
+                                                    <div class="avatar-sm me-3">
+                                                        <div class="avatar-title bg-success bg-opacity-10 text-success rounded-circle fs-3">
+                                                            <i class="ri-calendar-check-line"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-0 fs-15">{{ seance.date_seance|date:"d F Y à H:i" }}</h6>
+                                                        <p class="text-muted mb-0 fs-13">Durée : {{ seance.duree_heures }} heures</p>
+                                                    </div>
+                                                </div>
+                                                
+                                                {% if seance.stages.all %}
+                                                <div class="mb-3">
+                                                    <h6 class="fs-13 fw-bold text-uppercase text-muted mb-2">Stages abordés</h6>
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                        {% for s in seance.stages.all %}
+                                                            <span class="badge bg-primary bg-opacity-10 text-primary py-1 px-2">{{ s.sujet }}</span>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+                                                
+                                                <h6 class="fs-13 fw-bold text-uppercase text-muted mb-2">Compte-rendu</h6>
+                                                <div class="bg-light p-3 rounded-3 text-dark fs-13">
+                                                    {{ seance.compte_rendu|linebreaks }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="text-center py-4">
+                                    <div class="avatar-md mx-auto mb-3">
+                                        <div class="avatar-title bg-light text-muted rounded-circle fs-2">
+                                            <i class="ri-history-line"></i>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted mb-0">Aucune séance enregistrée.</p>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -255,4 +344,66 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Assign Stages -->
+<div class="modal fade" id="assignStagesModal" tabindex="-1" aria-labelledby="assignStagesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignStagesModalLabel">Affecter des stages au Focus Group</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{% url 't_stage:focus_group_detail' focus_group.id %}" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_stages">
+                    <div class="mb-3">
+                        <label for="stagesToAssign" class="form-label">Sélectionnez les stages à affecter :</label>
+                        <select class="form-select" id="stagesToAssign" name="stages" multiple data-choices required>
+                            {% for stage in available_stages %}
+                                <option value="{{ stage.id }}">{{ stage.groupe.nom|default:"-" }} - {{ stage.sujet|truncatechars:50 }}</option>
+                            {% empty %}
+                                <option disabled>Aucun stage disponible</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Maintenez Ctrl pour sélectionner plusieurs stages. Seuls les stages non annulés et non présents dans ce groupe sont affichés.</small>
+                    </div>
+                    <div class="text-end mt-4">
+                        <button type="button" class="btn btn-light me-2" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary px-4">Affecter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modals Suppression Seance -->
+{% for seance in seances %}
+<div class="modal fade" id="deleteSeanceModal{{ seance.id }}" tabindex="-1" aria-labelledby="deleteSeanceModalLabel{{ seance.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1rem;">
+            <div class="modal-header border-bottom-0 pb-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <div class="avatar-lg mx-auto mb-4">
+                    <div class="avatar-title bg-danger bg-opacity-10 text-danger rounded-circle fs-1">
+                        <i class="ri-alert-line"></i>
+                    </div>
+                </div>
+                <h4 class="fw-bold mb-3">Supprimer cette séance ?</h4>
+                <p class="text-muted mb-4">Êtes-vous sûr de vouloir supprimer la séance du <strong>{{ seance.date_seance|date:"d/m/Y à H:i" }}</strong> ? Cette action est irréversible.</p>
+                <form action="{% url 't_stage:delete_seance' seance.id %}" method="POST">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-danger px-4 rounded-pill">Oui, supprimer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
 {% endblock content %}

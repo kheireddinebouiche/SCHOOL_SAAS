@@ -1,5 +1,5 @@
 {% extends 'tenant_folder/base.html' %}
-{% load static %}
+{% load static permissions_tags %}
 {% block title %}CRM - Remises{% endblock title %}
 
 {% block content %}
@@ -661,8 +661,53 @@
   </div>
 </div>
 
+<!-- Modal Suppression Réduction -->
+<div class="modal fade" id="deleteDiscountModal" tabindex="-1" aria-labelledby="deleteDiscountModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+      <div class="modal-header border-0 bg-light bg-opacity-50 px-4 py-3">
+        <div class="d-flex align-items-center">
+          <div class="bg-danger bg-opacity-10 p-2 rounded-circle me-3">
+            <i class="ri-delete-bin-line text-danger fs-4"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold text-danger mb-0" id="deleteDiscountModalLabel">Supprimer la réduction</h5>
+            <p class="text-muted small mb-0">Action irréversible</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4 bg-light bg-opacity-50">
+        <div class="alert alert-danger border-0 glass-card d-flex align-items-center p-3 mb-4" role="alert">
+          <i class="ri-error-warning-fill ri-2x me-3 text-danger"></i>
+          <div>
+            <p class="mb-0 small fw-medium">Voulez-vous vraiment supprimer cette réduction ?</p>
+            <p class="mb-0 small text-muted">Cette action est définitive et supprimera toutes les données associées.</p>
+          </div>
+        </div>
+        
+        <div class="glass-card p-4 text-center border-0">
+          <div class="bg-danger bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
+             <i class="ri-percent-line text-danger fs-3"></i>
+          </div>
+          <h5 class="fw-bold mb-1" id="discountToDeleteName">-</h5>
+          <p class="text-muted small mb-0">ID: <span id="discountToDeleteId">-</span></p>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light bg-opacity-50 px-4 py-3">
+        <button type="button" class="btn btn-light btn-rounded px-4" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-danger btn-rounded px-4" id="confirmDeleteDiscountBtn">
+          Confirmer la suppression
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-  
+  {% user_can_access 'crm' permission='delete' as has_delete_perm %}
+  const canDeleteRemise = {% if user.is_superuser or request.user.is_superuser or has_delete_perm %}true{% else %}false{% endif %};
+  console.log("has_delete_perm: {{ has_delete_perm }}, user.is_superuser: {{ user.is_superuser }}, request.user.is_superuser: {{ request.user.is_superuser }}, canDeleteRemise: " + canDeleteRemise);
   $(document).ready(function () {
     // Tableau pour stocker les prospects sélectionnés
     var selectedProspects = [];
@@ -786,8 +831,14 @@
 
           // Show activate button only for non-activated discounts
           if (!item.is_approuved) {
-            row += '<button class="btn btn-sm btn-soft-success btn-activate-discount d-inline-flex align-items-center justify-content-center" data-id="'+item.id+'" data-label="'+item.label+'" title="Approuver la réduction" alt="Approuver la réduction" style="width: 32px; height: 32px; border-radius: 8px;">';
+            row += '<button class="btn btn-sm btn-soft-success btn-activate-discount d-inline-flex align-items-center justify-content-center" data-id="'+item.id+'" data-label="'+item.label+'" title="Approuver la réduction" alt="Approuver la réduction" style="width: 32px; height: 32px; border-radius: 8px; margin-left: 0.5rem;">';
             row += '<i class="ri-check-double-line"></i>';
+            row += '</button>';
+          }
+
+          if (canDeleteRemise) {
+            row += '<button class="btn btn-sm btn-soft-danger btn-delete-discount d-inline-flex align-items-center justify-content-center" data-id="'+item.id+'" data-label="'+item.label+'" title="Supprimer la réduction" alt="Supprimer la réduction" style="width: 32px; height: 32px; border-radius: 8px; margin-left: 0.5rem;">';
+            row += '<i class="ri-delete-bin-line"></i>';
             row += '</button>';
           }
           row += '</div>';
@@ -1208,6 +1259,52 @@
         },
         error: function(xhr, status, error) {
           alert('Erreur lors de l\'activation de la réduction: ' + error);
+        }
+      });
+    });
+
+    // Handle delete discount button click (open modal)
+    $(document).on('click', '.btn-delete-discount', function() {
+      var discountId = $(this).data('id');
+      var discountLabel = $(this).data('label');
+      
+      // Populate modal with discount info
+      $('#discountToDeleteId').text(discountId);
+      $('#discountToDeleteName').text(discountLabel);
+      
+      // Store discount ID for deletion
+      $('#confirmDeleteDiscountBtn').data('id', discountId);
+      
+      // Show modal
+      $('#deleteDiscountModal').modal('show');
+    });
+
+    // Handle confirmation of discount deletion
+    $(document).on('click', '#confirmDeleteDiscountBtn', function() {
+      var discountId = $(this).data('id');
+      
+      $.ajax({
+        url: "{% url 't_crm:ApiDeleteRemiseAppliquer' %}",
+        type: 'POST',
+        data: {
+          'id': discountId,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+          if(response.status === 'success') {
+            if (typeof alertify !== 'undefined') {
+              alertify.success(response.message);
+            } else {
+              alert(response.message);
+            }
+            loadAppliedDiscounts();
+            $('#deleteDiscountModal').modal('hide');
+          } else {
+            alert('Erreur: ' + response.message);
+          }
+        },
+        error: function(xhr, status, error) {
+          alert('Erreur lors de la suppression: ' + error);
         }
       });
     });

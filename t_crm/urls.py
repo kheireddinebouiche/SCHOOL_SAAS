@@ -18,12 +18,13 @@ from .f_views.prospects import (
     ApiValidateProspectDouble, ApiUpdateProspectData,
     ApiCreateDoubleDiplomation, ApiLoadFicheVoeuxProspect, ApiLoadFicheVoeuxDoubleProspect,
     ApiConfirmeDoubleDiplome, ApiLoadDoubleDiplomations, ApiLoadDoubleSpecialite,
-    ApiUpdateDoubleVoeux, ApiChangeToStandardCursus,
+    ApiUpdateDoubleVoeux, ApiChangeToStandardCursus, ApiResetVoeuxProspectDouble, ApiResetVoeuxProspect,
     ApiLoadPromos, ApiCheckStatutProspect, ApiLoadFormationAndSpecialite,
     ApiLoadSpecialiteProspect, ApiUpdateVoeux, ApiCreateVoeux,
     ApiLoadNote, ApiStoreNote, ApiDeleteNote, ApiUpdateNote,
     ApiStoreRappel, ApiDeleteRappel, ApiUpdateRappel,
-    ApiLoadFormation, ApiLoadProspectFinancialHistory
+    ApiLoadFormation, ApiLoadProspectFinancialHistory,
+    ApiImportProspectsParticuliers, DownloadProspectsTemplate
 )
 from .f_views.prinscrits import (
     ListeDesPrinscrits, ApiLoadPrinscrits, DetailsPrinscrit,
@@ -59,7 +60,7 @@ from .f_views.remise import (
     ListeRemiseApplique, AipLoadRemise, ApiStoreApplicedReduction,
     ApiloadRemiseAppliquer, ApiLoadRemiseAppliquerDetails,
     ApiGetReductionDetails, ApiActivateRemiseAppliquer,
-    ApiLoadProspectParticulier
+    ApiLoadProspectParticulier, ApiDeleteRemiseAppliquer
 )
 from .f_views.counter import get_crm_counters, increment_crm_counter, get_activity_history
 from .f_views.logs import user_action_log_list, clear_logs
@@ -101,6 +102,8 @@ urlpatterns = [
     path('ApiFilterProspect', ApiFilterProspect, name="ApiFilterProspect"),
     path('ApiFilterPrinscrit', ApiFilterPrinscrit, name="ApiFilterPrinscrit"),
     path('ApiLoadFormation', ApiLoadFormation, name="ApiLoadFormation"),
+    path('api/import-prospects-particuliers/', ApiImportProspectsParticuliers, name='ApiImportProspectsParticuliers'),
+    path('api/download-prospects-template/', DownloadProspectsTemplate, name='DownloadProspectsTemplate'),
     path('details-prospect/<str:slug>/', DetailsProspect, name="DetailsProspect"),
     path('ApiLoadPromos', ApiLoadPromos, name="ApiLoadPromos"),
     #path('ApiLoadSpecialite', ApiLoadSpecialite, name="ApiLoadSpecialite"), 
@@ -125,6 +128,8 @@ urlpatterns = [
     path('ApiLoadDoubleSpecialite', ApiLoadDoubleSpecialite, name="ApiLoadDoubleSpecialite"),
     path('ApiUpdateDoubleVoeux',ApiUpdateDoubleVoeux, name="ApiUpdateDoubleVoeux"),
     path('ApiChangeToStandardCursus', ApiChangeToStandardCursus, name="ApiChangeToStandardCursus"),
+    path('ApiResetVoeuxProspectDouble', ApiResetVoeuxProspectDouble, name="ApiResetVoeuxProspectDouble"),
+    path('ApiResetVoeuxProspect', ApiResetVoeuxProspect, name="ApiResetVoeuxProspect"),
     ########################################## Fiche des voeux###################################################
     
 
@@ -238,6 +243,7 @@ urlpatterns = [
     path('ApiGetReductionDetails', ApiGetReductionDetails, name="ApiGetReductionDetails"),
 
     path('ApiActivateRemiseAppliquer', ApiActivateRemiseAppliquer, name="ApiActivateRemiseAppliquer"),
+    path('ApiDeleteRemiseAppliquer', ApiDeleteRemiseAppliquer, name="ApiDeleteRemiseAppliquer"),
 
     path('ApiCreateVoeuxDouble', ApiCreateVoeuxDouble, name="ApiCreateVoeuxDouble"),
     

@@ -593,7 +593,7 @@
             $('#totalMontantRembourse').text(formatComptable(totalMontantRembourse) + ' DA');
         }
 
-        function loadRemboursementsData() {
+        window.loadRemboursementsData = function() {
             $.ajax({
                 url: "{% url 't_tresorerie:ApiLoadRemboursements' %}",
                 dataType: 'JSON',
@@ -654,10 +654,14 @@
                     // Design the Financials (Montant) cell
                     var formatAmount = formatComptable(item.allowed_amount) + ' DA';
                     var totalPaye = formatComptable(item.total_paye) + ' DA';
+                    var totalAttente = formatComptable(item.total_attente || 0) + ' DA';
                     var financialHtml = '<div class="d-flex flex-column">' +
                                             '<span class="fw-bold text-danger" style="font-size: 0.95rem;">' + formatAmount + '</span>' +
-                                            '<span class="text-muted small" style="font-size: 0.75rem;">Total payé: ' + totalPaye + '</span>' +
-                                        '</div>';
+                                            '<span class="text-muted small" style="font-size: 0.75rem;">Total encaissé: ' + totalPaye + '</span>';
+                    if (item.total_attente > 0) {
+                        financialHtml += '<span class="text-warning small fw-bold" style="font-size: 0.70rem;" title="En attente d\'encaissement"><i class="ri-time-line me-1"></i>En attente: ' + totalAttente + '</span>';
+                    }
+                    financialHtml += '</div>';
 
                     // Design Date
                     var dateHtml = '<div class="d-flex align-items-center text-muted small">' +
@@ -674,14 +678,14 @@
 
                     // Design Payment Method
                     var methodHtml = '<div class="d-flex flex-column align-items-start gap-1"><span class="badge badge-soft-info d-inline-flex align-items-center gap-1 py-1.5 px-2.5 rounded-pill fw-semibold" style="font-size: 0.75rem;">' +
-                                         '<i class="ri-wallet-3-line"></i>' + (item.mode_rembourssement || '-') +
+                                         '<i class="ri-wallet-3-line me-1"></i>' + (item.mode_rembourssement || '-') +
                                      '</span>';
                     if (item.is_appliced) {
                         methodHtml += '<span class="badge badge-soft-success d-inline-flex align-items-center gap-1 py-1 px-2 rounded-pill fw-semibold" style="font-size: 0.70rem;" title="La dépense a été déclenchée pour ce remboursement">' +
-                                      '<i class="ri-checkbox-circle-line"></i>Dépense déclenchée</span>';
+                                      '<i class="ri-checkbox-circle-line me-1"></i>Dépense déclenchée</span>';
                     } else if (item.is_done) {
                         methodHtml += '<span class="badge badge-soft-warning d-inline-flex align-items-center gap-1 py-1 px-2 rounded-pill fw-semibold" style="font-size: 0.70rem;" title="En attente de déclenchement de la dépense">' +
-                                      '<i class="ri-time-line"></i>Attente dépense</span>';
+                                      '<i class="ri-time-line me-1"></i>Attente dépense</span>';
                     }
                     methodHtml += '</div>';
 
@@ -711,11 +715,14 @@
                     // Action Column
                     html += '<td class="text-center pe-4" style="min-width: 120px;">';
                     html += '  <div class="d-flex justify-content-center gap-2">';
-                    html += '    <a href="' + remboursementUrlBase + remboursementId + '" class="btn-action-premium" data-bs-toggle="tooltip" data-bs-placement="top" title="Détails" onclick="event.stopPropagation();">';
-                    html += '      <i class="ri-eye-line"></i>';
-                    html += '    </a>';
-                    
-                    if ((item.etat_key === 'acp' || item.etat_key === 'enc') && !item.is_done) {
+                    if (item.etat_key !== 'enc') {
+                        html += '    <a href="' + remboursementUrlBase + remboursementId + '" class="btn-action-premium" data-bs-toggle="tooltip" data-bs-placement="top" title="Détails" onclick="event.stopPropagation();">';
+                        html += '      <i class="ri-eye-line"></i>';
+                        html += '    </a>';
+                    } else {
+                        html += '    <span class="badge badge-soft-warning py-1 px-2 d-inline-flex align-items-center gap-1" style="font-size: 0.70rem;"><i class="ri-time-line"></i>En attente de traitement</span>';
+                    }
+                    if (item.etat_key === 'acp' && !item.is_done) {
                         html += '    <button class="btn-action-premium btn-premium-success btn-effectuer-remboursement" ';
                         html += '      data-bs-toggle="tooltip" data-bs-placement="top" title="Effectuer le remboursement" ';
                         html += '      data-amount="' + item.allowed_amount + '" ';
@@ -1076,7 +1083,7 @@
 </div>
 
 <!-- Modal Demande de Remboursement -->
-<div class="modal fade refundModal" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal fade" id="refundModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 shadow-lg border-0 overflow-hidden">
             <div class="modal-body p-4 p-md-5">
@@ -1210,9 +1217,15 @@
                                         </td>
                                         <td style="min-width: 180px;">
                                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                                <span class="text-muted small">Total payé:</span>
+                                                <span class="text-muted small">Total encaissé:</span>
                                                 <span class="text-success fw-bold">${p.total_paye.toLocaleString('fr-FR')} DA</span>
                                             </div>
+                                            ${p.total_attente > 0 ? `
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="text-muted small" title="En attente d'encaissement"><i class="ri-time-line me-1"></i>En attente:</span>
+                                                <span class="text-warning fw-bold">${p.total_attente.toLocaleString('fr-FR')} DA</span>
+                                            </div>
+                                            ` : ''}
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <span class="text-muted small">Reste à payer:</span>
                                                 <span class="text-danger fw-bold">${p.total_due.toLocaleString('fr-FR')} DA</span>
@@ -1222,7 +1235,7 @@
                                             ${badgeFacture}
                                         </td>
                                         <td class="text-end">
-                                            <button type="button" class="btn ${p.total_paye > 0 ? 'btn-primary' : 'btn-secondary'} rounded-pill btn-sm px-3 shadow-sm d-inline-flex align-items-center btn-demander-rembourssement" data-client="${p.id}" data-has-invoice="${p.has_invoice}" data-total-paye="${p.total_paye}" ${p.total_paye <= 0 ? 'disabled title="Aucun paiement effectué"' : ''}>
+                                            <button type="button" class="btn ${p.total_paye > 0 ? 'btn-primary' : 'btn-outline-secondary'} rounded-pill btn-sm px-3 shadow-sm d-inline-flex align-items-center btn-demander-rembourssement" data-client="${p.id}" data-has-invoice="${p.has_invoice}" data-total-paye="${p.total_paye}" data-total-attente="${p.total_attente || 0}" title="${p.total_paye <= 0 ? 'Confirmation sans montant' : 'Demander remboursement'}">
                                                 <span>Demander</span>
                                                 <i class="ri-arrow-right-s-line ms-1 fs-16"></i>
                                             </button>
@@ -1399,6 +1412,7 @@
             var clientId = $(this).data('client');
             var hasInvoice = $(this).data('has-invoice') === true || $(this).data('has-invoice') === "true";
             var totalPaye = parseFloat($(this).data('total-paye') || 0);
+            var totalAttente = parseFloat($(this).data('total-attente') || 0);
             
             $('#confirmRefundBtn').data('clientId', clientId);
             
@@ -1406,11 +1420,16 @@
                 ? '<span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill"><i class="ri-checkbox-circle-fill me-1 align-middle"></i>Paiements Facturés</span>' 
                 : '<span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill"><i class="ri-error-warning-fill me-1 align-middle"></i>Non facturés</span>';
                 
+            var attenteHtml = totalAttente > 0
+                ? `<div class="mt-2"><span class="text-warning small fw-bold" title="En attente d'encaissement"><i class="ri-time-line me-1 align-middle"></i>En attente: ${totalAttente.toLocaleString('fr-FR')} DA</span></div>`
+                : '';
+
             $('#refundModalPaymentInfo').html(`
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="text-muted small d-block text-uppercase fw-semibold mb-1" style="letter-spacing: 0.5px;">Montants déjà payés</span>
+                        <span class="text-muted small d-block text-uppercase fw-semibold mb-1" style="letter-spacing: 0.5px;">Montant encaissé</span>
                         <strong class="text-dark fs-5">${totalPaye.toLocaleString('fr-FR')} DA</strong>
+                        ${attenteHtml}
                     </div>
                     <div>
                         ${invoiceHtml}
@@ -1419,7 +1438,7 @@
             `);
             
             $('#searchProspectModal').modal('hide'); // Close the search modal
-            $('.refundModal').modal('show'); // Open the refund reason modal
+            $('#refundModal').modal('show'); // Open the refund reason modal
         });
 
         // Confirmation de remboursement
@@ -1450,7 +1469,24 @@
                     if(response.status === "success"){
                         alertify.success("La demande de remboursement à été envoyée avec succès");
                         loadRemboursementsData();
-                        $('.refundModal').modal('hide');
+                        
+                        // Fermeture robuste de la modale Bootstrap 5
+                        var refundModalEl = document.getElementById('refundModal');
+                        if (refundModalEl) {
+                            var modalInstance = bootstrap.Modal.getInstance(refundModalEl);
+                            if (modalInstance) {
+                                modalInstance.hide();
+                            } else {
+                                $('#refundModal').modal('hide');
+                            }
+                        } else {
+                            $('#refundModal').modal('hide');
+                        }
+                        
+                        // Nettoyage forcé du backdrop au cas où
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('padding-right', '');
+                        
                         $('#refundReason').val(''); // Clear the reason field
                     }else{
                         alertify.error("Une erreur c'est produite lors du traitement de la requete");

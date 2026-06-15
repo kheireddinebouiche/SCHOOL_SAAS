@@ -1,0 +1,380 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %} Suivi des chèques et virements émis - Trésorerie {% endblock title %}
+
+{% block content %}
+<style>
+    /* Premium Look & Feel - Strictly Harmonized */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+
+    .badge-soft-primary { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .badge-soft-success { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .badge-soft-danger { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .badge-soft-warning { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .badge-soft-info { background-color: rgba(6, 182, 212, 0.1); color: #0891b2; }
+
+    .table thead th {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.025em;
+        border-top: none;
+        padding: 1rem;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8fafc;
+        transition: background-color 0.2s ease;
+    }
+
+    .btn-rounded { border-radius: 0.75rem; }
+
+    .icon-container-premium {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+    }
+
+    /* Empty State */
+    .empty-state-container {
+        display: none;
+        animation: fadeInUp 0.4s ease;
+    }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .empty-state-icon-wrapper {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(99,102,241,0.15));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        border: 2px dashed rgba(99,102,241,0.25);
+    }
+    .empty-state-icon-wrapper i {
+        font-size: 3rem;
+        background: linear-gradient(135deg, #3b82f6, #6366f1);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .empty-state-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+    }
+    .empty-state-subtitle {
+        color: #94a3b8;
+        font-size: 0.95rem;
+        max-width: 380px;
+        margin: 0 auto 1.75rem;
+        line-height: 1.6;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            <!-- start page title -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="glass-card mb-4 p-4 border-0">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-container-premium bg-soft-primary me-3">
+                                    <i class="ri-article-line fs-2 text-primary"></i>
+                                </div>
+                                <div>
+                                    <h4 class="mb-1 fw-bold text-dark">Suivi des chèques et virements émis</h4>
+                                    <p class="text-muted mb-0">Traçabilité des sorties de fonds de leur émission à leur encaissement</p>
+                                </div>
+                            </div>
+                            <div class="d-none d-md-block">
+                                <nav aria-label="breadcrumb">
+                                    <ol class="breadcrumb m-0 bg-transparent">
+                                        <li class="breadcrumb-item text-muted">Trésorerie</li>
+                                        <li class="breadcrumb-item text-muted">Banque</li>
+                                        <li class="breadcrumb-item active text-primary fw-semibold">Suivi des chèques et virements émis</li>
+                                    </ol>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- end page title -->
+
+            <!-- Filtres rapides -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card glass-card border-0">
+                        <div class="card-body p-2 p-md-3">
+                            <ul class="nav nav-pills" id="chequesTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active px-4 rounded-pill" data-bs-toggle="pill" data-statut="tous" type="button" role="tab">Tous</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link px-4 rounded-pill" data-bs-toggle="pill" data-statut="emis" type="button" role="tab">Émis</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link px-4 rounded-pill" data-bs-toggle="pill" data-statut="attente_signature" type="button" role="tab">En attente de signature</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link px-4 rounded-pill" data-bs-toggle="pill" data-statut="remis" type="button" role="tab">Remis</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link px-4 rounded-pill" data-bs-toggle="pill" data-statut="decaisse" type="button" role="tab">Décaissé</button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tableau -->
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card glass-card border-0">
+                        <div class="card-header bg-transparent border-0 p-4">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="ri-list-check-2 text-primary me-2 fs-4"></i>
+                                    <h5 class="card-title mb-0 fw-bold">Liste des chèques et virements</h5>
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    <button type="button" class="btn btn-soft-info btn-rounded" id="refreshBtn">
+                                        <i class="ri-refresh-line"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4 pt-0">
+                            <div id="tableWrapper">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0" id="chequesTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Bénéficiaire</th>
+                                                <th>Montant</th>
+                                                <th>Référence</th>
+                                                <th>Statut</th>
+                                                <th>Historique</th>
+                                                <th class="text-center">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="chequesTableBody">
+                                            <!-- Contenu chargé via AJAX -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <!-- Empty State -->
+                            <div class="empty-state-container text-center py-5" id="emptyStateContainer">
+                                <div class="empty-state-icon-wrapper">
+                                    <i class="ri-wallet-3-line"></i>
+                                </div>
+                                <h5 class="empty-state-title">Aucune opération trouvée</h5>
+                                <p class="empty-state-subtitle">
+                                    Il n'y a actuellement aucun chèque ni virement correspondant à ce statut.
+                                </p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Changer Statut -->
+<div class="modal fade" id="changeStatutModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary p-3">
+                <h5 class="modal-title text-white">Modifier l'état de l'opération</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="avatar-md mx-auto mb-3">
+                        <div class="avatar-title bg-soft-primary text-primary rounded-circle fs-24">
+                            <i class="ri-edit-line"></i>
+                        </div>
+                    </div>
+                    <p class="text-muted">Mettez à jour l'étape du cycle de vie de cette opération.</p>
+                </div>
+                <form id="changeStatutForm">
+                    <input type="hidden" id="chequeId" name="id">
+                    <div class="form-group mb-0">
+                        <label class="form-label fw-semibold">Nouvel état</label>
+                        <select class="form-select form-control-lg border-2" id="newStatut" name="statut" required>
+                            <option value="emis">Émis</option>
+                            <option value="attente_signature">En attente de signature</option>
+                            <option value="remis">Remis au bénéficiaire</option>
+                            <option value="decaisse">Décaissé</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light p-3">
+                <button type="button" class="btn btn-ghost-danger rounded-pill" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4" id="saveStatutBtn">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentStatut = 'tous';
+
+    function loadCheques() {
+        let tableBody = $('#chequesTableBody');
+        tableBody.html('<tr><td colspan="6" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Chargement en cours...</td></tr>');
+        $('#tableWrapper').show();
+        $('#emptyStateContainer').hide();
+        
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiListChequesEmis' %}",
+            type: "GET",
+            data: { statut: currentStatut },
+            success: function(data) {
+                if(data.length === 0) {
+                    $('#tableWrapper').hide();
+                    $('#emptyStateContainer').css('display', 'block');
+                } else {
+                    $('#tableWrapper').show();
+                    $('#emptyStateContainer').hide();
+                    
+                    let html = '';
+                    data.forEach(item => {
+                        let badgeClass = 'badge-soft-primary';
+                        if(item.statut === 'emis') badgeClass = 'bg-soft-info text-info';
+                        if(item.statut === 'attente_signature') badgeClass = 'bg-soft-warning text-warning';
+                        if(item.statut === 'remis') badgeClass = 'bg-soft-primary text-primary';
+                        if(item.statut === 'decaisse') badgeClass = 'bg-soft-success text-success';
+                        
+                        let formatMoney = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'DZD' }).format(item.montant).replace('DZD', 'DA');
+                        
+                        let history = `<small class="text-muted d-block"><i class="ri-calendar-event-line me-1"></i> Émis: ${item.date_emis || '-'}</small>`;
+                        if(item.date_attente) history += `<small class="text-muted d-block"><i class="ri-calendar-event-line me-1"></i> Signature: ${item.date_attente}</small>`;
+                        if(item.date_remis) history += `<small class="text-muted d-block"><i class="ri-calendar-event-line me-1"></i> Remis: ${item.date_remis}</small>`;
+                        if(item.date_decaisse) history += `<small class="text-muted d-block"><i class="ri-calendar-event-line me-1"></i> Décaissé: ${item.date_decaisse}</small>`;
+                        
+                        let beneficiaireInitials = (item.beneficiaire && item.beneficiaire.length >= 2) ? item.beneficiaire.substring(0, 2).toUpperCase() : 'IN';
+                        
+                        html += `
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0 avatar-xs me-2">
+                                            <div class="avatar-title bg-soft-info text-info rounded-circle font-size-12 fw-bold">
+                                                ${beneficiaireInitials}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold text-dark">${item.beneficiaire}</div>
+                                            <small class="text-muted">${item.entite || '-'}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="fw-bold">${formatMoney}</span></td>
+                                <td><code class="text-dark">${item.reference || '-'}</code></td>
+                                <td><span class="badge ${badgeClass}">${item.statut_label}</span></td>
+                                <td>${history}</td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-primary rounded-pill px-3 change-statut-btn shadow-sm" data-id="${item.id}" data-statut="${item.statut}">
+                                        <i class="ri-edit-line me-1"></i> Changer l'état
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    tableBody.html(html);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("AJAX Error:", error);
+                tableBody.empty();
+                $('#tableWrapper').hide();
+                $('#emptyStateContainer').css('display', 'block');
+                alertify.error('Erreur lors du chargement des données');
+            }
+        });
+    }
+
+    $(document).ready(function() {
+        loadCheques();
+
+        $('#refreshBtn').click(function() {
+            loadCheques();
+        });
+
+        // Gestion des onglets
+        $('#chequesTab button').on('click', function (e) {
+            currentStatut = $(this).data('statut');
+            loadCheques();
+        });
+
+        // Ouvrir modale changement statut
+        $(document).on('click', '.change-statut-btn', function() {
+            const id = $(this).data('id');
+            const statut = $(this).data('statut');
+            
+            $('#chequeId').val(id);
+            $('#newStatut').val(statut);
+            $('#changeStatutModal').modal('show');
+        });
+
+        // Sauvegarder statut
+        $('#saveStatutBtn').on('click', function() {
+            const id = $('#chequeId').val();
+            const statut = $('#newStatut').val();
+            
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Traitement...');
+
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiUpdateChequeStatut' %}",
+                type: "POST",
+                data: {
+                    id: id,
+                    statut: statut,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                success: function(res) {
+                    if(res.status === 'success') {
+                        alertify.success(res.message);
+                        $('#changeStatutModal').modal('hide');
+                        loadCheques();
+                    } else {
+                        alertify.error(res.message);
+                    }
+                },
+                complete: function() {
+                    $('#saveStatutBtn').prop('disabled', false).html('Enregistrer');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

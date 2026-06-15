@@ -6,6 +6,7 @@ from institut_app.models import *
 from django.contrib import messages
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
+from institut_app.decorators import module_permission_required
 from t_groupe.models import *
 from t_etudiants.models import *
 from django.db.models import Count, Q, Value, CharField
@@ -14,6 +15,7 @@ from django.core.paginator import Paginator
 from datetime import datetime, timedelta
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def PageSuivieCours(request):
     groupe_id = request.GET.get('groupe_id', '')
     search_query = request.GET.get('q', '')
@@ -70,6 +72,7 @@ def PageSuivieCours(request):
     return render(request, 'tenant_folder/timetable/avancement/suivie_cours.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ApiGetCours(request):
     groupe_id = request.GET.get('groupe_id')
     search_query = request.GET.get('q')
@@ -102,6 +105,7 @@ def ApiGetCours(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'add')
 @transaction.atomic
 def ApiAddSeance(request):
     if request.method == "POST":
@@ -130,6 +134,7 @@ def ApiAddSeance(request):
         return JsonResponse({"status":"error",'message':"Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ApiHistoriqueCours(request):
     if request.method == "GET":
         moduleId = request.GET.get('moduleId')
@@ -227,6 +232,7 @@ def ApiHistoriqueCours(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 @transaction.atomic
 def ApiUpdateSeanceNotes(request):
     if request.method == "POST":

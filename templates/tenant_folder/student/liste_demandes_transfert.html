@@ -1,9 +1,11 @@
 {% extends 'tenant_folder/base.html' %}
 {% load static %}
+{% load permissions_tags %}
 
 {% block title %} Scolarité - Demandes de transfert {% endblock %}
 
 {% block content %}
+{% user_can_access 'scol' 'delete' as can_delete_scolarite %}
 <style>
     :root {
         --card-border-color: rgba(226, 232, 240, 0.8);
@@ -168,6 +170,14 @@
                                                      <button class="btn btn-sm btn-soft-secondary" title="Détails" data-bs-toggle="collapse" data-bs-target="#reason-{{ demande.id }}">
                                                          <i class="ri-information-line"></i>
                                                      </button>
+                                                     {% if can_delete_scolarite or request.user.is_superuser %}
+                                                     <button class="btn btn-sm btn-soft-danger btn-delete-request" 
+                                                             data-id="{{ demande.id }}" 
+                                                             data-name="{{ demande.student.nom }} {{ demande.student.prenom }}"
+                                                             title="Supprimer la demande">
+                                                         <i class="ri-delete-bin-line"></i>
+                                                     </button>
+                                                     {% endif %}
                                                  </div>
                                              </td>
                                          </tr>
@@ -442,6 +452,43 @@
                     $btn.prop('disabled', false).html(originalText);
                 }
             });
+        });
+
+        // Handle delete request
+        $(document).on('click', '.btn-delete-request', function() {
+            const requestId = $(this).data('id');
+            const studentName = $(this).data('name');
+            const $btn = $(this);
+            
+            alertify.confirm("Suppression", `Voulez-vous vraiment supprimer la demande de transfert pour l'étudiant <b>${studentName}</b> ?`, 
+                function() {
+                    const originalHtml = $btn.html();
+                    $btn.prop('disabled', true).html('<i class="ri-loader-4-line ri-spin"></i>');
+                    
+                    $.ajax({
+                        url: '{% url "t_etudiants:ApiDeleteTransferRequest" %}',
+                        type: 'POST',
+                        data: {
+                            'request_id': requestId,
+                            'csrfmiddlewaretoken': '{{ csrf_token }}'
+                        },
+                        success: function(res) {
+                            if (res.status === 'success') {
+                                alertify.success(res.message);
+                                setTimeout(() => location.reload(), 1000);
+                            } else {
+                                alertify.error(res.message);
+                                $btn.prop('disabled', false).html(originalHtml);
+                            }
+                        },
+                        error: function() {
+                            alertify.error("Une erreur s'est produite lors de la suppression.");
+                            $btn.prop('disabled', false).html(originalHtml);
+                        }
+                    });
+                }, 
+                null
+            ).set('labels', {ok: 'Oui, supprimer', cancel: 'Annuler'});
         });
     });
 </script>

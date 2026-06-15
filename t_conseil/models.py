@@ -129,6 +129,12 @@ class LignesDevis(models.Model):
     
 class Facture(models.Model):
     client = models.ForeignKey(Prospets, on_delete=models.CASCADE, help_text="Client facturé", null=True, blank=True)
+    
+    # Surcharge des coordonnées de facturation si le payeur est différent de l'étudiant
+    client_nom_override = models.CharField(max_length=255, null=True, blank=True, help_text="Nom du tiers payeur")
+    client_prenom_override = models.CharField(max_length=255, null=True, blank=True, help_text="Prénom du tiers payeur")
+    client_nin_override = models.CharField(max_length=255, null=True, blank=True, help_text="NIN du tiers payeur")
+    
     devis_source = models.ForeignKey(Devis, on_delete=models.SET_NULL, null=True, blank=True, related_name="facture")
     num_facture = models.CharField(max_length=50, unique=True, null=True, blank=True, help_text="Numéro de la facture")
     date_emission = models.DateField(null=True, blank=True)
@@ -368,6 +374,9 @@ class ConseilConfiguration(models.Model):
     stamp_duty_min = models.DecimalField(max_digits=10, decimal_places=2, default=5.00, help_text="Montant minimum du timbre (DZD)")
     stamp_duty_max = models.DecimalField(max_digits=10, decimal_places=2, default=10000.00, help_text="Plafond du timbre (DZD)")
     apply_stamp_duty_on_cash_only = models.BooleanField(default=True, help_text="Appliquer uniquement sur les paiements en espèces")
+    
+    # Compte bancaire par défaut (IBAN affiché sur facture)
+    compte_bancaire_defaut = models.ForeignKey('institut_app.BankAccount', on_delete=models.SET_NULL, null=True, blank=True, help_text="Compte bancaire par défaut pour les factures")
 
     class Meta:
         verbose_name = "Configuration Conseil"
@@ -438,7 +447,8 @@ class Participant(models.Model):
 
 class GroupeConseil(models.Model):
     nom = models.CharField(max_length=100, null=True, blank=True)
-    devis = models.ForeignKey(Devis, on_delete=models.CASCADE, related_name='groupes_conseil')
+    devis = models.ForeignKey(Devis, on_delete=models.CASCADE, related_name='groupes_conseil', null=True, blank=True)
+    facture = models.ForeignKey(Facture, on_delete=models.CASCADE, related_name='groupes_conseil', null=True, blank=True)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     
@@ -471,10 +481,28 @@ class GroupeConseilParticipant(models.Model):
     def __str__(self):
         return f"{self.groupe.nom} - {self.participant.nom} {self.participant.prenom}"
 
+class Consultant(models.Model):
+    nom = models.CharField(max_length=255)
+    prenom = models.CharField(max_length=255)
+    email = models.EmailField(null=True, blank=True)
+    telephone = models.CharField(max_length=20, null=True, blank=True)
+    specialite = models.CharField(max_length=255, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Consultant"
+        verbose_name_plural = "Consultants"
+
+    def __str__(self):
+        return f"{self.nom} {self.prenom}"
+
 class GroupeConseilThematique(models.Model):
     groupe = models.ForeignKey(GroupeConseil, on_delete=models.CASCADE, related_name='affectations_thematiques')
     thematique = models.ForeignKey(Thematiques, on_delete=models.CASCADE)
     formateur = models.ForeignKey('t_formations.Formateurs', on_delete=models.SET_NULL, null=True, blank=True)
+    consultant = models.ForeignKey(Consultant, on_delete=models.SET_NULL, null=True, blank=True)
     
     date_debut = models.DateField(null=True, blank=True)
     date_fin = models.DateField(null=True, blank=True)
@@ -484,19 +512,28 @@ class GroupeConseilThematique(models.Model):
         verbose_name_plural = "Affectations Thématiques Groupes Conseil"
 
     def __str__(self):
-        formateur_str = self.formateur if self.formateur else "Sans formateur"
+        if self.consultant:
+            formateur_str = f"Consultant: {self.consultant}"
+        elif self.formateur:
+            formateur_str = f"Formateur: {self.formateur}"
+        else:
+            formateur_str = "Sans intervenant"
         return f"{self.groupe.nom} - {self.thematique.label} ({formateur_str})"
 
 class GroupeConseilPlanning(models.Model):
     groupe = models.ForeignKey(GroupeConseil, on_delete=models.CASCADE, related_name='planning')
     thematique = models.ForeignKey(Thematiques, on_delete=models.CASCADE)
     formateur = models.ForeignKey('t_formations.Formateurs', on_delete=models.SET_NULL, null=True, blank=True)
+    consultant = models.ForeignKey(Consultant, on_delete=models.SET_NULL, null=True, blank=True)
     
     date = models.DateField()
     heure_debut = models.TimeField()
     heure_fin = models.TimeField()
     
     note = models.TextField(null=True, blank=True)
+    
+    realisee = models.BooleanField(default=False, help_text="La séance a bien été tenue")
+    resume_seance = models.TextField(null=True, blank=True, help_text="Éléments réellement abordés")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

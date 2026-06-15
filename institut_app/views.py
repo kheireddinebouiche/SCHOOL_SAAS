@@ -1,3 +1,5 @@
+from institut_app.decorators import superuser_required
+from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from decimal import Decimal, InvalidOperation
@@ -408,6 +410,7 @@ def FinanceDashboard(request):
     return render(request, 'tenant_folder/dashboard/finance_dash.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def pedago_dashboard(request):
     # KPIs
     total_groups = Groupe.objects.count()
@@ -604,10 +607,22 @@ def ForgotPasswordRequestView(request):
         
         if user:
             from .models import PasswordResetRequest
+            from institut_app.utils_notifications import send_notification_to_user
+            
             if PasswordResetRequest.objects.filter(user=user, is_active=True).exists():
                 return JsonResponse({'status': 'warning', 'message': 'Une demande est déjà en cours pour ce compte.'})
             
             PasswordResetRequest.objects.create(user=user)
+            
+            # Notifier les superutilisateurs en temps réel
+            superusers = User.objects.filter(is_superuser=True)
+            for su in superusers:
+                send_notification_to_user(
+                    user=su,
+                    message=f"L'utilisateur {user.username} a demandé la réinitialisation de son mot de passe.",
+                    link=""
+                )
+                
             return JsonResponse({'status': 'success', 'message': 'Votre demande a été envoyée à l\'administrateur. Veuillez patienter.'})
         else:
             return JsonResponse({'status': 'error', 'message': 'Utilisateur introuvable.'})
@@ -791,6 +806,7 @@ def ApiGetEntrepriseDetails(request):
     entreprise = Entreprise.objects.filter(id=id).values('id','designation','rc','nif','art','nis','adresse','telephone','wilaya','pays','email','site_web')
     return JsonResponse(list(entreprise), safe=False)
 
+@superuser_required
 def UsersListePage(request):
     context = {
         'tenant' : request.tenant,
@@ -798,10 +814,12 @@ def UsersListePage(request):
     return render(request, 'tenant_folder/users/liste_users.html', context)
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiListeUsers(request):
     users = User.objects.all().values('id','is_staff','email','username','date_joined','is_active')
     return JsonResponse(list(users), safe=False)
 
+@superuser_required
 def ApiGetDetailsProfile(request):
     id = request.GET.get('id')
     obj = User.objects.get(id = id)
@@ -812,6 +830,7 @@ def ApiGetDetailsProfile(request):
     else:
         return JsonResponse({'status' : 'error', 'message' : "Aucun profile trouvé pour l'utilisateur"})
     
+@superuser_required
 def ApiCreateProfile(request):
     id_user= request.POST.get('id_user')
     nom = request.POST.get('nom')
@@ -832,6 +851,7 @@ def ApiCreateProfile(request):
 
     return JsonResponse({'status' : 'success', 'message' : "Le profile de l'utilisateur crée avec succès"})
 
+@superuser_required
 def ApiDeactivateUser(request):
     id = request.GET.get('id')
     if id:
@@ -843,6 +863,7 @@ def ApiDeactivateUser(request):
     else:
         return JsonResponse({'status' : 'success', 'message' : "<i class='ri-shut-down-line'></i>Erreur"})
     
+@superuser_required
 def ApiActivateUser(request):
     id = request.GET.get('id')
     if id:
@@ -854,13 +875,16 @@ def ApiActivateUser(request):
     else:
         return JsonResponse({'status' : 'success', 'message' : "<i class='ri-shut-down-line'></i>Le compte utilisateur a été desactiver avec succès"})
     
+@superuser_required
 def ListGroupePage(request):
     return render(request, "tenant_folder/users/groupe_list.html", {'tenant' : request.tenant})
 
+@superuser_required
 def ApilistGroupe(request):
     liste = CustomGroupe.objects.all().values('id', 'name', 'description', 'created_at')
     return JsonResponse(list(liste), safe=False)
     
+@superuser_required
 def NewCustomGroupe(request):
     form = CustomGroupForm()
 
@@ -880,17 +904,20 @@ def NewCustomGroupe(request):
     }
     return render(request,'tenant_folder/users/nouveau_groupe.html', context)
 
+@superuser_required
 def ApiGetGroupFrom(request):
     form = CustomGroupForm()
     form_html = form.as_p()
     return JsonResponse({'form' : form_html})
 
+@superuser_required
 def ApiGetNewUserForm(request):
     form = CreateNewUserForm()
     html = render_to_string('tenant_folder/users/html/form_create_user.html', {'form': form}, request=request)
     return JsonResponse({'form' : html})
 
 @transaction.atomic
+@superuser_required
 def PageUpdateUserDetails(request, pk):
     obj = User.objects.get(id = pk)
     form = UserUpdateForm(instance=obj)
@@ -911,6 +938,7 @@ def PageUpdateUserDetails(request, pk):
         }
         return render(request, 'tenant_folder/users/update_user.html', context)
 
+@superuser_required
 def ApiSaveUser(request):
     if request.method == "POST":
         form = CreateNewUserForm(request.POST)
@@ -922,6 +950,7 @@ def ApiSaveUser(request):
     else:
         return JsonResponse({"success" : False, 'message' : "Erreur"})
 
+@superuser_required
 def ApiCheckUsernameDisponibility(request):
     username = request.GET.get('username')
     try:
@@ -932,6 +961,7 @@ def ApiCheckUsernameDisponibility(request):
     except:
          return JsonResponse({'status' : 'error'})
 
+@superuser_required
 def ApiGetUpdateGroupForm(request):
     id = request.GET.get('id')
     obj = CustomGroupe.objects.get(id = id)
@@ -939,6 +969,7 @@ def ApiGetUpdateGroupForm(request):
     form_html = form.as_p()
     return JsonResponse({'form' : form_html})
 
+@superuser_required
 def ApiSaveGroup(request):
     if request.method == 'POST':
         form = CustomGroupForm(request.POST)
@@ -951,6 +982,7 @@ def ApiSaveGroup(request):
         else:
             return JsonResponse({'success': False,"message": "Le rôle existe déja ! <br>Veuillez attribuer un nom diffents"})
 
+@superuser_required
 def ApiGetUserDetails(request):
     id = request.GET.get('id')
     try:
@@ -973,6 +1005,7 @@ def ApiGetUserDetails(request):
 
         return JsonResponse({'error' : 'Utilisateur non trouvé'})
 
+@superuser_required
 def ApiGetGroupeDetails(request):
     id = request.GET.get('id')
     try:
@@ -989,6 +1022,7 @@ def ApiGetGroupeDetails(request):
     except CustomGroupe.DoesNotExist:
         return JsonResponse({'error': 'Groupe non trouvé'}, status=404)
     
+@superuser_required
 def ApiDeleteGroup(request):
     id = request.GET.get('id')
     obj = CustomGroupe.objects.get(id = id)
@@ -1013,9 +1047,13 @@ def GetMyProfile(request):
                 'permissions': permissions
             })
 
+        from .models import Entreprise
+        entreprise = Entreprise.objects.first()
+
         context = {
             'obj': obj,
             'detailed_roles': detailed_roles,
+            'entreprise': entreprise,
         }
         return render(request, 'tenant_folder/users/mon-profile.html', context)
     
@@ -1026,10 +1064,13 @@ def GetMyProfile(request):
 @login_required(login_url='institut_app:login')    
 def UpdateMyProfile(request):
     form = UserProfileEditForm(instance=request.user)
+    profile_form = ProfileUpdateForm(instance=request.user.profile)
     if request.method == "POST":
-        form = UserProfileEditForm(request.POST, request.FILES, instance=request.user)
-        if form.is_valid():
+        form = UserProfileEditForm(request.POST, instance=request.user)
+        profile_form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user.profile)
+        if form.is_valid() and profile_form.is_valid():
             form.save()
+            profile_form.save()
             messages.success(request, "Votre profile a été mis à jour avec succès")
             return redirect('institut_app:profile')
         else:
@@ -1037,6 +1078,7 @@ def UpdateMyProfile(request):
 
     context ={
         'form' : form,
+        'profile_form': profile_form,
         'tenant' : request.tenant,
     }
 
@@ -1046,6 +1088,7 @@ def Error404(request):
     return render(request,'tenant_folder/not_authorized.html')
 
 @login_required(login_url='institut_app:login')
+@superuser_required
 def active_sessions_view(request):
     """
     List all active user sessions.
@@ -1078,6 +1121,7 @@ def active_sessions_view(request):
     return render(request, 'tenant_folder/users/active_sessions.html', context)
 
 @login_required(login_url='institut_app:login')
+@superuser_required
 def terminate_session_api(request):
     """
     API endpoint to manually terminate a user session.
@@ -1095,6 +1139,16 @@ def terminate_session_api(request):
                 us = UserSession.objects.get(last_session_key=session_key)
                 us.last_session_key = None
                 us.save(update_fields=["last_session_key"])
+                
+                from t_crm.models import UserActionLog
+                UserActionLog.objects.create(
+                    user=request.user,
+                    action_type='UPDATE',
+                    target_model='UserSession',
+                    target_id=str(us.user.id),
+                    details=f"Terminaison de la session pour l'utilisateur {us.user.username}",
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
                 
                 return JsonResponse({'status': 'success', 'message': 'Session terminée avec succès.'})
             return JsonResponse({'status': 'success', 'message': 'Session terminée avec succès.'})
@@ -1231,6 +1285,14 @@ def directeur_dashboard(request):
     # Derniers rappels
     recent_reminders = RendezVous.objects.filter(archived=False).select_related('prospect').order_by('-created_at')[:5]
 
+    # --- 6. Executive Education ---
+    from t_conseil.models import Devis, Facture, GroupeConseil
+    exec_prospects = Prospets.objects.filter(context='con').count()
+    exec_clients = Prospets.objects.filter(context='con', is_client=True).count()
+    exec_devis_attente = Devis.objects.filter(etat='attente').count()
+    exec_ca = Facture.objects.filter(type_facture='standard', etat='valide').aggregate(ca=Sum('lignes_facture__montant_ht'))['ca'] or 0
+    exec_groupes_enc = GroupeConseil.objects.filter(etat='enc').count()
+
     context = {
         'tenant': request.tenant,
         'kpis': {
@@ -1258,6 +1320,13 @@ def directeur_dashboard(request):
             'exam': {
                 'success_rate': round(success_rate, 1),
                 'pending_pvs': pending_pvs
+            },
+            'executive': {
+                'prospects': exec_prospects,
+                'clients': exec_clients,
+                'devis_attente': exec_devis_attente,
+                'ca': exec_ca,
+                'groupes_enc': exec_groupes_enc,
             }
         },
         # CRM Data Injection
@@ -1396,6 +1465,10 @@ def my_budget_campaigns(request):
     }
     return render(request, 'tenant_folder/budget/my_campaigns.html', context)
 @login_required(login_url="institut_app:login")
+@module_permission_required('ger','view')
+@module_permission_required('ger','add')
+@module_permission_required('ger','change')
+@role_required('ger', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def budget_campaign_dispatch(request, campaign_slug):
     """
     Matrix view for tenants to dispatch their global budget objective 
@@ -1670,6 +1743,10 @@ def budget_campaign_dispatch(request, campaign_slug):
     return render(request, 'tenant_folder/budget/dispatch_budget.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('ger','view')
+@module_permission_required('ger','add')
+@module_permission_required('ger','change')
+@role_required('ger', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def request_extension(request, campaign_slug):
     """
     View for institutes to request a budget extension (rallonge).
@@ -1843,10 +1920,15 @@ def request_extension(request, campaign_slug):
         'structured_postes': structured_postes,
         'entreprises': entreprises,
         'allocations': allocations,
+        'title': f"Demande de rallonge - {campaign.name}",
     }
     return render(request, 'tenant_folder/budget/request_extension.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('ger','view')
+@module_permission_required('ger','add')
+@module_permission_required('ger','change')
+@role_required('ger', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def budget_campaign_realization(request, campaign_slug):
     """
     Matrix view for tracking budget realization: shows planned allocations vs realized expenses/payments.

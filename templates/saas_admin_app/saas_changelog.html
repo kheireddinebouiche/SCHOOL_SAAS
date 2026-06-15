@@ -1,0 +1,175 @@
+{% extends 'saas_admin_app/saas_base.html' %}
+{% load static %}
+
+{% block title %} Gestion du Changelog {% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="glass-card p-4 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-box primary">
+                        <i class="ri-article-line"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-1 text-primary">Gestion du Journal des Mises à Jour</h4>
+                        <p class="text-muted mb-0 fs-13">Ajoutez et gérez les notes de version visibles par les écoles.</p>
+                    </div>
+                </div>
+                <div>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUpdateModal">
+                        <i class="ri-add-line me-1"></i> Ajouter une mise à jour
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="glass-card p-0 overflow-hidden">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-muted">
+                        <tr>
+                            <th scope="col" style="width: 15%">Version</th>
+                            <th scope="col" style="width: 25%">Titre</th>
+                            <th scope="col" style="width: 15%">Type</th>
+                            <th scope="col" style="width: 20%">Date de publication</th>
+                            <th scope="col" style="width: 15%">Statut</th>
+                            <th scope="col" style="width: 10%" class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for update in updates %}
+                        <tr>
+                            <td><span class="fw-medium text-dark">{{ update.version }}</span></td>
+                            <td><span class="text-dark">{{ update.title }}</span></td>
+                            <td>
+                                {% if update.update_type == 'bugfix' %}<span class="badge bg-danger-subtle text-danger border">Correction de Bug</span>{% endif %}
+                                {% if update.update_type == 'feature' %}<span class="badge bg-success-subtle text-success border">Nouvelle Fonctionnalité</span>{% endif %}
+                                {% if update.update_type == 'optimisation' %}<span class="badge bg-warning-subtle text-warning border">Optimisation</span>{% endif %}
+                                {% if update.update_type == 'security' %}<span class="badge bg-info-subtle text-info border">Sécurité</span>{% endif %}
+                                {% if update.update_type == 'other' %}<span class="badge bg-secondary-subtle text-secondary border">Autre</span>{% endif %}
+                            </td>
+                            <td><span class="text-muted">{{ update.date_published|date:"d M Y, H:i" }}</span></td>
+                            <td>
+                                {% if update.is_published %}
+                                <span class="badge bg-success-subtle text-success"><i class="ri-check-line me-1"></i>Publié</span>
+                                {% else %}
+                                <span class="badge bg-warning-subtle text-warning"><i class="ri-draft-line me-1"></i>Brouillon</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-soft-danger" onclick="deleteUpdate({{ update.id }})"><i class="ri-delete-bin-line"></i></button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <div class="text-muted">Aucune mise à jour publiée.</div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Create Update -->
+<div class="modal fade" id="createUpdateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-light border-bottom-0">
+                <h5 class="modal-title text-dark fw-bold">Ajouter une mise à jour</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="createUpdateForm">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium text-dark">Version</label>
+                            <input type="text" class="form-control bg-light border-0" id="up_version" name="version" placeholder="ex: v1.2.4" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium text-dark">Type de mise à jour</label>
+                            <select class="form-select bg-light border-0" id="up_type" name="update_type" required>
+                                <option value="bugfix">Correction de Bug</option>
+                                <option value="feature">Nouvelle Fonctionnalité</option>
+                                <option value="optimisation">Optimisation</option>
+                                <option value="security">Sécurité</option>
+                                <option value="other">Autre</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-medium text-dark">Titre</label>
+                            <input type="text" class="form-control bg-light border-0" id="up_title" name="title" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-medium text-dark">Description</label>
+                            <textarea class="form-control bg-light border-0" id="up_desc" name="description" rows="5" placeholder="Utilisez le Markdown ou du texte brut." required></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-top-0 bg-light">
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="submitUpdate()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function submitUpdate() {
+    let formData = new FormData(document.getElementById('createUpdateForm'));
+    formData.append('action', 'create');
+    
+    fetch("{% url 'saas_admin_app:saas_changelog_action' %}", {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.status === 'success') {
+            location.reload();
+        } else {
+            alert('Erreur lors de la création.');
+        }
+    });
+}
+
+function deleteUpdate(id) {
+    if(!confirm('Êtes-vous sûr de vouloir supprimer cette mise à jour ?')) return;
+    
+    let csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    let formData = new FormData();
+    formData.append('action', 'delete');
+    formData.append('id', id);
+    formData.append('csrfmiddlewaretoken', csrfToken);
+    
+    fetch("{% url 'saas_admin_app:saas_changelog_action' %}", {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.status === 'success') {
+            location.reload();
+        }
+    });
+}
+</script>
+{% endblock %}

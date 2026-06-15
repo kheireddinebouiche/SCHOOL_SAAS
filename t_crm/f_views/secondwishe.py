@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render,redirect
 from django.http import JsonResponse
 from ..models import *
@@ -52,6 +53,7 @@ def ApiDeleteSecondWish(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('crm', 'approuv')
 def ApiConfirmeSecondWish(request):
     id_prospect = request.POST.get('id_prospect')
     id_voeux_sup = request.POST.get('id_voeux_sup')

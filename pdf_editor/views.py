@@ -79,6 +79,13 @@ class TemplateListView(LoginRequiredMixin, ListView):
         if template_type:
             queryset = queryset.filter(template_type=template_type)
 
+        # Filtrer par statut
+        status = self.request.GET.get('status')
+        if status == 'active':
+            queryset = queryset.filter(is_active=True)
+        elif status == 'inactive':
+            queryset = queryset.filter(is_active=False)
+
         # Recherche par titre ou description
         search = self.request.GET.get('search')
         if search:
@@ -105,6 +112,12 @@ class TemplateDetailView(LoginRequiredMixin, DetailView):
     slug_field = 'slug'
     context_object_name = 'template'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from .variables import get_variables_for_type
+        context['template_variables'] = get_variables_for_type(self.object.template_type)
+        return context
+
 
 class TemplateCreateBasicView(LoginRequiredMixin, CreateView):
     """Crée un nouveau template - étape 1: informations de base"""
@@ -117,6 +130,17 @@ class TemplateCreateBasicView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.created_by = self.request.user
         response = super().form_valid(form)
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=self.request.user,
+            action_type='CREATE',
+            target_model='DocumentTemplate',
+            target_id=str(self.object.id),
+            details=f"Création (base) du template PDF: {self.object.title}",
+            ip_address=self.request.META.get('REMOTE_ADDR')
+        )
+
         # Redirect to the edit view to complete the template with content
         return redirect('pdf_editor:template-update', slug=self.object.slug)
 
@@ -130,7 +154,19 @@ class TemplateCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=self.request.user,
+            action_type='CREATE',
+            target_model='DocumentTemplate',
+            target_id=str(self.object.id),
+            details=f"Création complète du template PDF: {self.object.title}",
+            ip_address=self.request.META.get('REMOTE_ADDR')
+        )
+        
+        return response
 
 
 class TemplateUpdateView(LoginRequiredMixin, UpdateView):
@@ -148,6 +184,21 @@ class TemplateUpdateView(LoginRequiredMixin, UpdateView):
         context['template_variables'] = get_variables_for_type(self.object.template_type)
         return context
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=self.request.user,
+            action_type='UPDATE',
+            target_model='DocumentTemplate',
+            target_id=str(self.object.id),
+            details=f"Mise à jour du template PDF: {self.object.title}",
+            ip_address=self.request.META.get('REMOTE_ADDR')
+        )
+        
+        return response
+
 
 class TemplateDeleteView(LoginRequiredMixin, DeleteView):
     """Supprime un template"""
@@ -156,6 +207,34 @@ class TemplateDeleteView(LoginRequiredMixin, DeleteView):
     template_name = 'documents/template_confirm_delete.html'
     slug_field = 'slug'
     success_url = reverse_lazy('pdf_editor:template-list')
+
+    def form_valid(self, form):
+        # Pour Django 4+ où delete() utilise form_valid
+        obj = self.get_object()
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=self.request.user,
+            action_type='DELETE',
+            target_model='DocumentTemplate',
+            target_id=str(obj.id),
+            details=f"Suppression du template PDF: {obj.title}",
+            ip_address=self.request.META.get('REMOTE_ADDR')
+        )
+        return super().form_valid(form)
+
+    def delete(self, request, *args, **kwargs):
+        # Pour compatibilité avec les anciennes versions de Django
+        obj = self.get_object()
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=self.request.user,
+            action_type='DELETE',
+            target_model='DocumentTemplate',
+            target_id=str(obj.id),
+            details=f"Suppression du template PDF: {obj.title}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        return super().delete(request, *args, **kwargs)
 
 
 class DocumentGenerationView(LoginRequiredMixin, View):
@@ -175,14 +254,17 @@ class DocumentGenerationView(LoginRequiredMixin, View):
         form = DocumentGenerationForm(request.POST)
         
         if form.is_valid():
-            # Préparer les données de contexte
-            context_data = {
-                'recipient_name': form.cleaned_data.get('recipient_name', ''),
-                'recipient_email': form.cleaned_data.get('recipient_email', ''),
-                'document_date': form.cleaned_data.get('document_date', ''),
-                'company_name': 'SALDAE SYSTEMS',  # À personnaliser
-                'current_user': request.user.get_full_name() or request.user.username,
-            }
+            # Préparer les données de contexte avec Mock
+            from .utils import get_mock_context_for_type
+            context_data = get_mock_context_for_type(template_obj.template_type)
+            
+            # Surcharger avec les données du formulaire si fournies
+            if form.cleaned_data.get('recipient_name'):
+                context_data['recipient_name'] = form.cleaned_data.get('recipient_name')
+            if form.cleaned_data.get('recipient_email'):
+                context_data['recipient_email'] = form.cleaned_data.get('recipient_email')
+            if form.cleaned_data.get('document_date'):
+                context_data['document_date'] = form.cleaned_data.get('document_date').strftime("%d/%m/%Y")
             
             # Rendre le template Django
             try:

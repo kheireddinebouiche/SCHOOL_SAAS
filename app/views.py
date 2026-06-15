@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from institut_app.decorators import module_permission_required
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from .form import *
@@ -221,6 +222,7 @@ from institut_app.models import Notification
 from app.models import TenantMessage
 
 @login_required
+@module_permission_required('rel', 'view')
 def tenant_comm_hub(request):
     current_tenant = request.tenant
     
@@ -238,7 +240,7 @@ def tenant_comm_hub(request):
 from django.http import JsonResponse
 
 @login_required
-@login_required
+@module_permission_required('rel', 'view')
 def tenant_comm_detail(request, tenant_id):
     current_tenant = request.tenant
     target_tenant = get_object_or_404(Institut, id=tenant_id)
@@ -404,6 +406,7 @@ def tenant_comm_detail(request, tenant_id):
     return render(request, 'tenant_folder/communication/inter_tenant_hub.html', context)
 
 @login_required
+@module_permission_required('rel', 'view')
 def tenant_comm_global(request):
     current_tenant = request.tenant
     
@@ -569,3 +572,14 @@ def tenant_comm_global(request):
     return render(request, 'tenant_folder/communication/inter_tenant_hub.html', context)
     
 
+
+
+from saas_admin_app.models import SystemUpdate
+@login_required(login_url='institut_app:login')
+def tenant_changelog_view(request):
+    if not request.user.is_superuser:
+        messages.error(request, 'Accès non autorisé.')
+        return redirect('/')
+    updates = SystemUpdate.objects.filter(is_published=True)
+    context = {'tenant': request.tenant, 'updates': updates}
+    return render(request, 'tenant_folder/changelog.html', context)

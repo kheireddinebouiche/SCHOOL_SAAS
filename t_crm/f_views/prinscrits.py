@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render,redirect
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -20,7 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from .generate_paiements import ApiGeneratePaiementRequest
 from django.db.models import Q, Sum
 from django.urls import reverse
-from institut_app.utils_notifications import send_notification_to_module_level
+from institut_app.utils_notifications import send_notification_to_module_level, send_notification_to_user
 from institut_app.models import GlobalConfiguration
 from django.core.paginator import Paginator
 
@@ -28,9 +29,13 @@ from django.core.paginator import Paginator
 @login_required(login_url='institut_app:login')
 def ListeDesPrinscrits(request):
     promos = Promos.objects.filter(is_archived=False).order_by('-begin_year')
+    specialites = Specialites.objects.all()
+    double_specialites = DoubleDiplomation.objects.all()
     context = {
         'tenant' : request.tenant,
         'promos': promos,
+        'specialites': specialites,
+        'double_specialites': double_specialites,
     }
 
     return render(request,'tenant_folder/crm/preinscrits/liste-des-preinscrits.html', context)
@@ -90,6 +95,7 @@ def ApiLoadPrinscrits(request):
     month_filter = request.GET.get('month')
     search_term = request.GET.get('search', '').strip().lower() if request.GET.get('search') else ''
     client_type = request.GET.get('client_type')
+    specialite_id = request.GET.get('specialite')
     sort_order = request.GET.get('sort', 'nom_asc')
     page_number = request.GET.get('page', 1)
     page_size = 10
@@ -133,6 +139,18 @@ def ApiLoadPrinscrits(request):
             qs = qs.filter(Q(entreprise__isnull=True) | Q(entreprise=''))
         elif client_type == 'entreprise':
             qs = qs.exclude(Q(entreprise__isnull=True) | Q(entreprise=''))
+
+    # Specialite filter
+    if specialite_id:
+        if specialite_id.startswith('d_'):
+            s_id = specialite_id[2:]
+            qs = qs.filter(
+                prospect_fiche_voeux_double__specialite_id=s_id
+            ).distinct()
+        else:
+            qs = qs.filter(
+                prospect_fiche_voeux__specialite_id=specialite_id
+            ).distinct()
 
     # Dynamic sorting
     if sort_order == 'nom_desc':
@@ -1308,6 +1326,7 @@ def ApiReactivatePreinscrit(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('crm', 'approuv')
 def ApiValidatePreinscrit(request):
     id_preinscrit = request.GET.get('id_preinscrit')
 
@@ -1339,13 +1358,17 @@ def ApiValidatePreinscrit(request):
         preinscrit.instance_date = now()
         preinscrit.save()
 
-        # Envoi de notification au module Trésorerie (utilisateur, superviseur, manager)
+        # Envoi de notification au module Trésorerie
         message = _("Une nouvelle demande de paiement a été créée pour {} {}").format(preinscrit.nom, preinscrit.prenom)
         link = reverse('t_tresorerie:attentes_de_paiements')
         
         config = GlobalConfiguration.get_solo()
         if config.crm_notifications_enabled:
-            send_notification_to_module_level('tre', [1, 2, 3], message, link=link)
+            if config.payment_notification_mode == 'specific':
+                for receiver in config.payment_notification_receivers.all():
+                    send_notification_to_user(receiver, message, link)
+            else:
+                send_notification_to_module_level('tre', [1, 2, 3], message, link=link)
 
         return JsonResponse({'status': "success", "message": "La validation a été effectuée avec succès"})
     except Exception as e:
@@ -1550,4 +1573,4 @@ def SearchProspectPreinscrit(request):
 
     return render(request, 'tenant_folder/crm/search_prospect_preinscrit.html', {'tenant': request.tenant})
 
-
+

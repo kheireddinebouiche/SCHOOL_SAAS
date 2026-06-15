@@ -22,6 +22,7 @@ class Stage(models.Model):
     sujet = models.CharField(max_length=500)
     problematique = models.TextField(null=True, blank=True)
     plan_previsionnel = models.TextField(null=True, blank=True)
+    organisme_accueil = models.CharField(max_length=255, null=True, blank=True, help_text="Entreprise ou organisme accueillant les stagiaires")
     
     date_debut = models.DateField(null=True, blank=True)
     date_fin = models.DateField(null=True, blank=True)
@@ -37,10 +38,15 @@ class Stage(models.Model):
         verbose_name_plural = "Stages"
 
     def __str__(self):
-        membres = f"{self.etudiant1}"
-        if self.etudiant2:
-            membres += f" & {self.etudiant2}"
-        return f"{membres} - {self.sujet[:50]}..."
+        try:
+            if self.pk:
+                noms = [str(e) for e in self.etudiants.all()]
+                membres = " & ".join(noms) if noms else "Aucun étudiant"
+            else:
+                membres = "Nouveau stage"
+            return f"{membres} - {self.sujet[:50]}..."
+        except Exception:
+            return f"Stage - {self.sujet[:50]}..."
 
 class FocusGroup(models.Model):
     nom = models.CharField(max_length=255)
@@ -69,7 +75,11 @@ class SeanceFocusGroup(models.Model):
         verbose_name_plural = "Séances Focus Groups"
 
     def __str__(self):
-        return f"Séance {self.focus_group.nom} du {self.date_seance.strftime('%d/%m/%Y')}"
+        if hasattr(self.date_seance, 'strftime'):
+            date_str = self.date_seance.strftime('%d/%m/%Y')
+        else:
+            date_str = str(self.date_seance)[:10] if self.date_seance else "inconnue"
+        return f"Séance {self.focus_group.nom} du {date_str}"
 
 class PresentationProgressive(models.Model):
     CHOICES_ETAPE = [
@@ -101,16 +111,31 @@ class PresentationProgressive(models.Model):
         return f"P{self.etape} - {self.stage}"
 
 class ConseilValidation(models.Model):
+    CHOICES_STATUT = [
+        ('ouvert', 'Ouvert'),
+        ('cloture', 'Clôturé')
+    ]
     date_conseil = models.DateField()
     observations_generales = models.TextField(null=True, blank=True)
+    statut = models.CharField(max_length=10, choices=CHOICES_STATUT, default='ouvert')
+    stages = models.ManyToManyField(Stage, related_name='conseils_validation', blank=True)
+    focus_groups = models.ManyToManyField('FocusGroup', related_name='conseils_validation', blank=True)
     
     class Meta:
         verbose_name = "Conseil de Validation"
         verbose_name_plural = "Conseils de Validation"
 
     def __str__(self):
-        return f"Conseil du {self.date_conseil.strftime('%d/%m/%Y')}"
-
+        if isinstance(self.date_conseil, str):
+            try:
+                from datetime import datetime
+                d = datetime.strptime(self.date_conseil, '%Y-%m-%d').date()
+                return f"Conseil du {d.strftime('%d/%m/%Y')}"
+            except ValueError:
+                return f"Conseil du {self.date_conseil}"
+        elif self.date_conseil:
+            return f"Conseil du {self.date_conseil.strftime('%d/%m/%Y')}"
+        return "Conseil de Validation"
 class DecisionConseil(models.Model):
     CHOICES_DECISION = [
         ('soutenable', 'Soutenable (Lancement de la soutenance officielle)'),
@@ -130,3 +155,55 @@ class DecisionConseil(models.Model):
 
     def __str__(self):
         return f"Décision {self.stage} : {self.get_decision_display()}"
+
+
+class BulletinStage(models.Model):
+    groupe = models.ForeignKey(Groupe, on_delete=models.CASCADE, related_name='bulletins_stage')
+    etudiant = models.ForeignKey(Prospets, on_delete=models.CASCADE, related_name='bulletins_stage')
+    moyenne_ponderee = models.FloatField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Bulletin Examen Final (Stage)"
+        verbose_name_plural = "Bulletins Examens Finaux (Stage)"
+        unique_together = ['groupe', 'etudiant']
+
+    def __str__(self):
+        return f"Bulletin {self.etudiant} - {self.groupe}"
+
+
+class NoteBulletinStage(models.Model):
+    bulletin = models.ForeignKey(BulletinStage, on_delete=models.CASCADE, related_name='notes')
+    module = models.ForeignKey('t_formations.Modules', on_delete=models.CASCADE)
+    valeur = models.FloatField(null=True, blank=True, help_text="Note sur 20")
+    coefficient = models.IntegerField(default=1)
+    valeur_ponderee = models.FloatField(null=True, blank=True, help_text="Note * Coefficient")
+
+    class Meta:
+        verbose_name = "Note Examen Final (Stage)"
+        verbose_name_plural = "Notes Examens Finaux (Stage)"
+        unique_together = ['bulletin', 'module']
+
+    def save(self, *args, **kwargs):
+        if self.valeur is not None and self.coefficient is not None:
+            self.valeur_ponderee = self.valeur * self.coefficient
+        else:
+            self.valeur_ponderee = None
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Note {self.module} - {self.bulletin.etudiant}"
+
+class StageDocumentHistory(models.Model):
+    stage = models.ForeignKey(Stage, on_delete=models.CASCADE, related_name='document_history')
+    document = models.ForeignKey('pdf_editor.DocumentGeneration', on_delete=models.CASCADE, related_name='+')
+    target_info = models.CharField(max_length=255, help_text="Cible de l'impression (Ex: Tout le binôme, ou Nom de l'étudiant)")
+    date_generation = models.DateTimeField(auto_now_add=True)
+    generated_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        ordering = ['-date_generation']
+
+    def __str__(self):
+        return f"{self.document.template.title} pour {self.stage} le {self.date_generation}"

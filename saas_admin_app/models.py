@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.contrib.auth.models import User
 
 class SaaSEmailConfiguration(models.Model):
     """Configuration email globale pour le SaaS Admin (schéma public)."""
@@ -48,7 +49,15 @@ class SaaSEmailConfiguration(models.Model):
         settings.EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
         settings.EMAIL_HOST = self.email_host
         settings.EMAIL_PORT = self.email_port
-        settings.EMAIL_USE_TLS = self.email_use_tls
+        
+        # Gestion automatique du SSL vs TLS en fonction du port
+        if int(self.email_port) == 465:
+            settings.EMAIL_USE_SSL = True
+            settings.EMAIL_USE_TLS = False
+        else:
+            settings.EMAIL_USE_SSL = False
+            settings.EMAIL_USE_TLS = self.email_use_tls
+            
         settings.EMAIL_HOST_USER = self.email_host_user
         settings.EMAIL_HOST_PASSWORD = self.email_host_password
         settings.DEFAULT_FROM_EMAIL = self.default_from_email
@@ -177,3 +186,73 @@ class KnowledgeResource(models.Model):
 
     def __str__(self):
         return self.title
+
+class SystemUpdate(models.Model):
+    UPDATE_TYPES = (
+        ('bugfix', 'Correction de Bug'),
+        ('feature', 'Nouvelle Fonctionnalité'),
+        ('optimisation', 'Optimisation'),
+        ('security', 'Sécurité'),
+        ('other', 'Autre'),
+    )
+
+    version = models.CharField(max_length=50, verbose_name="Version", help_text="ex: v1.2.4")
+    title = models.CharField(max_length=255, verbose_name="Titre")
+    description = models.TextField(verbose_name="Description détaillée")
+    update_type = models.CharField(max_length=20, choices=UPDATE_TYPES, default='bugfix', verbose_name="Type de mise à jour")
+    date_published = models.DateTimeField(verbose_name="Date de publication")
+    is_published = models.BooleanField(default=True, verbose_name="Est publié")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Mise à jour Système (Changelog)"
+        verbose_name_plural = "Mises à jour Système"
+        ordering = ['-date_published', '-created_at']
+
+    def __str__(self):
+        return f"{self.version} - {self.title}"
+
+
+class SystemAnnouncement(models.Model):
+    TARGET_ALL = 'all'
+    TARGET_TENANT = 'tenant'
+    TARGET_USER = 'user'
+    
+    TARGET_CHOICES = [
+        (TARGET_ALL, 'Tous les utilisateurs'),
+        (TARGET_TENANT, 'Utilisateurs d\'un Tenant spécifique'),
+        (TARGET_USER, 'Un utilisateur spécifique dans un Tenant'),
+    ]
+    
+    title = models.CharField(max_length=255, verbose_name="Titre")
+    message = models.TextField(verbose_name="Message")
+    target_type = models.CharField(max_length=20, choices=TARGET_CHOICES, default=TARGET_ALL, verbose_name="Cible")
+    
+    target_tenant = models.ForeignKey('app.Institut', on_delete=models.CASCADE, null=True, blank=True, verbose_name="Tenant ciblé")
+    target_user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Utilisateur ciblé")
+    
+    is_active = models.BooleanField(default=True, verbose_name="Actif")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Annonce Système"
+        verbose_name_plural = "Annonces Système"
+
+    def __str__(self):
+        return self.title
+
+class AnnouncementRead(models.Model):
+    announcement = models.ForeignKey(SystemAnnouncement, on_delete=models.CASCADE, related_name='reads')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    read_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('announcement', 'user')
+        verbose_name = "Lecture d'annonce"
+        verbose_name_plural = "Lectures d'annonces"
+
+    def __str__(self):
+        return f"{self.user.username} a lu '{self.announcement.title}'"

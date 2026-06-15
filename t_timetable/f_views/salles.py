@@ -6,12 +6,14 @@ from institut_app.models import *
 from django.contrib import messages
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
+from institut_app.decorators import module_permission_required
 from t_groupe.models import *
 from django.db.models import Avg
 
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ListeDesSalles(request):
     salles = Salle.objects.all()
     avg_capacity = salles.aggregate(Avg('capacite'))['capacite__avg']
@@ -30,6 +32,7 @@ def ListeDesSalles(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'add')
 def CreerSalle(request):
     if request.method == 'POST':
         nom = request.POST.get('nom')
@@ -63,6 +66,7 @@ def CreerSalle(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 def EditerSalle(request, salle_id):
     salle = Salle.objects.get(id=salle_id)
     if request.method == 'POST':
@@ -93,6 +97,7 @@ def EditerSalle(request, salle_id):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'delete')
 def SupprimerSalle(request, salle_id):
     salle = Salle.objects.get(id=salle_id)
     salle.delete()
@@ -101,6 +106,7 @@ def SupprimerSalle(request, salle_id):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def get_salle_data(request, salle_id):
     try:
         salle = Salle.objects.get(id=salle_id)
@@ -122,6 +128,7 @@ def get_salle_data(request, salle_id):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 def EditerSalle(request, salle_id):
     if request.method == 'POST':
         salle = Salle.objects.get(id=salle_id)

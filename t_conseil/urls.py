@@ -1,18 +1,22 @@
 from django.urls import path
+from institut_app.decorators import module_permission_required
 from .views import *
 from .f_views.prospects import *
 from .f_views.groupes_conseil import *
+from .f_views.consultants import *
 
 app_name="t_conseil"
 
 urlpatterns = [
 
   path('liste-des-thematiques/',ListeThematique, name="ListeThematique"),
+  path('consultants/', ListeConsultants, name="ListeConsultants"),
 
   path('nouveau-devis/', AddNewDevis, name="AddNewDevis"),
   path('configuration-devis/<str:pk>/', configure_devis , name="configure-devis"),
   path('details-devis/<str:pk>/', DetailsDevis, name="DetailsDevis"),
-  path('liste-des-devis/', ListeDesDevis, name="ListeDesDevis"),
+  path('print-devis/<str:pk>/', PrintDevisConseil, name="PrintDevisConseil"),
+  path('liste-des-devis/', module_permission_required('con', 'view')(ListeDesDevis), name="ListeDesDevis"),
 
   path('ApiSaveThematique' , ApiSaveThematique, name="ApiSaveThematique"),
 
@@ -28,13 +32,15 @@ urlpatterns = [
   path('ApiUpdateThematique', ApiUpdateThematique, name="ApiUpdateThematique"),
   path('ApiDeleteFinalThematique', ApiDeleteFinalThematique, name="ApiDeleteFinalThematique"),
 
-
+  path('api/thematiques/template/', ApiDownloadThematiqueTemplate, name="ApiDownloadThematiqueTemplate"),
+  path('api/thematiques/export/', ApiExportThematique, name="ApiExportThematique"),
+  path('api/thematiques/import/', ApiImportThematique, name="ApiImportThematique"),
 
   path('details-prospect/<str:slug>/', DetailsProspectConseil, name="DetailsProspectConseil"),
   path('prospects-en-instance/',ListeProspectConseil, name="prospectInstance"),
   path('ApiLoadProspect',ApiLoadProspect, name="ApiLoadProspect"),
   path('ApiTransformeToClient',ApiTransformeToClient, name="ApiTransformeToClient"),
-  path('liste-des-clients/', ListeDesClients, name="ListeDesClients"),
+  path('liste-des-clients/', module_permission_required('con', 'view')(ListeDesClients), name="ListeDesClients"),
   path('details-client/<str:slug>/', DetailsClient, name="DetailsClient"),
   path('ApiListeClients', ApiListeClients, name="ApiListeClients"),
 
@@ -44,6 +50,10 @@ urlpatterns = [
   path('ApiLoadProspectFinancials', ApiLoadProspectFinancials, name="ApiLoadProspectFinancials"),
   
   path('ApiCreateProspect', ApiCreateProspect, name="ApiCreateProspect"),
+  path('ApiAddContactEntreprise', ApiAddContactEntreprise, name="ApiAddContactEntreprise"),
+  path('ApiEditContactEntreprise', ApiEditContactEntreprise, name="ApiEditContactEntreprise"),
+  path('ApiDeleteContactEntreprise', ApiDeleteContactEntreprise, name="ApiDeleteContactEntreprise"),
+  path('ApiLoadContactsEntreprise', ApiLoadContactsEntreprise, name="ApiLoadContactsEntreprise"),
   path('ApiQuickCreateProspect', ApiQuickCreateProspect, name="ApiQuickCreateProspect"),
   path('ApiSaveLigneDevis', ApiSaveLigneDevis, name="ApiSaveLigneDevis"),
   path('ApiSaveDevisItems', ApiSaveDevisItems, name="ApiSaveDevisItems"),
@@ -51,11 +61,12 @@ urlpatterns = [
   path('ApiFetchEnterpriseTvas', ApiFetchEnterpriseTvas, name="ApiFetchEnterpriseTvas"),
 
   
-  path('liste-des-factures/', ListeDesFactures, name="ListeDesFactures"),
+  path('liste-des-factures/', module_permission_required('con', 'view')(ListeDesFactures), name="ListeDesFactures"),
   path('liste-des-avoirs/', ListeDesAvoirs, name="ListeDesAvoirs"),
   path('nouvelle-facture/', AddNewFacture, name="AddNewFacture"),
   path('configuration-facture/<str:pk>/', configure_facture, name="configure-facture"),
   path('details-facture/<str:pk>/', DetailsFacture, name="DetailsFacture"),
+  path('print-facture/<str:pk>/', PrintFactureConseil, name="PrintFactureConseil"),
   path('configuration/', ConfigurationConseil, name="ConfigurationConseil"),
   
   path('dashboard/', ConseilDashboard, name="ConseilDashboard"),
@@ -67,6 +78,7 @@ urlpatterns = [
   path('api/pipeline/get-opportunite/', ApiGetOpportunite, name="ApiGetOpportunite"),
   path('api/pipeline/update-opportunite/', ApiUpdateOpportunite, name="ApiUpdateOpportunite"),
   path('api/pipeline/delete/', ApiDeleteOpportunite, name="ApiDeleteOpportunite"),
+  path('api/pipeline/create-rendezvous/', ApiCreateRendezVousPipeline, name="ApiCreateRendezVousPipeline"),
   path('api/facture/add-paiement/', ApiAddPaiement, name="ApiAddPaiement"),
   path('api/devis/delete/', ApiDeleteDevis, name="ApiDeleteDevis"),
   path('api/devis/validate/', ApiValidateDevis, name="ApiValidateDevis"),
@@ -118,9 +130,11 @@ urlpatterns = [
     path('api/groupes/update-settings/', ApiUpdateGroupeSettings, name="ApiUpdateGroupeSettings"),
     path('api/groupes/planning/add/', ApiAddPlanningSession, name="ApiAddPlanningSession"),
     path('api/groupes/planning/delete/', ApiDeletePlanningSession, name="ApiDeletePlanningSession"),
+    path('api/groupes/planning/report/', ApiUpdateSessionReport, name="ApiUpdateSessionReport"),
     path('groupes/planning/session-pdf/<int:session_id>/', SessionAttendancePDF, name="SessionAttendancePDF"),
     path('api/participants/confirm-scolarite/', ApiConfirmParticipantForScolarite, name="ApiConfirmParticipantForScolarite"),
     path('api/participants/cancel-scolarite-confirmation/', ApiCancelParticipantConfirmationForScolarite, name="ApiCancelParticipantConfirmationForScolarite"),
+    path('api/groupes/update-thematique-intervenant/', ApiUpdateThematiqueIntervenant, name="ApiUpdateThematiqueIntervenant"),
     
     path('liste-des-paiements/', PaiementsConseilListe, name="PaiementsConseilListe"),
 ]

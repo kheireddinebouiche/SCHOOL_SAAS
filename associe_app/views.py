@@ -1745,6 +1745,8 @@ def budget_campaign_review(request, campaign_slug, institut_id):
     details = BudgetLineDetail.objects.none()
     structured_postes = []
     total_dispatched = 0
+    total_recette_propose = 0
+    total_depense_propose = 0
     entreprises = []
     row_quarters = {}
     allocations = {}
@@ -1787,6 +1789,8 @@ def budget_campaign_review(request, campaign_slug, institut_id):
                 allocations[key].montant += d.montant
         
         total_dispatched = details.aggregate(Sum('montant'))['montant__sum'] or 0
+        total_recette_propose = details.filter(poste__type='recette').aggregate(Sum('montant'))['montant__sum'] or 0
+        total_depense_propose = details.filter(poste__type='depense').aggregate(Sum('montant'))['montant__sum'] or 0
 
         # 2. Tenant Specific Entities
         with schema_context(institut.schema_name):
@@ -1926,12 +1930,14 @@ def budget_campaign_review(request, campaign_slug, institut_id):
         'entreprises': entreprises,
         'allocations': allocations,
         'total_dispatched': total_dispatched,
+        'total_recette_propose': total_recette_propose,
+        'total_depense_propose': total_depense_propose,
         'row_quarters': row_quarters,
         'is_visible_to_admin': is_visible_to_admin,
         
         # Stats
-        'remaining': budget_line.montant - total_dispatched,
-        'percent_dispatched': (total_dispatched / budget_line.montant * 100) if budget_line.montant > 0 else 0,
+        'remaining': budget_line.montant - total_depense_propose,
+        'percent_dispatched': (total_depense_propose / budget_line.montant * 100) if budget_line.montant > 0 else 0,
 
         # Realization Data
         'combined_postes': realization_data['combined_postes'],
@@ -2064,6 +2070,7 @@ def review_extension(request, request_id):
         'ext_request': ext_request,
         'items': items,
         'entreprise_map': entreprise_map,
+        'total_requested': sum(item.requested_amount for item in items),
     }
     context['title'] = f'Révision de Rallonge - {ext_request.institut.nom}'
     return render(request, 'associe_app/review_extension.html', context)
@@ -2199,6 +2206,7 @@ def user_create(request):
         last_name = request.POST.get('last_name')
         is_staff = request.POST.get('is_staff') == 'on'
         is_active = request.POST.get('is_active') == 'on'
+        is_superuser = request.POST.get('is_superuser') == 'on'
         
         if User.objects.filter(username=username).exists():
             messages.error(request, "Ce nom d'utilisateur existe déjà.")
@@ -2210,7 +2218,8 @@ def user_create(request):
                 first_name=first_name,
                 last_name=last_name,
                 is_staff=is_staff,
-                is_active=is_active
+                is_active=is_active,
+                is_superuser=is_superuser
             )
             messages.success(request, "Utilisateur créé avec succès.")
             return redirect('associe_app:user_list')
@@ -2227,6 +2236,7 @@ def user_edit(request, pk):
         user.last_name = request.POST.get('last_name')
         user.is_staff = request.POST.get('is_staff') == 'on'
         user.is_active = request.POST.get('is_active') == 'on'
+        user.is_superuser = request.POST.get('is_superuser') == 'on'
         
         password = request.POST.get('password')
         if password:
@@ -2317,3 +2327,155 @@ def api_delete_saas_notification(request):
         except SaaSNotification.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Notification not found'})
     return JsonResponse({'status': 'error', 'message': 'Invalid request'})
+
+@login_required(login_url='login')
+def satisfaction_pending(request):
+    return render(request, 'associe_app/satisfaction_pending.html', {'title': 'Satisfaction'})
+
+@login_required(login_url='login')
+def crm_user_logs(request):
+    from app.models import Institut
+    from t_crm.models import UserActionLog
+    from django_tenants.utils import schema_context
+    from django.contrib.auth.models import User
+    
+    filter_tenant = request.GET.get('tenant')
+    filter_user = request.GET.get('user')
+    filter_action = request.GET.get('action')
+
+    if filter_tenant:
+        tenants = Institut.objects.filter(id=filter_tenant, is_visible=True).exclude(schema_name='public')
+    else:
+        tenants = Institut.objects.filter(is_visible=True).exclude(schema_name='public').order_by('nom')
+        
+    all_tenants = Institut.objects.filter(is_visible=True).exclude(schema_name='public').order_by('nom')
+    all_users = User.objects.all().order_by('username')
+    action_choices = UserActionLog.ACTION_CHOICES
+    
+    institutes_logs = []
+
+    for tenant in tenants:
+        try:
+            with schema_context(tenant.schema_name):
+                logs = UserActionLog.objects.all().select_related('user').order_by('-created_at')
+                
+                if filter_user:
+                    logs = logs.filter(user_id=filter_user)
+                if filter_action:
+                    logs = logs.filter(action_type=filter_action)
+                    
+                logs_data = []
+                for log in logs:
+                    logs_data.append({
+                        'user': log.user.username if log.user else 'Système',
+                        'action': log.get_action_type_display(),
+                        'target_model': log.target_model,
+                        'details': log.details,
+                        'date': log.created_at,
+                    })
+                
+                if logs_data or not (filter_user or filter_action):
+                    institutes_logs.append({
+                        'id': tenant.id,
+                        'name': tenant.nom,
+                        'logs': logs_data
+                    })
+        except Exception as e:
+            continue
+
+    context = {
+        'institutes_logs': institutes_logs,
+        'title': 'Logs',
+        'all_tenants': all_tenants,
+        'all_users': all_users,
+        'action_choices': action_choices,
+        'filter_tenant': filter_tenant,
+        'filter_user': filter_user,
+        'filter_action': filter_action,
+    }
+    return render(request, 'associe_app/crm_user_logs.html', context)
+
+
+@login_required(login_url='login')
+def platform_usage_rate(request):
+    from app.models import Institut
+    from t_crm.models import UserActionLog
+    from django_tenants.utils import schema_context
+    from django.utils import timezone
+    from django.db.models import Count
+
+    tenants = Institut.objects.filter(is_visible=True).exclude(schema_name='public').order_by('nom')
+    all_tenants = tenants # For the modal selection
+
+    is_print = request.GET.get('print') == 'true'
+    if is_print:
+        tenant_ids = request.GET.getlist('tenants')
+        if tenant_ids:
+            tenants = tenants.filter(id__in=tenant_ids)
+
+    usage_data = []
+
+    now = timezone.now()
+
+    for tenant in tenants:
+        try:
+            with schema_context(tenant.schema_name):
+                creation_date = tenant.date_creation
+                if not creation_date:
+                    continue
+                
+                delta = now - creation_date
+                days_active = max(delta.days, 1)
+
+                user_actions = UserActionLog.objects.values(
+                    'user__username', 'user__first_name', 'user__last_name'
+                ).annotate(total_actions=Count('id')).order_by('-total_actions')
+
+                users_data = []
+                for ua in user_actions:
+                    username = ua['user__username'] if ua['user__username'] else 'Système'
+                    total = ua['total_actions']
+                    rate = round(total / days_active, 2)
+                    
+                    if rate >= 10:
+                        status = 'Excellent'
+                        color = 'success'
+                    elif rate >= 2:
+                        status = 'Actif'
+                        color = 'primary'
+                    elif rate > 0:
+                        status = 'Faible'
+                        color = 'warning'
+                    else:
+                        status = 'Inactif'
+                        color = 'danger'
+
+                    users_data.append({
+                        'username': username,
+                        'first_name': ua['user__first_name'],
+                        'last_name': ua['user__last_name'],
+                        'total_actions': total,
+                        'rate': rate,
+                        'status': status,
+                        'color': color
+                    })
+
+                usage_data.append({
+                    'id': tenant.id,
+                    'name': tenant.nom,
+                    'days_active': days_active,
+                    'users': users_data,
+                    'creation_date': creation_date
+                })
+        except Exception as e:
+            continue
+
+    context = {
+        'title': "Taux d'utilisation",
+        'usage_data': usage_data,
+        'all_tenants': all_tenants
+    }
+    
+    if is_print:
+        return render(request, 'associe_app/platform_usage_rate_print.html', context)
+    return render(request, 'associe_app/platform_usage_rate.html', context)

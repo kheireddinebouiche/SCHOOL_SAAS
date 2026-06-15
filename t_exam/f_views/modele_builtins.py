@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -8,6 +9,7 @@ import json
 from django.contrib.auth.decorators import login_required
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ModelBuilltinPage(request):
     """Page principale pour la gestion des modèles de bulletins"""
     formations = Formation.objects.all()
@@ -18,6 +20,7 @@ def ModelBuilltinPage(request):
     return render(request, 'tenant_folder/exams/model-builtins.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiListModeleBuilltins(request):
     """API pour lister tous les modèles de bulletins"""
     obj = ModelBuilltins.objects.all().values('id', 'label', 'formation__nom', 'is_default')
@@ -32,6 +35,7 @@ def ApiListModeleBuilltins(request):
     return JsonResponse(data, safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
 def NewModelBuilltin(request):
     """Vue pour créer un nouveau modèle de bulletin"""
     if request.method == "POST":
@@ -63,6 +67,7 @@ def NewModelBuilltin(request):
         return render(request, 'tenant_folder/exams/template-modele-builtins.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'delete')
 def ApiDeleteModelBuitltin(request):
     """API pour supprimer un modèle de bulletin"""
     id = request.GET.get('id')
@@ -71,6 +76,7 @@ def ApiDeleteModelBuitltin(request):
     return JsonResponse({'status': 'success', 'message': 'Le modèle de bulletin a été supprimé avec succès.'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiGetModelBuilltinDetails(request):
     """API pour obtenir les détails d'un modèle de bulletin avec ses types de notes et sous-notes"""
     model_id = request.GET.get('id')
@@ -132,6 +138,7 @@ def ApiGetModelBuilltinDetails(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'change')
 def ApiUpdateModelBuilltin(request):
     """API pour mettre à jour un modèle de bulletin"""
     if request.method == 'POST':
@@ -160,6 +167,7 @@ def ApiUpdateModelBuilltin(request):
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiGetTypeNotes(request):
     """API pour obtenir les types de notes d'un modèle"""
     model_id = request.GET.get('model_id')
@@ -186,6 +194,7 @@ def ApiGetTypeNotes(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'add')
 def ApiAddTypeNote(request):
     """API pour ajouter un type de note à un modèle"""
     if request.method == 'POST':
@@ -239,6 +248,7 @@ def ApiAddTypeNote(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'change')
 def ApiUpdateTypeNote(request):
     """API pour mettre à jour un type de note"""
     if request.method == 'POST':
@@ -290,6 +300,7 @@ def ApiUpdateTypeNote(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'delete')
 def ApiDeleteTypeNote(request):
     """API pour supprimer un type de note"""
     type_note_id = request.GET.get('id')
@@ -302,6 +313,7 @@ def ApiDeleteTypeNote(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'add')
 def ApiAddSousNote(request):
     """API pour ajouter une sous-note à un type de note"""
     if request.method == 'POST':
@@ -328,6 +340,7 @@ def ApiAddSousNote(request):
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
 @transaction.atomic
+@module_permission_required('exa', 'change')
 def ApiUpdateSousNote(request):
     """API pour mettre à jour une sous-note"""
     if request.method == 'POST':
@@ -350,6 +363,7 @@ def ApiUpdateSousNote(request):
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
 @transaction.atomic
+@module_permission_required('exa', 'delete')
 def ApiDeleteSousNote(request):
     """API pour supprimer une sous-note"""
     sous_note_id = request.GET.get('id')
@@ -361,6 +375,7 @@ def ApiDeleteSousNote(request):
     })
 
 @transaction.atomic
+@module_permission_required('exa', 'change')
 def ApiBulkUpdateSousNotes(request):
     """API pour mettre à jour plusieurs sous-notes à la fois"""
     if request.method == 'POST':
@@ -403,6 +418,7 @@ def ApiBulkUpdateSousNotes(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'add')
 def ApiAddTypeNoteDependency(request):
     """API pour ajouter une dépendance entre types de notes"""
     if request.method == 'POST':
@@ -441,6 +457,7 @@ def ApiAddTypeNoteDependency(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'delete')
 def ApiDeleteTypeNoteDependency(request):
     """API pour supprimer une dépendance entre types de notes"""
     dependency_id = request.GET.get('id')
@@ -452,6 +469,7 @@ def ApiDeleteTypeNoteDependency(request):
     })
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiGetTypeNoteDependencies(request):
     """API pour obtenir toutes les dépendances d'un type de note"""
     parent_id = request.GET.get('parent_id')
@@ -474,6 +492,7 @@ def ApiGetTypeNoteDependencies(request):
     return JsonResponse(data, safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiGetTypeNoteAvailableDependencies(request):
     """API pour obtenir tous les types de notes disponibles pour les dépendances"""
     model_id = request.GET.get('model_id')
@@ -523,6 +542,7 @@ def creates_cycle(parent, child):
 
     return False
 
+@module_permission_required('exa', 'view')
 def ApiGetSousNotesForType(request):
     """API pour obtenir toutes les sous-notes d'un type de note"""
     type_note_id = request.GET.get('type_note_id')
@@ -542,6 +562,7 @@ def ApiGetSousNotesForType(request):
     return JsonResponse(data, safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiGetAllBlocs(request):
     """API pour obtenir tous les blocs de notes"""
     blocs = NoteBloc.objects.all().order_by('ordre')
@@ -559,6 +580,7 @@ def ApiGetAllBlocs(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'add')
 def ApiAddBloc(request):
     """API pour ajouter un nouveau bloc de notes"""
     if request.method == 'POST':
@@ -599,6 +621,7 @@ def ApiAddBloc(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'change')
 def ApiUpdateBloc(request):
     """API pour mettre à jour un bloc de notes"""
     if request.method == 'POST':
@@ -646,6 +669,7 @@ def ApiUpdateBloc(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiGetAllBlocs(request):
     """API pour obtenir tous les blocs de notes"""
     blocs = NoteBloc.objects.all().order_by('ordre')

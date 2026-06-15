@@ -5,7 +5,7 @@ from django.db.models import Sum
 from django_tenants.utils import schema_context
 from app.models import Institut
 from associe_app.models import BudgetCampaign, BudgetLine, PostesBudgetaire, BudgetLineDetail, GlobalPaymentType, GlobalPaymentCategory, GlobalDepensesCategory
-from t_tresorerie.models import Paiements, Depenses, AutreProduit, SpecialiteCompte
+from t_tresorerie.models import Paiements, Depenses, AutreProduit, SpecialiteCompte, Rembourssements
 from t_crm.models import FicheDeVoeux, FicheVoeuxDouble
 
 def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
@@ -194,10 +194,13 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                 
                 # 2. Add Realization to the correct Budget Poste
                 if target_g_cat:
+                    refunds = p.remboursements.filter(remboursement__is_done=True).aggregate(total=Sum('montant'))['total'] or Decimal('0')
+                    net_montant = p.montant_paye - refunds
+                    
                     with schema_context('public'):
                         poste = PostesBudgetaire.objects.filter(payment_categories=target_g_cat).first()
-                        if poste:
-                            add_real(poste.id, p.montant_paye, p.date_paiement)
+                        if poste and net_montant > 0:
+                            add_real(poste.id, net_montant, p.date_paiement)
 
             # Autre Produits
             autres = AutreProduit.objects.filter(date_paiement__gte=campaign.date_debut, date_paiement__lte=campaign.date_fin, payment_type__isnull=False).prefetch_related('lettrages', 'payment_type')
@@ -216,13 +219,31 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                                     break 
 
             # Depenses
-            depenses = Depenses.objects.filter(date_paiement__gte=campaign.date_debut, date_paiement__lte=campaign.date_fin, category__isnull=False).prefetch_related('category')
+            depenses = Depenses.objects.filter(date_paiement__gte=campaign.date_debut, date_paiement__lte=campaign.date_fin, lignes__category__isnull=False).distinct().prefetch_related('lignes__category')
             for d in depenses:
+                for ligne in d.lignes.all():
+                    if not ligne.category: continue
+                    with schema_context('public'):
+                        g_cat = GlobalDepensesCategory.objects.filter(name=ligne.category.name).first()
+                        if g_cat:
+                            poste = PostesBudgetaire.objects.filter(depense_categories=g_cat).first()
+                            if poste: add_real(poste.id, ligne.montant_ttc, d.date_paiement)
+
+
+            # Remboursements en tant que Dépenses
+            remboursements = Rembourssements.objects.filter(
+                updated_at__date__gte=campaign.date_debut,
+                updated_at__date__lte=campaign.date_fin,
+                is_done=True,
+                category__isnull=False
+            ).select_related('category')
+            
+            for r in remboursements:
                 with schema_context('public'):
-                    g_cat = GlobalDepensesCategory.objects.filter(name=d.category.name).first()
+                    g_cat = GlobalDepensesCategory.objects.filter(name=r.category.name).first()
                     if g_cat:
                         poste = PostesBudgetaire.objects.filter(depense_categories=g_cat).first()
-                        if poste: add_real(poste.id, d.montant_ttc, d.date_paiement)
+                        if poste: add_real(poste.id, r.allowed_amount, r.updated_at.date() if r.updated_at else None)
 
     # 6. Structure Final Data
     structured_postes = []

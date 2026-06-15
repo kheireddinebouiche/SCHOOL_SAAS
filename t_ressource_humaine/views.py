@@ -1,10 +1,12 @@
+from django.utils.decorators import method_decorator
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, DetailView, FormView, DeleteView
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
-from .models import Contrat, FichePaie, ParametresPaie, TypeContrat, Rubrique, RubriqueContrat, LignePaie
+from .models import Contrat, FichePaie, ParametresPaie, TypeContrat, Rubrique, RubriqueContrat, LignePaie, ValidationFicheMensuelleFormateur
 from .logic import PaieEngine
 from django import forms
 from decimal import Decimal
@@ -21,6 +23,7 @@ from datetime import datetime, timedelta
 from django.db.models import Count, Sum, Q
 import collections
 
+@method_decorator(module_permission_required('rh', 'view'), name='dispatch')
 class ContratListView(LoginRequiredMixin, ListView):
     model = Contrat
     context_object_name = 'contrats'
@@ -42,20 +45,24 @@ class ContratListView(LoginRequiredMixin, ListView):
 class ContratForm(forms.ModelForm):
     class Meta:
         model = Contrat
-        fields = '__all__'
+        exclude = ['entreprise', 'employee', 'prime_transport', 'prime_panier', 'created_at', 'updated_at']
         widgets = {
             'formateur': forms.Select(attrs={'class': 'form-select'}),
-            'employee': forms.Select(attrs={'class': 'form-select'}),
             'type_contrat': forms.Select(attrs={'class': 'form-select'}),
             'date_debut': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'date_fin': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'salaire_base': forms.NumberInput(attrs={'class': 'form-control'}),
             'salaire_horaire': forms.NumberInput(attrs={'class': 'form-control'}),
-            'prime_transport': forms.NumberInput(attrs={'class': 'form-control'}),
-            'prime_panier': forms.NumberInput(attrs={'class': 'form-control'}),
             'actif': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            if field_name not in ['formateur', 'type_contrat', 'date_debut']:
+                field.required = False
 
+@method_decorator(module_permission_required('rh', 'add'), name='dispatch')
 class ContratCreateView(LoginRequiredMixin, CreateView):
     model = Contrat
     form_class = ContratForm
@@ -89,6 +96,7 @@ class ContratCreateView(LoginRequiredMixin, CreateView):
             return JsonResponse({'status': 'invalid', 'html': html})
         return super().form_invalid(form)
 
+@method_decorator(module_permission_required('rh', 'change'), name='dispatch')
 class ContratUpdateView(LoginRequiredMixin, UpdateView):
     model = Contrat
     form_class = ContratForm
@@ -116,6 +124,7 @@ class ContratUpdateView(LoginRequiredMixin, UpdateView):
             return JsonResponse({'status': 'invalid', 'html': html})
         return super().form_invalid(form)
 
+@method_decorator(module_permission_required('rh', 'view'), name='dispatch')
 class ContratDetailView(LoginRequiredMixin, DetailView):
     model = Contrat
     template_name = 't_ressource_humaine/contrat_print.html'
@@ -129,6 +138,7 @@ class FichePaieGenerationForm(forms.Form):
     primes_exceptionnelles = forms.DecimalField(initial=0, required=False, widget=forms.NumberInput(attrs={'class': 'form-control'}))
     avance_sur_salaire = forms.DecimalField(initial=0, required=False, widget=forms.NumberInput(attrs={'class': 'form-control'}))
 
+@module_permission_required('rh', 'add')
 def generer_paie(request, contrat_id):
     contrat = get_object_or_404(Contrat, pk=contrat_id)
     
@@ -136,6 +146,7 @@ def generer_paie(request, contrat_id):
     initial_heures_absence = 0
     mois_select = int(request.GET.get('mois', datetime.now().month))
     annee_select = int(request.GET.get('annee', datetime.now().year))
+    initial_heures = request.GET.get('heures_travailles', 0)
 
     if contrat.employee:
         presences = Presence.objects.filter(
@@ -152,11 +163,11 @@ def generer_paie(request, contrat_id):
     contract_rubrics_config = {rc.rubrique_id: rc for rc in RubriqueContrat.objects.filter(contrat=contrat)}
     contract_defaults = {}
     
-    all_rubriques = Rubrique.objects.filter(actif=True)
+    all_rubriques = Rubrique.objects.filter(actif=True).prefetch_related('eligible_types')
     rubriques_actives = []
     
     for r in all_rubriques:
-        if r.types_contrat and contrat.type_contrat not in r.types_contrat:
+        if r.eligible_types.exists() and not r.eligible_types.filter(label__icontains=contrat.type_contrat).exists():
             continue
         rc = contract_rubrics_config.get(r.id)
         if rc:
@@ -255,6 +266,7 @@ def generer_paie(request, contrat_id):
             'mois': mois_select,
             'annee': annee_select,
             'jours_travailles': initial_jours,
+            'heures_travailles': initial_heures,
             'heures_absence': initial_heures_absence
         })
 
@@ -266,6 +278,7 @@ def generer_paie(request, contrat_id):
     return render(request, 't_ressource_humaine/generate_paie.html', 
                   {'form': form, 'contrat': contrat, 'rubriques': rubriques_actives, 'contract_defaults': contract_defaults})
 
+@module_permission_required('rh', 'change')
 def modifier_paie(request, pk):
     fiche = get_object_or_404(FichePaie, pk=pk)
     contrat = fiche.contrat
@@ -380,6 +393,7 @@ def modifier_paie(request, pk):
     return render(request, 't_ressource_humaine/generate_paie.html', 
                   {'form': form, 'contrat': contrat, 'rubriques': rubriques_actives, 'existing_lignes': existing_lignes})
 
+@module_permission_required('rh', 'delete')
 def supprimer_paie(request, pk):
     fiche = get_object_or_404(FichePaie, pk=pk)
     
@@ -398,6 +412,7 @@ def supprimer_paie(request, pk):
     return redirect('t_ressource_humaine:fiche_paie_list') # Fallback if direct access GET
 
 
+@method_decorator(module_permission_required('rh', 'view'), name='dispatch')
 class FichePaieDetailView(LoginRequiredMixin, DetailView):
     model = FichePaie
     template_name = 't_ressource_humaine/fiche_paie_print.html'
@@ -408,6 +423,7 @@ class FichePaieDetailView(LoginRequiredMixin, DetailView):
             return ['t_ressource_humaine/_fiche_paie_detail.html']
         return [self.template_name]
 
+@method_decorator(module_permission_required('rh', 'view'), name='dispatch')
 class FichePaieListView(LoginRequiredMixin, ListView):
     model = FichePaie
     template_name = 't_ressource_humaine/fiche_paie_list.html'
@@ -467,14 +483,16 @@ class FichePaieListView(LoginRequiredMixin, ListView):
 class ParametresPaieForm(forms.ModelForm):
     class Meta:
         model = ParametresPaie
-        fields = ['taux_ss', 'jours_travailles_standard', 'heures_mensuelles_standard', 'seuil_exoneration_irg']
+        fields = ['taux_ss', 'jours_travailles_standard', 'heures_mensuelles_standard', 'seuil_exoneration_irg', 'taux_irg_vacataire']
         widgets = {
             'taux_ss': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
             'jours_travailles_standard': forms.NumberInput(attrs={'class': 'form-control'}),
             'heures_mensuelles_standard': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'seuil_exoneration_irg': forms.NumberInput(attrs={'class': 'form-control'}),
+            'taux_irg_vacataire': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
         }
 
+@module_permission_required('rh', 'change')
 def config_paie(request):
     active_id = request.session.get('active_entreprise_id')
     if not active_id:
@@ -502,6 +520,7 @@ def config_paie(request):
 
 from .models import Rubrique, LignePaie, RubriqueContrat
 
+@module_permission_required('rh', 'change')
 def manage_rubriques_contrat(request, contrat_id):
     contrat = get_object_or_404(Contrat, pk=contrat_id)
     
@@ -593,11 +612,13 @@ class RubriqueForm(forms.ModelForm):
             'actif': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
+@method_decorator(module_permission_required('rh', 'view'), name='dispatch')
 class RubriqueListView(LoginRequiredMixin, ListView):
     model = Rubrique
     template_name = 't_ressource_humaine/rubrique_list.html'
     context_object_name = 'rubriques'
 
+@method_decorator(module_permission_required('rh', 'add'), name='dispatch')
 class RubriqueCreateView(LoginRequiredMixin, CreateView):
     model = Rubrique
     form_class = RubriqueForm
@@ -625,6 +646,7 @@ class RubriqueCreateView(LoginRequiredMixin, CreateView):
              return JsonResponse({'status': 'invalid', 'html': html})
         return super().form_invalid(form)
 
+@method_decorator(module_permission_required('rh', 'change'), name='dispatch')
 class RubriqueUpdateView(LoginRequiredMixin, UpdateView):
     model = Rubrique
     form_class = RubriqueForm
@@ -652,6 +674,7 @@ class RubriqueUpdateView(LoginRequiredMixin, UpdateView):
              return JsonResponse({'status': 'invalid', 'html': html})
         return super().form_invalid(form)
 
+@method_decorator(module_permission_required('rh', 'delete'), name='dispatch')
 class RubriqueDeleteView(LoginRequiredMixin, DeleteView):
     model = Rubrique
     success_url = reverse_lazy('t_ressource_humaine:rubrique_list')
@@ -665,6 +688,7 @@ class RubriqueDeleteView(LoginRequiredMixin, DeleteView):
         return redirect(success_url)
 
 @login_required
+@module_permission_required('rh', 'add')
 def init_conventional_primes(request):
     """
     Initialise les primes conventionnelles standards si elles n'existent pas.
@@ -700,8 +724,279 @@ def init_conventional_primes(request):
         'message': f'{count} primes conventionnelles ont été initialisées.'
     })
 
+@module_permission_required('rh', 'add')
+def reset_rubriques(request):
+    """
+    Supprime toutes les rubriques non utilisées, corrige/met à jour
+    les rubriques utilisées qui ont des paramètres erronés,
+    et injecte la configuration réglementaire correcte.
+    """
+    from t_ressource_humaine.models import Rubrique, RubriqueContrat, LignePaie
+    
+    # Définir les rubriques conventionnelles cibles
+    target_rubriques = [
+        {
+            'libelle': "Indemnité d'Expérience Professionnelle (IEP)",
+            'type_rubrique': 'GAIN',
+            'mode_calcul': 'PERCENT',
+            'est_cotisable': True,
+            'est_imposable': True,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Prime d'Expérience Professionnelle (PEP)",
+            'type_rubrique': 'GAIN',
+            'mode_calcul': 'PERCENT',
+            'est_cotisable': True,
+            'est_imposable': True,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Indemnité de Nuisance",
+            'type_rubrique': 'GAIN',
+            'mode_calcul': 'FIXE',
+            'est_cotisable': True,
+            'est_imposable': True,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Prime de Danger",
+            'type_rubrique': 'GAIN',
+            'mode_calcul': 'FIXE',
+            'est_cotisable': True,
+            'est_imposable': True,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Prime de Nuisance",
+            'type_rubrique': 'GAIN',
+            'mode_calcul': 'FIXE',
+            'est_cotisable': True,
+            'est_imposable': True,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Prime d'Astreinte",
+            'type_rubrique': 'GAIN',
+            'mode_calcul': 'FIXE',
+            'est_cotisable': True,
+            'est_imposable': True,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Indemnité de Zone",
+            'type_rubrique': 'GAIN',
+            'mode_calcul': 'FIXE',
+            'est_cotisable': True,
+            'est_imposable': True,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Prime de Rendement Individuel (PRI)",
+            'type_rubrique': 'GAIN',
+            'mode_calcul': 'PERCENT',
+            'est_cotisable': True,
+            'est_imposable': True,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Prime de Rendement Collectif (PRC)",
+            'type_rubrique': 'GAIN',
+            'mode_calcul': 'PERCENT',
+            'est_cotisable': True,
+            'est_imposable': True,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Heures Supplémentaires 50%",
+            'type_rubrique': 'GAIN',
+            'mode_calcul': 'HOURS',
+            'est_cotisable': True,
+            'est_imposable': True,
+            'valeur_defaut': 1.50,
+            'actif': True
+        },
+        {
+            'libelle': "Heures Supplémentaires 75%",
+            'type_rubrique': 'GAIN',
+            'mode_calcul': 'HOURS',
+            'est_cotisable': True,
+            'est_imposable': True,
+            'valeur_defaut': 1.75,
+            'actif': True
+        },
+        {
+            'libelle': "Indemnité de Panier (Non Cotisable)",
+            'type_rubrique': 'GAIN',
+            'mode_calcul': 'FIXE',
+            'est_cotisable': False,
+            'est_imposable': False,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Indemnité de Transport (Non Cotisable)",
+            'type_rubrique': 'GAIN',
+            'mode_calcul': 'FIXE',
+            'est_cotisable': False,
+            'est_imposable': False,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Prime de Panier (Cotisable)",
+            'type_rubrique': 'GAIN',
+            'mode_calcul': 'FIXE',
+            'est_cotisable': True,
+            'est_imposable': True,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Prime de Transport (Cotisable)",
+            'type_rubrique': 'GAIN',
+            'mode_calcul': 'FIXE',
+            'est_cotisable': True,
+            'est_imposable': True,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Absence non justifiée",
+            'type_rubrique': 'RETENUE',
+            'mode_calcul': 'FIXE',
+            'est_cotisable': False,
+            'est_imposable': False,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Retenue Absence",
+            'type_rubrique': 'RETENUE',
+            'mode_calcul': 'HOURS',
+            'est_cotisable': False,
+            'est_imposable': False,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Retenue Retard",
+            'type_rubrique': 'RETENUE',
+            'mode_calcul': 'HOURS',
+            'est_cotisable': False,
+            'est_imposable': False,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Acompte sur Salaire",
+            'type_rubrique': 'RETENUE',
+            'mode_calcul': 'FIXE',
+            'est_cotisable': False,
+            'est_imposable': False,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Cotisation Mutuelle",
+            'type_rubrique': 'RETENUE',
+            'mode_calcul': 'FIXE',
+            'est_cotisable': False,
+            'est_imposable': False,
+            'valeur_defaut': 0,
+            'actif': True
+        },
+        {
+            'libelle': "Remboursement Prêt",
+            'type_rubrique': 'RETENUE',
+            'mode_calcul': 'FIXE',
+            'est_cotisable': False,
+            'est_imposable': False,
+            'valeur_defaut': 0,
+            'actif': True
+        }
+    ]
+
+    deleted_count = 0
+    updated_count = 0
+    created_count = 0
+    deactivated_count = 0
+
+    target_names = [t['libelle'] for t in target_rubriques]
+
+    # Nettoyer les rubriques existantes
+    all_current = list(Rubrique.objects.all())
+    for r in all_current:
+        # Vérifier si elle est utilisée
+        is_used = RubriqueContrat.objects.filter(rubrique=r).exists() or LignePaie.objects.filter(rubrique=r).exists()
+        
+        is_duplicate_or_invalid = (r.libelle not in target_names)
+        if r.libelle in ["Indemnité de Panier", "Indemnité de Transport"]:
+            is_duplicate_or_invalid = True
+            
+        if is_duplicate_or_invalid:
+            if not is_used:
+                r.delete()
+                deleted_count += 1
+            else:
+                if r.actif:
+                    r.actif = False
+                    r.save()
+                    deactivated_count += 1
+
+    # Injecter ou mettre à jour les rubriques cibles
+    for t in target_rubriques:
+        existing = Rubrique.objects.filter(libelle=t['libelle']).first()
+        if existing:
+            changed = False
+            if existing.type_rubrique != t['type_rubrique']:
+                existing.type_rubrique = t['type_rubrique']
+                changed = True
+            if existing.mode_calcul != t['mode_calcul']:
+                existing.mode_calcul = t['mode_calcul']
+                changed = True
+            if existing.est_cotisable != t['est_cotisable']:
+                existing.est_cotisable = t['est_cotisable']
+                changed = True
+            if existing.est_imposable != t['est_imposable']:
+                existing.est_imposable = t['est_imposable']
+                changed = True
+            if not existing.actif:
+                existing.actif = True
+                changed = True
+            
+            if changed:
+                existing.save()
+                updated_count += 1
+        else:
+            Rubrique.objects.create(
+                libelle=t['libelle'],
+                type_rubrique=t['type_rubrique'],
+                mode_calcul=t['mode_calcul'],
+                est_cotisable=t['est_cotisable'],
+                est_imposable=t['est_imposable'],
+                valeur_defaut=t['valeur_defaut'],
+                actif=t['actif']
+            )
+            created_count += 1
+
+    return JsonResponse({
+        'status': 'success',
+        'message': f'Réinitialisation terminée : {created_count} créées, {updated_count} mises à jour, {deleted_count} supprimées, {deactivated_count} désactivées.'
+    })
+
 # -- Config Paie (Existing) --
 
+@module_permission_required('rh', 'view')
 def select_entreprise_paie(request):
     if request.method == 'POST':
         entreprise_id = request.POST.get('entreprise_id')
@@ -717,6 +1012,7 @@ def select_entreprise_paie(request):
 
 # --- Import / Export Rubriques ---
 
+@module_permission_required('rh', 'view')
 def export_rubriques(request):
     wb = Workbook()
     ws = wb.active
@@ -752,6 +1048,7 @@ def export_rubriques(request):
     wb.save(response)
     return response
 
+@module_permission_required('rh', 'add')
 def import_rubriques(request):
     if request.method == 'POST' and request.FILES.get('file'):
         excel_file = request.FILES['file']
@@ -815,6 +1112,7 @@ def import_rubriques(request):
             
     return JsonResponse({'status': 'error', 'message': 'Fichier manquant ou méthode non autorisée.'})
 
+@module_permission_required('rh', 'view')
 def fiches_mensuelles(request):
     """
     View to display monthly course summary for trainers.
@@ -906,11 +1204,24 @@ def fiches_mensuelles(request):
         
         report_data[teacher][year][month].append(session_info)
 
+    # Fetch validations
+    validations = ValidationFicheMensuelleFormateur.objects.all()
+    validated_set = {(v.formateur_id, v.annee, v.mois) for v in validations}
+
+    # Fetch existing fiches de paie
+    fiches_paie = FichePaie.objects.select_related('contrat').filter(contrat__formateur__isnull=False)
+    paie_set = {(fp.contrat.formateur_id, fp.annee, fp.mois) for fp in fiches_paie if fp.contrat}
+
     # Flatten and format for template
     formatted_report = []
+    total_heures_global = 0
+    total_sessions_global = 0
+    
     for teacher, years in report_data.items():
+        contrat = Contrat.objects.filter(formateur=teacher, actif=True).first()
         teacher_report = {
             'teacher': teacher,
+            'contrat_id': contrat.id if contrat else None,
             'years': []
         }
         for year, months in sorted(years.items(), reverse=True):
@@ -918,12 +1229,23 @@ def fiches_mensuelles(request):
                 'year': year,
                 'months': []
             }
+            months_fr = {
+                1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+            }
             for month, sessions in sorted(months.items(), reverse=True):
+                month_total_hours = round(sum(s['duration'] for s in sessions), 2)
+                total_heures_global += month_total_hours
+                total_sessions_global += len(sessions)
+                
                 month_report = {
                     'month': month,
-                    'month_name': datetime(year, month, 1).strftime('%B'),
+                    'month_name': months_fr.get(month, ''),
                     'sessions': sessions,
-                    'total_hours': round(sum(s['duration'] for s in sessions), 2)
+                    'total_hours': month_total_hours,
+                    'is_validated': (teacher.id, year, month) in validated_set,
+                    'is_paid': (teacher.id, year, month) in paie_set
                 }
                 year_report['months'].append(month_report)
             teacher_report['years'].append(year_report)
@@ -945,7 +1267,188 @@ def fiches_mensuelles(request):
         'selected_formateur': int(formateur_id) if formateur_id and formateur_id.isdigit() else None,
         'selected_annee': int(annee_filter) if annee_filter and annee_filter.isdigit() else None,
         'selected_mois': int(mois_filter) if mois_filter and mois_filter.isdigit() else None,
+        'metrics': {
+            'total_formateurs': len(report_data.keys()),
+            'total_heures': total_heures_global,
+            'total_sessions': total_sessions_global
+        }
     }
     
     return render(request, 'tenant_folder/rh/fiches_mensuelles.html', context)
+
+@module_permission_required('rh', 'add')
+def valider_fiche_mensuelle_formateur(request):
+    if request.method == 'POST':
+        formateur_id = request.POST.get('formateur_id')
+        mois = int(request.POST.get('mois'))
+        annee = int(request.POST.get('annee'))
+        total_heures = request.POST.get('total_heures', 0)
+        
+        try:
+            formateur = Formateurs.objects.get(id=formateur_id)
+            ValidationFicheMensuelleFormateur.objects.get_or_create(
+                formateur=formateur,
+                mois=mois,
+                annee=annee,
+                defaults={
+                    'total_heures': total_heures,
+                    'validated_by': request.user
+                }
+            )
+            return JsonResponse({'status': 'success', 'message': 'Fiche mensuelle validée avec succès.', 'reload_page': True})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+            
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
+@method_decorator(module_permission_required('rh', 'view'), name='dispatch')
+class FormateurFichePaieListView(LoginRequiredMixin, ListView):
+    model = FichePaie
+    template_name = 't_ressource_humaine/fiche_paie_list_formateur.html'
+    context_object_name = 'fiches'
+
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            self.object_list = self.get_queryset()
+            context = self.get_context_data()
+            return render(request, 't_ressource_humaine/_fiche_paie_table.html', context)
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        active_id = self.request.session.get('active_entreprise_id')
+        queryset = super().get_queryset().select_related('contrat__formateur').filter(contrat__formateur__isnull=False).order_by('-annee', '-mois', '-generated_at')
+        
+        if active_id == 'none':
+            queryset = queryset.filter(entreprise__isnull=True)
+        elif active_id:
+            queryset = queryset.filter(entreprise_id=active_id)
+            
+        formateur_id = self.request.GET.get('formateur')
+        annee = self.request.GET.get('annee')
+        
+        if formateur_id:
+            queryset = queryset.filter(contrat__formateur_id=formateur_id)
+        if annee:
+            queryset = queryset.filter(annee=annee)
+            
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from .models import Entreprise
+        context['entreprises'] = Entreprise.objects.all()
+        context['active_entreprise_id'] = self.request.session.get('active_entreprise_id')
+        
+        formateur_id = self.request.GET.get('formateur')
+        annee_selected = self.request.GET.get('annee')
+        
+        context['formateurs'] = Formateurs.objects.all().order_by('nom')
+        context['selected_formateur'] = int(formateur_id) if formateur_id and formateur_id.isdigit() else None
+        context['selected_annee'] = int(annee_selected) if annee_selected and annee_selected.isdigit() else None
+        context['years'] = FichePaie.objects.filter(contrat__formateur__isnull=False).values_list('annee', flat=True).distinct().order_by('-annee')
+        
+        return context
+
+@module_permission_required('rh', 'view')
+def assistant_paie_formateur(request):
+    month = int(request.GET.get('month', datetime.now().month))
+    year = int(request.GET.get('year', datetime.now().year))
+    action = request.GET.get('action')
+    
+    validations = ValidationFicheMensuelleFormateur.objects.filter(mois=month, annee=year).select_related('formateur')
+    
+    payroll_data = []
+    fiches_existantes = FichePaie.objects.filter(mois=month, annee=year, contrat__formateur__isnull=False).values_list('contrat__formateur_id', flat=True)
+    
+    for val in validations:
+        if val.formateur_id in fiches_existantes:
+            continue
+            
+        contrat = Contrat.objects.filter(formateur=val.formateur, actif=True).first()
+        if not contrat:
+            continue
+            
+        heures = Decimal(val.total_heures)
+        
+        contract_rubrics_config = {rc.rubrique_id: rc for rc in RubriqueContrat.objects.filter(contrat=contrat)}
+        all_rubriques = Rubrique.objects.filter(actif=True).prefetch_related('eligible_types')
+        lignes_rubriques = []
+        for r in all_rubriques:
+            if r.eligible_types.exists() and not r.eligible_types.filter(label__icontains=contrat.type_contrat).exists():
+                continue
+            rc = contract_rubrics_config.get(r.id)
+            if rc and rc.actif:
+                lignes_rubriques.append({'rubrique': r, 'valeur': rc.valeur})
+                
+        res = PaieEngine.calculer_paie(
+            contrat, 
+            jours_travailles=0,
+            heures_travailles=heures,
+            lignes_rubriques=lignes_rubriques
+        )
+        
+        payroll_data.append({
+            'formateur': val.formateur,
+            'contrat_obj': contrat,
+            'heures': heures,
+            'result': res
+        })
+        
+    if action == 'valider':
+        from django.db import transaction
+        with transaction.atomic():
+            for data in payroll_data:
+                contrat = data['contrat_obj']
+                res = data['result']
+                fiche, created = FichePaie.objects.update_or_create(
+                    contrat=contrat,
+                    mois=month,
+                    annee=year,
+                    defaults={
+                        'entreprise': contrat.entreprise,
+                        'heures_travailles': data['heures'],
+                        'jours_travailles': 0,
+                        'salaire_base_calcule': res['salaire_base_calcule'],
+                        'montant_ss': res['montant_ss'],
+                        'base_ss': res['base_ss'],
+                        'salaire_imposable': res['salaire_imposable'],
+                        'irg': res['irg'],
+                        'net_a_payer': res['net_a_payer'],
+                        'prime_panier': res['prime_panier'],
+                        'prime_transport': res['prime_transport'],
+                        'is_validated': True
+                    }
+                )
+                
+                LignePaie.objects.filter(fiche_paie=fiche).delete()
+                for ligne in res['detail_lignes']:
+                    LignePaie.objects.create(
+                        fiche_paie=fiche,
+                        rubrique=ligne['rubrique'],
+                        valeur_saisie=ligne['valeur_saisie'],
+                        montant=ligne['montant']
+                    )
+        messages.success(request, f"Les paies de {len(payroll_data)} formateurs ont été générées avec succès.")
+        return redirect('t_ressource_humaine:formateur_fiche_paie_list')
+
+    totals = {
+        'net_a_payer': sum(data['result']['net_a_payer'] for data in payroll_data),
+        'irg': sum(data['result']['irg'] for data in payroll_data),
+        'montant_ss': sum(data['result']['montant_ss'] for data in payroll_data),
+        'salaire_base_calcule': sum(data['result']['salaire_base_calcule'] for data in payroll_data),
+        'count': len(payroll_data)
+    }
+
+    context = {
+        'month': month,
+        'year': year,
+        'payroll_data': payroll_data,
+        'totals': totals,
+        'months_choices': [
+            (1, 'Janvier'), (2, 'Février'), (3, 'Mars'), (4, 'Avril'),
+            (5, 'Mai'), (6, 'Juin'), (7, 'Juillet'), (8, 'Août'),
+            (9, 'Septembre'), (10, 'Octobre'), (11, 'Novembre'), (12, 'Décembre')
+        ]
+    }
+    return render(request, 'tenant_folder/rh/paie/assistant_paie_formateur.html', context)
 

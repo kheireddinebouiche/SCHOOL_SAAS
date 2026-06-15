@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -12,6 +13,7 @@ from t_crm.models import FicheVoeuxDouble, UserActionLog
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ListeEcheancierSpecial(request):
     # Fetch all special echeanciers with related prospect data
     echeanciers = EcheancierSpecial.objects.select_related('prospect').all().order_by('-created_at')
@@ -41,6 +43,7 @@ def ListeEcheancierSpecial(request):
     })
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListEcheancierSpecial(request):
     try:
         # Fetch all special echeanciers with related prospect data
@@ -118,6 +121,7 @@ def ApiListEcheancierSpecial(request):
         })
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'approuv')
 def ApiValidateEcheancierSpecial(request):
     if request.method == 'POST':
         try:
@@ -158,6 +162,7 @@ def ApiValidateEcheancierSpecial(request):
 @login_required(login_url="institut_app:login")
 @csrf_exempt
 @transaction.atomic
+@module_permission_required('tre', 'view')
 def ApiApproveEcheancierSpecial(request):
     if request.method == "POST":
         try:
@@ -198,6 +203,7 @@ def ApiApproveEcheancierSpecial(request):
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiRejectEcheancierSpecial(request):
     if request.method == 'POST':
         try:
@@ -237,6 +243,7 @@ def ApiRejectEcheancierSpecial(request):
 @login_required(login_url="institut_app:login")
 @csrf_exempt
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiStoreEcheancierSpecial(request):
     if request.method == 'POST':
         

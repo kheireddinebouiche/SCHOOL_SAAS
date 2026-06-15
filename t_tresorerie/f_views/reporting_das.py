@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
@@ -6,6 +7,7 @@ from django.apps import apps
 import datetime
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ReportingDAS(request):
     """
     Dashboard showing total amounts grouped by PaymentCategory AND Entreprise.
@@ -151,7 +153,7 @@ def ReportingDAS(request):
             ).distinct().aggregate(total=Sum('montant'))['total'] or 0
 
         # 3. Other Products
-        other_total = AutreProduit.objects.filter(payment_type__payment_categories__id__in=cat_ids, entite=ent, date_paiement__gte=start_date, date_paiement__lte=end_date).aggregate(total=Sum('montant_paiement'))['total'] or 0
+        other_total = AutreProduit.objects.filter(payment_category__id__in=cat_ids, entite=ent, date_paiement__gte=start_date, date_paiement__lte=end_date).aggregate(total=Sum('montant_paiement'))['total'] or 0
 
         # 4. Rachat de Crédit
         rachat_total = 0
@@ -384,7 +386,7 @@ def ReportingDAS(request):
                     })
 
         # 3. Other Details (Group by Label)
-        other_qs = AutreProduit.objects.filter(payment_type__payment_categories__id=cat_id, entite=ent, date_paiement__gte=start_date, date_paiement__lte=end_date).values('label').annotate(total=Sum('montant_paiement')).order_by('-total')
+        other_qs = AutreProduit.objects.filter(payment_category__id=cat_id, entite=ent, date_paiement__gte=start_date, date_paiement__lte=end_date).values('label').annotate(total=Sum('montant_paiement')).order_by('-total')
         for g in other_qs:
              if g['total'] > 0:
                 details.append({

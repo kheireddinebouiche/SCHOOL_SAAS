@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -8,13 +9,16 @@ from django.contrib import messages
 from t_crm.models import Prospets
 import json
 from institut_app.models import Entreprise
+from django.db.models import Q
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageProduits(request):
     return render(request, 'tenant_folder/comptabilite/produits/liste_categories_produits.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListeCategoriesProduits(request):
     """API endpoint to list all payment categories in hierarchical structure"""
     # Get all categories with parent relationship
@@ -57,6 +61,7 @@ def ApiListeCategoriesProduits(request):
     return JsonResponse({'data': category_tree}, safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiCreerCategorieProduit(request):
     """API endpoint to create a new payment category"""
     if request.method == 'POST':
@@ -93,6 +98,7 @@ def ApiCreerCategorieProduit(request):
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'change')
 def ApiModifierCategorieProduit(request):
     """API endpoint to update a payment category"""
     if request.method == 'POST':  # Changed to POST for consistency
@@ -131,6 +137,7 @@ def ApiModifierCategorieProduit(request):
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'delete')
 def ApiSupprimerCategorieProduit(request):
     """API endpoint to delete a payment category"""
     if request.method == 'DELETE':
@@ -156,6 +163,7 @@ def ApiSupprimerCategorieProduit(request):
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetCategorieProduit(request, pk):
     """API endpoint to get details of a specific payment category"""
     try:
@@ -171,11 +179,13 @@ def ApiGetCategorieProduit(request, pk):
         return JsonResponse({'error': 'Catégorie non trouvée'}, status=404)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageCategoriesProduits(request):
     """Page to manage payment categories"""
     return render(request, 'tenant_folder/comptabilite/produits/liste_categories_produits.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageAutrePaiements(request):
     """Page to manage other payments"""
     entites = Entreprise.objects.all()
@@ -183,6 +193,7 @@ def PageAutrePaiements(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'add')
 def ApiStoreAutrePaiement(request):
     """API endpoint to create a new other payment"""
 
@@ -204,12 +215,12 @@ def ApiStoreAutrePaiement(request):
     if mode_paiement == 'esp' and not date_paiement:
          return JsonResponse({'error': 'La date de règlement est obligatoire pour les paiements en espèces.'}, status=400)
 
-    # Get the PaymentType if provided
-    payment_type = None
+    # Get the PaymentCategory if provided
+    payment_category = None
     if compte_id:
         try:
-            payment_type = PaymentType.objects.get(id=compte_id)
-        except PaymentType.DoesNotExist:
+            payment_category = PaymentCategory.objects.get(id=compte_id)
+        except PaymentCategory.DoesNotExist:
             pass # Or handle error appropriately
 
     # Get the Client if provided
@@ -236,7 +247,7 @@ def ApiStoreAutrePaiement(request):
         date_operation=date_operation,
         reference=reference,
         date_paiement=date_paiement if date_paiement else None,
-        payment_type=payment_type,
+        payment_category=payment_category,
         client=client,
         entite=entite,
         is_done=(mode_paiement == 'esp')
@@ -259,10 +270,11 @@ def ApiStoreAutrePaiement(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListeAutrePaiements(request):
     """API endpoint to list all other payments"""
     
-    paiements = AutreProduit.objects.all().select_related('client', 'payment_type').order_by('-date_paiement')
+    paiements = AutreProduit.objects.all().select_related('client', 'payment_category').order_by('-date_paiement')
     data = []
 
     for p in paiements:
@@ -273,7 +285,7 @@ def ApiListeAutrePaiements(request):
             'description': p.label,
             'num': p.reference if p.reference else f"AUT-{p.id}",
             'montant_paye': float(p.montant_paiement) if p.montant_paiement else 0,
-            'context': p.payment_type.name if p.payment_type else "Autre",
+            'context': p.payment_category.name if p.payment_category else "Autre",
             'context_key': 'autre',
             'mode_paiement': p.get_mode_paiement_display(),
             'date_paiement': p.date_paiement.strftime('%Y-%m-%d') if p.date_paiement else "-"
@@ -283,6 +295,7 @@ def ApiListeAutrePaiements(request):
     
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetAutrePaiement(request, pk):
     """API endpoint to get details of a specific other payment"""
     try:
@@ -296,7 +309,7 @@ def ApiGetAutrePaiement(request, pk):
             'date_operation': paiement.date_operation.strftime('%Y-%m-%d') if paiement.date_operation else '-',
             'reference': paiement.reference or '-',
             'date_paiement': paiement.date_paiement.strftime('%Y-%m-%d') if paiement.date_paiement else '-',
-            'compte_id': paiement.payment_type.id if paiement.payment_type else None,
+            'compte_id': paiement.payment_category.id if paiement.payment_category else None,
             'client_nom': paiement.client.nom if paiement.client else '-',
             'client_prenom': paiement.client.prenom if paiement.client else '',
             'client_telephone': paiement.client.telephone if paiement.client else '-',
@@ -309,6 +322,7 @@ def ApiGetAutrePaiement(request, pk):
         return JsonResponse({'error': 'Paiement non trouvé'}, status=404)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'change')
 def ApiUpdateAutrePaiement(request):
     """API endpoint to update an other payment"""
     if request.method == 'POST':
@@ -328,10 +342,10 @@ def ApiUpdateAutrePaiement(request):
 
             paiement = AutreProduit.objects.get(id=paiement_id)
 
-            # Get the PaymentType if provided
-            payment_type = None
+            # Get the PaymentCategory if provided
+            payment_category = None
             if compte_id:
-                payment_type = PaymentType.objects.get(id=compte_id)
+                payment_category = PaymentCategory.objects.get(id=compte_id)
 
             # Update the AutreProduit instance
             paiement.label = label
@@ -340,7 +354,7 @@ def ApiUpdateAutrePaiement(request):
             paiement.date_operation = date_operation
             paiement.reference = reference
             paiement.date_paiement = date_paiement
-            paiement.payment_type = payment_type
+            paiement.payment_category = payment_category
             paiement.save()
 
             # Handle OperationsBancaire for banking modes
@@ -375,6 +389,7 @@ def ApiUpdateAutrePaiement(request):
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'delete')
 def ApiDeleteAutrePaiement(request):
     """API endpoint to delete an other payment"""
     if request.method == 'DELETE':
@@ -405,18 +420,27 @@ def ApiDeleteAutrePaiement(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def api_liste_clients(request):
     if request.method == "GET":
         type_prospect = request.GET.get('type', None)
         context = request.GET.get('context', None)
+        promo_id = request.GET.get('promo_id', None)
         
-        query = Prospets.objects.all().values('id', 'nom', 'prenom', 'type_prospect', 'context')
+        query = Prospets.objects.all()
         
         if type_prospect:
             query = query.filter(type_prospect=type_prospect)
         
         if context:
             query = query.filter(context=context)
+            
+        if promo_id:
+            query = query.filter(
+                Q(prospect_fiche_voeux__promo_id=promo_id) | Q(prospect_fiche_voeux_double__promo_id=promo_id)
+            ).distinct()
+            
+        query = query.values('id', 'nom', 'prenom', 'type_prospect', 'context')
             
         return JsonResponse(list(query), safe=False)
     else:
@@ -425,6 +449,7 @@ def api_liste_clients(request):
     
 
 @login_required(login_url="institu_app:login")
+@module_permission_required('tre', 'add')
 def CreateClientFromTresorerie(request):
     if request.method == "POST":
         nom  = request.POST.get('nom')

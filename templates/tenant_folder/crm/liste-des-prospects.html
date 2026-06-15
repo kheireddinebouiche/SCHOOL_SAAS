@@ -138,6 +138,37 @@
     z-index: 1060 !important;
   }
 
+  /* Select2 Customization for Premium Select */
+  .select2-container--default .select2-selection--single {
+      background-color: #f8fafc !important;
+      border: 1.5px solid #e2e8f0 !important;
+      border-radius: 1rem !important;
+      font-weight: 500 !important;
+      height: 44px !important;
+      padding: 0.35rem 0.5rem !important;
+      transition: all 0.3s ease !important;
+      display: flex;
+      align-items: center;
+  }
+  
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+      color: #212529 !important;
+      padding-left: 0 !important;
+      line-height: normal !important;
+  }
+
+  .select2-container--default .select2-selection--single .select2-selection__arrow {
+      height: 42px !important;
+      right: 10px !important;
+  }
+
+  .select2-container--default.select2-container--open .select2-selection--single,
+  .select2-container--default.select2-container--focus .select2-selection--single {
+      background-color: white !important;
+      border-color: #4f46e5 !important;
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1) !important;
+  }
+
   /* Modern Modal Stylings */
   .modal-modern .modal-content {
     background: rgba(255, 255, 255, 0.98);
@@ -651,49 +682,77 @@
           <!-- Main Content Card -->
           <div class="custom-table-container glass-card" id="prospectList">
             <div class="card-header bg-transparent border-0 p-4">
-              <div class="row g-3 align-items-center">
-                <div class="col-md-4">
-                  <div class="search-box position-relative">
+              <div class="row g-3 align-items-center flex-nowrap overflow-auto pb-2">
+                <!-- Search box -->
+                <div class="col-auto">
+                  <div class="search-box position-relative" style="min-width: 200px;">
                     <i class="ri-search-line fs-5"></i>
-                    <input type="text" id="table-filter" class="form-control premium-input" placeholder="Rechercher un prospect...">
+                    <input type="text" id="table-filter" class="form-control premium-input" placeholder="Rechercher...">
                   </div>
                 </div>
 
-                <div class="col-md-8">
-                  <div class="d-flex flex-wrap justify-content-md-end gap-3">
-                    <div class="d-flex gap-2">
-                      <select id="filter-prospect" class="form-select premium-input w-auto">
-                        <option value="0">Tous les types</option>
+                <!-- Filters and Actions -->
+                <div class="col-auto ms-auto">
+                  <div class="d-flex align-items-center gap-3">
+                    
+                    <!-- Filters group -->
+                    <div class="d-flex align-items-center gap-2">
+                      <select id="filter-prospect" class="form-select premium-input" style="width: 150px;">
+                        <option value="0">Types</option>
                         <option value="particulier">Particulier</option>
                         <option value="entreprise">Entreprise</option>
                       </select>
 
-                      <select id="voeux_filter-prospect" class="form-select premium-input w-auto">
-                        <option value="0">Tous les prospects</option>
-                        <option value="avec_voeux">Avec fiche de voeux</option>
-                        <option value="sans_voeux">Sans fiche de voeux</option>
+                      <div style="width: 200px;">
+                          <select id="filter-specialite" class="form-select premium-input">
+                              <option value="">Toutes les spécialités</option>
+                              <optgroup label="Spécialités Standards">
+                              {% for spec in specialites %}
+                                  <option value="{{ spec.id }}">{{ spec.label }}</option>
+                              {% endfor %}
+                              </optgroup>
+                              <optgroup label="Double Diplomation">
+                              {% for d_spec in double_specialites %}
+                                  <option value="d_{{ d_spec.id }}">{{ d_spec.specialite1.label }} / {{ d_spec.specialite2.label }}</option>
+                              {% endfor %}
+                              </optgroup>
+                          </select>
+                      </div>
+
+                      <select id="voeux_filter-prospect" class="form-select premium-input" style="width: 150px;">
+                        <option value="0">Dossier</option>
+                        <option value="avec_voeux">Avec voeux</option>
+                        <option value="sans_voeux">Sans voeux</option>
                       </select>
 
-                      <select id="date_filter-prospect" class="form-select premium-input w-auto">
-                        <option value="0">Date de création</option>
+                      <select id="date_filter-prospect" class="form-select premium-input" style="width: 150px;">
+                        <option value="0">Date</option>
                         <option value="-created_at">Plus récent</option>
                         <option value="created_at">Plus ancien</option>
                       </select>
                     </div>
 
-                    <!-- Toggle View Buttons -->
-                    <div class="btn-group gap-2" role="group">
-                      <button type="button" class="btn btn-light rounded-pill shadow-sm" id="tableViewBtn" data-view="table" style="width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;">
-                        <i class="ri-list-check fs-5"></i>
+                    <!-- Actions group -->
+                    <div class="d-flex align-items-center gap-2 border-start ps-3 border-light">
+                      <!-- Toggle View Buttons -->
+                      <div class="btn-group gap-2" role="group">
+                        <button type="button" class="btn btn-light rounded-pill shadow-sm" id="tableViewBtn" data-view="table" style="width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;">
+                          <i class="ri-list-check fs-5"></i>
+                        </button>
+                        <button type="button" class="btn btn-light rounded-pill shadow-sm" id="cardViewBtn" data-view="card" style="width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;">
+                          <i class="ri-grid-fill fs-5"></i>
+                        </button>
+                      </div>
+
+                      <button type="button" class="btn btn-soft-primary rounded-pill px-4 shadow-sm d-flex align-items-center gap-2" style="height: 42px;" data-bs-toggle="modal" data-bs-target="#importProspectModal">
+                        <i class="ri-upload-cloud-2-line fs-5"></i> Importer
                       </button>
-                      <button type="button" class="btn btn-light rounded-pill shadow-sm" id="cardViewBtn" data-view="card" style="width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;">
-                        <i class="ri-grid-fill fs-5"></i>
+
+                      <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm d-flex align-items-center gap-2" style="height: 42px;" data-bs-toggle="modal" data-bs-target="#newProspectModal">
+                        <i class="ri-add-line fs-5"></i> Nouveau
                       </button>
                     </div>
 
-                    <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm d-flex align-items-center gap-2 h-100" data-bs-toggle="modal" data-bs-target="#newProspectModal">
-                      <i class="ri-add-line fs-5"></i> Nouveau
-                    </button>
                   </div>
                 </div>
               </div>
@@ -876,6 +935,47 @@
   </div>
 </div>
 
+<!-- Modal for importing prospects -->
+<div class="modal fade modal-modern" id="importProspectModal" tabindex="-1" aria-labelledby="importProspectModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0 pt-4 px-4">
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center pt-0 pb-4 px-4">
+        <div class="avatar-lg mx-auto mb-4">
+          <div class="avatar-title bg-info-subtle text-info">
+            <i class="ri-file-excel-2-line"></i>
+          </div>
+        </div>
+        
+        <h3 class="modal-title-custom text-dark mb-2">Importer des Prospects Particuliers</h3>
+        <p class="modal-text-custom mb-3">Téléchargez un fichier Excel (.xlsx) contenant les prospects. Ils seront ajoutés sans vœux formulés pour le moment.</p>
+        
+        <div class="text-center mb-4">
+            <a href="{% url 't_crm:DownloadProspectsTemplate' %}" class="btn btn-sm btn-soft-info rounded-pill px-3">
+                <i class="ri-download-cloud-2-line me-1"></i> Télécharger le modèle Excel
+            </a>
+        </div>
+
+        <form id="importProspectForm" enctype="multipart/form-data">
+            <div class="mb-4 text-start">
+                <label for="excelFile" class="form-label fw-bold">Fichier Excel (.xlsx) <span class="text-danger">*</span></label>
+                <input class="form-control" type="file" id="excelFile" name="file" accept=".xlsx" required>
+            </div>
+            
+            <div class="pt-2 d-flex gap-2 justify-content-center">
+                <button type="button" class="btn btn-modern-light w-50" data-bs-dismiss="modal">Annuler</button>
+                <button type="submit" class="btn btn-modern-primary w-50" id="btnImportSubmit">
+                    <i class="ri-upload-cloud-2-line me-1"></i> Importer
+                </button>
+            </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 {% user_can_access 'crm' permission='delete' as has_delete_perm %}
 {% user_can_access 'crm' role='Administrateur' as is_admin %}
@@ -907,6 +1007,11 @@
     let currentFilterVoeux = '0'; // Default: '0' means no voeux filter
     let currentFilterDate = '0'; // Default: '0' means no date filter
     let currentSearchTerm = ''; // Default: empty search term
+
+    // Initialize Select2 for the specialty filter
+    $('#filter-specialite').select2({
+        width: '100%'
+    });
     
     function updateKPIs(data) {
       // Total prospects
@@ -1156,8 +1261,12 @@
     }
 
     function loadProspects(){
+        var specialite_id = $('#filter-specialite').val();
         $.ajax({
           url : '{% url "t_crm:ApiLoadProspects" %}',
+          data: {
+              'specialite': specialite_id
+          },
           dataType: "JSON",
           type: 'GET',
           beforeSend: function() {
@@ -1300,6 +1409,11 @@
       applyFiltersAndSearch();
     });
 
+    // Handle specialite filter change
+    $(document).on('change', '#filter-specialite', function() {
+        loadProspects();
+    });
+
     // Handle date filter change
     $(document).on('change','#date_filter-prospect', function(){
       currentFilterDate = $(this).val();
@@ -1374,6 +1488,48 @@
 
       $('.hstack').html(row);
       $('.deleteModal').modal('show');
+    });
+
+    // Import prospect form submit
+    $('#importProspectForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        var formData = new FormData(this);
+        var $btn = $('#btnImportSubmit');
+        var originalText = $btn.html();
+        
+        $btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Importation...').prop('disabled', true);
+        
+        $.ajax({
+            url: "{% url 't_crm:ApiImportProspectsParticuliers' %}",
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                $btn.html(originalText).prop('disabled', false);
+                if(response.status === 'success') {
+                    $('#importProspectModal').modal('hide');
+                    $('#importProspectForm')[0].reset();
+                    
+                    alertify.success(response.message);
+                    
+                    // Reload page after a short delay
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    alertify.error(response.message || "Erreur lors de l'importation");
+                }
+            },
+            error: function() {
+                $btn.html(originalText).prop('disabled', false);
+                alertify.error("Une erreur s'est produite lors de la connexion au serveur.");
+            }
+        });
     });
 
     // Modal handlers removed as they now use data-bs attributes directly in HTML for better reliability with dynamic content

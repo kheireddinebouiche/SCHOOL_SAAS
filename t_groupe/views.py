@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from .models import *
@@ -257,6 +258,15 @@ def ApiUpdateGroupeCode(request):
 
         groupe.save()
 
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Groupe',
+            target_id=str(groupe.id),
+            details=f"Modification du code partenaire du groupe {groupe.nom} en {code_partenaire}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
         return JsonResponse({"status" : "success","message" : "Le code du groupe a été changé avec succès"})
 
     else:
@@ -267,15 +277,32 @@ def makeGroupeBrouillon(request, pk):
     groupe = Groupe.objects.get(id = pk)
     groupe.etat = "brouillon"
     groupe.save()
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='UPDATE',
+        target_model='Groupe',
+        target_id=str(groupe.id),
+        details=f"Le groupe {groupe.nom} a été remis en brouillon",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
     messages.success(request, "Le groupe est en mode brouillon")
     return redirect('t_groupe:detailsgroupe', pk)
 
 @login_required(login_url="insitut_app:login")
 @transaction.atomic
+@module_permission_required('scol', 'approuv')
 def validateGroupe(request, pk):
     groupe = Groupe.objects.get(id = pk)
     groupe.etat = "inscription"
     groupe.save()
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='UPDATE',
+        target_model='Groupe',
+        target_id=str(groupe.id),
+        details=f"Les inscriptions ont été ouvertes pour le groupe {groupe.nom}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
     messages.success(request, "Le début des inscription est programmé")
     return redirect('t_groupe:detailsgroupe', pk)
 
@@ -285,6 +312,14 @@ def closeGroupe(request, pk):
     groupe = Groupe.objects.get(id = pk)
     groupe.etat = "cloture"
     groupe.save()
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='UPDATE',
+        target_model='Groupe',
+        target_id=str(groupe.id),
+        details=f"Le groupe {groupe.nom} a été clôturé",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
     messages.success(request, "Le groupe a été clôturé avec succès")
     return redirect('t_groupe:detailsgroupe', pk)
 
@@ -321,6 +356,14 @@ def ApiCloseGroupInscription(request, pk):
     groupe = Groupe.objects.get(id=pk)
     groupe.etat = 'inscription_terminee'
     groupe.save()
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='UPDATE',
+        target_model='Groupe',
+        target_id=str(groupe.id),
+        details=f"Fermeture des inscriptions pour le groupe {groupe.nom}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
     messages.success(request, f"L'inscription au groupe {groupe.nom} est désormais terminée.")
     return redirect('t_groupe:detailsgroupe', pk=pk)
 
@@ -329,6 +372,14 @@ def ApiOpenGroupInscription(request, pk):
     groupe = Groupe.objects.get(id=pk)
     groupe.etat = 'inscription'
     groupe.save()
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='UPDATE',
+        target_model='Groupe',
+        target_id=str(groupe.id),
+        details=f"Réouverture des inscriptions pour le groupe {groupe.nom}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
     messages.success(request, f"L'inscription au groupe {groupe.nom} est désormais réouverte.")
     return redirect('t_groupe:detailsgroupe', pk=pk)
 

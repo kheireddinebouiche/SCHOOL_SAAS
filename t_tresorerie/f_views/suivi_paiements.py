@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
@@ -9,6 +10,7 @@ from t_groupe.models import Groupe, GroupeLine
 from t_formations.models import Promos
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageSuiviPaiements(request):
     promos = Promos.objects.filter(etat="active")
     groupes = Groupe.objects.all()
@@ -20,6 +22,7 @@ def PageSuiviPaiements(request):
     return render(request, 'tenant_folder/comptabilite/tresorerie/suivi_paiements.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiSuiviPaiements(request):
     promo_id = request.GET.get('promo_id')
     groupe_id = request.GET.get('groupe_id')

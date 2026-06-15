@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
@@ -35,6 +36,7 @@ def check_exam_overlap(salle_id, date, heure_debut, heure_fin, exclude_id=None):
     return ExamPlanification.objects.filter(query).exists()
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
 def ApiSavePlannedExam(request):
     if request.method == "POST":
         pass
@@ -43,6 +45,7 @@ def ApiSavePlannedExam(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
 def ApiLoadDataToPlan(request):
     if request.method == "GET":
         id_groupe = request.GET.get("id_groupe")
@@ -74,6 +77,7 @@ def ApiLoadDataToPlan(request):
         return JsonResponse({"status":"error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def PageDetailsSessionExamPlan(request, pk):
     try:
         SessionExamLine.objects.get(id=pk)
@@ -85,6 +89,7 @@ def PageDetailsSessionExamPlan(request, pk):
     return render(request, 'tenant_folder/exams/details_sessions_exams_plan.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def get_exam_planifications(request):
     session_line_id = request.GET.get("id")
     try:
@@ -135,6 +140,7 @@ def get_exam_planifications(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'add')
 def ApiPlanExam(request):
     if request.method == "POST":
         moduleSelect = request.POST.get('moduleSelect')
@@ -188,6 +194,7 @@ def ApiPlanExam(request):
         return JsonResponse({"status":"error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def PreviewPV(request, pk):
     obj = ExamPlanification.objects.get(id = pk)
     groupe  = SessionExamLine.objects.get(id = obj.exam_line.id)
@@ -206,6 +213,7 @@ def PreviewPV(request, pk):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'approuv')
 def validate_exam(request):
     if request.method == "POST":
         exam_plan_id = request.POST.get('planId')
@@ -230,6 +238,7 @@ def validate_exam(request):
         return JsonResponse({"status": "error","message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
 def GeneratePv(request, pk):
     obj = ExamPlanification.objects.get(id=pk)
     groupe = SessionExamLine.objects.get(id=obj.exam_line.id)
@@ -350,6 +359,7 @@ def GeneratePv(request, pk):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'delete')
 def delete_pv(request):
     if request.method == "POST":
         exam_plan_id = request.POST.get('exam_plan_id')
@@ -384,6 +394,7 @@ def delete_pv(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ShowPvModal(request, pk):
     obj = ExamPlanification.objects.get(id = pk)
     groupe  = SessionExamLine.objects.get(id = obj.exam_line.id)
@@ -512,6 +523,7 @@ def ShowPvModal(request, pk):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def get_calculated_results(request, pk):
     """
     API pour récupérer les résultats calculés avec les moyennes des sous-notes
@@ -575,6 +587,7 @@ def get_calculated_results(request, pk):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'approuv')
 def validate_pv_exam(request):
     """
     Vue pour valider le PV d'examen et enregistrer les décisions des étudiants
@@ -638,6 +651,7 @@ def validate_pv_exam(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ApiListPvExamen(request):
     if request.method == "GET":
         # Get status filter from request parameters
@@ -744,6 +758,7 @@ def ApiListPvExamen(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'delete')
 def ApiDeletePvExamen(request):
     """
     API pour supprimer un PV d'examen et remettre le statut passed de l'exam planification à False
@@ -790,6 +805,7 @@ def ApiDeletePvExamen(request):
         })
 
 @login_required(login_url="institut_app:login")    
+@module_permission_required('exa', 'view')
 def exams_results(request):
     """
     Vue pour afficher la liste des PVs d'examens
@@ -798,6 +814,7 @@ def exams_results(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'delete')
 def ApiDeleteExamPlanification(request):
     """
     API pour supprimer une planification d'examen
@@ -846,6 +863,7 @@ def ApiDeleteExamPlanification(request):
         })
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
 def SaveExamResults(request, pk):
     if request.method == 'POST':
         try:
@@ -1227,6 +1245,7 @@ def SaveExamResults(request, pk):
             "message": "Méthode non autorisée"
         })
 
+@module_permission_required('exa', 'view')
 def GetExamHistory(request, pk):
     """
     Function to retrieve the history of exam results for a given exam planification
@@ -1294,6 +1313,7 @@ def GetExamHistory(request, pk):
         })
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def ShowPv(request, pk):
     obj = ExamPlanification.objects.get(id = pk)
     groupe  = SessionExamLine.objects.get(id = obj.exam_line.id)
@@ -1420,6 +1440,7 @@ def ShowPv(request, pk):
     return render(request,'tenant_folder/exams/print_pv_examn.html',context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def close_session_line(request):
     if request.method == "GET":
         session_line = request.GET.get('session_line')
@@ -1441,10 +1462,12 @@ def close_session_line(request):
         return JsonResponse({"status" : "error"})
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def PagePvDeliberation(request):
     return render(request, 'tenant_folder/exams/deliberation.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
 def ApiLoadDeliberationPv(request):
     if request.method == "GET":
         liste = SessionExam.objects.all()
@@ -1466,6 +1489,7 @@ def ApiLoadDeliberationPv(request):
         return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
 def PageDeliberationResult(request, pk):
     try:
         SessionExam.objects.get(id=pk)
@@ -1477,6 +1501,7 @@ def PageDeliberationResult(request, pk):
     return render(request, 'tenant_folder/exams/deliberation_results.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
 def ApiLoadSessionExamLines(request):
     if request.method == "GET":
         session_id = request.GET.get("session_id")
@@ -1511,6 +1536,7 @@ def ApiLoadSessionExamLines(request):
 
 ##############" Mise a jours des plannifications d'examens"######################
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'change')
 def update_exam_plan(request):
     if request.method == "POST":
         id = request.POST.get('id')
@@ -1554,6 +1580,7 @@ def update_exam_plan(request):
         return JsonResponse({"status":"error"})   
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
 def ApiLoadSalle(request):
     if request.method =="GET":
         liste = Salle.objects.all().values('id','nom')
@@ -1563,6 +1590,7 @@ def ApiLoadSalle(request):
         return JsonResponse({"status":"error"})
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'delete')
 def delete_exam_plan(request):
     if request.method == "POST":
         id = request.POST.get('id')
@@ -1578,6 +1606,7 @@ def delete_exam_plan(request):
         return JsonResponse({"status":"error"})
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
 def ApiLoadFormateur(request):
     if request.method == "GET":
         liste = Formateurs.objects.all().values('id','nom','prenom')

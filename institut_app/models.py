@@ -66,8 +66,7 @@ class Roles(models.Model):
         verbose_name_plural="Roles"
 
     def __str__(self):
-        return self.label
-
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class Entreprise(models.Model):
    
     designation = models.CharField(max_length=255, null=True, blank=True)
@@ -99,13 +98,15 @@ class Entreprise(models.Model):
 
     entite_afficher = models.CharField(max_length=100, null=True, blank=True, help_text="Abreviation a afficher sur les rapport ex: INSIM")
 
+    quittance_format = models.CharField(max_length=200, null=True, blank=True, default="N°{seq}/ST/{entite}/{wilaya}/{annexe}/{mois}/{annee}", verbose_name="Format de Quittance")
+    quittance_sequence_length = models.IntegerField(default=6, verbose_name="Longueur de la séquence")
+
     class Meta:
         verbose_name="Entreprise"
         verbose_name_plural = "Entreprises"
     
     def __str__(self):
-        return self.designation
-
+        return str(self.designation) if getattr(self, "designation", None) else "Sans désignation"
 class BankAccount(models.Model):
    
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name="comptes_entreprise")
@@ -125,8 +126,7 @@ class BankAccount(models.Model):
         verbose_name_plural="Labels"
 
     def __str__(self):
-        return self.bank_code
-
+        return str(self.bank_code) if getattr(self, "bank_code", None) else "Sans code"
 class GlobalConfiguration(models.Model):
     registration_validation_enabled = models.BooleanField(default=True, verbose_name=_("Validation des inscriptions active"))
     crm_notifications_enabled = models.BooleanField(default=True, verbose_name=_("Notifications CRM actives"))
@@ -137,6 +137,38 @@ class GlobalConfiguration(models.Model):
     session_timeout_enabled = models.BooleanField(default=True, verbose_name=_("Verrouillage de session actif"))
     device_lock_enabled = models.BooleanField(default=True, verbose_name=_("Verrouillage par appareil actif"))
     
+    # Derogation Settings
+    NOTIFICATION_MODE_CHOICES = (
+        ('role', _('Par rôle (Managers/Superviseurs CRM)')),
+        ('specific', _('Comptes spécifiques')),
+    )
+    derogation_notification_mode = models.CharField(max_length=20, choices=NOTIFICATION_MODE_CHOICES, default='role', verbose_name=_("Mode de notification de dérogation"))
+    derogation_notification_receivers = models.ManyToManyField(User, blank=True, verbose_name=_("Receveurs des notifications de dérogation"), related_name='derogation_receivers')
+
+    # Payment Notifications
+    PAYMENT_NOTIFICATION_MODE_CHOICES = (
+        ('role', _('Par rôle (Trésorerie)')),
+        ('specific', _('Comptes spécifiques')),
+    )
+    payment_notification_mode = models.CharField(max_length=20, choices=PAYMENT_NOTIFICATION_MODE_CHOICES, default='role', verbose_name=_("Mode de notification de paiement"))
+    payment_notification_receivers = models.ManyToManyField(User, blank=True, verbose_name=_("Receveurs des notifications de paiement"), related_name='payment_receivers')
+
+    # Paie Notifications
+    PAIE_NOTIFICATION_MODE_CHOICES = (
+        ('role', _('Par rôle (Comptabilité/Finance)')),
+        ('specific', _('Comptes spécifiques')),
+    )
+    paie_notification_mode = models.CharField(max_length=20, choices=PAIE_NOTIFICATION_MODE_CHOICES, default='role', verbose_name=_("Mode de notification de paie"))
+    paie_notification_receivers = models.ManyToManyField(User, blank=True, verbose_name=_("Receveurs des notifications de paie"), related_name='paie_receivers')
+
+    # Transfer Notifications
+    TRANSFER_NOTIFICATION_MODE_CHOICES = (
+        ('role', _('Par rôle (Scolarité)')),
+        ('specific', _('Comptes spécifiques')),
+    )
+    transfer_notification_mode = models.CharField(max_length=20, choices=TRANSFER_NOTIFICATION_MODE_CHOICES, default='role', verbose_name=_("Mode de notification de transfert"))
+    transfer_notification_receivers = models.ManyToManyField(User, blank=True, verbose_name=_("Receveurs des notifications de transfert"), related_name='transfer_receivers')
+
     # Email Configuration
     email_enabled = models.BooleanField(default=False, verbose_name=_("Envoi d'emails activé"))
     email_host = models.CharField(max_length=255, default='smtp.gmail.com', verbose_name=_("Serveur SMTP"))
@@ -232,11 +264,11 @@ class Fournisseur(models.Model):
     updated_at = models.DateField(auto_now=True)
     
     def __str__(self):
-        return self.designation
-
+        return str(self.designation) if getattr(self, "designation", None) else "Sans désignation"
 class Module(models.Model):
     MODULES = [
         ('crm',_('CRM')),
+        ('rel',_('Relations Extérieures')),
         ('ped',_('Pédagogie')),
         ('exa',_('Examens')),
         ('eva',_('Evaluation')),
@@ -266,7 +298,7 @@ class Module(models.Model):
         ordering = ['name']
 
     def __str__(self):
-        return self.get_name_display()
+        return str(self.get_name_display()) if self.name else "Module sans nom"
     
 class Role(models.Model):
     ROLE_LEVEL = [
@@ -405,3 +437,17 @@ class PasswordResetRequest(models.Model):
 
     def __str__(self):
         return f"Reset for {self.user.username} at {self.created_at}"
+
+class UserSubMenuAccess(models.Model):
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='submenu_accesses')
+    module_code = models.CharField(max_length=10) # e.g. 'tre'
+    submenu_code = models.CharField(max_length=50) # e.g. 'tresorerie', 'caisse', 'depenses'
+    is_active = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('user', 'module_code', 'submenu_code')
+        verbose_name = _('Accès Sous-Menu')
+        verbose_name_plural = _('Accès Sous-Menus')
+
+    def __str__(self):
+        return f"{self.user} - {self.module_code} - {self.submenu_code} : {'Actif' if self.is_active else 'Inactif'}"

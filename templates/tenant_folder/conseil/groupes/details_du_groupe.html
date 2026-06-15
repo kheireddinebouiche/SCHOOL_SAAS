@@ -299,15 +299,27 @@
                         </p>
                         <h1 class="banner-title">{{ groupe.nom }}</h1>
                         <div>
-                            <span class="banner-badge"><i class="ri-file-text-line"></i> {{ groupe.devis.num_devis }}</span>
-                            <span class="banner-badge">
-                                <i class="ri-building-line"></i> 
-                                {% if groupe.devis.client.type_prospect == 'entreprise' %}
-                                    {{ groupe.devis.client.entreprise }}
-                                {% else %}
-                                    {{ groupe.devis.client.nom }} {{ groupe.devis.client.prenom }}
-                                {% endif %}
-                            </span>
+                            {% if groupe.devis %}
+                                <span class="banner-badge"><i class="ri-file-text-line"></i> {{ groupe.devis.num_devis }}</span>
+                                <span class="banner-badge">
+                                    <i class="ri-building-line"></i> 
+                                    {% if groupe.devis.client.type_prospect == 'entreprise' %}
+                                        {{ groupe.devis.client.entreprise }}
+                                    {% else %}
+                                        {{ groupe.devis.client.nom }} {{ groupe.devis.client.prenom }}
+                                    {% endif %}
+                                </span>
+                            {% elif groupe.facture %}
+                                <span class="banner-badge"><i class="ri-bill-line"></i> {{ groupe.facture.num_facture }}</span>
+                                <span class="banner-badge">
+                                    <i class="ri-building-line"></i> 
+                                    {% if groupe.facture.client.type_prospect == 'entreprise' %}
+                                        {{ groupe.facture.client.entreprise }}
+                                    {% else %}
+                                        {{ groupe.facture.client.nom }} {{ groupe.facture.client.prenom }}
+                                    {% endif %}
+                                </span>
+                            {% endif %}
                             {% if groupe.etat == "brouillon" %}
                                 <span class="banner-badge" style="background:rgba(255,255,255,0.15)"><i class="ri-pencil-line"></i> {{ groupe.get_etat_display }}</span>
                             {% elif groupe.etat == "enc" %}
@@ -323,9 +335,15 @@
                                 <i class="ri-lock-line me-1"></i> Clôturer
                             </button>
                         {% endif %}
+                        {% if groupe.devis %}
                         <a href="{% url 't_conseil:DetailsDevis' pk=groupe.devis.num_devis %}" class="btn-ghost-white">
                             <i class="ri-file-text-line me-1"></i> Voir le devis
                         </a>
+                        {% elif groupe.facture %}
+                        <a href="{% url 't_conseil:DetailsFacture' pk=groupe.facture.num_facture %}" class="btn-ghost-white">
+                            <i class="ri-bill-line me-1"></i> Voir la facture
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -462,12 +480,19 @@
                                                 <div class="thematique-dot"></div>
                                                 <div>
                                                     <div class="thematique-name">{{ aff.thematique.label }}</div>
-                                                    <div class="thematique-formateur">
-                                                        {% if aff.formateur %}
-                                                            <i class="ri-user-voice-line me-1" style="color:var(--success)"></i>{{ aff.formateur }}
-                                                        {% else %}
-                                                            <span style="color:var(--warning)"><i class="ri-user-unfollow-line me-1"></i>Formateur non affecté</span>
-                                                        {% endif %}
+                                                    <div class="thematique-formateur d-flex align-items-center">
+                                                        <div class="flex-grow-1">
+                                                            {% if aff.consultant %}
+                                                                <i class="ri-user-voice-line me-1" style="color:var(--success)"></i>{{ aff.consultant }}
+                                                            {% elif aff.formateur %}
+                                                                <i class="ri-user-voice-line me-1" style="color:var(--success)"></i>{{ aff.formateur }}
+                                                            {% else %}
+                                                                <span style="color:var(--warning)"><i class="ri-user-unfollow-line me-1"></i>Intervenant non affecté</span>
+                                                            {% endif %}
+                                                        </div>
+                                                        <button class="btn btn-sm btn-link text-primary p-0 ms-2" onclick="openChangeIntervenantModal({{ aff.id }}, '{% if aff.consultant %}c_{{ aff.consultant.id }}{% elif aff.formateur %}f_{{ aff.formateur.id }}{% else %}{% endif %}')" title="Changer l'intervenant">
+                                                            <i class="ri-edit-line"></i>
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -509,6 +534,7 @@
                                                     <th>Horaire</th>
                                                     <th>Thématique</th>
                                                     <th>Formateur</th>
+                                                    <th>État</th>
                                                     <th class="text-end pe-4">Actions</th>
                                                 </tr>
                                             </thead>
@@ -523,14 +549,26 @@
                                                     </td>
                                                     <td class="fw-medium">{{ session.thematique.label }}</td>
                                                     <td>
-                                                        {% if session.formateur %}
+                                                        {% if session.consultant %}
+                                                            <i class="ri-user-voice-line me-1 text-success"></i>{{ session.consultant }}
+                                                        {% elif session.formateur %}
                                                             <i class="ri-user-voice-line me-1 text-success"></i>{{ session.formateur }}
                                                         {% else %}
                                                             <span class="text-muted italic small">N/A</span>
                                                         {% endif %}
                                                     </td>
+                                                    <td id="td-etat-{{ session.id }}">
+                                                        {% if session.realisee %}
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="ri-check-double-line me-1"></i>Tenue</span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle"><i class="ri-time-line me-1"></i>En attente</span>
+                                                        {% endif %}
+                                                    </td>
                                                     <td class="text-end pe-4">
-                                                        <a href="{% url 't_conseil:SessionAttendancePDF' session_id=session.id %}" target="_blank" class="btn btn-sm btn-light-primary btn-icon me-2" title="Imprimer la feuille d'émargement">
+                                                        <button class="btn btn-sm btn-light-info btn-icon me-1" title="Renseigner les éléments abordés" onclick="openReportModal({{ session.id }}, '{{ session.realisee|yesno:'true,false' }}', '{{ session.resume_seance|escapejs }}')">
+                                                            <i class="ri-file-edit-line fs-5"></i>
+                                                        </button>
+                                                        <a href="{% url 't_conseil:SessionAttendancePDF' session_id=session.id %}" target="_blank" class="btn btn-sm btn-light-primary btn-icon me-1" title="Imprimer la feuille d'émargement">
                                                             <i class="ri-printer-line fs-5"></i>
                                                         </a>
                                                         <button class="btn btn-link btn-sm text-danger p-0 border-0" onclick="deleteSession({{ session.id }})">
@@ -604,11 +642,36 @@
 
                 <!-- RIGHT: Sidebar -->
                 <div>
-                    <!-- Devis card -->
+                    <!-- Documents liés -->
                     <div class="sidebar-info-block">
-                        <div class="sidebar-block-title"><i class="ri-file-text-line"></i> Devis associé</div>
-                        <div class="devis-card">
-                            <div class="devis-num">{{ groupe.devis.num_devis }}</div>
+                        <div class="sidebar-block-title"><i class="ri-folder-open-line"></i> Documents liés</div>
+                        
+                        {% if facture_liee %}
+                        <div class="devis-card mb-3" style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: rgba(34, 197, 94, 0.2);">
+                            <div class="devis-num text-success"><i class="ri-bill-line me-1"></i> Facture {{ facture_liee.num_facture }}</div>
+                            <div class="devis-client">
+                                <i class="ri-building-line me-1"></i>
+                                {% if facture_liee.client.type_prospect == 'entreprise' %}
+                                    {{ facture_liee.client.entreprise }}
+                                {% else %}
+                                    {{ facture_liee.client.nom }} {{ facture_liee.client.prenom }}
+                                {% endif %}
+                            </div>
+                            <div class="devis-state mt-2">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">{{ facture_liee.get_etat_display }}</span>
+                            </div>
+                            <a href="{% url 't_conseil:DetailsFacture' pk=facture_liee.num_facture %}" 
+                               class="btn btn-sm mt-3 w-100 btn-success text-white" 
+                               style="border-radius:10px;font-size:0.82rem;font-weight:600;">
+                                <i class="ri-eye-line me-1"></i> Consulter la facture
+                            </a>
+                        </div>
+                        {% endif %}
+
+                        {% if groupe.devis %}
+                        <div class="devis-card" {% if facture_liee %}style="background: #f8fafc; border-color: #e2e8f0; opacity: 0.9;"{% endif %}>
+                            <div class="devis-num {% if facture_liee %}text-muted{% endif %}"><i class="ri-file-text-line me-1"></i> Devis {{ groupe.devis.num_devis }}</div>
+                            {% if not facture_liee %}
                             <div class="devis-client">
                                 <i class="ri-building-line me-1"></i>
                                 {% if groupe.devis.client.type_prospect == 'entreprise' %}
@@ -617,13 +680,15 @@
                                     {{ groupe.devis.client.nom }} {{ groupe.devis.client.prenom }}
                                 {% endif %}
                             </div>
-                            <div class="devis-state">État : {{ groupe.devis.get_etat_display }}</div>
+                            {% endif %}
+                            <div class="devis-state {% if facture_liee %}mt-2{% endif %}">État : {{ groupe.devis.get_etat_display }}</div>
                             <a href="{% url 't_conseil:DetailsDevis' pk=groupe.devis.num_devis %}" 
-                               class="btn btn-sm mt-3 w-100" 
-                               style="background:var(--accent);color:#fff;border-radius:10px;font-size:0.82rem;font-weight:600;">
+                               class="btn btn-sm mt-3 w-100 {% if facture_liee %}btn-light border{% endif %}" 
+                               style="{% if not facture_liee %}background:var(--accent);color:#fff;{% else %}color:var(--text-primary);{% endif %}border-radius:10px;font-size:0.82rem;font-weight:600;">
                                 <i class="ri-eye-line me-1"></i> Consulter le devis
                             </a>
                         </div>
+                        {% endif %}
                     </div>
 
                     <!-- Synthèse -->
@@ -788,6 +853,74 @@
     </div>
 </div>
 
+<!-- Modal CHANGE INTERVENANT -->
+<div class="modal fade" id="modalChangeIntervenant" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0">
+            <div class="modal-header px-4 pt-4 border-0">
+                <h5 class="fw-bold m-0"><i class="ri-user-voice-line me-2 text-indigo"></i>Changer l'intervenant</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4">
+                <form id="formChangeIntervenant">
+                    <input type="hidden" name="affectation_id" id="changeIntervenantAffectationId">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Intervenant</label>
+                        <select class="form-select" name="intervenant_id" id="changeIntervenantSelect">
+                            <option value="">-- Aucun intervenant --</option>
+                            <optgroup label="Consultants">
+                                {% for c in consultants %}
+                                    <option value="c_{{ c.id }}">{{ c.nom }} {{ c.prenom }}</option>
+                                {% endfor %}
+                            </optgroup>
+                            <optgroup label="Formateurs">
+                                {% for f in formateurs %}
+                                    <option value="f_{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>
+                                {% endfor %}
+                            </optgroup>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" style="border-radius:10px">Annuler</button>
+                <button type="button" id="btnSaveChangeIntervenant" class="btn btn-primary px-4" style="border-radius:10px">
+                    <i class="ri-save-line me-1"></i> Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal SESSION REPORT -->
+<div class="modal fade" id="modalSessionReport" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0">
+            <div class="modal-header border-bottom border-light">
+                <h5 class="modal-title fw-bold text-dark"><i class="ri-file-edit-line me-2 text-info"></i>Compte Rendu de Session</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="reportSessionId">
+                <div class="form-check form-switch mb-3 custom-switch-lg">
+                    <input class="form-check-input" type="checkbox" role="switch" id="reportRealisee">
+                    <label class="form-check-label ms-2 fw-medium" for="reportRealisee">Séance tenue et réalisée</label>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium text-muted">Éléments réellement abordés :</label>
+                    <textarea class="form-control rounded-3 bg-light border-0" id="reportResumeSeance" rows="4" placeholder="Résumé de la séance..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pb-4 px-4 gap-2 justify-content-end">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" style="border-radius:12px">Annuler</button>
+                <button type="button" class="btn btn-info text-white px-4" id="btnSaveSessionReport" style="border-radius:12px">
+                    <i class="ri-save-line me-1"></i> Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 $(document).ready(function () {
 
@@ -927,6 +1060,57 @@ $(document).ready(function () {
         $('#deleteSessionId').val(id);
         $('#modalDeleteSession').modal('show');
     }
+
+    // ─── Report Planning Session ────────────────────────────
+    window.openReportModal = function(id, realisee, resume) {
+        $('#reportSessionId').val(id);
+        $('#reportRealisee').prop('checked', realisee === 'true');
+        $('#reportResumeSeance').val(resume);
+        $('#modalSessionReport').modal('show');
+    }
+
+    $('#btnSaveSessionReport').on('click', function() {
+        const id = $('#reportSessionId').val();
+        const realisee = $('#reportRealisee').is(':checked');
+        const resume = $('#reportResumeSeance').val();
+        const btn = $(this);
+        
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> ...');
+        
+        $.ajax({
+            url: '{% url "t_conseil:ApiUpdateSessionReport" %}',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ session_id: id, realisee: realisee, resume_seance: resume }),
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            success: function(res) {
+                if(res.status === 'success') {
+                    alertify.success('Compte rendu enregistré');
+                    $('#modalSessionReport').modal('hide');
+                    
+                    // Update table badge
+                    const tdEtat = $(`#td-etat-${id}`);
+                    if (realisee) {
+                        tdEtat.html('<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="ri-check-double-line me-1"></i>Tenue</span>');
+                    } else {
+                        tdEtat.html('<span class="badge bg-warning-subtle text-warning border border-warning-subtle"><i class="ri-time-line me-1"></i>En attente</span>');
+                    }
+                    
+                    // Update the onclick arguments for the report button in that row
+                    const btnReport = tdEtat.next('td').find('button[title="Renseigner les éléments abordés"]');
+                    if (btnReport.length > 0) {
+                        const safeResume = resume.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                        btnReport.attr('onclick', `openReportModal(${id}, '${realisee ? "true" : "false"}', '${safeResume}')`);
+                    }
+                } else {
+                    alertify.error(res.message);
+                }
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('<i class="ri-save-line me-1"></i> Enregistrer');
+            }
+        });
+    });
 
     $('#btnConfirmDeleteSession').on('click', function() {
         const id = $('#deleteSessionId').val();
@@ -1074,6 +1258,44 @@ $(document).ready(function () {
             }
         });
     };
+    // ─── Change Intervenant ───────────────────────
+    window.openChangeIntervenantModal = function(affectationId, currentIntervenantId) {
+        $('#changeIntervenantAffectationId').val(affectationId);
+        $('#changeIntervenantSelect').val(currentIntervenantId);
+        $('#modalChangeIntervenant').modal('show');
+    };
+
+    $('#btnSaveChangeIntervenant').click(function() {
+        const affectationId = $('#changeIntervenantAffectationId').val();
+        const intervenantId = $('#changeIntervenantSelect').val();
+        const $btn = $(this);
+        
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+        
+        $.ajax({
+            url: '{% url "t_conseil:ApiUpdateThematiqueIntervenant" %}',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ 
+                'affectation_id': affectationId,
+                'intervenant_id': intervenantId
+            }),
+            headers: {"X-CSRFToken": '{{ csrf_token }}'},
+            success: function(res) {
+                if (res.status === 'success') {
+                    alertify.success(res.message);
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    alertify.error(res.message);
+                    $btn.prop('disabled', false).html('<i class="ri-save-line me-1"></i> Enregistrer');
+                }
+            },
+            error: function() {
+                alertify.error('Une erreur est survenue.');
+                $btn.prop('disabled', false).html('<i class="ri-save-line me-1"></i> Enregistrer');
+            }
+        });
+    });
 });
 </script>
 

@@ -1,4 +1,6 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect, get_object_or_404
+from django.db import transaction
 from .forms import *
 from .models import *
 from t_tresorerie.models import PaymentCategory, OperationsBancaire
@@ -17,6 +19,7 @@ from django.utils import timezone
 from institut_app.decorators import ajax_required
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ListeThematique(request):
     context = {
         'tenant' : request.tenant,
@@ -25,11 +28,14 @@ def ListeThematique(request):
     return render(request, 'tenant_folder/conseil/liste-des-thematiques.html', context)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiLoadThematique(request):
     thematique = Thematiques.objects.filter(etat  = "active").values('id', 'label', 'description', 'prix', 'created_at', 'billing_type', 'default_tva', 'categorie')
     return JsonResponse(list(thematique), safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveThematique(request):
     label = request.POST.get('label')
     prix = request.POST.get('prix')
@@ -38,7 +44,7 @@ def ApiSaveThematique(request):
     default_tva = request.POST.get('default_tva', 19.00)
     categorie = request.POST.get('categorie', 'service')
 
-    Thematiques.objects.create(
+    thematique = Thematiques.objects.create(
         label = label,
         description = description,
         prix = prix,
@@ -47,9 +53,20 @@ def ApiSaveThematique(request):
         categorie = categorie
     )
 
-    return JsonResponse({'status': 'success', 'message': 'ThÃ©matique ajoutÃ©e avec succÃ¨s.'})
+    from t_crm.models import UserActionLog
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='CREATE',
+        target_model='Thematiques',
+        target_id=str(thematique.id),
+        details=f"Création de la thématique: {label}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+
+    return JsonResponse({'status': 'success', 'message': 'Thématique ajoutée avec succès.'})
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiLoadThematiqueDetails(request):
     id_thematique = request.GET.get('id_thematique')
     obj = Thematiques.objects.filter(id = id_thematique)
@@ -66,26 +83,32 @@ def ApiLoadThematiqueDetails(request):
     return JsonResponse(data, safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def DetailsProspectConseil(request, slug):
     prospect = get_object_or_404(Prospets, slug=slug)
+    from t_crm.models import RendezVous
+    rendez_vous = RendezVous.objects.filter(prospect=prospect).order_by('-date_rendez_vous', '-heure_rendez_vous')
     
     context = {
         'tenant': request.tenant,
         'prospect': prospect,
         'pk': prospect.id,
         'slug': prospect.slug,
+        'rendez_vous': rendez_vous,
     }
     
     # Use dedicated template for Conseil/Executive Education
     return render(request, 'tenant_folder/conseil/prospect/details_prospect.html', context)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiLoadProspectDevis(request):
     id_prospect = request.GET.get('id_prospect')
     devis = Devis.objects.filter(client_id=id_prospect).values('id', 'num_devis', 'montant', 'date_emission', 'etat')
     return JsonResponse(list(devis), safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiLoadProspectFactures(request):
     id_prospect = request.GET.get('id_prospect')
     factures = Facture.objects.filter(client_id=id_prospect)
@@ -102,6 +125,7 @@ def ApiLoadProspectFactures(request):
     return JsonResponse(data, safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiLoadProspectFinancials(request):
     id_prospect = request.GET.get('id_prospect')
     factures = Facture.objects.filter(client_id=id_prospect)
@@ -127,12 +151,24 @@ def ApiLoadProspectFinancials(request):
     })
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'add')
 def AddNewDevis(request):
     form = NewDevisForms()
     if request.method == "POST":
         form = NewDevisForms(request.POST)
         if form.is_valid():
-            devis = form.save()
+            devis = form.save(commit=False)
+            
+            config = None
+            if devis.entreprise:
+                config = ConseilConfiguration.objects.filter(entreprise=devis.entreprise).first()
+            if not config:
+                config = ConseilConfiguration.objects.filter(entreprise=None).first()
+            
+            if config and config.default_conditions_commerciales:
+                devis.conditions_commerciales = config.default_conditions_commerciales
+                
+            devis.save()
             
             # Create a new Opportunity for this manual Devis creation
             # Since the user explicitly creates a NEW quote, we assume a NEW opportunity unless specified otherwise.
@@ -143,7 +179,7 @@ def AddNewDevis(request):
                     nom=f"Devis #{devis.num_devis}",
                     stage='entrant', # Start at entrant or devis_envoye? If it's a draft, maybe just entrant or nego?
                     # Actually if it is just "Nouveau Devis" it is a draft. Let's say 'negociation' or keep 'entrant'.
-                    # User complaint: "l'opportunitÃ© ne se rajoute pas".
+                    # User complaint: "l'opportunité ne se rajoute pas".
                     budget=devis.montant or 0,
                     commercial=request.user # Assign current user as commercial?
                 )
@@ -152,8 +188,18 @@ def AddNewDevis(request):
             except Exception as e:
                 # Log error but don't crash
                 print(f"Error creating opportunity: {e}")
+                
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Devis',
+                target_id=str(devis.num_devis),
+                details=f"Création d'un devis: {devis.num_devis} (Montant: {devis.montant})",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
-            messages.success(request, "Devis ajoutÃ© avec succÃ¨s.")
+            messages.success(request, "Devis ajouté avec succès.")
             return redirect('t_conseil:configure-devis', pk=form.instance.num_devis)
         else:
             messages.error(request, "Erreur lors de l'ajout du devis.")
@@ -167,13 +213,36 @@ def AddNewDevis(request):
     return render(request, 'tenant_folder/conseil/nouveau-devis.html', context)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'add')
 def AddNewFacture(request):
     form = NewFactureForms()
     if request.method == "POST":
         form = NewFactureForms(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Facture ajoutÃ©e avec succÃ¨s.")
+            facture = form.save(commit=False)
+            
+            config = None
+            if facture.entreprise:
+                config = ConseilConfiguration.objects.filter(entreprise=facture.entreprise).first()
+            if not config:
+                config = ConseilConfiguration.objects.filter(entreprise=None).first()
+            
+            if config and config.default_conditions_commerciales:
+                facture.conditions_commerciales = config.default_conditions_commerciales
+                
+            facture.save()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Facture',
+                target_id=str(facture.num_facture),
+                details=f"Création d'une nouvelle facture: {facture.num_facture}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            messages.success(request, "Facture ajoutée avec succès.")
             return redirect('t_conseil:configure-facture', pk=form.instance.num_facture)
         else:
             messages.error(request, "Erreur lors de l'ajout de la facture.")
@@ -187,6 +256,7 @@ def AddNewFacture(request):
     return render(request, 'tenant_folder/conseil/nouveau-facture.html', context)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiFetchEnterpriseTvas(request):
     ent_id = request.GET.get('enterprise_id')
     if not ent_id:
@@ -197,11 +267,16 @@ def ApiFetchEnterpriseTvas(request):
     return JsonResponse({'status': 'success', 'tvas': data})
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'change')
 def configure_devis(request, pk):
     if pk is None or pk == '0':
         return redirect('t_conseil:AddNewDevis')
     else:
-        devis = Devis.objects.get(num_devis=pk)
+        try:
+            devis = Devis.objects.get(num_devis=pk) 
+        except Devis.DoesNotExist:
+            messages.error(request, 'Devis introuvable.')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
         lignes_devis = devis.lignes_devis.all()
 
         config = None
@@ -225,11 +300,16 @@ def configure_devis(request, pk):
         return render(request, 'tenant_folder/conseil/configure-devis.html', context)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'change')
 def configure_facture(request, pk):
     if pk is None or pk == '0':
         return redirect('t_conseil:AddNewFacture')
     else:
-        facture = Facture.objects.get(num_facture=pk)
+        try:
+            facture = Facture.objects.get(num_facture=pk) 
+        except Facture.DoesNotExist:
+            messages.error(request, 'Facture introuvable.')
+            return redirect(request.META.get('HTTP_REFERER', '/'))
         lignes_facture = facture.lignes_facture.all()
 
         config = None
@@ -253,6 +333,7 @@ def configure_facture(request, pk):
         return render(request, 'tenant_folder/conseil/configure-facture.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ListeDesDevis(request):
     devis = Devis.objects.all().order_by('-created_at')
     
@@ -264,13 +345,19 @@ def ListeDesDevis(request):
         'rejete': devis.filter(etat='rejete').count(),
     }
     
+    # Get distinct issuing entities (entreprises)
+    from institut_app.models import Entreprise
+    entites = Entreprise.objects.filter(devis_entreprise__isnull=False).distinct()
+    
     context = {
         "devis" : devis,
         "stats": stats,
+        "entites": entites,
     }
     return render(request,'tenant_folder/conseil/liste_des_devis.html', context)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'delete')
 def ArchiveThematique(request):
     context = {
         'tenant' : request.tenant
@@ -279,37 +366,90 @@ def ArchiveThematique(request):
     return render(request, 'tenant_folder/conseil/archive_thematique.html', context)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiLoadArchivedThematique(request):
     thematique = Thematiques.objects.filter(etat = "archive").values('id', 'label', 'prix', 'created_at', 'categorie', 'billing_type')
     return JsonResponse(list(thematique), safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiArchiveThematique(request):
     id_thematique = request.POST.get('id_thematique')
-    thematique = Thematiques.objects.get(id=id_thematique)
+    try:
+        thematique = Thematiques.objects.get(id=id_thematique) 
+    except Thematiques.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
     thematique.etat = "archive"
     thematique.save()
-    return JsonResponse({'status': 'success', 'message': 'ThÃ©matique archivÃ©e avec succÃ¨s.'})   
+    
+    from t_crm.models import UserActionLog
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='UPDATE',
+        target_model='Thematiques',
+        target_id=str(id_thematique),
+        details=f"Archivage de la thématique: {thematique.label}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+    
+    return JsonResponse({'status': 'success', 'message': 'Thématique archivée avec succès.'})   
     
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'change')
+@transaction.atomic
 def ApiActivateThematique(request):
     id_thematique = request.POST.get('id_thematique')
-    thematique = Thematiques.objects.get(id=id_thematique)
+    try:
+        thematique = Thematiques.objects.get(id=id_thematique) 
+    except Thematiques.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
     thematique.etat = "active"
     thematique.save()
-    return JsonResponse({'status': 'success', 'message': 'ThÃ©matique activÃ©e avec succÃ¨s.'})
+    
+    from t_crm.models import UserActionLog
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='UPDATE',
+        target_model='Thematiques',
+        target_id=str(id_thematique),
+        details=f"Activation de la thématique: {thematique.label}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+    
+    return JsonResponse({'status': 'success', 'message': 'Thématique activée avec succès.'})
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeleteFinalThematique(request):
     id_thematique = request.POST.get('id_thematique')
-    thematique = Thematiques.objects.get(id=id_thematique)
+    try:
+        thematique = Thematiques.objects.get(id=id_thematique) 
+    except Thematiques.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
+    label = thematique.label
     thematique.delete()
-    return JsonResponse({'status': 'success', 'message': 'ThÃ©matique supprimÃ©e dÃ©finitivement.'})
+    
+    from t_crm.models import UserActionLog
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='DELETE',
+        target_model='Thematiques',
+        target_id=str(id_thematique),
+        details=f"Suppression définitive de la thématique: {label}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+    
+    return JsonResponse({'status': 'success', 'message': 'Thématique supprimée définitivement.'})
 
+@module_permission_required('con', 'change')
 def make_prospect_client(request):
     pass
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'change')
+@transaction.atomic
 def ApiUpdateThematique(request):
     id_thematique = request.POST.get('id_thematique')
     label = request.POST.get('label')
@@ -336,15 +476,114 @@ def ApiUpdateThematique(request):
             
         thematique.description = description
         thematique.save()
-        return JsonResponse({'status': 'success', 'message': 'ThÃ©matique mise Ã  jour avec succÃ¨s.'})
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Thematiques',
+            target_id=str(id_thematique),
+            details=f"Mise à jour de la thématique: {label}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        return JsonResponse({'status': 'success', 'message': 'Thématique mise Ã  jour avec succès.'})
     except Thematiques.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': f'ThÃ©matique introuvable (ID: {id_thematique})'})
+        return JsonResponse({'status': 'error', 'message': f'Thématique introuvable (ID: {id_thematique})'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': f'Erreur lors de la mise Ã  jour : {str(e)}'})
 
-
+import openpyxl
+from django.http import HttpResponse
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
+def ApiDownloadThematiqueTemplate(request):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Thematiques"
+    
+    headers = ['Label', 'Description']
+    ws.append(headers)
+    
+    for cell in ws[1]:
+        cell.font = openpyxl.styles.Font(bold=True)
+        
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=thematiques_template.xlsx'
+    wb.save(response)
+    return response
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
+def ApiExportThematique(request):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Thematiques"
+    
+    headers = ['Label', 'Description']
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = openpyxl.styles.Font(bold=True)
+        
+    thematiques = Thematiques.objects.all()
+    for t in thematiques:
+        ws.append([
+            t.label, 
+            t.description
+        ])
+        
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=export_thematiques.xlsx'
+    wb.save(response)
+    return response
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
+def ApiImportThematique(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        excel_file = request.FILES['file']
+        if not excel_file.name.endswith('.xlsx'):
+            return JsonResponse({'status': 'error', 'message': 'Le fichier doit être au format Excel (.xlsx)'})
+            
+        try:
+            wb = openpyxl.load_workbook(excel_file)
+            ws = wb.active
+            
+            imported_count = 0
+            skipped_count = 0
+            
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                label = row[0]
+                description = row[1] if len(row) > 1 else None
+                
+                if not label:
+                    skipped_count += 1
+                    continue
+                    
+                if Thematiques.objects.filter(label=label).exists():
+                    skipped_count += 1
+                    continue
+                    
+                Thematiques.objects.create(
+                    label=str(label),
+                    description=str(description) if description else None,
+                    etat='active'
+                )
+                imported_count += 1
+                
+            return JsonResponse({
+                'status': 'success', 
+                'message': f'Importation terminée : {imported_count} thématiques ajoutées, {skipped_count} ignorées.'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Erreur lors de l\'importation : {str(e)}'})
+            
+    return JsonResponse({'status': 'error', 'message': 'Requête invalide ou fichier manquant'})
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ListeProspectConseil(request):
     context ={
         'tenant' : request.tenant,
@@ -352,10 +591,12 @@ def ListeProspectConseil(request):
     return render(request, "tenant_folder/conseil/prospect/liste_des_prospects.html",context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ApiLoadProspect(request):
     pass
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ListeDesClients(request):
     context = {
         'tenant': request.tenant,
@@ -363,23 +604,31 @@ def ListeDesClients(request):
     return render(request, "tenant_folder/conseil/clients/liste_des_clients.html", context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def DetailsClient(request, slug):
     client = get_object_or_404(Prospets, slug=slug)
+    from t_crm.models import RendezVous
+    rendez_vous = RendezVous.objects.filter(prospect=client).order_by('-date_rendez_vous', '-heure_rendez_vous')
+    
     context = {
         'tenant': request.tenant,
         'client': client,
         'pk': client.id,
+        'rendez_vous': rendez_vous,
     }
     return render(request, "tenant_folder/conseil/clients/details_client.html", context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ApiListeClients(request):
     liste = Prospets.objects.filter(context='con', is_client=True).values(
-        'id', 'slug', 'nom', 'prenom', 'entreprise', 'email', 'telephone', 'created_at', 'convertit_date'
+        'id', 'slug', 'nom', 'prenom', 'entreprise', 'email', 'telephone', 'created_at', 'convertit_date', 'type_prospect'
     )
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'change')
+@transaction.atomic
 def ApiTransformeToClient(request):
     id_prospect = request.POST.get('id_prospect')
     try:
@@ -388,11 +637,24 @@ def ApiTransformeToClient(request):
         prospect.statut = 'convertit'
         prospect.convertit_date = timezone.now().date()
         prospect.save()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Prospets',
+            target_id=str(prospect.id),
+            details=f"Conversion du prospect en client: {prospect.nom} {prospect.prenom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({'status': 'success', 'message': 'Prospect converti en client.'})
     except Prospets.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'Prospect non trouvÃ©.'})
+        return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveLigneDevis(request):
     import decimal
     devis_id = request.POST.get('devis_id')
@@ -400,8 +662,14 @@ def ApiSaveLigneDevis(request):
     quantite = request.POST.get('quantite')
     description = request.POST.get('description')
     
-    devis = Devis.objects.get(num_devis=devis_id)
-    thematique = Thematiques.objects.get(id=thematique_id)
+    try:
+        devis = Devis.objects.get(num_devis=devis_id) 
+    except Devis.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Devis introuvable.'})
+    try:
+        thematique = Thematiques.objects.get(id=thematique_id) 
+    except Thematiques.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
     
     try:
         qty = decimal.Decimal(quantite)
@@ -423,9 +691,11 @@ def ApiSaveLigneDevis(request):
     devis.montant = total
     devis.save()
 
-    return JsonResponse({'status': 'success', 'message': 'Ligne ajoutÃ©e avec succÃ¨s.'})
+    return JsonResponse({'status': 'success', 'message': 'Ligne ajoutée avec succès.'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'change')
+@transaction.atomic
 def ApiStartTransformationDevisToFacture(request):
     import decimal
     devis_id = request.POST.get('devis_id')
@@ -444,6 +714,13 @@ def ApiStartTransformationDevisToFacture(request):
     # Automatically accept the devis when converting to invoice
     devis.etat = 'accepte'
     devis.save()
+
+    # Convert the associated prospect to a client if not already
+    if devis.client and not devis.client.is_client:
+        devis.client.is_client = True
+        devis.client.statut = 'convertit'
+        devis.client.convertit_date = timezone.now().date()
+        devis.client.save()
 
     facture = Facture.objects.create(
         client=devis.client,
@@ -523,9 +800,21 @@ def ApiStartTransformationDevisToFacture(request):
             nin=part.nin
         )
         
-    return JsonResponse({'status': 'success', 'message': 'Devis transformÃ© en facture avec succÃ¨s.', 'facture_num': facture.num_facture})
+    from t_crm.models import UserActionLog
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='CREATE',
+        target_model='Facture',
+        target_id=str(facture.num_facture),
+        details=f"Transformation du devis {devis.num_devis} en facture: {facture.num_facture}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+        
+    return JsonResponse({'status': 'success', 'message': 'Devis transformé en facture avec succès.', 'facture_num': facture.num_facture})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveDevisItems(request):
     import json
     import decimal
@@ -540,7 +829,10 @@ def ApiSaveDevisItems(request):
         show_tva = data.get('show_tva', True)
         show_remise = data.get('show_remise', False)
         
-        devis = Devis.objects.get(num_devis=devis_id)
+        try:
+            devis = Devis.objects.get(num_devis=devis_id) 
+        except Devis.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Devis introuvable.'})
         devis.show_tva = show_tva
         devis.show_remise = show_remise
         
@@ -556,6 +848,14 @@ def ApiSaveDevisItems(request):
         conditions = data.get('conditions_commerciales')
         if conditions is not None:
             devis.conditions_commerciales = conditions
+
+        # Dates
+        date_emission = data.get('date_emission')
+        if date_emission:
+            devis.date_emission = date_emission
+        date_echeance = data.get('date_echeance')
+        if date_echeance:
+            devis.date_echeance = date_echeance
         
         # Clear existing lines to replace with new ones (full sync) or append?
         # Usually full sync is safer for "Save" button unless we track IDs.
@@ -628,15 +928,35 @@ def ApiSaveDevisItems(request):
             if devis.opportunite:
                 devis.opportunite.budget = total_montant
                 devis.opportunite.save()
+                
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Devis',
+                target_id=str(devis.num_devis),
+                details=f"Mise à jour des éléments du devis: {devis.num_devis}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
-        return JsonResponse({'status': 'success', 'message': 'Devis enregistrÃ© avec succÃ¨s.'})
+        return JsonResponse({'status': 'success', 'message': 'Devis enregistré avec succès.'})
         
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def DetailsDevis(request, pk):
-    devis = Devis.objects.get(num_devis=pk)
+    try:
+        devis = Devis.objects.get(num_devis=pk) 
+    except Devis.DoesNotExist:
+        messages.error(request, 'Devis introuvable.')
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+        
+    if devis.etat == 'brouillon':
+        messages.warning(request, "Veuillez valider le devis avant de pouvoir consulter ses détails.")
+        return redirect('t_conseil:configure-devis', pk=devis.num_devis)
+        
     lignes_devis = devis.lignes_devis.all()
     
     # Calculate totals for summary (since we have per-line TVA)
@@ -670,7 +990,116 @@ def DetailsDevis(request, pk):
     }
     return render(request, 'tenant_folder/conseil/details_devis.html', context)
 
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
+def PrintDevisConseil(request, pk):
+    from .models import Devis
+    from pdf_editor.models import DocumentTemplate, DocumentGeneration
+    from pdf_editor.utils import render_template_with_context
+    from django.utils import timezone
+    from django.contrib import messages
+
+    try:
+        devis = Devis.objects.get(num_devis=pk)
+    except Devis.DoesNotExist:
+        messages.error(request, 'Devis introuvable.')
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    # Retrieve the dolibare template
+    try:
+        template_obj = DocumentTemplate.objects.get(slug='dolibare', is_active=True)
+    except DocumentTemplate.DoesNotExist:
+        messages.error(request, "Template 'dolibare' introuvable dans l'éditeur de documents.")
+        return redirect('t_conseil:DetailsDevis', pk=pk)
+
+    lignes_devis = devis.lignes_devis.all()
+    
+    total_ht = 0
+    total_tva = 0
+    tva_breakdown = {}
+    
+    for ligne in lignes_devis:
+        total_ht += float(ligne.montant)
+        if devis.show_tva:
+            rate = float(getattr(ligne, 'tva_percent', 0))
+            amount = float(ligne.montant) * (rate / 100)
+            if rate > 0:
+                tva_breakdown[rate] = tva_breakdown.get(rate, 0) + amount
+
+    total_tva = sum(tva_breakdown.values())
+    total_ttc = total_ht + total_tva
+    total_remise = 0 # Not present in Devis model
+
+    emetteur = getattr(devis, 'entreprise', None)
+
+    # Context mapping
+    context_data = {
+        'entreprise_nom': emetteur.designation if emetteur else 'SALDAE',
+        'entreprise_adresse': getattr(emetteur, 'adresse', ''),
+        'entreprise_telephone': getattr(emetteur, 'telephone', ''),
+        'entreprise_email': getattr(emetteur, 'email', ''),
+        'entreprise_rc': getattr(emetteur, 'rc', ''),
+        'entreprise_nif': getattr(emetteur, 'nif', ''),
+        'entreprise_nis': getattr(emetteur, 'nis', ''),
+        'entreprise_art_imp': getattr(emetteur, 'art', ''), # the model uses 'art'
+        'entreprise_logo': request.build_absolute_uri(emetteur.logo.url) if emetteur and hasattr(emetteur, 'logo') and emetteur.logo else '',
+        
+        'devis_numero': devis.num_devis,
+        'date_emission': devis.date_emission.strftime("%d/%m/%Y") if devis.date_emission else "",
+        'date_echeance': devis.date_echeance.strftime("%d/%m/%Y") if devis.date_echeance else "",
+        'conditions_commerciales': devis.conditions_commerciales,
+        
+        'client_nom': str(devis.client.entreprise) if devis.client.entreprise else f"{devis.client.nom} {devis.client.prenom}",
+        'client_adresse': devis.client.adresse,
+        'client_telephone': devis.client.telephone,
+        'client_email': devis.client.email,
+        'client_rc': getattr(devis.client, 'rc', ''),
+        'client_nif': getattr(devis.client, 'nif', ''),
+        'client_nis': getattr(devis.client, 'nis', ''),
+        'client_art_imp': getattr(devis.client, 'art_imp', ''),
+        'client_logo': request.build_absolute_uri(devis.client.logo_entreprise.url) if hasattr(devis.client, 'logo_entreprise') and devis.client.logo_entreprise else '',
+        
+        'lignes': [
+            {
+                'designation': getattr(ligne.thematique, 'label', '') if hasattr(ligne, 'thematique') and ligne.thematique else getattr(ligne, 'description', ''),
+                'description': getattr(ligne, 'long_description', getattr(ligne, 'description', '')),
+                'quantite': float(ligne.quantite),
+                'prix_unitaire': float(ligne.prix_unitaire),
+                'tva_percent': float(getattr(ligne, 'tva_percent', 0)) if devis.show_tva else 0,
+                'remise_percent': float(getattr(ligne, 'remise_percent', 0)) if devis.show_remise else 0,
+                'montant': float(ligne.montant)
+            } for ligne in lignes_devis
+        ],
+        'total_ht': round(total_ht, 2),
+        'total_tva': round(total_tva, 2),
+        'total_ttc': round(total_ttc, 2),
+        'total_remise': round(total_remise, 2),
+        'show_tva': devis.show_tva,
+        'show_remise': devis.show_remise,
+    }
+
+    try:
+        rendered_content, error = render_template_with_context(template_obj.content, context_data)
+        if error:
+            messages.error(request, f"Erreur de génération : {error}")
+            return redirect('t_conseil:DetailsDevis', pk=pk)
+
+        doc_gen = DocumentGeneration.objects.create(
+            template=template_obj,
+            context_data=context_data,
+            rendered_content=rendered_content,
+            generated_by=request.user
+        )
+
+        return redirect('pdf_editor:document-export', pk=doc_gen.pk)
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la génération PDF : {str(e)}")
+        return redirect('t_conseil:DetailsDevis', pk=pk)
+
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'approuv')
+@transaction.atomic
 def ApiValidateDevis(request):
     if request.method == 'POST':
         devis_id = request.POST.get('devis_id')
@@ -701,13 +1130,25 @@ def ApiValidateDevis(request):
                     )
                     devis.opportunite = new_opp
                     devis.save()
+                    
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Devis',
+                target_id=str(devis.num_devis),
+                details=f"Validation et envoi du devis: {devis.num_devis}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
-            return JsonResponse({'status': 'success', 'message': 'Devis validÃ© avec succÃ¨s.'})
+            return JsonResponse({'status': 'success', 'message': 'Devis validé avec succès.'})
         except Devis.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Devis non trouvÃ©.'}, status=404)
+            return JsonResponse({'status': 'error', 'message': 'Devis non trouvé.'}, status=404)
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'change')
+@transaction.atomic
 def ApiRevertDevisToDraft(request):
     if request.method == 'POST':
         devis_id = request.POST.get('devis_id')
@@ -715,16 +1156,28 @@ def ApiRevertDevisToDraft(request):
             devis = Devis.objects.get(num_devis=devis_id)
             # Check if has facture
             if Facture.objects.filter(devis_source=devis).exists():
-                return JsonResponse({'status': 'error', 'message': 'Impossible de repasser en brouillon : une facture est dÃ©jÃ  associÃ©e Ã  ce devis.'})
+                return JsonResponse({'status': 'error', 'message': 'Impossible de repasser en brouillon : une facture est déjÃ  associée Ã  ce devis.'})
             
             devis.etat = 'brouillon'
             devis.save()
-            return JsonResponse({'status': 'success', 'message': 'Devis repassÃ© en brouillon.'})
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Devis',
+                target_id=str(devis.num_devis),
+                details=f"Repassage en brouillon du devis: {devis.num_devis}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            return JsonResponse({'status': 'success', 'message': 'Devis repassé en brouillon.'})
         except Devis.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Devis non trouvÃ©.'}, status=404)
+            return JsonResponse({'status': 'error', 'message': 'Devis non trouvé.'}, status=404)
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ListeDesFactures(request):
     factures = Facture.objects.filter(module_source='conseil').exclude(type_facture='avoir').order_by('-created_at')
     
@@ -753,6 +1206,7 @@ def ListeDesFactures(request):
     return render(request, 'tenant_folder/conseil/liste_des_factures.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ListeDesAvoirs(request):
     factures = Facture.objects.filter(module_source='conseil', type_facture='avoir').order_by('-created_at')
     
@@ -782,6 +1236,8 @@ def ListeDesAvoirs(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
+@transaction.atomic
 def ApiQuickCreateProspect(request):
     if request.method != "POST":
          return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
@@ -790,12 +1246,14 @@ def ApiQuickCreateProspect(request):
     prenom = request.POST.get('prenom')
     email = request.POST.get('email')
     telephone = request.POST.get('telephone')
+    email_entreprise = request.POST.get('email_entreprise')
+    telephone_entreprise = request.POST.get('telephone_entreprise')
     type_prospect = 'entreprise'
     entreprise_nom = request.POST.get('entreprise')
     poste = request.POST.get('poste')
     
-    if not nom or not telephone or not entreprise_nom:
-         return JsonResponse({'status': 'error', 'message': "Le nom, le téléphone et le nom de l'entreprise sont obligatoires."})
+    if not entreprise_nom:
+         return JsonResponse({'status': 'error', 'message': "La désignation de l'entreprise est obligatoire."})
          
     try:
         # Check for duplicates? For now, we assume standard creation.
@@ -803,14 +1261,36 @@ def ApiQuickCreateProspect(request):
         prospect = Prospets.objects.create(
             nom=nom,
             prenom=prenom,  # Keep prenom for both types - it's the contact person name
-            email=email,
-            telephone=telephone,
+            email=email_entreprise or email,
+            telephone=telephone_entreprise or telephone,
             type_prospect=type_prospect,
             context='con', # Conseil
             indic='+213', # Default
             # Enterprise specific fields - always populated as type_prospect is entreprise
             entreprise=entreprise_nom,
             poste_dans_entreprise=poste,
+        )
+        
+        if nom or prenom or telephone or email:
+            from t_crm.models import ContactEntreprise
+            ContactEntreprise.objects.create(
+                prospect=prospect,
+                nom=nom,
+                prenom=prenom,
+                telephone=telephone,
+                email=email,
+                poste=poste,
+                is_primary=True
+            )
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='Prospets',
+            target_id=str(prospect.id),
+            details=f"Création rapide d'un prospect (Conseil): {entreprise_nom} - {nom} {prenom}",
+            ip_address=request.META.get('REMOTE_ADDR')
         )
         
         return JsonResponse({
@@ -830,19 +1310,35 @@ def ApiQuickCreateProspect(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeleteOpportunite(request):
     if request.method == "POST":
         id_opp = request.POST.get('id')
         try:
             opp = Opportunite.objects.get(id=id_opp)
+            nom_opp = opp.nom
             opp.delete()
-            return JsonResponse({'status': 'success', 'message': 'OpportunitÃ© supprimÃ©e.'})
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='Opportunite',
+                target_id=str(id_opp),
+                details=f"Suppression de l'opportunité: {nom_opp}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            return JsonResponse({'status': 'success', 'message': 'Opportunité supprimée.'})
         except Opportunite.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'OpportunitÃ© non trouvÃ©e.'})
-    return JsonResponse({'status': 'error', 'message': 'MÃ©thode non autorisÃ©e.'})
+            return JsonResponse({'status': 'error', 'message': 'Opportunité non trouvée.'})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'add')
+@transaction.atomic
 def ApiAddPaiement(request):
     if request.method == "POST":
         facture_id = request.POST.get('facture_id')
@@ -884,23 +1380,43 @@ def ApiAddPaiement(request):
             
             facture.save()
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Paiement',
+                target_id=str(paiement.id),
+                details=f"Ajout d'un paiement de {montant} pour la facture: {facture.num_facture}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 'status': 'success', 
-                'message': 'Paiement enregistrÃ© avec succÃ¨s.',
+                'message': 'Paiement enregistré avec succès.',
                 'new_status': facture.get_etat_display(),
                 'total_paye': float(total_paye)
             })
 
         except Facture.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Facture non trouvÃ©e.'})
+            return JsonResponse({'status': 'error', 'message': 'Facture non trouvée.'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
             
-    return JsonResponse({'status': 'error', 'message': 'MÃ©thode non autorisÃ©e.'})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def DetailsFacture(request, pk):
-    facture = Facture.objects.get(num_facture=pk)
+    try:
+        facture = Facture.objects.get(num_facture=pk) 
+    except Facture.DoesNotExist:
+        messages.error(request, 'Facture introuvable.')
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+        
+    if facture.etat == 'brouillon':
+        messages.warning(request, "Veuillez valider la facture avant de pouvoir consulter ses détails.")
+        return redirect('t_conseil:configure-facture', pk=facture.num_facture)
+        
     lignes_facture = facture.lignes_facture.all()
     
     config = None
@@ -941,14 +1457,213 @@ def DetailsFacture(request, pk):
     }
     return render(request, 'tenant_folder/conseil/details_facture.html', context)
 
+
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
+def PrintFactureConseil(request, pk):
+    from t_conseil.models import Facture
+    from pdf_editor.models import DocumentTemplate, DocumentGeneration
+    from pdf_editor.utils import render_template_with_context
+    from django.utils import timezone
+    from django.contrib import messages
+
+    try:
+        facture = Facture.objects.get(num_facture=pk)
+    except Facture.DoesNotExist:
+        messages.error(request, 'Facture introuvable.')
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+    # Retrieve the dolibare_facture template
+    try:
+        template_obj = DocumentTemplate.objects.get(slug='dolibare_facture', is_active=True)
+    except DocumentTemplate.DoesNotExist:
+        messages.error(request, "Template 'dolibare_facture' introuvable dans l'éditeur de documents.")
+        return redirect('t_conseil:DetailsFacture', pk=pk)
+
+    lignes_facture = facture.lignes_facture.all()
+    
+    total_ht = 0
+    total_tva = 0
+    tva_breakdown = {}
+    
+    for ligne in lignes_facture:
+        total_ht += float(ligne.montant_ht)
+        if facture.show_tva:
+            rate = float(getattr(ligne, 'tva_percent', 0))
+            amount = float(ligne.montant_ht) * (rate / 100)
+            if rate > 0:
+                tva_breakdown[rate] = tva_breakdown.get(rate, 0) + amount
+
+    total_tva = sum(tva_breakdown.values())
+    timbre = float(facture.get_timbre()) if hasattr(facture, 'get_timbre') else 0
+    total_ttc = total_ht + total_tva + timbre
+    total_remise = getattr(facture, 'montant_remise_globale', 0)
+
+    emetteur = getattr(facture, 'entreprise', None)
+    
+    # Retrieve configuration for bank account
+    from t_conseil.models import ConseilConfiguration
+    config_fin = ConseilConfiguration.objects.filter(entreprise=emetteur).first() if emetteur else ConseilConfiguration.objects.filter(entreprise=None).first()
+    
+    banque_nom = ''
+    banque_iban = ''
+    if config_fin and config_fin.compte_bancaire_defaut:
+        banque_nom = config_fin.compte_bancaire_defaut.bank_name
+        banque_iban = config_fin.compte_bancaire_defaut.bank_iban
+
+    # Context mapping
+    context_data = {
+        'entreprise_nom': emetteur.designation if emetteur else 'SALDAE',
+        'entreprise_adresse': getattr(emetteur, 'adresse', ''),
+        'entreprise_telephone': getattr(emetteur, 'telephone', ''),
+        'entreprise_email': getattr(emetteur, 'email', ''),
+        'entreprise_rc': getattr(emetteur, 'rc', ''),
+        'entreprise_nif': getattr(emetteur, 'nif', ''),
+        'entreprise_nis': getattr(emetteur, 'nis', ''),
+        'entreprise_art_imp': getattr(emetteur, 'art', ''), # the model uses 'art'
+        'entreprise_logo': request.build_absolute_uri(emetteur.logo.url) if emetteur and hasattr(emetteur, 'logo') and emetteur.logo else '',
+        
+        'banque_nom': banque_nom,
+        'banque_iban': banque_iban,
+        
+        'facture_numero': facture.num_facture,
+        'date_emission': facture.date_facturation.strftime("%d/%m/%Y") if hasattr(facture, 'date_facturation') and facture.date_facturation else "",
+        'date_echeance': facture.date_echeance.strftime("%d/%m/%Y") if facture.date_echeance else "",
+        'conditions_commerciales': getattr(facture, 'conditions_commerciales', ''),
+        'mode_paiement': facture.get_mode_paiement_display() if hasattr(facture, 'get_mode_paiement_display') else getattr(facture, 'mode_paiement', ''),
+        
+        'client_nom': str(facture.client.entreprise) if getattr(facture.client, 'entreprise', None) else f"{getattr(facture.client, 'nom', '')} {getattr(facture.client, 'prenom', '')}",
+        'client_adresse': getattr(facture.client, 'adresse', ''),
+        'client_telephone': getattr(facture.client, 'telephone', ''),
+        'client_email': getattr(facture.client, 'email', ''),
+        'client_rc': getattr(facture.client, 'rc', ''),
+        'client_nif': getattr(facture.client, 'nif', ''),
+        'client_nis': getattr(facture.client, 'nis', ''),
+        'client_art_imp': getattr(facture.client, 'art_imp', ''),
+        'client_logo': request.build_absolute_uri(facture.client.logo_entreprise.url) if hasattr(facture.client, 'logo_entreprise') and getattr(facture.client, 'logo_entreprise') else '',
+        
+        'lignes': [
+            {
+                'designation': getattr(ligne.thematique, 'label', '') if hasattr(ligne, 'thematique') and ligne.thematique else getattr(ligne, 'description', ''),
+                'description': getattr(ligne, 'long_description', getattr(ligne, 'description', '')),
+                'quantite': float(ligne.quantite),
+                'prix_unitaire': float(ligne.prix_unitaire_ht) if hasattr(ligne, 'prix_unitaire_ht') else float(getattr(ligne, 'prix_unitaire', 0)),
+                'tva_percent': float(getattr(ligne, 'tva_percent', 0)) if facture.show_tva else 0,
+                'remise_percent': float(getattr(ligne, 'remise_percent', 0)) if getattr(facture, 'show_remise', False) else 0,
+                'montant': float(ligne.montant_ht) if hasattr(ligne, 'montant_ht') else float(getattr(ligne, 'montant', 0))
+            } for ligne in lignes_facture
+        ],
+        'total_ht': round(total_ht, 2),
+        'total_tva': round(total_tva, 2),
+        'total_ttc': round(total_ttc, 2),
+        'total_remise': round(total_remise, 2),
+        'timbre': round(timbre, 2),
+        'show_tva': facture.show_tva,
+        'show_remise': getattr(facture, 'show_remise', False),
+    }
+
+    try:
+        rendered_content, error = render_template_with_context(template_obj.content, context_data)
+        if error:
+            messages.error(request, f"Erreur de génération : {error}")
+            return redirect('t_conseil:DetailsFacture', pk=pk)
+
+        doc_gen = DocumentGeneration.objects.create(
+            template=template_obj,
+            context_data=context_data,
+            rendered_content=rendered_content,
+            generated_by=request.user
+        )
+
+        return redirect('pdf_editor:document-export', pk=doc_gen.pk)
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la génération PDF : {str(e)}")
+        return redirect('t_conseil:DetailsFacture', pk=pk)
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ConseilDashboard(request):
+    from django.db.models import Count, Sum, Q
+    from t_crm.models import Prospets, RendezVous
+    from t_conseil.models import Opportunite, Devis, Facture, GroupeConseil, Participant
+    from django.utils import timezone
+    import json
+    
+    now = timezone.now()
+    first_day_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # 1. CRM & Pipeline Stats
+    prospects = Prospets.objects.filter(context='con')
+    total_prospects = prospects.filter(is_client=False).count()
+    new_prospects_this_month = prospects.filter(is_client=False, created_at__gte=first_day_of_month).count()
+    
+    pipeline_stats = Opportunite.objects.filter(prospect__context='con').values('stage').annotate(count=Count('id'))
+    pipeline_dict = {item['stage']: item['count'] for item in pipeline_stats}
+    
+    # 2. Ventes (Devis & Factures)
+    total_clients = prospects.filter(is_client=True).count()
+    devis_stats = Devis.objects.aggregate(
+        total_attente=Count('id', filter=Q(etat='attente')),
+        montant_attente=Sum('montant', filter=Q(etat='attente')),
+        total_accepte=Count('id', filter=Q(etat='accepte')),
+        total_refuse=Count('id', filter=Q(etat='refuse')),
+    )
+    
+    # Chiffre d'affaires (Factures validées)
+    factures = Facture.objects.filter(type_facture='standard', etat__in=['brouillon', 'valide', 'annule']) 
+    ca_global = Facture.objects.filter(type_facture='standard', etat='valide').aggregate(ca=Sum('lignes_facture__montant_ht'))['ca'] or 0
+    factures_attente = Facture.objects.filter(type_facture='standard', etat='brouillon').count()
+    
+    # 3. Formation (Groupes & Participants)
+    groupes_stats = GroupeConseil.objects.aggregate(
+        en_cours=Count('id', filter=Q(etat='enc')),
+        brouillon=Count('id', filter=Q(etat='brouillon')),
+        cloture=Count('id', filter=Q(etat='cloture')),
+    )
+    
+    # Total participants uniques
+    total_participants = Participant.objects.count()
+    
+    # JSON for Charts
+    stages = ['entrant', 'contacte', 'negociation', 'devis_envoye', 'facture', 'recouvrement']
+    stages_labels = ['Entrant', 'Contacté', 'Négociation', 'Devis envoyé', 'Facturé', 'Recouvrement']
+    pipeline_data = [pipeline_dict.get(stage, 0) for stage in stages]
+
+    # Prochains Rendez-vous
+    upcoming_rendez_vous = RendezVous.objects.filter(context='con', date_rendez_vous__gte=now.date()).order_by('date_rendez_vous', 'heure_rendez_vous')[:5]
+    
     context = {
         'tenant': request.tenant,
+        'page_title': 'Tableau de Bord - Executive Education',
+        'crm': {
+            'total_prospects': total_prospects,
+            'new_prospects': new_prospects_this_month,
+            'total_clients': total_clients,
+        },
+        'ventes': {
+            'devis_attente': devis_stats['total_attente'] or 0,
+            'devis_attente_montant': devis_stats['montant_attente'] or 0,
+            'devis_accepte': devis_stats['total_accepte'] or 0,
+            'devis_refuse': devis_stats['total_refuse'] or 0,
+            'ca_global': ca_global,
+            'factures_attente': factures_attente,
+        },
+        'formation': {
+            'groupes_en_cours': groupes_stats['en_cours'] or 0,
+            'groupes_brouillon': groupes_stats['brouillon'] or 0,
+            'groupes_cloture': groupes_stats['cloture'] or 0,
+            'total_participants': total_participants,
+        },
+        'charts': {
+            'pipeline_labels': json.dumps(stages_labels),
+            'pipeline_data': json.dumps(pipeline_data),
+        },
+        'upcoming_rendez_vous': upcoming_rendez_vous,
     }
     return render(request, 'tenant_folder/conseil/dashboard.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def PipelineConseil(request):
     from django.db.models import Sum, Q
     from django.db.models.functions import TruncMonth
@@ -1040,17 +1755,31 @@ def PipelineConseil(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'change')
+@transaction.atomic
 def ApiToggleFavorite(request):
     prospect_id = request.POST.get('prospect_id')
     try:
         prospect = Prospets.objects.get(id=prospect_id)
         prospect.conseil_is_favorite = not prospect.conseil_is_favorite
         prospect.save()
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Prospets',
+            target_id=str(prospect.id),
+            details=f"Modification favori pipeline: {prospect.nom} (Favori: {prospect.conseil_is_favorite})",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({'status': 'success', 'is_favorite': prospect.conseil_is_favorite})
     except Prospets.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'Prospect non trouvÃ©.'})
+        return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ExportPipelineCsv(request):
     import csv
     from django.http import HttpResponse
@@ -1071,6 +1800,8 @@ def ExportPipelineCsv(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'change')
+@transaction.atomic
 def ApiConvertProspectToDevis(request):
     from django.urls import reverse
     # Note: 'prospect_id' parameter actually comes as opportunite_id from the new pipeline
@@ -1083,16 +1814,25 @@ def ApiConvertProspectToDevis(request):
         # In a multi-tenant set, Entreprise.objects.first() should be the correct one.
         entreprise = Entreprise.objects.first()
         
+        config = None
+        if entreprise:
+            config = ConseilConfiguration.objects.filter(entreprise=entreprise).first()
+        if not config:
+            config = ConseilConfiguration.objects.filter(entreprise=None).first()
+            
+        default_conditions = config.default_conditions_commerciales if config else ""
+
         new_devis = Devis.objects.create(
             client=prospect,
             opportunite=opp, # Link the devis to the opportunity
             date_emission=timezone.now().date(),
             entreprise=entreprise,
-            etat='brouillon'
+            etat='brouillon',
+            conditions_commerciales=default_conditions
         )
         
         # Update Opportunity Stage
-        opp.stage = 'devis_envoye'
+        opp.stage = 'negociation'
         opp.save()
         
         redirect_url = reverse('t_conseil:configure-devis', kwargs={'pk': new_devis.num_devis})
@@ -1107,18 +1847,33 @@ def ApiConvertProspectToDevis(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeleteDevis(request):
     num_devis = request.POST.get('num_devis')
     try:
         devis = Devis.objects.get(num_devis=num_devis)
         devis.delete()
-        return JsonResponse({'status': 'success', 'message': 'Devis supprimÃ© avec succÃ¨s.'})
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='Devis',
+            target_id=str(num_devis),
+            details=f"Suppression du devis: {num_devis}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        return JsonResponse({'status': 'success', 'message': 'Devis supprimé avec succès.'})
     except Devis.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'Devis non trouvÃ©.'})
+        return JsonResponse({'status': 'error', 'message': 'Devis non trouvé.'})
 
 @login_required(login_url="institut_app:login")
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'change')
+@transaction.atomic
 def ApiUpdatePipelineStage(request):
     if request.method == "POST":
         # 'prospect_id' coming from frontend is actually Opportunite ID now
@@ -1129,13 +1884,26 @@ def ApiUpdatePipelineStage(request):
             opp = Opportunite.objects.get(id=opp_id)
             opp.stage = new_stage
             opp.save()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Opportunite',
+                target_id=str(opp.id),
+                details=f"Mise à jour du statut de l'opportunité {opp.nom} vers {new_stage}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Statut mis à jour.'})
         except Opportunite.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Opportunité non trouvée.'})
-    return JsonResponse({'status': 'error', 'message': 'MÃ©thode non autorisÃ©e.'})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'add')
+@transaction.atomic
 def ApiCreateOpportunite(request):
     if request.method == "POST":
         prospect_id = request.POST.get('prospect_id')
@@ -1156,6 +1924,16 @@ def ApiCreateOpportunite(request):
                 commercial=request.user
             )
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Opportunite',
+                target_id=str(opp.id),
+                details=f"Création d'une opportunité: {nom} pour {prospect.entreprise}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             # Get initials
             initials = ""
             if prospect.nom: initials += prospect.nom[0].upper()
@@ -1174,9 +1952,10 @@ def ApiCreateOpportunite(request):
         except Prospets.DoesNotExist:
              return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
              
-    return JsonResponse({'status': 'error', 'message': 'MÃ©thode non autorisÃ©e.'})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ApiGetOpportunite(request):
     opp_id = request.GET.get('id')
     try:
@@ -1198,6 +1977,8 @@ def ApiGetOpportunite(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'change')
+@transaction.atomic
 def ApiUpdateOpportunite(request):
     if request.method == "POST":
         opp_id = request.POST.get('id')
@@ -1217,27 +1998,41 @@ def ApiUpdateOpportunite(request):
                 opp.closing_date = None
             
             opp.save()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Opportunite',
+                target_id=str(opp.id),
+                details=f"Mise à jour de l'opportunité: {nom}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Opportunité mise à jour.'})
         except Opportunite.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Opportunité non trouvée.'})
             
-    return JsonResponse({'status': 'error', 'message': 'MÃ©thode non autorisÃ©e.'})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})
 
+@module_permission_required('con', 'add')
 def ConfigurationConseil(request):
     enterprise_id = request.GET.get('enterprise_id') or request.POST.get('enterprise_id')
     enterprise = None
+    
+    # Si enterprise_id est fourni mais vide (sélection "Configuration Globale"), enterprise reste None.
     if enterprise_id:
         try:
             enterprise = Entreprise.objects.get(id=enterprise_id)
         except Entreprise.DoesNotExist:
             pass
-    
-    if not enterprise:
-        # Fallback to first enterprise for convenience in the UI? 
-        # Or keep it None (Global). Let's say we prefer selecting an enterprise.
+    elif 'enterprise_id' not in request.GET and 'enterprise_id' not in request.POST:
+        # Par défaut au premier chargement
         enterprise = Entreprise.objects.first()
 
     config, created = ConseilConfiguration.objects.get_or_create(entreprise=enterprise)
+    global_config, _ = ConseilConfiguration.objects.get_or_create(entreprise=None)
+    
     # Global TVAs
     tvas = TvaConseil.objects.all().order_by('valeur')
     enterprises = Entreprise.objects.all()
@@ -1247,9 +2042,10 @@ def ConfigurationConseil(request):
         
         if action == 'save_config' or not action: # Default fallback if action missing
             try:
-                config.default_tva_percent = request.POST.get('default_tva_percent') or 19.00
-                config.show_tva_on_devis = request.POST.get('show_tva_on_devis') == 'on'
-                config.show_tva_on_facture = request.POST.get('show_tva_on_facture') == 'on'
+                global_config.default_tva_percent = request.POST.get('default_tva_percent') or 19.00
+                global_config.show_tva_on_devis = request.POST.get('show_tva_on_devis') == 'on'
+                global_config.show_tva_on_facture = request.POST.get('show_tva_on_facture') == 'on'
+                global_config.save()
                 
                 config.enable_remise_global = request.POST.get('enable_remise_global') == 'on'
                 config.default_remise_percent = request.POST.get('default_remise_percent') or 0.00
@@ -1265,17 +2061,20 @@ def ConfigurationConseil(request):
                 config.default_conditions_commerciales = request.POST.get('default_conditions_commerciales', '')
                 config.payment_methods = request.POST.get('payment_methods', '')
                 
-                # Stamp Duty Configuration
-                config.enable_stamp_duty = request.POST.get('enable_stamp_duty') == 'on'
-                config.stamp_duty_rate = request.POST.get('stamp_duty_rate') or 1.00
-                config.stamp_duty_min = request.POST.get('stamp_duty_min') or 5.00
-                config.stamp_duty_max = request.POST.get('stamp_duty_max') or 10000.00
-                config.apply_stamp_duty_on_cash_only = request.POST.get('apply_stamp_duty_on_cash_only') == 'on'
+                compte_bancaire_id = request.POST.get('compte_bancaire_defaut')
+                if compte_bancaire_id:
+                    from institut_app.models import BankAccount
+                    try:
+                        config.compte_bancaire_defaut = BankAccount.objects.get(id=compte_bancaire_id)
+                    except BankAccount.DoesNotExist:
+                        pass
+                else:
+                    config.compte_bancaire_defaut = None
                 
                 config.save()
-                messages.success(request, "Configuration mise Ã  jour avec succÃ¨s.")
+                messages.success(request, "Configuration mise à jour avec succès.")
             except Exception as e:
-                messages.error(request, f"Erreur lors de la mise Ã  jour : {e}")
+                messages.error(request, f"Erreur lors de la mise à jour : {e}")
                 
         elif action == 'add_tva':
             label = request.POST.get('tva_label')
@@ -1283,31 +2082,45 @@ def ConfigurationConseil(request):
             if label and valeur:
                 try:
                     TvaConseil.objects.create(label=label, valeur=valeur)
-                    messages.success(request, f"TVA '{label}' ajoutÃ©e avec succÃ¨s.")
+                    messages.success(request, f"TVA '{label}' ajoutée avec succès.")
                 except Exception as e:
                     messages.error(request, f"Erreur : {e}")
             else:
-                messages.warning(request, "Veuillez remplir le libellÃ© et la valeur.")
+                messages.warning(request, "Veuillez remplir le libellé et la valeur.")
                 
         elif action == 'delete_tva':
             tva_id = request.POST.get('tva_id')
             if tva_id:
                 TvaConseil.objects.filter(id=tva_id).delete()
-                messages.success(request, "TVA supprimÃ©e.")
+                messages.success(request, "TVA supprimée.")
             
         return redirect('t_conseil:ConfigurationConseil')
 
+    from institut_app.models import BankAccount
+    comptes_bancaires = BankAccount.objects.filter(is_archived=False)
+    if enterprise:
+        comptes_bancaires = comptes_bancaires.filter(entreprise=enterprise)
+    
     context = {
         "tenant": request.tenant,
-        "config": config,
-        "tvas": tvas,
-        "enterprises": enterprises,
-        "current_enterprise": enterprise,
+        'config': config,
+        'global_config': global_config,
+        'tvas': tvas,
+        'enterprises': enterprises,
+        'current_enterprise': enterprise,
+        'comptes_bancaires': comptes_bancaires,
     }
     return render(request, 'tenant_folder/conseil/configuration.html', context)
+
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def DetailsFacture(request, pk):
     facture = get_object_or_404(Facture, num_facture=pk)
+    
+    if facture.etat == 'brouillon':
+        messages.warning(request, "Veuillez valider la facture avant de pouvoir consulter ses détails.")
+        return redirect('t_conseil:configure-facture', pk=facture.num_facture)
+        
     lignes_facture = facture.lignes_facture.all()
     config = ConseilConfiguration.objects.filter(entreprise=facture.entreprise).first() if facture.entreprise else ConseilConfiguration.objects.filter(entreprise=None).first()
     
@@ -1353,11 +2166,34 @@ def DetailsFacture(request, pk):
     return render(request, 'tenant_folder/conseil/details_facture.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
 def AddNewFacture(request):
     if request.method == "POST":
         form = NewFactureForms(request.POST)
         if form.is_valid():
-            facture = form.save()
+            facture = form.save(commit=False)
+            
+            config = None
+            if facture.entreprise:
+                config = ConseilConfiguration.objects.filter(entreprise=facture.entreprise).first()
+            if not config:
+                config = ConseilConfiguration.objects.filter(entreprise=None).first()
+            
+            if config and config.default_conditions_commerciales:
+                facture.conditions_commerciales = config.default_conditions_commerciales
+                
+            facture.save()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Facture',
+                target_id=str(facture.num_facture),
+                details=f"Création d'une nouvelle facture: {facture.num_facture}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return redirect('t_conseil:configure-facture', pk=facture.num_facture)
     else:
         form = NewFactureForms()
@@ -1371,6 +2207,7 @@ def AddNewFacture(request):
     return render(request, 'tenant_folder/conseil/nouveau-facture.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'change')
 def configure_facture(request, pk):
     facture = get_object_or_404(Facture, num_facture=pk)
     lignes_facture = facture.lignes_facture.all()
@@ -1405,6 +2242,8 @@ def configure_facture(request, pk):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveFactureItems(request):
     import json
     if request.method != 'POST':
@@ -1422,7 +2261,10 @@ def ApiSaveFactureItems(request):
         date_emission = data.get('date_emission')
         date_echeance = data.get('date_echeance')
         
-        facture = Facture.objects.get(num_facture=facture_id)
+        try:
+            facture = Facture.objects.get(num_facture=facture_id) 
+        except Facture.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Facture introuvable.'})
         
         if facture.etat != 'brouillon':
             return JsonResponse({'status': 'error', 'message': 'Modification impossible : la facture n\'est plus en brouillon.'})
@@ -1439,7 +2281,10 @@ def ApiSaveFactureItems(request):
             facture.date_echeance = date_echeance
             
         if entreprise_id:
-            facture.entreprise = Entreprise.objects.get(id=entreprise_id)
+            try:
+                facture.entreprise = Entreprise.objects.get(id=entreprise_id) 
+            except Entreprise.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Entreprise introuvable.'})
         facture.save()
         
         # Clear existing items and recreate
@@ -1459,7 +2304,10 @@ def ApiSaveFactureItems(request):
             
             thematique = None
             if t_id:
-                thematique = Thematiques.objects.get(id=t_id)
+                try:
+                    thematique = Thematiques.objects.get(id=t_id) 
+                except Thematiques.DoesNotExist:
+                    return JsonResponse({'status': 'error', 'message': 'Thematiques introuvable.'})
                 
             montant_ht = (qty * unit_price) * (1 - (remise_percent / 100))
             tva_amount = montant_ht * (tva_percent / 100)
@@ -1470,6 +2318,7 @@ def ApiSaveFactureItems(request):
                 description=description,
                 long_description=long_description,
                 quantite=qty,
+                prix_unitaire=unit_price,
                 montant_ht=montant_ht,
                 remise_percent=remise_percent,
                 tva_percent=tva_percent
@@ -1543,12 +2392,24 @@ def ApiSaveFactureItems(request):
 
         facture.save()
         
-        return JsonResponse({'status': 'success', 'message': 'Facture enregistrÃ©e avec succÃ¨s.'})
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Facture',
+            target_id=str(facture.num_facture),
+            details=f"Mise à jour des éléments de la facture: {facture.num_facture}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        return JsonResponse({'status': 'success', 'message': 'Facture enregistrée avec succès.'})
         
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'approuv')
+@transaction.atomic
 def ApiValidateFacture(request):
     if request.method == 'POST':
         facture_id = request.POST.get('facture_id')
@@ -1590,12 +2451,24 @@ def ApiValidateFacture(request):
                         opp.stage = 'recouvrement'
                         opp.save()
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Facture',
+                target_id=str(facture.num_facture),
+                details=f"Validation de la facture: {facture.num_facture}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Facture validée et en attente de paiement.'})
         except Facture.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Facture non trouvée.'}, status=404)
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'change')
+@transaction.atomic
 def ApiRevertFactureToDraft(request):
     if request.method == 'POST':
         facture_id = request.POST.get('facture_id')
@@ -1603,26 +2476,84 @@ def ApiRevertFactureToDraft(request):
             facture = Facture.objects.get(num_facture=facture_id)
             facture.etat = 'brouillon'
             facture.save()
-            return JsonResponse({'status': 'success', 'message': 'Facture repassÃ©e en brouillon.'})
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Facture',
+                target_id=str(facture.num_facture),
+                details=f"Repassage en brouillon de la facture: {facture.num_facture}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            return JsonResponse({'status': 'success', 'message': 'Facture repassée en brouillon.'})
         except Facture.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Facture non trouvÃ©e.'}, status=404)
+            return JsonResponse({'status': 'error', 'message': 'Facture non trouvée.'}, status=404)
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeleteFacture(request):
     facture_id = request.POST.get('facture_id')
     try:
         facture = Facture.objects.get(num_facture=facture_id)
-        if facture.etat != 'brouillon':
-            return JsonResponse({'status': 'error', 'message': 'Seules les factures en brouillon peuvent être supprimées.'})
+        
+        # We allow deletion of validated factures.
+        
+        from t_tresorerie.models import Paiements as TresoreriePaiements, OperationsBancaire, Rembourssements
+
+        # 1. Delete associated Tresorerie Paiements and their Lettrages (OperationsBancaire)
+        tresorerie_paiements = TresoreriePaiements.objects.filter(facture=facture)
+        for t_p in tresorerie_paiements:
+            OperationsBancaire.objects.filter(paiement=t_p).delete()
+            t_p.delete()
+
+        # 2. Delete OperationsBancaire linked to Conseil Paiement
+        conseil_paiements = facture.paiements.all()
+        for c_p in conseil_paiements:
+            OperationsBancaire.objects.filter(conseil_paiement=c_p).delete()
+            # The c_p itself will be cascade deleted when facture is deleted
+
+        # 3. Delete associated Rembourssements
+        Rembourssements.objects.filter(facture=facture).delete()
+
+        # 4. Devis is NOT deleted. It stays in the system.
+        # We must reset the pipeline stage of the client and opportunity
+        if facture.client:
+            new_stage = 'devis_envoye' if facture.devis_source else 'negociation'
+            facture.client.conseil_pipeline_stage = new_stage
+            facture.client.save()
+            
+        if facture.devis_source and hasattr(facture.devis_source, 'opportunite'):
+            opp = facture.devis_source.opportunite
+            if opp:
+                opp.stage = 'devis_envoye'
+                opp.save()
+
+        # 5. Delete the Facture itself
         facture.delete()
-        return JsonResponse({'status': 'success', 'message': 'Facture supprimée avec succès.'})
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='Facture',
+            target_id=str(facture_id),
+            details=f"Suppression de la facture: {facture_id}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        return JsonResponse({'status': 'success', 'message': 'Facture et informations liées supprimées avec succès.'})
     except Facture.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Facture non trouvée.'})
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'add')
+@transaction.atomic
 def ApiCreateAvoir(request):
     facture_id = request.POST.get('facture_id')
     try:
@@ -1668,6 +2599,7 @@ def ApiCreateAvoir(request):
         return JsonResponse({'status': 'error', 'message': 'Facture non trouvée.'})
 
 @ajax_required
+@module_permission_required('con', 'view')
 def ApiFetchEnterpriseTvas(request):
     enterprise_id = request.GET.get('enterprise_id')
     if not enterprise_id:
@@ -1677,15 +2609,40 @@ def ApiFetchEnterpriseTvas(request):
     return JsonResponse({'status': 'success', 'tvas': list(tvas)})
 
 
+from django.core.paginator import Paginator
+
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ListeDAS(request):
     """
     Renders the page to manage DAS mappings (Products/Services to PaymentCategory).
     """
+    filter_type = request.GET.get('filter', 'all')
+    
+    thematiques = Thematiques.objects.filter(etat='active').prefetch_related('das_mappings__payment_category').order_by('-created_at')
+    
+    thematique_list = []
+    for t in thematiques:
+        mapping = t.das_mappings.first()
+        
+        if filter_type == 'mapped' and not mapping:
+            continue
+        if filter_type == 'unmapped' and mapping:
+            continue
+            
+        thematique_list.append({
+            'thematique': t,
+            'mapping': mapping,
+        })
+        
+    paginator = Paginator(thematique_list, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     context = {
         'tenant': request.tenant,
-        'mappings': DASMapping.objects.all().select_related('thematique', 'payment_category'),
-        'thematiques': Thematiques.objects.filter(etat='active'),
+        'page_obj': page_obj,
+        'filter_type': filter_type,
         'payment_categories': PaymentCategory.objects.all(),
     }
     return render(request, 'tenant_folder/conseil/liste_das.html', context)
@@ -1693,50 +2650,65 @@ def ListeDAS(request):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveDAS(request):
     """
     API to create or update a DAS mapping.
     """
     if request.method == "POST":
-        das_id = request.POST.get('das_id')
-        designation = request.POST.get('designation')
         thematique_id = request.POST.get('thematique_id')
         category_id = request.POST.get('category_id')
 
-        if not designation or not thematique_id or not category_id:
-            return JsonResponse({'status': 'error', 'message': 'Tous les champs sont obligatoires.'})
+        if not thematique_id or not category_id:
+            return JsonResponse({'status': 'error', 'message': 'Produit et Catégorie sont obligatoires.'})
 
         try:
             thematique = Thematiques.objects.get(id=thematique_id)
             category = PaymentCategory.objects.get(id=category_id)
+            
+            auto_designation = f"{thematique.label} - {category.name}"
 
-            if das_id:
-                mapping = DASMapping.objects.get(id=das_id)
-                mapping.designation = designation
-                mapping.thematique = thematique
+            mapping = DASMapping.objects.filter(thematique=thematique).first()
+            if mapping:
                 mapping.payment_category = category
+                mapping.designation = auto_designation
                 mapping.save()
-                message = "Mapping DAS mis Ã  jour avec succÃ¨s."
+                message = "Mapping mis à jour avec succès."
+                action_type = 'UPDATE'
             else:
-                DASMapping.objects.create(
-                    designation=designation,
+                mapping = DASMapping.objects.create(
+                    designation=auto_designation,
                     thematique=thematique,
                     payment_category=category
                 )
-                message = "Nouveau mapping DAS crÃ©Ã© avec succÃ¨s."
+                message = "Mapping créé avec succès."
+                action_type = 'CREATE'
 
-            return JsonResponse({'status': 'success', 'message': message})
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type=action_type,
+                target_model='DASMapping',
+                target_id=str(mapping.id),
+                details=f"Création/Mise à jour d'un mapping DAS pour: {thematique.label}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
+            return JsonResponse({'status': 'success', 'message': message, 'mapping_id': mapping.id, 'designation': mapping.designation})
 
         except (Thematiques.DoesNotExist, PaymentCategory.DoesNotExist):
-            return JsonResponse({'status': 'error', 'message': 'Produit ou catÃ©gorie introuvable.'})
+            return JsonResponse({'status': 'error', 'message': 'Produit ou catégorie introuvable.'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 
-    return JsonResponse({'status': 'error', 'message': 'MÃ©thode non autorisÃ©e.'})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})
 
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeleteDAS(request):
     """
     API to delete a DAS mapping.
@@ -1745,19 +2717,37 @@ def ApiDeleteDAS(request):
         das_id = request.POST.get('das_id')
         try:
             mapping = DASMapping.objects.get(id=das_id)
+            designation = mapping.designation
             mapping.delete()
-            return JsonResponse({'status': 'success', 'message': 'Mapping supprimÃ© avec succÃ¨s.'})
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='DASMapping',
+                target_id=str(das_id),
+                details=f"Suppression d'un mapping DAS: {designation}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            return JsonResponse({'status': 'success', 'message': 'Mapping supprimé avec succès.'})
         except DASMapping.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Mapping introuvable.'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 
-    return JsonResponse({'status': 'error', 'message': 'MÃ©thode non autorisÃ©e.'})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def DownloadFacturePDF(request, pk):
     try:
         facture = get_object_or_404(Facture, num_facture=pk)
+        
+        if facture.etat == 'brouillon':
+            messages.warning(request, "La facture doit être validée avant de pouvoir générer le PDF.")
+            return redirect('t_conseil:configure-facture', pk=facture.num_facture)
+            
         lignes = facture.lignes_facture.all()
         
         # Calculate totals
@@ -1795,9 +2785,11 @@ def DownloadFacturePDF(request, pk):
         return response
         
     except Exception as e:
-        return HttpResponse(f"Erreur lors de la gÃ©nÃ©ration du PDF: {str(e)}", status=500)
+        return HttpResponse(f"Erreur lors de la génération du PDF: {str(e)}", status=500)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveParticipants(request):
     import json
     if request.method != 'POST':
@@ -1811,11 +2803,17 @@ def ApiSaveParticipants(request):
         
         devis = None
         if devis_id:
-            devis = Devis.objects.get(num_devis=devis_id)
+            try:
+                devis = Devis.objects.get(num_devis=devis_id) 
+            except Devis.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Devis introuvable.'})
         
         facture = None
         if facture_id:
-            facture = Facture.objects.get(num_facture=facture_id)
+            try:
+                facture = Facture.objects.get(num_facture=facture_id) 
+            except Facture.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Facture introuvable.'})
             
         # Full sync: delete existing for this doc and re-add
         from django.db import transaction
@@ -1839,23 +2837,36 @@ def ApiSaveParticipants(request):
                     nin=p.get('nin')
                 )
             
-        return JsonResponse({'status': 'success', 'message': 'Participants enregistrÃ©s avec succÃ¨s.'})
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='Participant',
+            target_id=str(devis_id or facture_id),
+            details=f"Sauvegarde en masse des participants pour Devis/Facture.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+            
+        return JsonResponse({'status': 'success', 'message': 'Participants enregistrés avec succès.'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ApiGetDegreeFormations(request):
     from t_formations.models import Specialites
     specialites = Specialites.objects.all().values('id', 'label', 'prix', 'code', 'created_at', 'formation__nom')
     return JsonResponse(list(specialites), safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiLoadDegreeFormationsList(request):
     from t_formations.models import Formation
     formations = Formation.objects.all().values('id', 'nom', 'description', 'prix_formation', 'code', 'date_creation')
     return JsonResponse(list(formations), safe=False)
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def ApiGetSpecialiteDetails(request):
     """
     Returns full details for a specific specialty, including associated modules.
@@ -1889,9 +2900,11 @@ def ApiGetSpecialiteDetails(request):
         }
         return JsonResponse({'status': 'success', 'data': data})
     except Specialites.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'SpÃ©cialitÃ© introuvable'}, status=404)
+        return JsonResponse({'status': 'error', 'message': 'Spécialité introuvable'}, status=404)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
+@transaction.atomic
 def ApiEnrollToGroup(request):
     from t_groupe.models import Groupe, GroupeLine
     from t_crm.models import Prospets
@@ -1906,13 +2919,22 @@ def ApiEnrollToGroup(request):
         prospect_id = data.get('prospect_id') # From Prospets model
         groupe_id = data.get('groupe_id')
         
-        groupe = Groupe.objects.get(id=groupe_id)
+        try:
+            groupe = Groupe.objects.get(id=groupe_id) 
+        except Groupe.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Groupe introuvable.'})
         
         prospect = None
         if prospect_id:
-            prospect = Prospets.objects.get(id=prospect_id)
+            try:
+                prospect = Prospets.objects.get(id=prospect_id) 
+            except Prospets.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Prospets introuvable.'})
         elif participant_id:
-            p = Participant.objects.get(id=participant_id)
+            try:
+                p = Participant.objects.get(id=participant_id) 
+            except Participant.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Participant introuvable.'})
             prospect = Prospets.objects.filter(nom=p.nom, prenom=p.prenom, email=p.email).first()
             if not prospect:
                 prospect = Prospets.objects.create(
@@ -1935,9 +2957,20 @@ def ApiEnrollToGroup(request):
                     GroupeLine.objects.create(groupe=groupe, student=prospect)
                     prospect.statut = 'convertit'
                     prospect.save()
-                    return JsonResponse({'status': 'success', 'message': f'{prospect.nom} {prospect.prenom} inscrit au groupe {groupe.nom} avec succÃ¨s.'})
+                    
+                    from t_crm.models import UserActionLog
+                    UserActionLog.objects.create(
+                        user=request.user,
+                        action_type='CREATE',
+                        target_model='GroupeLine',
+                        target_id=str(groupe.id),
+                        details=f"Inscription de {prospect.nom} {prospect.prenom} au groupe {groupe.nom}",
+                        ip_address=request.META.get('REMOTE_ADDR')
+                    )
+                    
+                    return JsonResponse({'status': 'success', 'message': f'{prospect.nom} {prospect.prenom} inscrit au groupe {groupe.nom} avec succès.'})
                 else:
-                    return JsonResponse({'status': 'error', 'message': 'DÃ©jÃ  inscrit Ã  ce groupe.'})
+                    return JsonResponse({'status': 'error', 'message': 'DéjÃ  inscrit Ã  ce groupe.'})
         
         return JsonResponse({'status': 'error', 'message': 'Participant ou prospect introuvable.'})
         
@@ -1946,6 +2979,7 @@ def ApiEnrollToGroup(request):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'view')
 def ApiGetGroups(request):
     """
     Returns groups for a specific specialty.
@@ -1959,6 +2993,7 @@ def ApiGetGroups(request):
     return JsonResponse({'status': 'success', 'groups': list(groups)})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def ApiLoadProspectParticipants(request):
     prospect_id = request.GET.get('prospect_id')
     if not prospect_id:
@@ -1971,6 +3006,8 @@ def ApiLoadProspectParticipants(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveParticipant(request):
     import json
     if request.method != 'POST':
@@ -1980,14 +3017,33 @@ def ApiSaveParticipant(request):
         data = json.loads(request.body)
         p_id = data.get('id')
         prospect_id = data.get('prospect_id')
+        doc_id = data.get('devis_id') # Could be devis_123 or facture_123
         
-        if not prospect_id and not p_id:
-            return JsonResponse({'status': 'error', 'message': 'Prospect ID required'}, status=400)
+        is_facture = False
+        actual_id = doc_id
+        if doc_id and str(doc_id).startswith('devis_'):
+            actual_id = str(doc_id).replace('devis_', '')
+        elif doc_id and str(doc_id).startswith('facture_'):
+            is_facture = True
+            actual_id = str(doc_id).replace('facture_', '')
+        
+        if not prospect_id and not p_id and not doc_id:
+            return JsonResponse({'status': 'error', 'message': 'Prospect ID ou Document ID requis'}, status=400)
             
         if p_id:
-            participant = Participant.objects.get(id=p_id)
+            try:
+                participant = Participant.objects.get(id=p_id) 
+            except Participant.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Participant introuvable.'})
         else:
-            participant = Participant(prospect_id=prospect_id)
+            participant = Participant()
+            if prospect_id:
+                participant.prospect_id = prospect_id
+            if actual_id:
+                if is_facture:
+                    participant.facture_id = actual_id
+                else:
+                    participant.devis_id = actual_id
             
         participant.nom = data.get('nom')
         participant.prenom = data.get('prenom')
@@ -1999,12 +3055,24 @@ def ApiSaveParticipant(request):
         participant.nin = data.get('nin')
         participant.save()
         
-        return JsonResponse({'status': 'success', 'message': 'Participant enregistrÃ© avec succÃ¨s.', 'id': participant.id})
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE' if p_id else 'CREATE',
+            target_model='Participant',
+            target_id=str(participant.id),
+            details=f"Création/Mise à jour du participant: {participant.nom} {participant.prenom}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        return JsonResponse({'status': 'success', 'message': 'Participant enregistré avec succès.', 'id': participant.id})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeleteParticipant(request):
     import json
     if request.method != 'POST':
@@ -2017,12 +3085,25 @@ def ApiDeleteParticipant(request):
             return JsonResponse({'status': 'error', 'message': 'Participant ID required'}, status=400)
             
         Participant.objects.filter(id=p_id).delete()
-        return JsonResponse({'status': 'success', 'message': 'Participant supprimÃ© avec succÃ¨s.'})
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='Participant',
+            target_id=str(p_id),
+            details=f"Suppression du participant {p_id}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        return JsonResponse({'status': 'success', 'message': 'Participant supprimé avec succès.'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveEtsDetails(request):
     if request.method == 'POST':
         prospect_id = request.POST.get('prospect_id')
@@ -2035,13 +3116,25 @@ def ApiSaveEtsDetails(request):
             prospect.art_imp = request.POST.get('art_imp')
             prospect.observation = request.POST.get('observation')
             prospect.save()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Prospets',
+                target_id=str(prospect.id),
+                details=f"Mise à jour des informations entreprise du prospect: {prospect.entreprise}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Informations entreprise mises Ã  jour.'})
         except Prospets.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Prospect non trouvÃ©.'})
+            return JsonResponse({'status': 'error', 'message': 'Prospect non trouvé.'})
     return JsonResponse({'status': 'error', 'message': 'Invalid request'})
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'view')
 def ApiLoadBankAccounts(request):
     prospect_id = request.GET.get('id_prospect')
     accounts = ProspectBankAccount.objects.filter(prospect_id=prospect_id).values(
@@ -2051,15 +3144,23 @@ def ApiLoadBankAccounts(request):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'add')
+@transaction.atomic
 def ApiSaveBankAccount(request):
     if request.method == 'POST':
         account_id = request.POST.get('account_id')
         prospect_id = request.POST.get('prospect_id')
         
         if account_id:
-            account = ProspectBankAccount.objects.get(id=account_id)
+            try:
+                account = ProspectBankAccount.objects.get(id=account_id) 
+            except ProspectBankAccount.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'ProspectBankAccount introuvable.'})
         else:
-            prospect = Prospets.objects.get(id=prospect_id)
+            try:
+                prospect = Prospets.objects.get(id=prospect_id) 
+            except Prospets.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Prospets introuvable.'})
             account = ProspectBankAccount(prospect=prospect)
             
         account.bank_name = request.POST.get('bank_name')
@@ -2068,23 +3169,48 @@ def ApiSaveBankAccount(request):
         account.bank_address = request.POST.get('bank_address')
         account.save()
         
-        return JsonResponse({'status': 'success', 'message': 'Compte bancaire enregistrÃ©.'})
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE' if account_id else 'CREATE',
+            target_model='ProspectBankAccount',
+            target_id=str(account.id),
+            details=f"Mise à jour du compte bancaire {account.bank_name}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        return JsonResponse({'status': 'success', 'message': 'Compte bancaire enregistré.'})
     return JsonResponse({'status': 'error', 'message': 'Invalid request'})
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'delete')
+@transaction.atomic
 def ApiDeleteBankAccount(request):
     if request.method == 'POST':
         account_id = request.POST.get('account_id')
         try:
             account = ProspectBankAccount.objects.get(id=account_id)
+            bank_name = account.bank_name
             account.delete()
-            return JsonResponse({'status': 'success', 'message': 'Compte bancaire supprimÃ©.'})
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='ProspectBankAccount',
+                target_id=str(account_id),
+                details=f"Suppression du compte bancaire: {bank_name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            return JsonResponse({'status': 'success', 'message': 'Compte bancaire supprimé.'})
         except ProspectBankAccount.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Compte non trouvÃ©.'})
+            return JsonResponse({'status': 'error', 'message': 'Compte non trouvé.'})
     return JsonResponse({'status': 'error', 'message': 'Invalid request'})
 
 @login_required(login_url='institut_app:login')
+@module_permission_required('con', 'view')
 def GroupedParticipants(request):
     """
     Displays participants grouped by their thematics from confirmed quotes.
@@ -2169,6 +3295,8 @@ def GroupedParticipants(request):
 
 @login_required(login_url='institut_app:login')
 @ajax_required
+@module_permission_required('con', 'add')
+@transaction.atomic
 def ApiCreateGroupFromParticipants(request):
     """
     API to create a group in t_groupe from selected participants.
@@ -2207,9 +3335,15 @@ def ApiCreateGroupFromParticipants(request):
                 student = None
                 if str(pid_str).startswith('prospect_'):
                     prospect_id = pid_str.replace('prospect_', '')
-                    student = Prospets.objects.get(id=prospect_id)
+                    try:
+                        student = Prospets.objects.get(id=prospect_id) 
+                    except Prospets.DoesNotExist:
+                        return JsonResponse({'status': 'error', 'message': 'Prospets introuvable.'})
                 else:
-                    participant = Participant.objects.get(id=pid_str)
+                    try:
+                        participant = Participant.objects.get(id=pid_str) 
+                    except Participant.DoesNotExist:
+                        return JsonResponse({'status': 'error', 'message': 'Participant introuvable.'})
                     # Find or create a Prospets record for the individual participant
                     if participant.email:
                         student = Prospets.objects.filter(email=participant.email, is_ets_prospect=False).first()
@@ -2237,6 +3371,16 @@ def ApiCreateGroupFromParticipants(request):
                 print(f"Error adding participant {pid_str}: {e}")
                 continue
         
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='Groupe',
+            target_id=str(groupe.id),
+            details=f"Création d'un groupe conseil en masse: {group_name} avec {count} participants",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
         return JsonResponse({
             'status': 'success', 
             'message': f'Groupe "{group_name}" créé avec succès. {count} participants ajoutés.',
@@ -2248,6 +3392,8 @@ def ApiCreateGroupFromParticipants(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'approuv')
+@transaction.atomic
 def ApiAcceptDevis(request):
     if request.method == 'POST':
         devis_id = request.POST.get('devis_id')
@@ -2262,6 +3408,16 @@ def ApiAcceptDevis(request):
                 devis.opportunite.stage = 'facture'
                 devis.opportunite.save()
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Devis',
+                target_id=str(devis.num_devis),
+                details=f"Acceptation du devis: {devis.num_devis}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Le devis a été accepté avec succès.'})
         except Devis.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Devis introuvable.'}, status=404)
@@ -2270,6 +3426,8 @@ def ApiAcceptDevis(request):
     return JsonResponse({'status': 'error', 'message': 'Mauvaise méthode.'}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'approuv')
+@transaction.atomic
 def ApiRejectDevis(request):
     if request.method == 'POST':
         devis_id = request.POST.get('devis_id')
@@ -2284,6 +3442,16 @@ def ApiRejectDevis(request):
                 devis.opportunite.stage = 'perdu'
                 devis.opportunite.save()
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Devis',
+                target_id=str(devis.num_devis),
+                details=f"Rejet du devis: {devis.num_devis}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({'status': 'success', 'message': 'Le devis a été rejeté.'})
         except Devis.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Devis introuvable.'}, status=404)
@@ -2292,6 +3460,7 @@ def ApiRejectDevis(request):
     return JsonResponse({'status': 'error', 'message': 'Mauvaise méthode.'}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('con', 'view')
 def PaiementsConseilListe(request):
     # Fetch all payments related to t_conseil
     paiements = Paiement.objects.all().order_by('-date_paiement', '-created_at')
@@ -2301,3 +3470,34 @@ def PaiementsConseilListe(request):
     }
     return render(request, 'tenant_folder/conseil/liste_des_paiements.html', context)
 
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('con', 'add')
+def ApiCreateRendezVousPipeline(request):
+    if request.method == "POST":
+        from t_crm.models import RendezVous, Prospets
+        prospect_id = request.POST.get('prospect_id')
+        date_rendez_vous = request.POST.get('date_rendez_vous')
+        heure_rendez_vous = request.POST.get('heure_rendez_vous')
+        type_rdv = request.POST.get('type')
+        object_rdv = request.POST.get('object')
+        
+        if not prospect_id or not date_rendez_vous or not heure_rendez_vous:
+            return JsonResponse({'status': 'error', 'message': 'Veuillez remplir les champs obligatoires.'})
+            
+        try:
+            prospect = Prospets.objects.get(id=prospect_id)
+            RendezVous.objects.create(
+                created_by=request.user,
+                prospect=prospect,
+                date_rendez_vous=date_rendez_vous,
+                heure_rendez_vous=heure_rendez_vous,
+                type=type_rdv,
+                object=object_rdv,
+                context='con',
+                statut='en_attente'
+            )
+            return JsonResponse({'status': 'success', 'message': 'Rendez-vous planifié avec succès.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})

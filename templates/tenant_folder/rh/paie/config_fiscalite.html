@@ -1,112 +1,453 @@
 {% extends 'tenant_folder/base.html' %}
-{% load static %}
+{% load static l10n %}
 {% block title %} RH - Configuration Fiscale {% endblock title %}
 
 {% block content %}
 <style>
-    .glass-card {
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 1.5rem;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+    /* CSS Variables matching the premium design system */
+    :root {
+        --primary-gradient: linear-gradient(135deg, #4361ee 0%, #3f37c9 100%);
+        --primary-glow: 0 4px 20px rgba(67, 97, 238, 0.15);
+        --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --info-gradient: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+        
+        --text-dark: #0f172a;
+        --text-slate: #334155;
+        --text-muted: #64748b;
+        
+        --glass-bg: rgba(255, 255, 255, 0.82);
+        --glass-border: rgba(255, 255, 255, 0.45);
+        --glass-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
     }
-    .form-control:focus {
-        background: #fff !important;
-        border: 1px solid #0ab39c !important;
-        box-shadow: 0 0 0 0.25rem rgba(10, 179, 156, 0.1) !important;
+
+    /* Core Layout Modifications */
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--glass-border);
+        border-radius: 1.25rem;
+        box-shadow: var(--glass-shadow);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .glass-card-hover:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 35px -5px rgba(67, 97, 238, 0.08), 0 4px 12px rgba(0, 0, 0, 0.02);
+    }
+
+    /* Inputs Styling */
+    .form-control-custom {
+        background: rgba(248, 250, 252, 0.6) !important;
+        border: 1px solid rgba(226, 232, 240, 0.9) !important;
+        border-radius: 0.75rem !important;
+        padding: 0.75rem 1rem !important;
+        font-weight: 500 !important;
+        color: var(--text-slate) !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+    
+    .form-control-custom:focus {
+        background: #ffffff !important;
+        border-color: #4361ee !important;
+        box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.15) !important;
+        outline: none !important;
+    }
+
+    .input-group-custom-text {
+        background: rgba(248, 250, 252, 0.6) !important;
+        border: 1px solid rgba(226, 232, 240, 0.9) !important;
+        border-left: none !important;
+        border-radius: 0 0.75rem 0.75rem 0 !important;
+        font-weight: 600 !important;
+        color: var(--text-muted) !important;
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+        display: flex;
+        align-items: center;
+    }
+
+    .input-group-custom .form-control-custom {
+        border-radius: 0.75rem 0 0 0.75rem !important;
+    }
+
+    /* Button Styling */
+    .btn-custom-primary {
+        background: var(--primary-gradient) !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        border: none !important;
+        border-radius: 0.75rem !important;
+        padding: 0.75rem 1.5rem !important;
+        transition: all 0.2s ease-in-out !important;
+        box-shadow: var(--primary-glow) !important;
+    }
+
+    .btn-custom-primary:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 22px rgba(67, 97, 238, 0.25) !important;
+    }
+
+    .btn-custom-primary:active {
+        transform: translateY(1px) !important;
+    }
+
+    /* Table Improvements */
+    .custom-table {
+        margin-bottom: 0;
+    }
+
+    .custom-table thead th {
+        background: rgba(248, 250, 252, 0.7) !important;
+        color: var(--text-muted);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    .custom-table tbody td {
+        padding: 1rem 1.25rem;
+        font-weight: 550;
+        color: var(--text-slate);
+        border-bottom: 1px solid rgba(241, 245, 249, 0.8);
+    }
+
+    .custom-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* Simulator Styling */
+    .simulator-output-card {
+        padding: 1.25rem;
+        border-radius: 1rem;
+        border: 1px solid transparent;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sim-card-general {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.01) 100%);
+        border-color: rgba(16, 185, 129, 0.12);
+    }
+
+    .sim-card-general:hover {
+        border-color: rgba(16, 185, 129, 0.25);
+        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.06);
+    }
+
+    .sim-card-particular {
+        background: linear-gradient(135deg, rgba(14, 165, 233, 0.05) 0%, rgba(14, 165, 233, 0.01) 100%);
+        border-color: rgba(14, 165, 233, 0.12);
+    }
+
+    .sim-card-particular:hover {
+        border-color: rgba(14, 165, 233, 0.25);
+        box-shadow: 0 10px 25px rgba(14, 165, 233, 0.06);
+    }
+
+    /* Pulse micro-animation when value updates */
+    @keyframes resultPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+
+    .pulse-update {
+        display: inline-block;
+        animation: resultPulse 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Tooltip / Info Icon style */
+    .info-tooltip-trigger {
+        color: var(--text-muted);
+        cursor: help;
+        transition: color 0.2s;
+    }
+    
+    .info-tooltip-trigger:hover {
+        color: #4361ee;
+    }
+
+    /* Custom scrollbar for table container */
+    .table-responsive::-webkit-scrollbar {
+        height: 6px;
+    }
+    .table-responsive::-webkit-scrollbar-track {
+        background: rgba(241, 245, 249, 0.5);
+    }
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: rgba(203, 213, 225, 0.8);
+        border-radius: 3px;
+    }
+
+    /* Form Section Info Labels */
+    .form-section-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--text-slate);
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
     }
 </style>
-
 
 <div class="main-content">
     <div class="page-content bg-light">
         <div class="container-fluid">
             
-            <div class="row mt-4">
-                <div class="col-12 mb-4">
-                    <h3 class="fw-bold text-dark mb-1">Configuration Fiscale & Sociale</h3>
-                    <p class="text-muted mb-0">Paramétrage des taux de Sécurité Sociale et du barème IRG (Réglementation Algérienne).</p>
+            <!-- Header Section -->
+            <div class="row mt-4 mb-4">
+                <div class="col-12">
+                    <div class="glass-card p-4 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-lg bg-soft-primary text-primary rounded-pill p-1 me-4 shadow-sm" style="background-color: rgba(67, 97, 238, 0.08); width: 64px; height: 64px; display: flex; align-items: center; justify-content: center;">
+                                <div class="avatar-title bg-white rounded-circle fs-24 text-primary" style="width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(67, 97, 238, 0.1);">
+                                    <i class="ri-percent-line"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="mb-1 fw-bold text-dark">Configuration Fiscale & Sociale</h4>
+                                <p class="text-muted mb-0 small uppercase fw-semibold tracking-wider">
+                                    <i class="ri-settings-4-line me-1"></i> Paramétrage des taux de Sécurité Sociale et du barème IRG (Réglementation Algérienne)
+                                </p>
+                            </div>
+                        </div>
+                        <div class="d-none d-md-block">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb m-0 bg-transparent p-0">
+                                    <li class="breadcrumb-item"><a href="{% url 't_ressource_humaine:contrat_list' %}" class="text-primary fw-medium">Contrats</a></li>
+                                    <li class="breadcrumb-item active fw-bold border-start border-light ps-3 ms-3">Configuration Fiscale</li>
+                                </ol>
+                            </nav>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="row">
-                <!-- Paramètres Globaux -->
+                <!-- Paramètres Globaux & Simulateur -->
                 <div class="col-md-4">
-                    <div class="glass-card p-4 h-100">
-                        <h5 class="fw-bold mb-4"><i class="ri-settings-4-line me-2 text-primary"></i>Paramètres Généraux</h5>
+                    <div class="glass-card p-4 mb-4">
+                        <div class="form-section-title">
+                            <i class="ri-settings-4-line me-2 text-primary fs-5"></i>Paramètres Généraux
+                        </div>
                         <form method="POST">
                             {% csrf_token %}
-                            <div class="mb-3">
-                                <label class="form-label">Taux Sécurité Sociale (Employé)</label>
-                                <div class="input-group">
-                                    <input type="number" step="0.01" name="taux_ss" value="{% widthratio config.taux_ss 1 100 %}" class="form-control border-0 bg-light">
-                                    <span class="input-group-text bg-light border-0">%</span>
+                            <div class="mb-4">
+                                <label class="form-label text-slate small fw-bold mb-2">
+                                    Taux Sécurité Sociale (Employé)
+                                    <i class="ri-information-line ms-1 info-tooltip-trigger" data-bs-toggle="tooltip" data-bs-placement="top" title="Taux de cotisation salariale à la CNAS (par défaut 9%)"></i>
+                                </label>
+                                <div class="input-group input-group-custom">
+                                    <input type="number" step="0.01" name="taux_ss" value="{% widthratio config.taux_ss 1 100 %}" class="form-control form-control-custom">
+                                    <span class="input-group-text input-group-custom-text">%</span>
                                 </div>
-
-                                <small class="text-muted">Défaut: 0.09 (9%)</small>
+                                <div class="form-text text-muted small mt-1">Défaut : 9.00% (soit 0.09)</div>
                             </div>
 
                             <div class="mb-4">
-                                <label class="form-label">Seuil d'Exonération IRG</label>
-                                <div class="input-group">
-                                    <input type="number" name="seuil_irg" value="{{ config.seuil_exoneration_irg|floatformat:0 }}" class="form-control border-0 bg-light">
-
-                                    <span class="input-group-text bg-light border-0">DA</span>
+                                <label class="form-label text-slate small fw-bold mb-2">
+                                    Seuil d'Exonération IRG
+                                    <i class="ri-information-line ms-1 info-tooltip-trigger" data-bs-toggle="tooltip" data-bs-placement="top" title="Seuil légal d'imposabilité à l'IRG (par défaut 30 000 DA)"></i>
+                                </label>
+                                <div class="input-group input-group-custom">
+                                    <input type="number" name="seuil_irg" value="{{ config.seuil_exoneration_irg|floatformat:0 }}" class="form-control form-control-custom">
+                                    <span class="input-group-text input-group-custom-text">DA</span>
                                 </div>
-                                <small class="text-muted">Défaut: 30 000 DA</small>
+                                <div class="form-text text-muted small mt-1">Défaut : 30 000 DA</div>
                             </div>
 
-                            <button type="submit" class="btn btn-primary w-100 rounded-pill">
-                                <i class="ri-save-line me-1"></i> Sauvegarder
+                            <button type="submit" class="btn btn-custom-primary w-100 mt-2">
+                                <i class="ri-save-line me-1.5"></i> Enregistrer les Modifications
                             </button>
                         </form>
+                    </div>
+
+                    <!-- Simulateur IRG -->
+                    <div class="glass-card p-4 mb-4">
+                        <div class="form-section-title">
+                            <i class="ri-calculator-line me-2 text-warning fs-5"></i>Simulateur IRG Réel
+                        </div>
+                        <p class="text-muted small mb-4">Entrez un salaire imposable mensuel pour observer instantanément l'abattement et l'impôt dû selon les deux cas de figure.</p>
+                        
+                        <div class="mb-4">
+                            <label class="form-label text-slate small fw-bold mb-2">Salaire Imposable (DA)</label>
+                            <div class="input-group input-group-custom">
+                                <input type="number" id="sim_imposable" placeholder="Ex: 30900" class="form-control form-control-custom">
+                                <span class="input-group-text input-group-custom-text">DA</span>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="simulator-output-card sim-card-general">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-success small fw-bold uppercase tracking-wide">Cas Général</span>
+                                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2.5 py-1 text-xs">Standard</span>
+                                    </div>
+                                    <h3 class="fw-bold text-success mb-0 mt-2" style="letter-spacing: -0.02em;"><span id="sim_res_general" class="d-inline-block">0,00</span> <span class="fs-6 fw-normal">DA</span></h3>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="simulator-output-card sim-card-particular">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="text-info small fw-bold uppercase tracking-wide">Cas Particulier</span>
+                                        <span class="badge bg-info bg-opacity-10 text-info rounded-pill px-2.5 py-1 text-xs">Retraité / Handicapé</span>
+                                    </div>
+                                    <h3 class="fw-bold text-info mb-0 mt-2" style="letter-spacing: -0.02em;"><span id="sim_res_particulier" class="d-inline-block">0,00</span> <span class="fs-6 fw-normal">DA</span></h3>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Barème IRG -->
                 <div class="col-md-8">
-                    <div class="glass-card p-4">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h5 class="fw-bold mb-0"><i class="ri-table-line me-2 text-success"></i>Barème de l'IRG Dynamique</h5>
-                            <button class="btn btn-sm btn-soft-success rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#addTrancheModal">
-                                <i class="ri-add-line me-1"></i> Ajouter une Tranche
+                    <div class="glass-card p-0 mb-4 overflow-hidden">
+                        <div class="d-flex justify-content-between align-items-center p-4 border-bottom border-light">
+                            <div class="form-section-title mb-0">
+                                <i class="ri-table-line me-2 text-success fs-5"></i>Barème Officiel de l'IRG
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary btn-rounded px-3 py-1.5 fw-bold" data-bs-toggle="modal" data-bs-target="#addTrancheModal">
+                                <i class="ri-add-line me-1"></i> Nouvelle Tranche
                             </button>
                         </div>
 
                         <div class="table-responsive">
-                            <table class="table align-middle">
-                                <thead class="table-light">
+                            <table class="table custom-table align-middle">
+                                <thead>
                                     <tr>
-                                        <th>Tranche (Min)</th>
-                                        <th>Tranche (Max)</th>
-                                        <th>Taux (%)</th>
+                                        <th>Tranche (Minimum)</th>
+                                        <th>Tranche (Maximum)</th>
+                                        <th>Taux d'Imposition</th>
                                         <th class="text-end">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for t in tranches %}
-                                    <tr>
-                                        <td>{{ t.min_montant|floatformat:0 }} DA</td>
-                                        <td>{% if t.max_montant %}{{ t.max_montant|floatformat:0 }} DA{% else %}+ infini{% endif %}</td>
-                                        <td><span class="badge bg-success bg-opacity-10 text-success fs-6 fw-bold">{% widthratio t.taux 1 100 %} %</span></td>
-
-
+                                    <tr class="align-middle">
+                                        <td><span class="font-monospace fw-bold">{{ t.min_montant|floatformat:0 }}</span> <span class="text-muted small">DA</span></td>
+                                        <td>
+                                            {% if t.max_montant %}
+                                                <span class="font-monospace fw-bold">{{ t.max_montant|floatformat:0 }}</span> <span class="text-muted small">DA</span>
+                                            {% else %}
+                                                <span class="badge bg-light text-muted rounded-pill px-2.5 py-1 font-monospace">&infin; Non plafonné</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success bg-opacity-10 text-success fs-13 px-3 py-2 rounded-pill fw-bold">
+                                                {% widthratio t.taux 1 100 %} %
+                                            </span>
+                                        </td>
                                         <td class="text-end">
-                                            <button class="btn btn-sm btn-soft-danger rounded-pill"><i class="ri-delete-bin-line"></i></button>
+                                            <button class="btn btn-sm btn-soft-danger btn-rounded p-2" title="Supprimer cette tranche" style="border-radius: 50%; width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; border: 1px solid rgba(239,68,68,0.1); background-color: rgba(239,68,68,0.06); color: #ef4444; transition: all 0.2s;">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </button>
                                         </td>
                                     </tr>
                                     {% empty %}
                                     <tr>
-                                        <td colspan="4" class="text-center py-4">
-                                            <div class="alert alert-info border-0 shadow-sm">
-                                                <i class="ri-information-line me-2"></i> Aucun barème personnalisé. Le système utilise le barème par défaut de la Loi de Finances 2022.
+                                        <td colspan="4" class="text-center py-5">
+                                            <div class="alert alert-info border-0 shadow-sm mx-4 mb-0">
+                                                <i class="ri-information-line me-2 fs-5 align-middle"></i> Aucun barème personnalisé configuré. Le système applique par défaut le barème de la Loi de Finances 2022.
                                             </div>
                                         </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Référence Légale & Explications -->
+            <div class="row mb-5">
+                <div class="col-12">
+                    <div class="glass-card p-4">
+                        <div class="form-section-title border-bottom border-light pb-3 mb-4">
+                            <i class="ri-book-open-line me-2 text-primary fs-5"></i>Méthode de Calcul Légale de l'IRG (Code des Impôts Directs)
+                        </div>
+                        <p class="text-muted mb-4 fs-14">Les rémunérations et salaires sont imposés selon le barème progressif mensuel défini à l'<strong>Article 66 du CIDTA</strong> (modifié par la LF 2022). Le calcul comporte un abattement général et deux régimes de lissage pour adoucir la fiscalité des tranches intermédiaires.</p>
+                        
+                        <div class="row g-4">
+                            <!-- Cas Général -->
+                            <div class="col-md-6">
+                                <div class="border-0 p-4 rounded-4 h-100 border-start border-4 border-success" style="background-color: rgba(248, 250, 252, 0.65);">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="avatar-sm bg-success bg-opacity-10 text-success rounded-circle p-2 fs-4 me-3 style-avatar-circle" style="width:42px; height:42px; display:inline-flex; align-items:center; justify-content:center; background-color: rgba(16, 185, 129, 0.08);">
+                                            <i class="ri-user-settings-line"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold mb-0 text-dark">Barème IRG - Cas Général</h6>
+                                            <span class="text-muted small">Salariés ordinaires (CDD, CDI)</span>
+                                        </div>
+                                    </div>
+                                    <ul class="list-unstyled text-muted small mb-0 fs-13">
+                                        <li class="mb-3 d-flex align-items-start">
+                                            <i class="ri-checkbox-circle-fill text-success me-2 mt-0.5"></i>
+                                            <div><strong>Exonération de base :</strong> Exonération totale de l'IRG pour les salaires imposables inférieurs ou égaux à 30 000 DA.</div>
+                                        </li>
+                                        <li class="mb-3 d-flex align-items-start">
+                                            <i class="ri-checkbox-circle-fill text-success me-2 mt-0.5"></i>
+                                            <div><strong>Abattement principal :</strong> Un abattement de 40% est appliqué sur l'IRG Brut calculé, avec un plancher minimal de 1 000 DA et un plafond maximal de 1 500 DA.</div>
+                                        </li>
+                                        <li class="mb-0 d-flex align-items-start">
+                                            <i class="ri-checkbox-circle-fill text-success me-2 mt-0.5"></i>
+                                            <div>
+                                                <strong>Formule de lissage (30 000 &agrave; 35 000 DA) :</strong>
+                                                <div class="bg-white p-3 rounded-3 text-center my-3 font-monospace text-success border border-success border-opacity-20 fw-bold fs-14 shadow-sm">
+                                                    IRG dû = (IRG1 &times; 137 / 51) - (27925 / 8)
+                                                </div>
+                                                <span class="text-muted small d-block leading-relaxed">
+                                                    Où <strong>IRG1</strong> est le montant post-abattement de 40%. Arrondi réglementaire à la dizaine de DA inférieure pour le salaire imposable, et au décime (0.10 DA) pour le résultat final.
+                                                </span>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <!-- Cas Particuliers -->
+                            <div class="col-md-6">
+                                <div class="border-0 p-4 rounded-4 h-100 border-start border-4 border-info" style="background-color: rgba(248, 250, 252, 0.65);">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="avatar-sm bg-info bg-opacity-10 text-info rounded-circle p-2 fs-4 me-3 style-avatar-circle" style="width:42px; height:42px; display:inline-flex; align-items:center; justify-content:center; background-color: rgba(14, 165, 233, 0.08);">
+                                            <i class="ri-handicap-line"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold mb-0 text-dark">Barème IRG - Cas Particuliers</h6>
+                                            <span class="text-muted small">Travailleurs handicapés et Retraités</span>
+                                        </div>
+                                    </div>
+                                    <ul class="list-unstyled text-muted small mb-0 fs-13">
+                                        <li class="mb-3 d-flex align-items-start">
+                                            <i class="ri-checkbox-circle-fill text-info me-2 mt-0.5"></i>
+                                            <div><strong>Exonération de base :</strong> Exonération totale de l'IRG pour les salaires imposables inférieurs ou égaux à 30 000 DA.</div>
+                                        </li>
+                                        <li class="mb-3 d-flex align-items-start">
+                                            <i class="ri-checkbox-circle-fill text-info me-2 mt-0.5"></i>
+                                            <div><strong>Abattement principal :</strong> Même abattement de 40% sur l'IRG brut (min 1 000 DA, max 1 500 DA) que le cas général.</div>
+                                        </li>
+                                        <li class="mb-0 d-flex align-items-start">
+                                            <i class="ri-checkbox-circle-fill text-info me-2 mt-0.5"></i>
+                                            <div>
+                                                <strong>Formule de lissage (30 000 &agrave; 42 500 DA) :</strong>
+                                                <div class="bg-white p-3 rounded-3 text-center my-3 font-monospace text-info border border-info border-opacity-20 fw-bold fs-14 shadow-sm">
+                                                    IRG dû = (IRG1 &times; 93 / 61) - (81213 / 41)
+                                                </div>
+                                                <span class="text-muted small d-block leading-relaxed">
+                                                    Cette formule permet une atténuation progressive de l'imposition sur une plage plus large (jusqu'à 42 500 DA imposable) spécifiquement pour soutenir cette catégorie de travailleurs.
+                                                </span>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -120,17 +461,121 @@
 <div class="modal fade" id="addTrancheModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 glass-card">
-            <div class="modal-header border-0">
-                <h5 class="modal-title fw-bold">Ajouter une Tranche IRG</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header border-bottom border-light">
+                <h5 class="modal-title fw-bold text-dark"><i class="ri-add-circle-line me-1.5 text-primary"></i>Ajouter une Tranche IRG</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <p class="text-muted small">Configurez une nouvelle tranche pour le barème progressif.</p>
-                <!-- Form omitted for brevity in MVP, would call a create view -->
-                <div class="alert alert-warning">Interface de gestion des tranches individuelles en cours de finalisation.</div>
+            <div class="modal-body p-4">
+                <p class="text-muted small mb-4">Définissez les limites et le taux d'imposition pour la nouvelle tranche du barème progressif.</p>
+                <div class="alert alert-warning border-0 bg-warning bg-opacity-10 text-warning rounded-3 p-3 fs-13 mb-0">
+                    <i class="ri-alert-line me-1.5 align-middle fs-16"></i> Interface de gestion des tranches individuelles en cours de finalisation.
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const inputSim = document.getElementById("sim_imposable");
+        const resGeneral = document.getElementById("sim_res_general");
+        const resParticulier = document.getElementById("sim_res_particulier");
+
+        // Safe parser that handles localized numbers (spaces as thousands separators and commas as decimals)
+        function parseCleanFloat(str) {
+            if (!str) return 0;
+            let clean = str.toString().replace(/[\s\u00A0\u202F]/g, "").replace(/,/g, ".");
+            return parseFloat(clean) || 0;
+        }
+
+        const seuilExo = parseCleanFloat("{{ config.seuil_exoneration_irg|unlocalize }}") || 30000;
+
+        // Récupération dynamique des tranches du barème passées par le serveur
+        const tranches = [
+            {% for t in tranches %}
+            {
+                min: parseCleanFloat("{{ t.min_montant|unlocalize }}"),
+                max: {% if t.max_montant %}parseCleanFloat("{{ t.max_montant|unlocalize }}"){% else %}null{% endif %},
+                taux: parseCleanFloat("{{ t.taux|unlocalize }}")
+            },
+            {% empty %}
+            { min: 0, max: 20000, taux: 0.00 },
+            { min: 20000, max: 40000, taux: 0.23 },
+            { min: 40000, max: 80000, taux: 0.27 },
+            { min: 80000, max: 160000, taux: 0.30 },
+            { min: 160000, max: 320000, taux: 0.33 },
+            { min: 320000, max: null, taux: 0.35 }
+            {% endfor %}
+        ];
+
+        inputSim.addEventListener("input", function() {
+            let val = parseCleanFloat(inputSim.value);
+            if (isNaN(val) || val <= 0) {
+                resGeneral.textContent = '0,00';
+                resParticulier.textContent = '0,00';
+                return;
+            }
+
+            // Règle DGI : Arrondi systématique à la dizaine de DA inférieure
+            const imposable = Math.floor(val / 10) * 10;
+
+            if (imposable <= seuilExo) {
+                resGeneral.textContent = '0,00';
+                resParticulier.textContent = '0,00';
+                return;
+            }
+
+            // 1. Calcul de l'IRG Brut selon le barème
+            let irgBrut = 0;
+            for (const t of tranches) {
+                if (imposable > t.min) {
+                    const borneSup = t.max !== null ? t.max : imposable;
+                    const baseCalcul = Math.min(imposable, borneSup) - t.min;
+                    irgBrut += baseCalcul * t.taux;
+                }
+            }
+
+            // 2. Premier abattement de 40% (min 1000 DA, max 1500 DA)
+            let abattement = irgBrut * 0.40;
+            if (abattement < 1000) {
+                abattement = 1000;
+            } else if (abattement > 1500) {
+                abattement = 1500;
+            }
+
+            const irg1 = Math.max(0, irgBrut - abattement);
+
+            // 3. Lissage Cas Général (30 000 à 35 000 DA)
+            let irgGeneral = irg1;
+            if (imposable > 30000 && imposable <= 35000) {
+                irgGeneral = irg1 * (137 / 51) - (27925 / 8);
+            }
+            irgGeneral = Math.max(0, irgGeneral);
+            irgGeneral = Math.round(irgGeneral * 10) / 10; // Arrondi au décime
+
+            // 4. Lissage Cas Particuliers (30 000 à 42 500 DA)
+            let irgParticulier = irg1;
+            if (imposable > 30000 && imposable <= 42500) {
+                irgParticulier = irg1 * (93 / 61) - (81213 / 41);
+            }
+            irgParticulier = Math.max(0, irgParticulier);
+            irgParticulier = Math.round(irgParticulier * 10) / 10; // Arrondi au décime
+
+            // Update UI with formatted values
+            resGeneral.textContent = irgGeneral.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            resParticulier.textContent = irgParticulier.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            // Trigger micro-animation on update
+            resGeneral.classList.remove("pulse-update");
+            resParticulier.classList.remove("pulse-update");
+            
+            // Force reflow
+            void resGeneral.offsetWidth;
+            void resParticulier.offsetWidth;
+            
+            resGeneral.classList.add("pulse-update");
+            resParticulier.classList.add("pulse-update");
+        });
+    });
+</script>
 {% endblock content %}

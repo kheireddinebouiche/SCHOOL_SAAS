@@ -151,8 +151,11 @@
                         </button>
                         {% endif %}
                     {% endif %}
-                    <a href="{% url 't_conseil:DownloadFacturePDF' facture.num_facture %}" class="btn btn-primary px-4 shadow">
-                        <i class="ri-file-pdf-line me-2"></i> Télécharger PDF
+                    <a href="{% url 't_tresorerie:PageModifierFacture' facture.id %}" class="btn btn-warning px-4 shadow text-white">
+                        <i class="ri-edit-line me-2"></i> Modifier Facture
+                    </a>
+                    <a href="{% url 't_tresorerie:PrintFactureTresorerie' facture.num_facture %}" class="btn btn-primary px-4 shadow">
+                        <i class="ri-printer-line me-2"></i> Imprimer / PDF
                     </a>
                     <a href="{% url 't_tresorerie:PageFacturation' %}" class="btn btn-light px-4">
                         <i class="ri-arrow-left-line me-2"></i> Retour à la liste
@@ -205,14 +208,28 @@
                                         {{ facture.entreprise.email|default:"" }}
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-4 position-relative">
+                                    <button type="button" class="btn btn-sm btn-light position-absolute top-0 end-0 mt-2 me-2" data-bs-toggle="modal" data-bs-target="#editClientInfoModal" title="Modifier le Tiers Payeur">
+                                        <i class="ri-edit-line"></i>
+                                    </button>
                                     <span class="premium-info-label">CLIENT</span>
-                                    <p class="premium-info-value mb-1">{{ facture.client.nom }} {{ facture.client.prenom }}</p>
-                                    <div class="text-muted small">
-                                        {% if facture.client.entreprise %}<strong>{{ facture.client.entreprise }}</strong><br>{% endif %}
-                                        {{ facture.client.adresse|default:"" }}<br>
-                                        {{ facture.client.telephone|default:"-" }}
-                                    </div>
+                                    {% if facture.client_nom_override %}
+                                        <p class="premium-info-value mb-1">{{ facture.client_nom_override }} {{ facture.client_prenom_override|default:"" }}</p>
+                                        <div class="text-muted small">
+                                            {% if facture.client_nin_override %}NIN/NIF: {{ facture.client_nin_override }}<br>{% endif %}
+                                            <div class="mt-2 pt-2 border-top border-light">
+                                                <span class="text-secondary fw-medium" style="font-size: 0.7rem;">ÉTUDIANT (BÉNÉFICIAIRE) :</span><br>
+                                                <strong>{{ facture.client.nom }} {{ facture.client.prenom }}</strong>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <p class="premium-info-value mb-1">{{ facture.client.nom }} {{ facture.client.prenom }}</p>
+                                        <div class="text-muted small">
+                                            {% if facture.client.email %}<i class="ri-mail-line me-1"></i>{{ facture.client.email }}<br>{% endif %}
+                                            {% if facture.client.telephone %}<i class="ri-phone-line me-1"></i>{{ facture.client.telephone }}<br>{% endif %}
+                                            {% if facture.client.nin %}NIN/NIF: {{ facture.client.nin }}{% endif %}
+                                        </div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-md-4 text-md-end">
                                     <div class="mb-4">
@@ -249,7 +266,12 @@
                                         {% for item in lignes_facture %}
                                         <tr>
                                             <td>
-                                                <div class="fw-bold text-dark fs-15">{{ item.description }}</div>
+                                                <div class="fw-bold text-dark fs-15">
+                                                    {{ item.description }}
+                                                    {% if facture.client_nom_override and "Au profit" not in item.description %}
+                                                        <span class="text-secondary small fw-medium ms-1">(Au profit de : {{ facture.client.nom }} {{ facture.client.prenom }})</span>
+                                                    {% endif %}
+                                                </div>
                                                 {% if item.long_description %}
                                                 <div class="text-muted small mt-1" style="white-space: pre-wrap;">{{ item.long_description }}</div>
                                                 {% endif %}
@@ -322,6 +344,7 @@
                                                 <th style="font-weight: 800; text-transform: uppercase; color: var(--text-muted); font-size: 11px; padding: 12px 15px;">N° Règlement</th>
                                                 <th style="font-weight: 800; text-transform: uppercase; color: var(--text-muted); font-size: 11px; padding: 12px 15px;">Date</th>
                                                 <th style="font-weight: 800; text-transform: uppercase; color: var(--text-muted); font-size: 11px; padding: 12px 15px;">Mode de Paiement</th>
+                                                <th style="font-weight: 800; text-transform: uppercase; color: var(--text-muted); font-size: 11px; padding: 12px 15px;">Statut</th>
                                                 <th style="font-weight: 800; text-transform: uppercase; color: var(--text-muted); font-size: 11px; padding: 12px 15px;">Promo / Formation</th>
                                                 <th class="text-end" style="font-weight: 800; text-transform: uppercase; color: var(--text-muted); font-size: 11px; padding: 12px 15px;">Montant payé</th>
                                             </tr>
@@ -332,7 +355,14 @@
                                                 <td class="fw-bold text-dark" style="padding: 12px 15px;">{{ p.num|default:"-" }}</td>
                                                 <td class="text-muted" style="padding: 12px 15px;">{{ p.date_paiement|date:"d/m/Y" }}</td>
                                                 <td style="padding: 12px 15px;">
-                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-10 py-1 px-2.5 rounded-pill">{{ p.get_mode_paiement_display }}</span>
+                                                    <span class="badge bg-light text-dark border border-secondary border-opacity-10 py-1 px-2.5 rounded-pill">{{ p.get_mode_paiement_display }}</span>
+                                                </td>
+                                                <td style="padding: 12px 15px;">
+                                                    {% if p.is_cashed %}
+                                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-10 py-1 px-2.5 rounded-pill"><i class="ri-checkbox-circle-line me-1"></i>Encaissé</span>
+                                                    {% else %}
+                                                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-10 py-1 px-2.5 rounded-pill"><i class="ri-time-line me-1"></i>En attente d'encaissement</span>
+                                                    {% endif %}
                                                 </td>
                                                 <td style="padding: 12px 15px;">
                                                     <span class="badge bg-light text-dark border">{{ p.promo.label|default:p.prospect.specialite_obtenu|default:"Formation" }}</span>
@@ -356,6 +386,39 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Update Tiers Payeur -->
+<div class="modal fade" id="editClientInfoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-light border-0 py-3">
+                <h5 class="modal-title fw-bold">Modifier les Informations (Tiers Payeur)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted small mb-4">Mettez à jour le Tiers Payeur. Les lignes de la facture afficheront automatiquement "Au profit de l'étudiant".</p>
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">Nom</label>
+                    <input type="text" class="form-control bg-light border-0" id="modalClientNom" value="{{ facture.client_nom_override|default:'' }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">Prénom</label>
+                    <input type="text" class="form-control bg-light border-0" id="modalClientPrenom" value="{{ facture.client_prenom_override|default:'' }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">NIN / NIF</label>
+                    <input type="text" class="form-control bg-light border-0" id="modalClientNin" value="{{ facture.client_nin_override|default:'' }}">
+                </div>
+            </div>
+            <div class="modal-footer border-0 pb-4 justify-content-center">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary px-4 shadow" id="btnSaveClientInfo">
+                    <i class="ri-save-line me-2"></i> Enregistrer
+                </button>
             </div>
         </div>
     </div>
@@ -387,6 +450,53 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btnSaveClientInfo = document.getElementById('btnSaveClientInfo');
+    if(btnSaveClientInfo) {
+        btnSaveClientInfo.addEventListener('click', function() {
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enregistrement...';
+            
+            const formData = {
+                facture_id: {{ facture.id }},
+                client_nom_override: document.getElementById('modalClientNom').value,
+                client_prenom_override: document.getElementById('modalClientPrenom').value,
+                client_nin_override: document.getElementById('modalClientNin').value
+            };
+            
+            fetch("{% url 't_tresorerie:ApiUpdateFactureClientOverride' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": '{{ csrf_token }}'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(r => r.json())
+            .then(res => {
+                if(res.status === 'success') {
+                    alertify.success(res.message);
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    alertify.error(res.message);
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alertify.error("Erreur de connexion");
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            });
+        });
+    }
+});
+</script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

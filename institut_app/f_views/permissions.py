@@ -1,3 +1,5 @@
+from institut_app.decorators import superuser_required
+from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render,redirect
 from django.http import HttpResponse, JsonResponse
 from ..models import *
@@ -5,15 +7,18 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ModulesPages(request):
     return render(request, 'tenant_folder/administration/permissions/modules.html')
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def Role_Attribution(request):
     return render(request,"tenant_folder/administration/permissions/attribution_des_roles.html")
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiListeModules(request):
     if request.method == "GET":
         
@@ -38,6 +43,7 @@ def ApiListeModules(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiAddModule(request):
     if request.method == "POST":
         addModuleName = request.POST.get('addModuleName')
@@ -54,6 +60,15 @@ def ApiAddModule(request):
                 is_active = addModuleStatus,
             )
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Module',
+                details=f"Création du module {addModuleName}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({"status":"success",'message':"Le module a été crée avec succès"})
 
         except Exception as e:
@@ -64,6 +79,7 @@ def ApiAddModule(request):
 
 
 @login_required(login_url='institut_app:login')
+@superuser_required
 def ApiListeRoles(request):
     if request.method == 'GET':
         roles = Role.objects.all()
@@ -87,6 +103,7 @@ def ApiListeRoles(request):
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
+@superuser_required
 def ApiAddRole(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -109,6 +126,16 @@ def ApiAddRole(request):
                 is_active=is_active in ['1', 'true', 'True', True, 'on']
             )
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Role',
+                target_id=str(role.id),
+                details=f"Création du rôle {name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({'status':'success', 'message':'Le rôle a été créé avec succès'})
 
         except ValueError:
@@ -122,6 +149,7 @@ def ApiAddRole(request):
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
+@superuser_required
 def ApiUpdateRole(request):
     if request.method == 'POST':
         role_id = request.POST.get('id')
@@ -147,6 +175,16 @@ def ApiUpdateRole(request):
 
             role.save()
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Role',
+                target_id=str(role.id),
+                details=f"Mise à jour du rôle {role.name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({'status':'success', 'message':'Le rôle a été mis à jour avec succès'})
 
         except Role.DoesNotExist:
@@ -161,6 +199,7 @@ def ApiUpdateRole(request):
 
 
 @login_required(login_url='institut_app:login')
+@superuser_required
 def ApiGetRoleDetails(request):
     role_id = request.GET.get('id')
 
@@ -190,6 +229,7 @@ def ApiGetRoleDetails(request):
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
+@superuser_required
 def ApiDeleteRole(request):
     if request.method == 'POST':
         role_id = request.POST.get('id')
@@ -207,7 +247,18 @@ def ApiDeleteRole(request):
                     'message': 'Impossible de supprimer un rôle actif. Veuillez désactiver le rôle avant de le supprimer.'
                 })
 
+            role_name = role.name
             role.delete()
+
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='Role',
+                target_id=str(role_id),
+                details=f"Suppression du rôle {role_name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({'status':'success', 'message':'Le rôle a été supprimé avec succès'})
 
@@ -221,6 +272,7 @@ def ApiDeleteRole(request):
 
 
 @login_required(login_url='institut_app:login')
+@superuser_required
 def ApiChangeRoleStatus(request):
     if request.method == 'POST':
         role_id = request.POST.get('id')
@@ -242,6 +294,16 @@ def ApiChangeRoleStatus(request):
             # Déterminer le texte de statut pour la réponse
             status_text = 'activé' if new_status else 'désactivé'
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Role',
+                target_id=str(role.id),
+                details=f"Statut {status_text} pour le rôle {role.name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 'status': 'success',
                 'message': f'Le rôle a été {status_text} avec succès',
@@ -260,6 +322,7 @@ def ApiChangeRoleStatus(request):
 # View functions for the roles page
 
 @login_required(login_url='institut_app:login')
+@superuser_required
 def roles_page(request):
     """Page de gestion des rôles"""
     roles = Role.objects.all()
@@ -273,6 +336,7 @@ def roles_page(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiUpdateModule(request):
     if request.method == "POST":
         module_id = request.POST.get('id')
@@ -297,6 +361,16 @@ def ApiUpdateModule(request):
 
             module.save()
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Module',
+                target_id=str(module.id),
+                details=f"Mise à jour du module {module.name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({"status":"success", 'message':"Le module a été mis à jour avec succès"})
 
         except Module.DoesNotExist:
@@ -309,6 +383,7 @@ def ApiUpdateModule(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiGetModuleDetails(request):
     module_id = request.GET.get('id')
 
@@ -337,6 +412,7 @@ def ApiGetModuleDetails(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiChangeModuleStatus(request):
     if request.method == "POST":
         module_id = request.POST.get('id')
@@ -358,6 +434,16 @@ def ApiChangeModuleStatus(request):
             # Determine the status text for the response
             status_text = "activé" if new_status else "désactivé"
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Module',
+                target_id=str(module.id),
+                details=f"Statut {status_text} pour le module {module.name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 "status": "success",
                 "message": f"Le module a été {status_text} avec succès",
@@ -374,6 +460,7 @@ def ApiChangeModuleStatus(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiGetModulePermissions(request):
     module_id = request.GET.get('module_id')
 
@@ -412,6 +499,7 @@ def ApiGetModulePermissions(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiAddModulePermission(request):
     if request.method == "POST":
         module_id = request.POST.get('module_id')
@@ -462,6 +550,7 @@ def ApiAddModulePermission(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiUpdateModulePermission(request):
     if request.method == "POST":
         permission_id = request.POST.get('permission_id')
@@ -513,6 +602,7 @@ def ApiUpdateModulePermission(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiDeleteModulePermission(request):
     if request.method == "POST":
         permission_id = request.POST.get('permission_id')
@@ -541,6 +631,7 @@ def ApiDeleteModulePermission(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiGetRolePermissions(request):
     role_id = request.GET.get('role_id')
 
@@ -581,6 +672,7 @@ def ApiGetRolePermissions(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiSaveRolePermissions(request):
     if request.method == "POST":
         role_id = request.POST.get('role_id')
@@ -640,6 +732,7 @@ def ApiSaveRolePermissions(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiAddRolePermission(request):
     if request.method == "POST":
         role_id = request.POST.get('role_id')
@@ -689,6 +782,7 @@ def ApiAddRolePermission(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiUpdateRolePermission(request):
     if request.method == "POST":
         permission_id = request.POST.get('permission_id')
@@ -748,6 +842,7 @@ def ApiUpdateRolePermission(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiDeleteRolePermission(request):
     if request.method == "POST":
         permission_id = request.POST.get('permission_id')
@@ -780,6 +875,7 @@ def ApiDeleteRolePermission(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiDeleteModule(request):
     if request.method == "POST":
         module_id = request.POST.get('id')
@@ -797,7 +893,18 @@ def ApiDeleteModule(request):
                     "message": "Impossible de supprimer un module actif. Veuillez désactiver le module avant de le supprimer."
                 })
 
+            module_name = module.name
             module.delete()
+
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='Module',
+                target_id=str(module_id),
+                details=f"Suppression du module {module_name}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({"status":"success", 'message':"Le module a été supprimé avec succès"})
 
@@ -813,6 +920,7 @@ def ApiDeleteModule(request):
  
  
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiListeAttributions(request):
     if request.method == "GET":
         try:
@@ -867,6 +975,7 @@ def ApiListeAttributions(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiAddAttribution(request):
     if request.method == "POST":
         user_id = request.POST.get('user_id')
@@ -903,6 +1012,33 @@ def ApiAddAttribution(request):
                 assigned_by=request.user
             )
             
+            # Activer automatiquement les sous-menus par défaut lors de l'attribution
+            from institut_app.models import UserSubMenuAccess
+            if module.name == 'tre':
+                submenus = ['dashboard', 'tresorerie', 'exec_edu', 'remboursement', 'remises', 'caisse', 'banque', 'autres_paiements', 'depenses', 'fournisseurs', 'factures', 'parametres', 'echeanciers']
+            elif module.name == 'scol':
+                submenus = ['groupes', 'affectations', 'etudiants', 'transferts', 'presences', 'contrats']
+            else:
+                submenus = []
+                
+            for sc in submenus:
+                UserSubMenuAccess.objects.get_or_create(
+                    user=user,
+                    module_code=module.name,
+                    submenu_code=sc,
+                    defaults={'is_active': True}
+                )
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='UserModuleRole',
+                target_id=str(attribution.id),
+                details=f"Attribution du rôle {role.name} au module {module.get_name_display()} pour l'utilisateur {user.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 'status': 'success',
                 'message': 'Attribution créée avec succès',
@@ -932,6 +1068,7 @@ def ApiAddAttribution(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiBulkAddAttribution(request):
     """
     API pour créer plusieurs attributions à la fois (1 rôle pour plusieurs modules)
@@ -979,6 +1116,15 @@ def ApiBulkAddAttribution(request):
                 except Module.DoesNotExist:
                     errors.append(f"ID Module {m_id} non trouvé")
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='UserModuleRole',
+                details=f"Attribution en masse du rôle {role.name} pour l'utilisateur {user.username} ({created_count} modules)",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 'status': 'success',
                 'message': f'{created_count} attribution(s) créée(s) avec succès',
@@ -995,6 +1141,7 @@ def ApiBulkAddAttribution(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiUpdateAttribution(request):
     if request.method == "POST":
         attribution_id = request.POST.get('id')
@@ -1038,6 +1185,16 @@ def ApiUpdateAttribution(request):
             attribution.assigned_by = request.user
             attribution.save()
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='UserModuleRole',
+                target_id=str(attribution.id),
+                details=f"Mise à jour de l'attribution pour l'utilisateur {user.username} (Module: {module.get_name_display()}, Rôle: {role.name})",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 'status': 'success',
                 'message': 'Attribution mise à jour avec succès'
@@ -1072,6 +1229,7 @@ def ApiUpdateAttribution(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiDeleteAttribution(request):
     if request.method == "POST":
         attribution_id = request.POST.get('id')
@@ -1085,6 +1243,16 @@ def ApiDeleteAttribution(request):
         try:
             attribution = UserModuleRole.objects.get(id=attribution_id)
             attribution.delete()
+
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='UserModuleRole',
+                target_id=str(attribution_id),
+                details=f"Suppression d'une attribution",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({
                 'status': 'success',
@@ -1104,6 +1272,7 @@ def ApiDeleteAttribution(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiGetAttributionDetails(request):
     """
     API pour récupérer les détails d'une attribution spécifique
@@ -1159,6 +1328,7 @@ def ApiGetAttributionDetails(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiListeUsersPermission(request):
     """
     API pour lister tous les utilisateurs
@@ -1193,6 +1363,7 @@ def ApiListeUsersPermission(request):
 
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiGetRolePermissionsByRoleId(request):
     """
     API pour récupérer toutes les permissions du rôle pour un module spécifique
@@ -1255,6 +1426,7 @@ def ApiGetRolePermissionsByRoleId(request):
         })
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiGetAttributionPermissions(request):
     """
     Récupère toutes les permissions possibles pour le module d'une attribution,
@@ -1273,13 +1445,13 @@ def ApiGetAttributionPermissions(request):
         all_module_permissions = ModulePermission.objects.filter(module=module)
         
         # Permissions accordées par le rôle
-        role_granted_ids = RolePermission.objects.filter(
+        role_granted_ids = set(RolePermission.objects.filter(
             role=role,
             module_permission__module=module
-        ).values_list('module_permission_id', flat=True)
+        ).values_list('module_permission_id', flat=True))
         
         # Permissions explicitement désactivées pour cet utilisateur
-        denied_ids = attribution.denied_permissions.values_list('id', flat=True)
+        denied_ids = set(attribution.denied_permissions.values_list('id', flat=True))
         
         permissions_data = []
         for mp in all_module_permissions:
@@ -1302,6 +1474,7 @@ def ApiGetAttributionPermissions(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiTogglePermissionDenial(request):
     """
     Bascule l'état de désactivation d'une permission pour une attribution.
@@ -1326,6 +1499,16 @@ def ApiTogglePermissionDenial(request):
                 message = "Permission désactivée"
                 is_denied = True
                 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='UserModuleRole',
+                target_id=str(attribution_id),
+                details=f"Bascule de désactivation de permission : {message} pour l'attribution ID {attribution_id}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 'status': 'success', 
                 'message': message,
@@ -1339,6 +1522,7 @@ def ApiTogglePermissionDenial(request):
 import json
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiExportModules(request):
     try:
         modules = Module.objects.all().prefetch_related('permissions')
@@ -1368,6 +1552,7 @@ def ApiExportModules(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiImportModules(request):
     if request.method == 'POST' and request.FILES.get('file'):
         try:

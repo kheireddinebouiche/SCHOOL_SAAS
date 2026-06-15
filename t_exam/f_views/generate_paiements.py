@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -15,6 +16,7 @@ from t_tresorerie.models import DuePaiements
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('exa', 'add')
 def ApiGenerateDuePaiements(request):
     if request.method == "POST":
         commisison_result_id = request.POST.get('commission_result_id')

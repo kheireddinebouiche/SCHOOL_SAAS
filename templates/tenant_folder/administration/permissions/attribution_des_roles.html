@@ -451,26 +451,7 @@
   </div>
 </div>
 
-<!-- Modal de confirmation pour désactivation de permission -->
-<div id="confirmPermissionToggleModal" class="modal fade" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-sm">
-    <div class="modal-content rounded-4 border-0 shadow-lg">
-      <div class="modal-body p-4 text-center">
-        <div class="avatar-lg mx-auto mb-4 bg-soft-warning rounded-circle d-flex align-items-center justify-content-center">
-          <i class="ri-error-warning-line text-warning fs-1"></i>
-        </div>
-        <h5 class="fw-bold mb-2">Confirmer l'action ?</h5>
-        <p class="text-muted mb-4" id="confirmPermissionToggleMessage">
-          Voulez-vous vraiment modifier l'accès à cette permission ?
-        </p>
-        <div class="d-flex gap-2 justify-content-center">
-          <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
-          <button type="button" id="executePermissionToggleBtn" class="btn btn-warning px-4">Confirmer</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+
 
 <!-- Modal de confirmation de suppression -->
 <div class="modal fade deleteAttributionModal" tabindex="-1" role="dialog" aria-labelledby="deleteAttributionModalLabel" aria-hidden="true">
@@ -814,6 +795,8 @@
                 <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2" style="min-width: 200px;">
                   <li><a href="#" class="dropdown-item edit-attribution" data-attribution-id="${attribution.id}"><i class="ri-edit-line text-primary me-2"></i>Modifier</a></li>
                   <li><a href="#" class="dropdown-item view-permissions" data-attribution-id="${attribution.id}"><i class="ri-eye-line text-info me-2"></i>Permissions</a></li>
+                  ${attribution.module.name_code === 'tre' ? `<li><a href="#" class="dropdown-item configure-submenu" data-module="tre" data-user-id="${attribution.user.id}"><i class="ri-function-line text-info me-2"></i>Accès Sous-Menus Finance</a></li>` : ''}
+                  ${attribution.module.name_code === 'scol' ? `<li><a href="#" class="dropdown-item configure-submenu" data-module="scol" data-user-id="${attribution.user.id}"><i class="ri-function-line text-info me-2"></i>Accès Sous-Menus Scolarité</a></li>` : ''}
                   <li><hr class="dropdown-divider my-1 opacity-50"></li>
                   <li><a href="#" class="dropdown-item text-danger delete-attribution" data-attribution-id="${attribution.id}"><i class="ri-delete-bin-line me-2"></i>Supprimer</a></li>
                 </ul>
@@ -1534,6 +1517,7 @@
         url: "{% url 'institut_app:ApiGetAttributionDetails' %}",
         type: "GET",
         dataType: "JSON",
+        cache: false,
         data: {
           'id': attributionId
         },
@@ -1546,6 +1530,7 @@
               url: "{% url 'institut_app:ApiGetAttributionPermissions' %}",
               type: "GET",
               dataType: "JSON",
+              cache: false,
               data: {
                 'attribution_id': attributionId
               },
@@ -1569,7 +1554,7 @@
                       `<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3"><i class="ri-check-line me-1"></i>Inclus dans le rôle</span>` :
                       `<span class="badge rounded-pill bg-light text-muted border px-3"><i class="ri-close-line me-1"></i>Non inclus</span>`;
                     
-                    var deniedChecked = permission.is_denied ? 'checked' : '';
+                    var activeChecked = !permission.is_denied ? 'checked' : '';
                     var disabledSwitch = !permission.is_granted_by_role ? 'disabled' : '';
                     var cardDeniedClass = permission.is_denied ? 'is-denied' : '';
                     
@@ -1598,7 +1583,7 @@
                                 <input class="form-check-input toggle-denial" type="checkbox" 
                                        data-permission-id="${permission.id}" 
                                        data-attribution-id="${attributionId}"
-                                       ${deniedChecked} ${disabledSwitch}>
+                                       ${activeChecked} ${disabledSwitch}>
                               </div>
                             </div>
                             <i class="ri-information-line text-muted cursor-pointer" title="ID: ${permission.id}"></i>
@@ -1629,80 +1614,195 @@
         }
       });
     }
-    // Variables to store pending toggle data
-    var pendingToggleData = null;
 
-    // Handle toggle permission denial
+    // Handle toggle permission denial instantly
     $(document).on('change', '.toggle-denial', function(e) {
       var $checkbox = $(this);
       var isChecked = $checkbox.is(':checked');
+      var permissionId = $checkbox.data('permission-id');
+      var attributionId = $checkbox.data('attribution-id');
       
-      // Prevent immediate visual change until confirmed
-      $checkbox.prop('checked', !isChecked);
+      // Disable the checkbox to prevent multiple clicks while waiting
+      $checkbox.prop('disabled', true);
       
-      pendingToggleData = {
-        checkbox: $checkbox,
-        permissionId: $checkbox.data('permission-id'),
-        attributionId: $checkbox.data('attribution-id'),
-        targetState: isChecked
-      };
-      
-      var actionText = isChecked ? "désactiver" : "réactiver";
-      $('#confirmPermissionToggleMessage').text(`Voulez-vous vraiment ${actionText} cette permission pour cet utilisateur ?`);
-      $('#executePermissionToggleBtn').removeClass('btn-warning btn-success').addClass(isChecked ? 'btn-warning' : 'btn-success');
-      
-      $('#confirmPermissionToggleModal').modal('show');
-    });
-
-    // Execute the toggle after confirmation
-    $('#executePermissionToggleBtn').on('click', function() {
-      if (!pendingToggleData) return;
-      
-      var $btn = $(this);
-      var $checkbox = pendingToggleData.checkbox;
-      var originalBtnText = $btn.html();
-      
-      $btn.html('<span class="spinner-border spinner-border-sm me-2"></span>En cours...').prop('disabled', true);
-
       $.ajax({
         url: "{% url 'institut_app:ApiTogglePermissionDenial' %}",
         type: "POST",
         dataType: "JSON",
         data: {
-          'attribution_id': pendingToggleData.attributionId,
-          'permission_id': pendingToggleData.permissionId,
+          'attribution_id': attributionId,
+          'permission_id': permissionId,
           'csrfmiddlewaretoken': '{{ csrf_token }}'
         },
         success: function(response) {
-          $btn.html(originalBtnText).prop('disabled', false);
-          $('#confirmPermissionToggleModal').modal('hide');
+          $checkbox.prop('disabled', false);
           
           if (response.status === "success") {
             alertify.success(response.message);
             
-            // Set the checkbox to the new state
-            $checkbox.prop('checked', response.is_denied);
+            // Set the checkbox to the new state (checked = active = not denied)
+            $checkbox.prop('checked', !response.is_denied);
             
             // Update UI styles
             if (response.is_denied) {
               $checkbox.closest('.permission-modern-card').addClass('is-denied');
-              $checkbox.closest('.denial-toggle-wrapper').find('span').text('Désactivé').removeClass('text-muted').addClass('text-danger');
+              $checkbox.closest('.denial-toggle-wrapper').find('span').text('Désactivé').removeClass('text-muted text-success').addClass('text-danger');
             } else {
               $checkbox.closest('.permission-modern-card').removeClass('is-denied');
-              $checkbox.closest('.denial-toggle-wrapper').find('span').text('Actif').removeClass('text-danger').addClass('text-muted');
+              $checkbox.closest('.denial-toggle-wrapper').find('span').text('Actif').removeClass('text-danger text-muted').addClass('text-success');
             }
           } else {
             alertify.error(response.message || "Erreur lors de la modification");
+            // Revert state
+            $checkbox.prop('checked', !isChecked);
           }
         },
         error: function() {
-          $btn.html(originalBtnText).prop('disabled', false);
-          $('#confirmPermissionToggleModal').modal('hide');
-          alertify.error("Une erreur est survenue");
+          $checkbox.prop('disabled', false);
+          // Revert state
+          $checkbox.prop('checked', !isChecked);
+          alertify.error("Erreur réseau lors de la modification");
         }
       });
     });
+
+    // Handle SubMenu Configuration click
+    $(document).on('click', '.configure-submenu', function(e) {
+      e.preventDefault();
+      var userId = $(this).data('user-id');
+      var moduleCode = $(this).data('module') || 'tre';
+      $('#submenuConfigModal').data('user-id', userId);
+      $('#submenuConfigModal').data('module-code', moduleCode);
+      var titleText = moduleCode === 'tre' ? 'Accès Sous-Menus Finance' : 'Accès Sous-Menus Scolarité';
+      $('#submenuConfigModal').find('.modal-title').text(titleText);
+      $('#submenuList').html('<div class="text-center py-3"><div class="spinner-border text-info" role="status"></div></div>');
+      $('#submenuConfigModal').modal('show');
+      
+      // Fetch current accesses
+      $.ajax({
+        url: "{% url 'institut_app:ApiGetSubMenuAccess' %}",
+        type: 'GET',
+        data: { id: userId, module_code: moduleCode },
+        success: function(response) {
+          if(response.status === 'success') {
+            var accesses = response.data;
+            var submenus = [];
+            if (moduleCode === 'tre') {
+                submenus = [
+                  {code: 'dashboard', name: 'Tableau de bord financier'},
+                  {code: 'tresorerie', name: 'Trésorerie'},
+                  {code: 'exec_edu', name: 'Executive Education'},
+                  {code: 'remboursement', name: 'Remboursements'},
+                  {code: 'remises', name: 'Remises'},
+                  {code: 'caisse', name: 'Caisse'},
+                  {code: 'banque', name: 'Banque'},
+                  {code: 'autres_paiements', name: 'Autres paiements'},
+                  {code: 'depenses', name: 'Dépenses'},
+                  {code: 'fournisseurs', name: 'Fournisseurs'},
+                  {code: 'factures', name: 'Factures'},
+                  {code: 'parametres', name: 'Paramètres Financiers'},
+                  {code: 'echeanciers', name: 'Échéanciers'},
+                  {code: 'paie_salaires', name: 'Paie & Salaires'}
+                ];
+            } else if (moduleCode === 'scol') {
+                submenus = [
+                  {code: 'groupes', name: 'Gestion des Groupes'},
+                  {code: 'affectations', name: 'Affectations'},
+                  {code: 'etudiants', name: 'Gestion des Étudiants'},
+                  {code: 'transferts', name: 'Transferts'},
+                  {code: 'presences', name: 'Gestion des Présences'},
+                  {code: 'contrats', name: 'Gestion des Contrats'}
+                ];
+            }
+            
+            var html = '';
+            submenus.forEach(function(item) {
+                var isActive = accesses[item.code] ? 'checked' : '';
+                html += `
+                <label class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>${item.name}</span>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input submenu-toggle" type="checkbox" data-submenu="${item.code}" ${isActive}>
+                    </div>
+                </label>`;
+            });
+            $('#submenuList').html(html);
+          } else {
+            alertify.error(response.message || "Erreur de chargement");
+            $('#submenuConfigModal').modal('hide');
+          }
+        },
+        error: function() {
+          alertify.error("Erreur serveur");
+          $('#submenuConfigModal').modal('hide');
+        }
+      });
+    });
+
+    // Handle toggle switch change
+    $(document).on('change', '.submenu-toggle', function() {
+        var userId = $('#submenuConfigModal').data('user-id');
+        var moduleCode = $('#submenuConfigModal').data('module-code') || 'tre';
+        var submenuCode = $(this).data('submenu');
+        var isActive = $(this).is(':checked');
+        
+        $.ajax({
+            url: "{% url 'institut_app:ApiToggleSubMenuAccess' %}",
+            type: 'POST',
+            data: JSON.stringify({
+                id: userId,
+                module_code: moduleCode,
+                submenu_code: submenuCode,
+                is_active: isActive
+            }),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if(response.status === 'success') {
+                    alertify.success(response.message);
+                } else {
+                    alertify.error(response.message || "Erreur");
+                    $(this).prop('checked', !isActive);
+                }
+            }.bind(this),
+            error: function() {
+                alertify.error("Erreur de sauvegarde");
+                $(this).prop('checked', !isActive);
+            }.bind(this)
+        });
+    });
   });
 </script>
+
+<!-- Modal de Configuration Sous-Menus Finance -->
+<div class="modal fade" id="submenuConfigModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-soft-info">
+        <div class="d-flex align-items-center">
+          <div class="modal-icon-box bg-info text-white shadow-sm" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:10px;">
+            <i class="ri-function-line fs-20"></i>
+          </div>
+          <div class="ms-3">
+            <h5 class="modal-title fw-bold text-info mb-0">Accès Sous-Menus Finance</h5>
+            <small class="text-muted">Configurer les sous-menus visibles pour l'utilisateur</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="list-group" id="submenuList">
+            <!-- Populated by JS -->
+            <div class="text-center py-3"><div class="spinner-border text-info" role="status"></div></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 {% endblock content %}

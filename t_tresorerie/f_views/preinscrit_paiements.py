@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -6,7 +7,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 import json
-from t_crm.models import RemiseAppliquer,FicheDeVoeux,FicheVoeuxDouble, UserActionLog, Derogations
+from t_crm.models import RemiseAppliquer, RemiseAppliquerLine, FicheDeVoeux,FicheVoeuxDouble, UserActionLog, Derogations
 from django.db.models import Q
 from institut_app.decorators import *
 from datetime import datetime
@@ -26,6 +27,7 @@ def clean_montant(val_str):
         return Decimal('0.00')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetPaiementRequestDetails(request):
     id_client = request.GET.get('id_client')
     id_echeancier = request.GET.get('id_echeancier')
@@ -80,6 +82,7 @@ def ApiGetPaiementRequestDetails(request):
         return JsonResponse({'error': 'Aucune donnée d\'échéancier fournie'}, status=400)
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetPaiementRequestDetailsDouble(request):
     if request.method == "GET":
         id_client = request.GET.get('id_client')
@@ -220,6 +223,7 @@ def ApiStorePaiementsDouble(client,label,date_echeance,montant,promo,echeancier,
     return JsonResponse({"status": "success","id": paiement.id,"ordre": assigned_ordre})
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'add')
 def ApiApplyRemiseToPaiement(request):
     if request.method == "POST":
         remiseId = request.POST.get('remiseId')
@@ -228,12 +232,55 @@ def ApiApplyRemiseToPaiement(request):
         remise_obj.is_applicated = True
         remise_obj.save()
 
+        # Mettre à jour les paiements dus (DuePaiements) s'ils existent déjà
+        remise_line = RemiseAppliquerLine.objects.filter(remise_appliquer=remise_obj).last()
+        if remise_line and remise_line.prospect:
+            prospect = remise_line.prospect
+            due_paiements = DuePaiements.objects.filter(client=prospect)
+            
+            if due_paiements.exists():
+                if prospect.is_double:
+                    voeux = FicheVoeuxDouble.objects.filter(prospect=prospect, is_confirmed=True).last()
+                    if voeux and voeux.specialite:
+                        prix_formation = Decimal(voeux.specialite.prix_spec1 or 0) + Decimal(voeux.specialite.prix_spec2 or 0)
+                    else:
+                        prix_formation = Decimal('0.00')
+                else:
+                    voeux = FicheDeVoeux.objects.filter(prospect=prospect, is_confirmed=True).last()
+                    if voeux and voeux.specialite:
+                        prix_formation = Decimal(voeux.specialite.prix or 0)
+                    else:
+                        prix_formation = Decimal('0.00')
+                
+                if prix_formation > 0:
+                    remise = remise_obj.remise
+                    for due in due_paiements:
+                        if 'inscription' not in due.label.lower():
+                            montant_due = Decimal(due.montant_due)
+                            if remise.is_value:
+                                ratio = (prix_formation - Decimal(remise.montant or 0)) / prix_formation
+                                new_due = montant_due * ratio
+                            else:
+                                taux = Decimal(remise.taux or 0)
+                                new_due = montant_due - (montant_due * taux / Decimal('100'))
+                            
+                            new_due = round(new_due)
+                            montant_paye = montant_due - Decimal(due.montant_restant)
+                            new_restant = Decimal(new_due) - montant_paye
+                            
+                            due.montant_due = new_due
+                            due.montant_restant = new_restant if new_restant > 0 else Decimal('0.00')
+                            if new_restant <= 0:
+                                due.is_done = True
+                            due.save()
+
         return JsonResponse({"status" : "success"})
     else:
         return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiStoreClientPaiement(request):
     echeance = request.POST.get('echeance')
     datePaiement = request.POST.get('datePaiement')
@@ -306,6 +353,7 @@ def ApiStoreClientPaiement(request):
  
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'delete')
 def ApiDeletePaiement(request):
     if request.method == "POST":
         num_bon = request.POST.get('num_bon')   
@@ -334,6 +382,7 @@ def ApiDeletePaiement(request):
     
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiApplyEcheancierSpecial(request):
     if request.method == "POST":
         id_echeancier_special = request.POST.get('id_echeancier_special')
@@ -385,6 +434,7 @@ def generate_matricule_interne(promo_code):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'approuv')
 def ApiConfirmInscription(request):
     if request.method == "POST":
         id_client = request.POST.get('id_preinscrit')
@@ -414,6 +464,7 @@ def ApiConfirmInscription(request):
     
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'approuv')
 def ApiConfirmInscriptionDouble(request):
     if request.method == "POST":
         id_client = request.POST.get('id_preinscrit')
@@ -443,6 +494,7 @@ def ApiConfirmInscriptionDouble(request):
     
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'view')
 def ApiRequestRefundPaiement(request):
     if request.method == "POST":
         id_client = request.POST.get('client_id')
@@ -467,6 +519,7 @@ def ApiRequestRefundPaiement(request):
     
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'delete')
 def ApiCancelPaiementRequest(request):
     if request.method == "POST":
         id_demande = request.POST.get('id_demande')
@@ -512,6 +565,7 @@ def ApiCancelPaiementRequest(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'delete')
 def ApiCancelDuePaiements(request):
     if request.method == "POST":
         id_demande = request.POST.get('id_demande')
@@ -547,5 +601,6 @@ def ApiCancelDuePaiements(request):
     return JsonResponse({'status': 'error', 'message': "Méthode non autorisée."}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def SuivieEcheancier(request):
     return render(request, 'tenant_folder/comptabilite/echeancier/suivie_echeancier.html')

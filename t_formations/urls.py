@@ -102,6 +102,7 @@ urlpatterns = [
 
     ### TRAITEMENT DES FORMATEURS ###
     path('formateurs/liste/',PageFormateurs, name="PageFormateurs"),
+    path('formateurs/charge-horaire/', ChargeHoraireFormateur, name="ChargeHoraireFormateur"),
     path('request_formateur_dispo/', request_formateur_dispo, name="request_formateur_dispo"),
     path('create_formateur/', create_formateur, name="create_formateur"),
     path('update_formateur/', update_formateur, name="update_formateur"),
@@ -129,4 +130,6 @@ urlpatterns = [
     path('export-formations/', export_formations, name="export_formations"),
     path('export-partenaires/', export_partenaires, name="export_partenaires"),
     path('export-formateurs/', export_formateurs, name="export_formateurs"),
+    path('import-formateurs/', import_formateurs, name="import_formateurs"),
+    path('ApiUploadPlanCours', ApiUploadPlanCours, name="ApiUploadPlanCours"),
 ]

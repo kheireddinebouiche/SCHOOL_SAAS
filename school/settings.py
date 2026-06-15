@@ -30,7 +30,7 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 SAAS_SYSTEM_PIN = env("SAAS_SYSTEM_PIN", default="1234")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env.bool("DEBUG", default=False)
 ALLOWED_HOSTS = ['.insim360.com', 'localhost', '127.0.0.1', '.localhost']
 
 CSRF_TRUSTED_ORIGINS = [
@@ -360,5 +360,9 @@ TINYMCE_DEFAULT_CONFIG = {
     'object_resizing' : True,
     'forced_root_block': False,  
 }
+
+# Configuration de la taille maximale d'upload
+DATA_UPLOAD_MAX_MEMORY_SIZE = 524288000  # 500 MB (utile si fichier inclus en base64 / formData)
+FILE_UPLOAD_MAX_MEMORY_SIZE = 524288000  # 500 MB (taille limite avant écriture sur disque temporaire)
 
 # Trigger reload

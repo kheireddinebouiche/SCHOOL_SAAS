@@ -64,3 +64,14 @@ def tenant_directory_path_for_logos(instance, filename):
         filename
     )
 
+
+def tenant_directory_path_for_plan_cours(instance, filename):
+    tenant = getattr(connection, "tenant", None)
+    schema_name = tenant.schema_name if tenant else "public"
+
+    return os.path.join(
+        schema_name,
+        "plans_cours",
+        timezone.now().strftime("%Y/%m"),
+        filename
+    )

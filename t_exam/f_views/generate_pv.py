@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -17,9 +18,13 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.units import mm
-
+import io
+from django.core.mail import EmailMessage, get_connection
+from saas_admin_app.models import SaaSEmailConfiguration
+from t_formations.models import Formateurs
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
 def GeneratePvModal(request, pk):
     obj = ExamPlanification.objects.get(id=pk)
     groupe = SessionExamLine.objects.get(id=obj.exam_line.id)
@@ -409,6 +414,7 @@ def GeneratePvModal(request, pk):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
 def DownloadBlankPvsPdf(request):
     """
     Generates a single, high-fidelity landscape A4 PDF compiled server-side via ReportLab,
@@ -426,13 +432,15 @@ def DownloadBlankPvsPdf(request):
     if not plan_ids:
         return HttpResponse("Aucun examen spécifié.", status=400)
 
-    # Setup the ReportLab document
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="PV_Vierges.pdf"'
+def generate_blank_pvs_pdf_bytes(plan_ids):
+    """
+    Génère le PDF des PVs vierges et retourne les octets (bytes) du PDF.
+    """
+    buffer = io.BytesIO()
     
     # Page setup: landscape A4
     doc = SimpleDocTemplate(
-        response,
+        buffer,
         pagesize=landscape(A4),
         leftMargin=15*mm,
         rightMargin=15*mm,
@@ -731,4 +739,254 @@ def DownloadBlankPvsPdf(request):
         
     # Compile the final document
     doc.build(story)
+    return buffer.getvalue()
+
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
+def DownloadBlankPvsPdf(request):
+    """
+    Generates a single, high-fidelity landscape A4 PDF compiled server-side via ReportLab,
+    containing blank PVs (Procès-Verbaux) for a list of comma-separated ExamPlanification IDs.
+    """
+    plan_ids_str = request.GET.get('plan_ids', '')
+    if not plan_ids_str:
+        return HttpResponse("Aucun examen spécifié.", status=400)
+    
+    try:
+        plan_ids = [int(x) for x in plan_ids_str.split(',') if x.strip()]
+    except ValueError:
+        return HttpResponse("Liste d'examens invalide.", status=400)
+        
+    if not plan_ids:
+        return HttpResponse("Aucun examen spécifié.", status=400)
+
+    pdf_bytes = generate_blank_pvs_pdf_bytes(plan_ids)
+    
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="PV_Vierges.pdf"'
     return response
+
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'view')
+def ApiGetExamInstructors(request):
+    if request.method == "GET":
+        exam_plan_id = request.GET.get('plan_id')
+        if not exam_plan_id:
+            return JsonResponse({"status": "error", "message": "ID manquant"})
+            
+        try:
+            exam_plan = ExamPlanification.objects.get(id=exam_plan_id)
+        except ExamPlanification.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Planification introuvable"})
+            
+        groupe = exam_plan.exam_line.groupe
+        semestre = exam_plan.exam_line.semestre
+        module = exam_plan.module
+        
+        instructors = Formateurs.objects.filter(
+            timetableentry__timetable__groupe=groupe,
+            timetableentry__timetable__semestre=semestre,
+            timetableentry__cours=module
+        ).distinct()
+        
+        data = []
+        for instructor in instructors:
+            data.append({
+                'nom': instructor.nom,
+                'prenom': instructor.prenom,
+                'email': instructor.email or 'Aucun e-mail'
+            })
+            
+        return JsonResponse({"status": "success", "instructors": data})
+    
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
+def ApiSendExamEmailToInstructor(request):
+    if request.method == "POST":
+        exam_plan_id = request.POST.get('plan_id')
+        if not exam_plan_id:
+            return JsonResponse({"status": "error", "message": "ID manquant"})
+            
+        try:
+            exam_plan = ExamPlanification.objects.get(id=exam_plan_id)
+        except ExamPlanification.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Planification introuvable"})
+            
+        # Check config
+        config = SaaSEmailConfiguration.get_solo()
+        if not config.email_enabled:
+            return JsonResponse({"status": "error", "message": "L'envoi d'e-mails n'est pas activé dans l'administration SaaS."})
+            
+        # Find Formateurs
+        groupe = exam_plan.exam_line.groupe
+        semestre = exam_plan.exam_line.semestre
+        module = exam_plan.module
+        
+        # We need to find the instructors teaching this module for this group and semester
+        instructors = Formateurs.objects.filter(
+            timetableentry__timetable__groupe=groupe,
+            timetableentry__timetable__semestre=semestre,
+            timetableentry__cours=module
+        ).distinct()
+        
+        emails = [i.email for i in instructors if i.email]
+        if not emails:
+            return JsonResponse({"status": "error", "message": "Aucun formateur avec une adresse e-mail valide n'a été trouvé pour ce module dans l'emploi du temps (même groupe et semestre)."})
+            
+        try:
+            # Generate PDF synchronously so we can use the DB connections safely
+            pdf_bytes = generate_blank_pvs_pdf_bytes([exam_plan.id])
+            
+            subject = f"Planification d'examen : {module.label} - {groupe.nom}"
+            date_str = exam_plan.date.strftime("%d/%m/%Y") if exam_plan.date else "Non définie"
+            heure_debut = exam_plan.heure_debut.strftime("%H:%M") if exam_plan.heure_debut else "Non définie"
+            heure_fin = exam_plan.heure_fin.strftime("%H:%M") if exam_plan.heure_fin else "Non définie"
+            salle = exam_plan.salle.nom if exam_plan.salle else "Non définie"
+            
+            body = f"Bonjour,\n\nUn examen a été planifié pour votre module.\n\n"
+            body += f"Module : {module.label}\n"
+            body += f"Groupe : {groupe.nom}\n"
+            body += f"Session : {exam_plan.exam_line.session.get_type_session_display()}\n"
+            body += f"Date : {date_str}\n"
+            body += f"Heure : {heure_debut} à {heure_fin}\n"
+            body += f"Salle : {salle}\n"
+            body += f"Type : {exam_plan.get_type_examen_display()}\n\n"
+            body += "Veuillez trouver en pièce jointe le PV vierge (liste des étudiants) pour cet examen.\n\nCordialement."
+            
+            # Fonction interne pour envoyer l'e-mail en arrière-plan
+            def send_email_thread():
+                import threading
+                from django.core.mail import get_connection, EmailMessage
+                
+                try:
+                    connection = get_connection(
+                        host=config.email_host,
+                        port=config.email_port,
+                        username=config.email_host_user,
+                        password=config.email_host_password,
+                        use_tls=config.email_use_tls
+                    )
+                    
+                    email = EmailMessage(
+                        subject=subject,
+                        body=body,
+                        from_email=config.default_from_email,
+                        to=emails,
+                        connection=connection
+                    )
+                    email.attach(f"PV_{module.code}_{groupe.nom}.pdf", pdf_bytes, 'application/pdf')
+                    email.send(fail_silently=True)
+                except Exception as e:
+                    print(f"Erreur d'envoi d'e-mail en arrière-plan: {e}")
+
+            import threading
+            thread = threading.Thread(target=send_email_thread)
+            thread.daemon = True
+            thread.start()
+            
+            return JsonResponse({"status": "success", "message": f"E-mail en cours d'envoi à {len(emails)} formateur(s). Cela peut prendre quelques instants."})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": f"Erreur lors de l'envoi de l'e-mail : {str(e)}"})
+    
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('exa', 'add')
+def ApiSendCustomExamEmail(request):
+    if request.method == "POST":
+        exam_plan_id = request.POST.get('plan_id')
+        subject = request.POST.get('subject')
+        body = request.POST.get('body')
+        attachment = request.FILES.get('attachment')
+        
+        if not exam_plan_id or not subject or not body:
+            return JsonResponse({"status": "error", "message": "Veuillez remplir le sujet et le message."})
+            
+        try:
+            exam_plan = ExamPlanification.objects.get(id=exam_plan_id)
+        except ExamPlanification.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Planification introuvable"})
+            
+        # Check config
+        config = SaaSEmailConfiguration.get_solo()
+        if not config.email_enabled:
+            return JsonResponse({"status": "error", "message": "L'envoi d'e-mails n'est pas activé dans l'administration SaaS."})
+            
+        # Find Formateurs
+        groupe = exam_plan.exam_line.groupe
+        semestre = exam_plan.exam_line.semestre
+        module = exam_plan.module
+        
+        instructors = Formateurs.objects.filter(
+            timetableentry__timetable__groupe=groupe,
+            timetableentry__timetable__semestre=semestre,
+            timetableentry__cours=module
+        ).distinct()
+        
+        emails = [i.email for i in instructors if i.email]
+        if not emails:
+            return JsonResponse({"status": "error", "message": "Aucun formateur avec une adresse e-mail valide n'a été trouvé."})
+            
+        try:
+            config.apply_email_settings()
+            from django.conf import settings
+            from django.core.mail import EmailMessage
+            import logging
+            
+            logger = logging.getLogger(__name__)
+            
+            email = EmailMessage(
+                subject=subject,
+                body=body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=emails
+            )
+            
+            emails_str = ', '.join(emails)
+            
+            # Read the uploaded file synchronously if present
+            if attachment:
+                file_data = attachment.read()
+                email.attach(attachment.name, file_data, attachment.content_type)
+                
+                # Avec pièce jointe, envoi en arrière-plan pour éviter les timeouts
+                def send_email_in_background(email_msg, dests):
+                    logger.info(f"Début d'envoi asynchrone d'e-mail avec PJ vers {dests}")
+                    print(f"--- Début d'envoi asynchrone d'e-mail avec PJ vers {dests} ---")
+                    try:
+                        email_msg.send(fail_silently=False)
+                        logger.info("Envoi asynchrone réussi.")
+                        print("--- Envoi asynchrone réussi ---")
+                    except Exception as e:
+                        logger.error(f"Erreur en arrière-plan d'e-mail: {str(e)}")
+                        print(f"--- Erreur en arrière-plan d'e-mail : {str(e)} ---")
+
+                import threading
+                thread = threading.Thread(target=send_email_in_background, args=(email, emails_str))
+                thread.daemon = True
+                thread.start()
+                
+                return JsonResponse({"status": "success", "message": f"L'e-mail (avec PJ) est en cours d'envoi vers : {emails_str}"})
+            else:
+                # Sans pièce jointe, envoi synchrone
+                logger.info(f"Début d'envoi synchrone d'e-mail vers {emails_str}")
+                print(f"--- Début d'envoi synchrone d'e-mail vers {emails_str} ---")
+                try:
+                    email.send(fail_silently=False)
+                    logger.info("Envoi synchrone réussi.")
+                    print("--- Envoi synchrone réussi ---")
+                    return JsonResponse({"status": "success", "message": f"L'e-mail a été envoyé avec succès vers : {emails_str}"})
+                except Exception as e:
+                    logger.error(f"Erreur d'envoi synchrone SMTP: {str(e)}")
+                    print(f"--- Erreur d'envoi synchrone SMTP : {str(e)} ---")
+                    return JsonResponse({"status": "error", "message": f"Erreur d'envoi SMTP : {str(e)}"})
+                    
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": f"Erreur lors de la préparation de l'envoi : {str(e)}"})
+            
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})

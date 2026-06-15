@@ -6,10 +6,12 @@ from institut_app.models import *
 from django.contrib import messages
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
+from institut_app.decorators import module_permission_required
 from t_groupe.models import *
 from django.views.decorators.http import require_http_methods
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ListeModel(request):
     liste = ModelCrenau.objects.all()
     modeles_actifs = ModelCrenau.objects.filter(is_active=True).count()
@@ -39,6 +41,7 @@ def ListeModel(request):
     return render(request, 'tenant_folder/timetable/crenaux/liste_model_crenau.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'add')
 def create_model(request):
     if request.method == 'POST':
         label = request.POST.get('nom')
@@ -74,6 +77,7 @@ def create_model(request):
         })
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def model_creneau_detail(request, pk):
     model = ModelCrenau.objects.get(id = pk)
     # Check if this model is linked to any validated timetable
@@ -86,6 +90,7 @@ def model_creneau_detail(request, pk):
     return render(request, 'tenant_folder/timetable/crenaux/details_creneau.html',context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 def model_creneau_edit(request, pk):
     """
     Vue pour éditer un modèle de créneau existant
@@ -143,6 +148,7 @@ def model_creneau_edit(request, pk):
     return render(request, 'tenant_folder/timetable/crenaux/edit_model_crenau.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def get_horaires(request):
     # This view could return available time slots if there's a Horaire model
     # For now, returning an empty response since horaires are user-defined
@@ -151,6 +157,8 @@ def get_horaires(request):
         'horaires': []
     })
 
+@login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 @require_http_methods(["POST"])
 def save_model_crenau(request):
    
@@ -207,6 +215,7 @@ def save_model_crenau(request):
         })
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 @require_http_methods(["POST"])
 def activate_model_crenau(request):
     try:

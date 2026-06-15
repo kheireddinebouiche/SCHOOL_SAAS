@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -8,10 +9,12 @@ from t_formations.models import Specialites
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'approuv')
 def PageImputationComptable(request):
     return render(request, 'tenant_folder/comptabilite/comptabilite/imputation_comptable.html')
 
 @login_required
+@module_permission_required('tre', 'view')
 def LoadSpecialiteComptes(request):
     """
     Charge la liste des associations spécialité-compte
@@ -34,6 +37,7 @@ def LoadSpecialiteComptes(request):
 
 
 @login_required
+@module_permission_required('tre', 'view')
 def LoadSpecialites(request):
     """
     Charge la liste des spécialités avec leur statut d'assignation
@@ -56,6 +60,7 @@ def LoadSpecialites(request):
 
 
 @login_required
+@module_permission_required('tre', 'view')
 def LoadComptes(request):
     """
     Charge la liste des comptes comptables (PaymentCategory)
@@ -76,6 +81,7 @@ def LoadComptes(request):
 
 @login_required
 @csrf_exempt
+@module_permission_required('tre', 'add')
 def CreateSpecialiteCompte(request):
     """
     Crée une ou plusieurs nouvelles associations spécialité-compte
@@ -141,6 +147,7 @@ def CreateSpecialiteCompte(request):
 
 @login_required
 @csrf_exempt
+@module_permission_required('tre', 'change')
 def UpdateSpecialiteCompte(request):
     """
     Met à jour une association spécialité-compte existante
@@ -193,6 +200,7 @@ def UpdateSpecialiteCompte(request):
 
 @login_required
 @csrf_exempt
+@module_permission_required('tre', 'delete')
 def DeleteSpecialiteCompte(request):
     """
     Supprime une association spécialité-compte

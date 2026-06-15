@@ -1,5 +1,7 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render,redirect
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
+import openpyxl
 from ..models import *
 from ..forms import *
 from django.contrib import messages
@@ -299,8 +301,9 @@ def ApiChangeToStandardCursus(request):
                 commentaire = commentaires
             )
 
-            fiche_double = FicheVoeuxDouble.objects.get(prospect_id = id_prospect, is_confirmed=False, promo__code = promo)
-            fiche_double.delete()
+            fiche_double = FicheVoeuxDouble.objects.filter(prospect_id=id_prospect)
+            if fiche_double.exists():
+                fiche_double.delete()
 
             prosepect = Prospets.objects.get(id = id_prospect)
             prosepect.is_double = False
@@ -316,12 +319,56 @@ def ApiChangeToStandardCursus(request):
         return JsonResponse({"status":"error"})
 
 @login_required(login_url='institut_app:login')
+def ApiResetVoeuxProspectDouble(request):
+    if request.method == "POST":
+        id_prospect = request.POST.get('id_prospect')
+        if not id_prospect:
+            return JsonResponse({"status":"error", "message":"Identifiant prospect manquant"})
+        
+        try:
+            FicheVoeuxDouble.objects.filter(prospect_id=id_prospect).delete()
+            FicheDeVoeux.objects.filter(prospect_id=id_prospect).delete()
+            
+            prospect = Prospets.objects.get(id=id_prospect)
+            prospect.is_double = False
+            prospect.has_second_wish = False
+            # Optionnel: on peut aussi reinitialiser le statut si besoin
+            # prospect.statut = 'visiteur'
+            prospect.save()
+            
+            messages.success(request, "Les fiches de vœux ont été supprimées et le prospect a été réinitialisé.")
+            return JsonResponse({"status":"success"})
+        except Exception as e:
+            return JsonResponse({"status":"error", "message":str(e)})
+    else:
+        return JsonResponse({"status":"error", "message":"Requête invalide"})
+
+@login_required(login_url='institut_app:login')
 def ApiUpdateFicheVoeuxProspect(request):
     pass
 
 @login_required(login_url='institut_app:login')
-def ApiDeleteFicheVoeuxProspect(request):
-    pass
+def ApiResetVoeuxProspect(request):
+    if request.method == "POST":
+        id_prospect = request.POST.get('id_prospect')
+        if not id_prospect:
+            return JsonResponse({"status":"error", "message":"Identifiant prospect manquant"})
+        
+        try:
+            FicheVoeuxDouble.objects.filter(prospect_id=id_prospect).delete()
+            FicheDeVoeux.objects.filter(prospect_id=id_prospect).delete()
+            
+            prospect = Prospets.objects.get(id=id_prospect)
+            prospect.is_double = False
+            prospect.has_second_wish = False
+            prospect.save()
+            
+            messages.success(request, "Les fiches de vœux ont été supprimées et le prospect a été réinitialisé.")
+            return JsonResponse({"status":"success"})
+        except Exception as e:
+            return JsonResponse({"status":"error", "message":str(e)})
+    else:
+        return JsonResponse({"status":"error", "message":"Requête invalide"})
 
 
 @login_required(login_url='institut_app:login')
@@ -433,6 +480,7 @@ from datetime import datetime
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
+@module_permission_required('crm', 'approuv')
 def ApiValidateProspect(request):
     if request.method == 'POST':
         id_prospect = request.POST.get('id_prospect')
@@ -471,6 +519,7 @@ def ApiValidateProspect(request):
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('crm', 'approuv')
 def ApiValidateProspectDouble(request):
     if request.method == "POST":
         id_prospect = request.POST.get('id_prospect')
@@ -653,6 +702,7 @@ def ApiCreateVoeux(request):
     return JsonResponse({"status" : "success", "message" : "La fiche de voeux a été enregistrée avec succès"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('crm', 'approuv')
 def ApiConfirmeDoubleDiplome(request):
     if request.method == "POST":
         pass
@@ -724,3 +774,100 @@ def ApiLoadProspectFinancialHistory(request):
         'paiements': paiements_list,
         'remboursements': refunds_list
     })
+
+@login_required(login_url='institut_app:login')
+@module_permission_required('crm', 'add')
+def DownloadProspectsTemplate(request):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Modèle Prospects"
+
+    # En-têtes (Nom, Prénom, Numéro téléphone, Email)
+    headers = ["Nom", "Prénom", "Téléphone", "Email"]
+    ws.append(headers)
+
+    # Style des en-têtes
+    from openpyxl.styles import Font, PatternFill
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+
+    # Ajouter un exemple pour guider l'utilisateur
+    ws.append(["DUPONT", "Jean", "0612345678", "jean.dupont@example.com"])
+
+    # Ajuster la largeur des colonnes
+    ws.column_dimensions['A'].width = 20
+    ws.column_dimensions['B'].width = 20
+    ws.column_dimensions['C'].width = 20
+    ws.column_dimensions['D'].width = 30
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=modele_import_prospects.xlsx'
+    wb.save(response)
+    return response
+
+@login_required(login_url='institut_app:login')
+@module_permission_required('crm', 'add')
+@transaction.atomic
+def ApiImportProspectsParticuliers(request):
+    if request.method == "POST" and request.FILES.get('file'):
+        excel_file = request.FILES['file']
+        
+        # Validation d'extension
+        if not excel_file.name.endswith('.xlsx'):
+            return JsonResponse({'status': 'error', 'message': 'Seuls les fichiers .xlsx sont autorisés.'})
+        
+        try:
+            wb = openpyxl.load_workbook(excel_file, data_only=True)
+            ws = wb.active
+            
+            rows = list(ws.iter_rows(values_only=True))
+            if len(rows) < 2:
+                return JsonResponse({'status': 'error', 'message': 'Le fichier semble vide ou ne contient que des en-têtes.'})
+            
+            headers = [str(h).strip().lower() for h in rows[0] if h]
+            
+            # Vérification des colonnes requises
+            if 'nom' not in headers or 'prénom' not in headers and 'prenom' not in headers:
+                return JsonResponse({'status': 'error', 'message': 'Le fichier doit contenir au moins les colonnes "Nom" et "Prénom".'})
+            
+            nom_idx = headers.index('nom')
+            prenom_idx = headers.index('prénom') if 'prénom' in headers else headers.index('prenom')
+            tel_idx = headers.index('téléphone') if 'téléphone' in headers else (headers.index('telephone') if 'telephone' in headers else -1)
+            email_idx = headers.index('email') if 'email' in headers else -1
+            
+            imported_count = 0
+            for row in rows[1:]:
+                if len(row) <= max(nom_idx, prenom_idx):
+                    continue
+                
+                nom = str(row[nom_idx] or '').strip().upper()
+                prenom = str(row[prenom_idx] or '').strip().capitalize()
+                
+                if not nom or not prenom:
+                    continue
+                
+                tel = str(row[tel_idx]).strip() if tel_idx != -1 and row[tel_idx] else ''
+                if tel.endswith('.0'): tel = tel[:-2] # Corriger le formatage float
+                
+                email = str(row[email_idx]).strip() if email_idx != -1 and row[email_idx] else ''
+                
+                Prospets.objects.create(
+                    nom=nom,
+                    prenom=prenom,
+                    telephone=tel,
+                    email=email,
+                    type_prospect='particulier',
+                    context='acc',  # Sans voeux formulés pour le moment
+                    created_by=request.user
+                )
+                imported_count += 1
+                
+            return JsonResponse({'status': 'success', 'message': f'{imported_count} prospects ont été importés avec succès.'})
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Erreur lors de l\'importation : {str(e)}'})
+            
+    return JsonResponse({'status': 'error', 'message': 'Aucun fichier fourni.'})

@@ -228,7 +228,15 @@ def ApiUpdate_etudiant(request):
     etu.indic1 = request.POST.get('indicatif_pere')
     etu.indic2 = request.POST.get('indicatif_mere')
     etu.save()
-    print(id,request.POST.get('nationalite'))
+
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='UPDATE',
+        target_model='Prospets',
+        target_id=str(etu.id),
+        details=f"Mise à jour des informations du profil de l'étudiant {etu.nom} {etu.prenom}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
 
     messages.success(request,'Informations mises à jour')
     return JsonResponse({'status': 'success'})
@@ -249,6 +257,16 @@ def ApiUpdateStudentPassword(request):
             student = Prospets.objects.get(id=student_id)
             student.password = password
             student.save()
+            
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Prospets',
+                target_id=str(student.id),
+                details=f"Mise à jour du mot de passe pour l'étudiant {student.nom} {student.prenom}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success', 'message': 'Mot de passe mis à jour'})
         except Prospets.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Étudiant introuvable'})
@@ -273,6 +291,16 @@ def ApiUpdateStudentPhoto(request):
             student = Prospets.objects.get(id=student_id)
             student.photo = photo
             student.save()
+            
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='Prospets',
+                target_id=str(student.id),
+                details=f"Mise à jour de la photo de profil de l'étudiant {student.nom} {student.prenom}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({'status': 'success'})
         except Prospets.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Étudiant introuvable'})

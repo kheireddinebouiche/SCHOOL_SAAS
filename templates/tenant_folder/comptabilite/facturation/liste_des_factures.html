@@ -611,10 +611,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>
                     <div class="d-flex align-items-center">
                         <div class="avatar-xs bg-light rounded-circle d-flex align-items-center justify-content-center me-2 text-primary fw-bold">
-                            ${facture.client.charAt(0)}
+                            ${facture.client_override ? facture.client_override.charAt(0).toUpperCase() : facture.client.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <h6 class="mb-0 fs-13">${facture.client}</h6>
+                            <h6 class="mb-0 fs-13">${facture.client_override ? facture.client_override + ' ' + (facture.client_prenom_override || '') : facture.client}</h6>
+                            ${facture.client_override ? `<div class="text-muted fs-12 mt-1">(Pour: ${facture.client})</div>` : ''}
                         </div>
                     </div>
                 </td>
@@ -628,13 +629,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         <a href="/comptabilite/tresorerie/details-facture/${facture.numero}/" class="btn-action-icon" title="Voir">
                             <i class="ri-eye-line"></i>
                         </a>
-                        <a href="/conseil/facture/pdf/${facture.numero}/" class="btn-action-icon" title="PDF">
-                            <i class="ri-file-pdf-line"></i>
+                        <a href="/comptabilite/tresorerie/print-facture/${facture.numero}/" class="btn-action-icon" title="Imprimer / PDF">
+                            <i class="ri-printer-line"></i>
                         </a>
                         ${facture.etat === 'brouillon' ? `
-                        <button type="button" class="btn-action-icon text-warning bg-warning bg-opacity-10 edit-btn" data-id="${facture.id}" title="Modifier">
+                        <a href="/comptabilite/tresorerie/facturation/modifier/${facture.id}/" class="btn-action-icon text-warning bg-warning bg-opacity-10 edit-btn" title="Modifier">
                             <i class="ri-edit-line"></i>
-                        </button>
+                        </a>
                         <button type="button" class="btn-action-icon text-danger bg-danger bg-opacity-10 delete-btn" data-id="${facture.id}" title="Supprimer">
                             <i class="ri-delete-bin-line"></i>
                         </button>
@@ -799,15 +800,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="col-md-8 mx-auto">
                         <div class="card border border-light shadow-sm p-4" style="border-radius: 1rem; background: rgba(248, 250, 252, 0.7); border: 1px solid rgba(226, 232, 240, 0.8);">
                             <label class="form-label fw-bold text-dark mb-2 fs-14">Sélectionner un Prospect (Étudiant) :</label>
-                            <div class="d-flex gap-2 align-items-center">
-                                <div class="flex-grow-1">
-                                    <select id="selectProspectFacture" class="form-select" style="width: 100%;">
-                                        <option value="">-- Rechercher un étudiant par nom, prénom ou NIN --</option>
+                            <div class="row g-2 align-items-center mb-3">
+                                <div class="col-md-5">
+                                    <select id="selectPromoFacture" class="form-select">
+                                        <option value="">Toutes les promotions</option>
+                                        {% for promo in promos %}
+                                            <option value="{{ promo.id }}">{{ promo.code }}</option>
+                                        {% endfor %}
                                     </select>
                                 </div>
-                                <button type="button" id="btnRefreshProspects" class="btn btn-light btn-rounded shadow-sm px-3" title="Actualiser la liste">
-                                    <i class="ri-refresh-line"></i>
-                                </button>
+                                <div class="col-md-7 d-flex gap-2">
+                                    <div class="flex-grow-1">
+                                        <select id="selectProspectFacture" class="form-select" style="width: 100%;">
+                                            <option value="">-- Rechercher un étudiant par nom, prénom ou NIN --</option>
+                                        </select>
+                                    </div>
+                                    <button type="button" id="btnRefreshProspects" class="btn btn-light btn-rounded shadow-sm px-3" title="Actualiser la liste">
+                                        <i class="ri-refresh-line"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1178,6 +1189,12 @@ $(document).ready(function() {
         modal.show();
         
         if (!select2Initialized) {
+            $('#selectPromoFacture').select2({
+                theme: 'bootstrap-5',
+                dropdownParent: $('#modalNouvelleFacture'),
+                placeholder: 'Toutes les promotions',
+                allowClear: true
+            });
             $('#selectProspectFacture').select2({
                 theme: 'bootstrap-5',
                 dropdownParent: $('#modalNouvelleFacture'),
@@ -1199,8 +1216,19 @@ $(document).ready(function() {
         }, 800);
     });
 
+    // Handle promo selection change to filter prospects
+    $('#selectPromoFacture').on('change', function() {
+        loadProspectsDropdown();
+    });
+
     function loadProspectsDropdown() {
-        fetch("{% url 't_tresorerie:api_liste_clients' %}")
+        const promoId = $('#selectPromoFacture').val();
+        let url = "{% url 't_tresorerie:api_liste_clients' %}";
+        if (promoId) {
+            url += `?promo_id=${promoId}`;
+        }
+        
+        fetch(url)
             .then(response => response.json())
             .then(data => {
                 if (Array.isArray(data)) {

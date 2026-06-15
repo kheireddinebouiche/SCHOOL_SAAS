@@ -1,0 +1,118 @@
+<!-- Bulk Action Bar -->
+<div id="bulk-action-bar" class="mb-3 d-none bg-white p-3 rounded-3 border d-flex justify-content-between align-items-center shadow-sm">
+    <div class="d-flex align-items-center">
+        <i class="ri-checkbox-multiple-line text-primary fs-5 me-2"></i>
+        <span class="fw-medium text-dark"><span id="selected-count" class="fw-bold text-primary">0</span> bulletins sélectionnés</span>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-success rounded-pill px-3 fw-bold" onclick="validerSelection('valider')">
+            <i class="ri-checkbox-circle-line me-1"></i> Valider la sélection
+        </button>
+        <button class="btn btn-sm btn-warning rounded-pill px-3 fw-bold text-dark" onclick="validerSelection('invalider')">
+            <i class="ri-close-circle-line me-1"></i> Annuler la validation
+        </button>
+    </div>
+</div>
+
+<div class="glass-card p-4">
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 40px;">
+                        <input type="checkbox" id="select-all-fiches" class="form-check-input" onclick="toggleSelectAll(this)">
+                    </th>
+                    <th>Employé</th>
+                    <th>Période</th>
+                    <th>Salaire de Poste</th>
+                    <th>Retenues (SS+IRG)</th>
+                    <th>Net à Payer</th>
+                    <th>Statut</th>
+                    <th>Date Génération</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in fiches %}
+                <tr class="fiche-row" onclick="window.location='{% url 't_rh:detail_fiche_paie' f.pk %}'">
+                    <td onclick="event.stopPropagation();">
+                        <input type="checkbox" class="fiche-checkbox form-check-input" value="{{ f.id }}" onclick="updateBulkActionButton();">
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-xs bg-soft-primary rounded-circle p-2 me-2 d-flex align-items-center justify-content-center">
+                                <i class="ri-user-star-line text-primary"></i>
+                            </div>
+                            <span class="fw-bold">
+                                {% if f.contrat.employee %}
+                                    {{ f.contrat.employee }}
+                                {% elif f.contrat.formateur %}
+                                    {{ f.contrat.formateur }}
+                                {% else %}
+                                    Inconnu
+                                {% endif %}
+                            </span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border rounded-pill">
+                            {{ f.get_mois_display }} {{ f.annee }}
+                        </span>
+                    </td>
+                    <td>{{ f.salaire_base_calcule|floatformat:2 }} DA</td>
+                    <td class="text-danger">
+                        -{{ f.montant_ss|add:f.irg|floatformat:2 }} DA
+                    </td>
+                    <td class="fw-bold text-success">{{ f.net_a_payer|floatformat:2 }} DA</td>
+                    <td>
+                        {% if f.is_validated %}
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1.5 fs-11">
+                                <i class="ri-checkbox-circle-fill me-1 align-middle"></i> Validé
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-1.5 fs-11">
+                                <i class="ri-error-warning-line me-1 align-middle"></i> Brouillon
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td><small class="text-muted">{{ f.generated_at|date:"d/m/Y H:i" }}</small></td>
+                    <td class="text-end" onclick="event.stopPropagation();">
+                        <a href="{% url 't_rh:detail_fiche_paie' f.pk %}" class="btn btn-sm btn-soft-info rounded-pill">
+                            <i class="ri-eye-line"></i> Voir
+                        </a>
+                        {% if f.is_validated %}
+                            <button class="btn btn-sm btn-soft-warning rounded-pill px-2.5" onclick="validerFiche('{{ f.id }}', 'invalider')">
+                                <i class="ri-close-circle-line me-1"></i> Annuler
+                            </button>
+                        {% else %}
+                            <button class="btn btn-sm btn-soft-success rounded-pill px-2.5" onclick="validerFiche('{{ f.id }}', 'valider')">
+                                <i class="ri-checkbox-circle-line me-1"></i> Valider
+                            </button>
+                            <button class="btn btn-sm btn-soft-danger rounded-pill px-2.5 ms-1" onclick="supprimerFiche('{{ f.id }}')" title="Supprimer le bulletin">
+                                <i class="ri-delete-bin-line"></i>
+                            </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="p-0 border-0">
+                        <div class="empty-state">
+                            <div class="avatar-xl mx-auto mb-4">
+                                <div class="avatar-title bg-light text-primary rounded-circle display-3" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                    <i class="ri-file-list-3-line"></i>
+                                </div>
+                            </div>
+                            <h5 class="fw-bold">Aucune fiche de paie</h5>
+                            <p class="text-muted mb-4">Il n'y a actuellement aucune fiche de paie générée dans le système.</p>
+                            <a href="{% url 't_rh:assistant_paie' %}" class="btn btn-modern-primary">
+                                <i class="ri-magic-line me-2"></i>Lancer l'Assistant
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

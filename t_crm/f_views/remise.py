@@ -12,6 +12,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from t_tresorerie.models import DuePaiements
 from django.utils.dateformat import format
+from institut_app.decorators import module_permission_required
 
 
 @login_required(login_url="institut_app:login")
@@ -240,3 +241,22 @@ def ApiActivateRemiseAppliquer(request):
             
     else:
         return JsonResponse({"status" : "error", "message" : "Methode non autoriser"})
+
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('crm', 'delete')
+@transaction.atomic
+def ApiDeleteRemiseAppliquer(request):
+    if request.method == "POST":
+        discountId = request.POST.get('id')
+        try:
+            remise_obj = RemiseAppliquer.objects.get(id=discountId)
+            
+            remise_obj.delete()
+            return JsonResponse({"status": "success", "message": "La réduction a été supprimée avec succès."})
+        except RemiseAppliquer.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "La réduction n'existe pas."})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    else:
+        return JsonResponse({"status": "error", "message": "Méthode non autorisée."}, status=405)

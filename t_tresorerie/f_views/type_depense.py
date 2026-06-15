@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
@@ -5,6 +6,7 @@ from django.db import transaction
 from ..models import DepensesCategory
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'add')
 def ApiLoadDepensesCategories(request):
     """
     Returns a list of all categories. 
@@ -29,6 +31,7 @@ def ApiLoadDepensesCategories(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiStoreDepenseCategory(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -60,6 +63,7 @@ def ApiStoreDepenseCategory(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'change')
 def ApiUpdateDepenseCategory(request):
     if request.method == 'POST':
         cat_id = request.POST.get('id')
@@ -95,6 +99,7 @@ def ApiUpdateDepenseCategory(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'delete')
 def ApiDeleteDepenseCategory(request):
      if request.method == 'GET':
         cat_id = request.GET.get('id')

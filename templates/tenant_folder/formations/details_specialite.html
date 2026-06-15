@@ -717,6 +717,39 @@
     </div>
 </div>
 
+<!-- Modal Upload Plan Cours -->
+<div id="uploadPlanModal" class="modal fade" tabindex="-1" aria-labelledby="uploadPlanModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0">
+            <div class="modal-header border-bottom-0 p-4 pb-0">
+                <div class="d-flex align-items-center">
+                    <div class="icon-box info me-3">
+                        <i class="ri-upload-cloud-2-line"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-semibold text-info mb-1" id="uploadPlanModalLabel">Uploader le Plan Cours</h5>
+                        <p class="text-muted small mb-0">Sélectionnez un fichier PDF</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="uploadPlanForm" enctype="multipart/form-data">
+                    <input type="hidden" id="upload_module_id" name="module_id">
+                    <div class="mb-3">
+                        <label for="plan_cours_file" class="form-label fw-medium">Fichier PDF <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="plan_cours_file" name="plan_cours" accept=".pdf" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button type="button" class="btn btn-light px-4 py-2" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary px-4 py-2" id="btnSubmitPlanCours">Uploader</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="programmeFormation" class="modal fade" tabindex="-1" aria-labelledby="programmeFormationLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content rounded-4 border-0">
@@ -1118,6 +1151,12 @@
                             row += "<td><span class='badge " + validationClass + "' data-module-id='"+p.id+"'>" + validationText + "</span></td>";
                             row += "<td>";
                             row += '<div class="d-flex gap-2 align-items-center justify-content-end">';
+                            
+                            if (p.plan_cours) {
+                                row += '<a href="/media/' + p.plan_cours + '" target="_blank" class="btn btn-sm btn-soft-success" title="Voir le plan cours"><i class="ri-file-pdf-line"></i></a>';
+                            }
+                            row += '<a href="#" class="btn btn-sm btn-soft-secondary upload-plan-btn" data-id="' + p.id + '" title="Uploader plan cours"><i class="ri-upload-cloud-2-line"></i></a>';
+                            
                             row += '<a href="#" class="btn btn-sm btn-soft-info view-module-details" data-id="'+p.id+'" title="Consulter"><i class="ri-eye-fill"></i></a>';
                             
                             var tenantType = $('#_tenant_type').val();
@@ -1298,6 +1337,44 @@
 
         $(document).on('click', '#updateBtn', function(){
             var id = $(this).data('id');
+
+        $(document).on('click', '.upload-plan-btn', function(e) {
+            e.preventDefault();
+            var id = $(this).data('id');
+            $('#upload_module_id').val(id);
+            $('#plan_cours_file').val('');
+            $('#uploadPlanModal').modal('show');
+        });
+
+        $(document).on('click', '#btnSubmitPlanCours', function() {
+            var formData = new FormData($('#uploadPlanForm')[0]);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            var fileInput = $('#plan_cours_file')[0];
+            if(fileInput.files.length === 0) {
+                alertify.error("Veuillez sélectionner un fichier PDF");
+                return;
+            }
+
+            $.ajax({
+                url: "{% url 't_formations:ApiUploadPlanCours' %}",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if(response.success) {
+                        alertify.success(response.message);
+                        $('#uploadPlanModal').modal('hide');
+                        loadModule();
+                    } else {
+                        alertify.error(response.message);
+                    }
+                },
+                error: function() {
+                    alertify.error("Erreur lors de l'envoi du fichier");
+                }
+            });
+        });
             
             $.ajax({
                 url : "{% url 't_formations:ApiGetModuleDetails' %}",

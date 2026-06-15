@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
@@ -5,6 +6,36 @@ from t_tresorerie.models import Paiements
 from t_conseil.models import Facture, LignesFacture, ConseilConfiguration
 from decimal import Decimal, ROUND_HALF_UP
 import datetime
+
+def get_client_voeux_info(client, entite=None):
+    from t_crm.models import FicheDeVoeux, FicheVoeuxDouble
+    if not client:
+        return ""
+    if client.is_double:
+        voeux = FicheVoeuxDouble.objects.filter(prospect=client, is_confirmed=True).select_related('specialite__specialite1__formation', 'specialite__specialite2__formation').first()
+        if not voeux:
+            voeux = FicheVoeuxDouble.objects.filter(prospect=client).select_related('specialite__specialite1__formation', 'specialite__specialite2__formation').first()
+        if voeux and voeux.specialite:
+            if entite:
+                if voeux.specialite.specialite1 and voeux.specialite.specialite1.formation and voeux.specialite.specialite1.formation.entite_legal == entite:
+                    return f" ({voeux.specialite.specialite1.formation.nom} - {voeux.specialite.specialite1.label})"
+                if voeux.specialite.specialite2 and voeux.specialite.specialite2.formation and voeux.specialite.specialite2.formation.entite_legal == entite:
+                    return f" ({voeux.specialite.specialite2.formation.nom} - {voeux.specialite.specialite2.label})"
+            
+            f1 = voeux.specialite.specialite1.formation.nom if voeux.specialite.specialite1 and voeux.specialite.specialite1.formation else ""
+            f2 = voeux.specialite.specialite2.formation.nom if voeux.specialite.specialite2 and voeux.specialite.specialite2.formation else ""
+            formations = " / ".join([f for f in [f1, f2] if f])
+            if formations:
+                return f" ({formations} - {voeux.specialite.label})"
+            return f" ({voeux.specialite.label})"
+    else:
+        voeux = FicheDeVoeux.objects.filter(prospect=client, is_confirmed=True).select_related('specialite__formation').first()
+        if not voeux:
+            voeux = FicheDeVoeux.objects.filter(prospect=client).select_related('specialite__formation').first()
+        if voeux and voeux.specialite:
+            formation_nom = voeux.specialite.formation.nom if voeux.specialite.formation else ""
+            return f" ({formation_nom} - {voeux.specialite.label})"
+    return ""
 
 def create_invoice_from_payment_object(paiement, tva_percent, show_tva, skip_timbre):
     # 1. Determine Enterprise (Entite)
@@ -56,6 +87,11 @@ def create_invoice_from_payment_object(paiement, tva_percent, show_tva, skip_tim
     description = paiement.paiement_label or "Paiement"
     if paiement.observation:
         description += f" - {paiement.observation}"
+    
+    voeux_info = get_client_voeux_info(client, entite=entite)
+    long_desc = ""
+    if voeux_info:
+        long_desc = voeux_info.strip(' ()')
     
     montant_paye = Decimal(str(paiement.montant_paye))
     
@@ -159,6 +195,7 @@ def create_invoice_from_payment_object(paiement, tva_percent, show_tva, skip_tim
     ligne = LignesFacture(
         facture=facture,
         description=description,
+        long_description=long_desc,
         quantite=1,
         prix_unitaire=montant_ht,
         montant_ht=montant_ht,
@@ -171,6 +208,7 @@ def create_invoice_from_payment_object(paiement, tva_percent, show_tva, skip_tim
 
 @login_required
 @require_POST
+@module_permission_required('tre', 'add')
 def generate_invoice_from_payment(request):
     try:
         paiement_id = request.POST.get('paiement_id')
@@ -198,6 +236,7 @@ def generate_invoice_from_payment(request):
 
 @login_required
 @require_POST
+@module_permission_required('tre', 'add')
 def generate_consolidated_invoice(request):
     try:
         prospect_id = request.POST.get('prospect_id')
@@ -346,10 +385,15 @@ def generate_consolidated_invoice(request):
             promos = list(set(p.promo.code for p in payments if p.promo))
             if promos:
                 description += f" - Promotions: {', '.join(promos)}"
+            voeux_info = get_client_voeux_info(client, entite=entite)
+            long_desc = ""
+            if voeux_info:
+                long_desc = voeux_info.strip(' ()')
 
             ligne = LignesFacture(
                 facture=facture,
                 description=description,
+                long_description=long_desc,
                 quantite=1,
                 prix_unitaire=montant_ht,
                 montant_ht=montant_ht,
@@ -368,10 +412,15 @@ def generate_consolidated_invoice(request):
                     desc += f" (Promo: {p.promo.code})"
                 if p.observation:
                     desc += f" - {p.observation}"
+                voeux_info = get_client_voeux_info(client, entite=p.entite)
+                long_desc = ""
+                if voeux_info:
+                    long_desc = voeux_info.strip(' ()')
 
                 ligne = LignesFacture(
                     facture=facture,
                     description=desc,
+                    long_description=long_desc,
                     quantite=1,
                     prix_unitaire=montant_ht,
                     montant_ht=montant_ht,
@@ -396,6 +445,7 @@ def generate_consolidated_invoice(request):
 
 @login_required
 @require_POST
+@module_permission_required('tre', 'change')
 def ApiUpdateDraftInvoice(request):
     try:
         facture_id = request.POST.get('facture_id')
@@ -404,6 +454,10 @@ def ApiUpdateDraftInvoice(request):
         show_tva = request.POST.get('show_tva', 'true').lower() == 'true'
         skip_timbre = request.POST.get('skip_timbre', 'false').lower() == 'true'
         consolidation_mode = request.POST.get('consolidation_mode', 'multi_line')
+        
+        client_nom_override = request.POST.get('client_nom_override', '')
+        client_prenom_override = request.POST.get('client_prenom_override', '')
+        client_nin_override = request.POST.get('client_nin_override', '')
 
         if not facture_id:
             return JsonResponse({'status': 'error', 'message': 'ID de facture manquant'})
@@ -416,9 +470,6 @@ def ApiUpdateDraftInvoice(request):
             facture = Facture.objects.get(id=facture_id, module_source='tresorerie')
         except Facture.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Facture introuvable'})
-
-        if facture.etat != 'brouillon':
-            return JsonResponse({'status': 'error', 'message': 'Seule une facture en brouillon peut être modifiée.'})
 
         payment_ids = [int(x.strip()) for x in payment_ids_str.split(',') if x.strip()]
         
@@ -461,6 +512,9 @@ def ApiUpdateDraftInvoice(request):
             facture.tva = tva_decimal
             facture.show_tva = show_tva
             facture.mode_paiement = main_payment_mode
+            facture.client_nom_override = client_nom_override if client_nom_override else None
+            facture.client_prenom_override = client_prenom_override if client_prenom_override else None
+            facture.client_nin_override = client_nin_override if client_nin_override else None
             
             # Reset relations for existing payments
             facture.tresorerie_paiements.update(facture=None)
@@ -559,10 +613,19 @@ def ApiUpdateDraftInvoice(request):
                 promos = list(set(p.promo.code for p in payments if p.promo))
                 if promos:
                     description += f" - Promotions: {', '.join(promos)}"
+                voeux_info = get_client_voeux_info(client)
+                if voeux_info:
+                    description += voeux_info
+
+                au_profit_text = ""
+                if facture.client_nom_override:
+                    au_profit_text = f" (Au profit de : {client.nom} {client.prenom or ''})".strip()
+                    description += f" {au_profit_text}"
 
                 ligne = LignesFacture(
                     facture=facture,
                     description=description,
+                    long_description="",
                     quantite=1,
                     prix_unitaire=montant_ht,
                     montant_ht=montant_ht,
@@ -581,10 +644,19 @@ def ApiUpdateDraftInvoice(request):
                         desc += f" (Promo: {p.promo.code})"
                     if p.observation:
                         desc += f" - {p.observation}"
+                    voeux_info = get_client_voeux_info(client)
+                    if voeux_info:
+                        desc += voeux_info
+
+                    au_profit_text = ""
+                    if facture.client_nom_override:
+                        au_profit_text = f" (Au profit de : {client.nom} {client.prenom or ''})".strip()
+                        desc += f" {au_profit_text}"
 
                     ligne = LignesFacture(
                         facture=facture,
                         description=desc,
+                        long_description="",
                         quantite=1,
                         prix_unitaire=montant_ht,
                         montant_ht=montant_ht,
@@ -603,4 +675,6 @@ def ApiUpdateDraftInvoice(request):
         })
 
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)})
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': repr(e)})

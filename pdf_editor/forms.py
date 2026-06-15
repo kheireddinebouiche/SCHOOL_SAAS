@@ -98,12 +98,6 @@ class DocumentTemplateForm(forms.ModelForm):
 class DocumentGenerationForm(forms.Form):
     """Formulaire pour générer un document avec contexte personnalisé"""
     
-    template = forms.ModelChoiceField(
-        queryset=DocumentTemplate.objects.filter(is_active=True),
-        label="Sélectionner un template",
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
     # Champs de contexte dynamiques (optionnel, peut être étendu)
     recipient_name = forms.CharField(
         required=False,

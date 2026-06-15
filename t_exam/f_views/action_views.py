@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
@@ -11,6 +12,7 @@ from t_etudiants.models import HistoriqueAbsence
 @login_required(login_url="institut_app:login")
 @csrf_exempt
 @transaction.atomic
+@module_permission_required('exa', 'view')
 def examen_action(request):
 
     if request.method == 'POST':
@@ -63,6 +65,7 @@ def examen_action(request):
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 @csrf_exempt
+@module_permission_required('exa', 'view')
 def rachat_action(request):
     if request.method == 'POST':
         data = json.loads(request.body)
@@ -98,6 +101,7 @@ def rachat_action(request):
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 @csrf_exempt
+@module_permission_required('exa', 'view')
 def ajourne_action(request):
     if request.method == 'POST':
         

@@ -140,6 +140,31 @@
         background-color: #f8fafc;
         border-top: 2px solid #eff2f7;
     }
+
+    /* Select2 Customization for Premium Forms */
+    .select2-container--default .select2-selection--single {
+        border: 1px solid var(--border-color) !important;
+        height: 38px !important;
+        padding: 4px 8px;
+        font-size: 14px;
+        border-radius: 8px !important;
+        display: flex;
+        align-items: center;
+        background-color: #fff;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: normal;
+        padding-left: 0;
+        color: #495057;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 100%;
+        right: 10px;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--single {
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 0 3px var(--primary-soft);
+    }
 </style>
 {% endblock %}
 
@@ -200,11 +225,11 @@
                                     <div class="row g-2">
                                         <div class="col-6">
                                             <label class="form-label fs-12 fw-bold text-muted text-uppercase mb-1">Date émission</label>
-                                            <div class="form-control form-control-premium bg-light text-center">{{ devis.date_emission|date:"d/m/Y" }}</div>
+                                            <input type="date" class="form-control form-control-premium bg-light text-center" id="dateEmission" value="{{ devis.date_emission|date:'Y-m-d' }}" {% if not can_edit %}disabled{% endif %}>
                                         </div>
                                         <div class="col-6">
                                             <label class="form-label fs-12 fw-bold text-muted text-uppercase mb-1">Date échéance</label>
-                                            <div class="form-control form-control-premium bg-light text-center text-danger">{{ devis.date_echeance|date:"d/m/Y" }}</div>
+                                            <input type="date" class="form-control form-control-premium bg-light text-center text-danger" id="dateEcheance" value="{{ devis.date_echeance|date:'Y-m-d' }}" {% if not can_edit %}disabled{% endif %}>
                                         </div>
                                     </div>
                                 </div>
@@ -425,7 +450,7 @@
         const addItemBtn = document.getElementById('addItemBtn');
 
         // Styles logic for badge-like display tag
-        const getTvaBadge = (rate) => `<span class="badge bg-light text-muted border px-2 py-1 fs-10">${parseFloat(rate)}%</span>`;
+        const getTvaBadge = (rate) => parseFloat(rate) > 0 ? `<span class="badge bg-light text-secondary border px-2 py-1 fs-11">${parseFloat(rate)}%</span>` : `<span class="text-muted">-</span>`;
 
         // Initial Toggle State Application
         function applyColumnVisibility() {
@@ -457,6 +482,12 @@
                 opt.dataset.price = t.prix;
                 opt.dataset.tva = t.default_tva;
                 newThematique.add(opt);
+            });
+            // Init Select2
+            $(newThematique).select2({
+                placeholder: "-- Sélectionner Thématique --",
+                width: '100%',
+                allowClear: true
             });
         });
 
@@ -490,8 +521,8 @@
         
         renderItems();
 
-        newThematique.addEventListener('change', function() {
-            const tId = this.value;
+        $(newThematique).on('change', function() {
+            const tId = $(this).val();
             if(!tId) return;
             const th = thematiques.find(x => x.id == tId);
             if(th) {
@@ -513,7 +544,12 @@
         
         if(toggleTva) toggleTva.addEventListener('change', () => { updateTotals(); setDirty(true); });
         if(toggleRemise) toggleRemise.addEventListener('change', () => { updateTotals(); setDirty(true); });
-
+        
+        ['dateEmission', 'dateEcheance', 'devisEnterprise', 'conditionsCommerciales'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', () => setDirty(true));
+        });
+        
         const saveBtn = document.getElementById('saveBtn');
         if(saveBtn) {
             saveBtn.addEventListener('click', function() {
@@ -526,7 +562,9 @@
                     show_tva: document.getElementById('toggleTva').checked,
                     show_remise: document.getElementById('toggleRemise').checked,
                     conditions_commerciales: document.getElementById('conditionsCommerciales').value,
-                    entreprise_id: document.getElementById('devisEnterprise').value
+                    entreprise_id: document.getElementById('devisEnterprise').value,
+                    date_emission: document.getElementById('dateEmission').value,
+                    date_echeance: document.getElementById('dateEcheance').value
                 };
 
                 fetch("{% url 't_conseil:ApiSaveDevisItems' %}", {
@@ -665,7 +703,8 @@
 
                 setDirty(true);
                 renderItems();
-                newThematique.value = ""; newDesignation.value=""; newLongDescription.value=""; newPrice.value="0.00"; newQty.value="1"; newRemise.value="0"; newRowTotal.textContent="0.00";
+                $(newThematique).val(null).trigger('change');
+                newDesignation.value=""; newLongDescription.value=""; newPrice.value="0.00"; newQty.value="1"; newRemise.value="0"; newRowTotal.textContent="0.00";
             });
         }
         
@@ -674,7 +713,7 @@
             editingIndex = idx;
             
             if(it.thematique_id) {
-                newThematique.value = it.thematique_id;
+                $(newThematique).val(it.thematique_id).trigger('change.select2');
             }
             
             newDesignation.value = it.description;
@@ -701,21 +740,38 @@
                 tr.classList.add('item-row');
                 tr.innerHTML = `
                     <td>
-                        <div class="fw-bold text-dark">${it.description}</div>
-                        ${it.long_description ? `<div class="text-muted small mt-1" style="white-space: pre-wrap;">${it.long_description}</div>` : ''}
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-xs flex-shrink-0 me-3">
+                                <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded-circle fs-13">
+                                    <i class="ri-price-tag-3-line"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold text-dark mb-1 fs-14">${it.description}</h6>
+                                ${it.long_description ? `<p class="text-muted small mb-0 lh-sm" style="white-space: pre-wrap; max-width: 300px;">${it.long_description}</p>` : ''}
+                            </div>
+                        </div>
                     </td>
-                    <td class="text-center fw-bold text-dark">${it.quantity}</td>
-                    <td class="text-end text-muted">${it.unitPrice.toFixed(2)}</td>
-                    <td class="text-center text-danger col-remise">${it.remise_percent}%</td>
-                    <td class="text-center col-tva">${getTvaBadge(it.tva_percent)}</td>
-                    <td class="text-end fw-bold text-dark">${it.total.toFixed(2)}</td>
                     <td class="text-center">
-                        <button class="btn btn-sm btn-link text-primary p-0 me-2" onclick="editItem(${idx})" {% if not can_edit %}disabled{% endif %}>
-                            <i class="ri-pencil-line fs-18"></i>
-                        </button>
-                        <button class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(${idx})" {% if not can_edit %}disabled{% endif %}>
-                            <i class="ri-delete-bin-line fs-18"></i>
-                        </button>
+                        <span class="badge bg-light text-dark border px-2 py-1 fs-12 fw-bold shadow-sm">${it.quantity}</span>
+                    </td>
+                    <td class="text-end fw-medium text-muted">${it.unitPrice.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}</td>
+                    <td class="text-center col-remise">
+                        ${it.remise_percent > 0 ? `<span class="badge bg-danger bg-opacity-10 text-danger px-2 py-1 fs-11"><i class="ri-arrow-down-line align-bottom"></i> ${it.remise_percent}%</span>` : '<span class="text-muted">-</span>'}
+                    </td>
+                    <td class="text-center col-tva">${getTvaBadge(it.tva_percent)}</td>
+                    <td class="text-end">
+                        <span class="fw-bold text-dark fs-14">${it.total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}</span>
+                    </td>
+                    <td class="text-end">
+                        <div class="d-flex justify-content-end gap-2">
+                            <button class="btn btn-sm btn-light text-primary rounded-circle shadow-sm" style="width: 32px; height: 32px; padding: 0;" onclick="editItem(${idx})" title="Modifier" {% if not can_edit %}disabled{% endif %}>
+                                <i class="ri-pencil-line fs-14"></i>
+                            </button>
+                            <button class="btn btn-sm btn-light text-danger rounded-circle shadow-sm" style="width: 32px; height: 32px; padding: 0;" onclick="removeItem(${idx})" title="Supprimer" {% if not can_edit %}disabled{% endif %}>
+                                <i class="ri-delete-bin-line fs-14"></i>
+                            </button>
+                        </div>
                     </td>
                 `;
                 itemsContainer.appendChild(tr);
@@ -732,7 +788,8 @@
                 addItemBtn.innerHTML = '<i class="ri-add-line fs-18"></i>';
                 addItemBtn.classList.remove('btn-warning');
                 addItemBtn.classList.add('btn-primary');
-                newThematique.value = ""; newDesignation.value=""; newLongDescription.value=""; newPrice.value="0.00"; newQty.value="1"; newRemise.value="0"; newRowTotal.textContent="0.00";
+                $(newThematique).val(null).trigger('change');
+                newDesignation.value=""; newLongDescription.value=""; newPrice.value="0.00"; newQty.value="1"; newRemise.value="0"; newRowTotal.textContent="0.00";
             } else if (editingIndex > idx) {
                 editingIndex--; // Shift index if deleting item above
             }

@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -12,16 +13,19 @@ from django.db.models import Q, Sum, F, Case, When, Value, CharField, Count
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageAutresPaiement(request):
     return render(request,'tenant_folder/comptabilite/paiements/liste_autres_paiement.html')
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageNouveauAutrePaiement(request):
     entites = Entreprise.objects.all()
     return render(request, 'tenant_folder/comptabilite/paiements/nouveau_autre_paiement.html',{'entites': entites})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListeAutresPaiements(request):
     if request.method == "GET":
         entite_id = request.GET.get('entite_id')

@@ -38,6 +38,8 @@ def ApiLoadEntrepriseData(request):
         'code_wilaya' : entreprise.code_wilaya,
         'representant' : entreprise.representant,
         'agrement' : entreprise.agrement,
+        'quittance_prefix' : entreprise.quittance_prefix,
+        'quittance_suffix' : entreprise.quittance_suffix,
     }
 
     return JsonResponse(data, safe=False)
@@ -65,6 +67,8 @@ def ApiUpdateEntrepriseData(request):
         numero = request.POST.get('numero')
         code_wilaya = request.POST.get('code_wilaya')
         representant = request.POST.get('representant')
+        quittance_prefix = request.POST.get('quittance_prefix')
+        quittance_suffix = request.POST.get('quittance_suffix')
 
         entreprise = Entreprise.objects.get(id = id_entreprise)
         
@@ -86,7 +90,19 @@ def ApiUpdateEntrepriseData(request):
         entreprise.numero = numero
         entreprise.code_wilaya = code_wilaya
         entreprise.representant = representant
+        entreprise.quittance_prefix = quittance_prefix
+        entreprise.quittance_suffix = quittance_suffix
         entreprise.save()
+
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Entreprise',
+            target_id=str(entreprise.id),
+            details=f"Mise à jour des informations de l'entreprise {entreprise.designation}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
 
         return JsonResponse({'status':"success",'message':'Les informations ont été mis a jour avec succès'})
     else:
@@ -119,6 +135,16 @@ def ApiSaveBankAccount(request):
             bank_currency = bank_currency,
             bank_observations = bank_observations
         )
+        
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='BankAccount',
+            details=f"Ajout d'un compte bancaire {bank_name} pour l'entreprise {entreprise.designation}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
         return JsonResponse({"status" : "success"})
 
     except:
@@ -146,6 +172,16 @@ def ApiArchiveBankAccount(request):
     account.is_archived = True
     account.save()
 
+    from t_crm.models import UserActionLog
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='UPDATE',
+        target_model='BankAccount',
+        target_id=str(account.id),
+        details=f"Archivage du compte bancaire {account.bank_name}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+
     return JsonResponse({"status" : "success"})
 
 
@@ -168,6 +204,16 @@ def ApiUpdateEntrepriseLogos(request):
         
         entreprise.save()
         
+        from t_crm.models import UserActionLog
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Entreprise',
+            target_id=str(entreprise.id),
+            details=f"Mise à jour des logos de l'entreprise {entreprise.designation}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
         return JsonResponse({
             'status': 'success', 
             'message': 'Logos mis à jour avec succès',

@@ -309,6 +309,7 @@
                           <th class="border-0">Méthode</th>
                           <th class="border-0">Date Création</th>
                           <th class="border-0">Date Effective</th>
+                          <th class="border-0">Remboursement</th>
                           <th class="border-0">Statut</th>
                           <th class="border-0">Compte</th>
                           <th class="border-0 rounded-end text-center">Actions</th>
@@ -451,9 +452,9 @@
               </div>
             </div>
             <div class="col-md-6">
-              <label class="form-label fw-medium" for="montant_encaissement">Montant (€)</label>
+              <label class="form-label fw-medium" for="montant_encaissement">Montant (DA)</label>
               <div class="input-group">
-                <span class="input-group-text bg-light border-0">€</span>
+                <span class="input-group-text bg-light border-0">DA</span>
                 <input type="number" step="0.01" class="form-control border-0 bg-light py-2" id="montant_encaissement" name="montant" placeholder="0.00">
               </div>
             </div>
@@ -540,9 +541,9 @@
               </div>
             </div>
             <div class="col-md-6">
-              <label class="form-label fw-medium" for="montant_decaissement">Montant (€)</label>
+              <label class="form-label fw-medium" for="montant_decaissement">Montant (DA)</label>
               <div class="input-group">
-                <span class="input-group-text bg-light border-0">€</span>
+                <span class="input-group-text bg-light border-0">DA</span>
                 <input type="number" step="0.01" class="form-control border-0 bg-light py-2" id="montant_decaissement" name="montant" placeholder="0.00">
               </div>
             </div>
@@ -755,7 +756,7 @@
                 <h6 class="text-muted mb-3">Détails du Paiement</h6>
                 <div class="d-flex justify-content-between mb-2">
                   <span class="text-muted">Montant:</span>
-                  <span class="fw-bold text-success" id="detailEncMontant">+ 500,00 €</span>
+                  <span class="fw-bold text-success" id="detailEncMontant">+ 500,00 DA</span>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
                   <span class="text-muted">Méthode:</span>
@@ -831,9 +832,9 @@
               </div>
             </div>
             <div class="col-md-6">
-              <label class="form-label fw-medium" for="montant_modif_encaissement">Montant (€)</label>
+              <label class="form-label fw-medium" for="montant_modif_encaissement">Montant (DA)</label>
               <div class="input-group">
-                <span class="input-group-text bg-light border-0">€</span>
+                <span class="input-group-text bg-light border-0">DA</span>
                 <input type="number" step="0.01" class="form-control border-0 bg-light py-2" id="montant_modif_encaissement" name="montant" value="500.00" placeholder="0.00">
               </div>
             </div>
@@ -929,7 +930,7 @@
                 <h6 class="text-muted mb-3">Détails de la Dépense</h6>
                 <div class="d-flex justify-content-between mb-2">
                   <span class="text-muted">Montant:</span>
-                  <span class="fw-bold text-danger" id="detailDecMontant">- 800,00 €</span>
+                  <span class="fw-bold text-danger" id="detailDecMontant">- 800,00 DA</span>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
                   <span class="text-muted">Méthode:</span>
@@ -1009,9 +1010,9 @@
               </div>
             </div>
             <div class="col-md-6">
-              <label class="form-label fw-medium" for="montant_modif_decaissement">Montant (€)</label>
+              <label class="form-label fw-medium" for="montant_modif_decaissement">Montant (DA)</label>
               <div class="input-group">
-                <span class="input-group-text bg-light border-0">€</span>
+                <span class="input-group-text bg-light border-0">DA</span>
                 <input type="number" step="0.01" class="form-control border-0 bg-light py-2" id="montant_modif_decaissement" name="montant" value="800.00" placeholder="0.00">
               </div>
             </div>
@@ -1345,20 +1346,23 @@
                       row += "<td><span class='badge bg-info'>"+item.label_mode_paiement+"</span></td>";
                       row += "<td>"+(item.date_creation || '-')+"</td>";
                       row += "<td>"+(item.date_effective || '-')+"</td>";
+                      var refund_info = "-";
+                      if (item.is_refunded) {
+                          refund_info = "<span class='badge bg-danger-subtle text-danger' title='Montant remboursé: "+formatCurrency(item.refunded_amount)+"'>Oui ("+formatCurrency(item.refunded_amount)+")</span>";
+                      }
+                      row += "<td>"+refund_info+"</td>";
                       row += "<td>"+(item.is_rapproche ? '<span class="badge bg-success">Associé</span>' : '<span class="badge bg-warning">Non Associé</span>')+"</td>";
                       row += "<td>"+(item.compte || 'N/A')+"</td>";
                       row += "<td class='text-center'>";
-                      row += "<div class='dropdown'>";
-                      row += "<button class='btn btn-soft-secondary btn-sm dropdown' type='button' data-bs-toggle='dropdown' aria-expanded='false'>";
-                      row += "<i class='ri-more-fill'></i>";
-                      row += "</button>";
-                      row += "<ul class='dropdown-menu dropdown-menu-end'>";
-                      row += "<li><a class='dropdown-item' href='#' id='detailsPaiementBtn' data-id="+item.id+" ><i class='ri-eye-line me-2 align-middle'></i> Voir</a></li>";
+                      row += "<div class='hstack gap-2 justify-content-center'>";
+                      row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' id='detailsPaiementBtn' title='Voir les détails' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-eye-line text-primary'></i></button>";
                       if (!item.is_rapproche) {
-                          row += "<li><a class='dropdown-item' href='#' id='rapprochementBtn' data-id="+item.id+" ><i class='ri-exchange-line me-2 align-middle'></i> Rapprochement</a></li>";
+                          row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' id='rapprochementBtn' title='Rapprochement' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-exchange-line text-info'></i></button>";
                       }
-                      row += "<li><a class='dropdown-item' href='#' data-bs-toggle='modal' data-bs-target='#modifierEncaissementModal'><i class='ri-pencil-line me-2 align-middle'></i> Modifier</a></li>";
-                      row += "</ul>";
+                      row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' title='Modifier' data-bs-toggle='modal' data-bs-target='#modifierEncaissementModal' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-pencil-line text-warning'></i></button>";
+                      if (canDelete) {
+                          row += "<button class='btn btn-sm btn-light rounded-circle shadow-none delete-imputation-btn' title='Supprimer' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-delete-bin-line text-danger'></i></button>";
+                      }
                       row += "</div>";
                       row += "</td>";
                     row += "</tr>";
@@ -1371,7 +1375,7 @@
             });
 
             if (matchCount === 0) {
-                row = '<tr><td colspan="9" class="text-center py-5"><div class="text-muted"><i class="ri-search-2-line fs-1 d-block mb-2"></i>Aucun encaissement trouvé pour cette période</div></td></tr>';
+                row = '<tr><td colspan="10" class="text-center py-5"><div class="text-muted"><i class="ri-search-2-line fs-1 d-block mb-2"></i>Aucun encaissement trouvé pour cette période</div></td></tr>';
             }
 
             $('#listePaiements').html(row);
@@ -1393,35 +1397,11 @@
              var totalDecaissements = 0;
              var matchCount = 0;
              var filterId = currentDecaissementFilter || 0;
-             // Get filter name from map if ID is set
-             // Note: Decaissements usually have supplier name, but here we might filter by entity if the data supports it?
-             // Looking at the code, it filters by 'entiteId' on server.
-             // But the display uses 'item.fournisseur'.
-             // DOES 'item' have an 'entite' field?
-             // The previous server code filtered 'undone paiements' by entite_id.
-             // IMPORTANT: 'ApiReturnUndonePaiament' likely returns data for the specific entity.
-             // If we rely on client side, we need to know which entity a disbursement belongs to.
-             // Item properties shown: fournisseur, montant, categorie, date, statut, compte.
-             // If 'entite' is missing from item, we can't filter client side easily!
-             // However, for this task, I must assume it's available or use the requested refactor.
-             // Let's assume 'item.entite' or 'item.entite_id' exists, similar to paiements.
-             
-             // Check if allDecaissementsData is empty, use fallback if so
-             var dataToProcess = allDecaissementsData;
-             if (allDecaissementsData.length === 0) {
-                 // Use the hardcoded fallback data for demonstration if empty
-                 // I will replicate the hardcoded data generation here if needed, or just let it be empty
-                 // The previous code had hardcoded data in the 'else'.
-                 // I'll regenerate it if needed, but for now let's assume valid data or empty.
-                 // Actually, the user wants me to not touch logic, but refactor.
-                 // If I lose the hardcoded data, I lose the demo.
-                 // I should check if I can keep it.
-             }
              
              // Get filter name
              var filterName = filterId != 0 ? entiteMap[filterId] : null;
 
-             $.each(dataToProcess, function(index, item){
+             $.each(allDecaissementsData, function(index, item){
                  // Filter by entity
                  if (filterName && item.entite && item.entite !== filterName) {
                      return true;
@@ -1459,17 +1439,15 @@
                    row += "<td>"+(item.is_rapproche ? '<span class="badge bg-success">Associé</span>' : '<span class="badge bg-warning">Non Associé</span>')+"</td>";
                    row += "<td>"+(item.compte || 'N/A')+"</td>";
                    row += "<td class='text-center'>";
-                   row += "<div class='dropdown'>";
-                   row += "<button class='btn btn-soft-secondary btn-sm dropdown' type='button' data-bs-toggle='dropdown' aria-expanded='false'>";
-                   row += "<i class='ri-more-fill'></i>";
-                   row += "</button>";
-                   row += "<ul class='dropdown-menu dropdown-menu-end'>";
-                   row += "<li><a class='dropdown-item' href='#' id='detailsDecaissementBtn' data-id="+item.id+" ><i class='ri-eye-line me-2 align-middle'></i> Voir</a></li>";
+                   row += "<div class='hstack gap-2 justify-content-center'>";
+                   row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' id='detailsDecaissementBtn' title='Voir les détails' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-eye-line text-primary'></i></button>";
                    if (!item.is_rapproche) {
-                       row += "<li><a class='dropdown-item' href='#' id='rapprochementBtn' data-id="+item.id+" ><i class='ri-exchange-line me-2 align-middle'></i> Rapprochement</a></li>";
+                       row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' id='rapprochementBtn' title='Rapprochement' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-exchange-line text-info'></i></button>";
                    }
-                   row += "<li><a class='dropdown-item' href='#' data-bs-toggle='modal' data-bs-target='#modifierDecaissementModal'><i class='ri-pencil-line me-2 align-middle'></i> Modifier</a></li>";
-                   row += "</ul>";
+                   row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' title='Modifier' data-bs-toggle='modal' data-bs-target='#modifierDecaissementModal' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-pencil-line text-warning'></i></button>";
+                   if (canDelete) {
+                       row += "<button class='btn btn-sm btn-light rounded-circle shadow-none delete-imputation-btn' title='Supprimer' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-delete-bin-line text-danger'></i></button>";
+                   }
                    row += "</div>";
                    row += "</td>";
                  row += "</tr>";
@@ -1570,17 +1548,47 @@
         }
 
         // Variables to track current filter states
-        var currentEncaissementFilter = 0;  // 0 means no filter (all entities)
-        var currentDecaissementFilter = 0;  // 0 means no filter (all entities)
+        var currentEncaissementFilter = null;
+        var currentDecaissementFilter = null;
         var allPaiementsData = [];
         var allDecaissementsData = [];
         var entiteMap = {};
+        const canDelete = {{ can_delete|yesno:"true,false" }};
 
         loadPaiementData();
         loadEntreprise();
 
-        // Variables to track current filter states
-
+        // Delete Logic
+        $(document).on('click', '.delete-imputation-btn', function(e) {
+            e.preventDefault();
+            const id = $(this).data('id');
+            alertify.confirm("Confirmation de suppression", "Voulez-vous vraiment supprimer cette opération bancaire et ses données liées (paiement/dépense) ? Cette action est irréversible.", 
+                function(){
+                    $.ajax({
+                        url: "{% url 't_tresorerie:ApiDeleteImputationBancaire' %}",
+                        type: 'POST',
+                        data: {
+                            'id': id,
+                            'csrfmiddlewaretoken': '{{ csrf_token }}'
+                        },
+                        success: function(response) {
+                            if(response.status === 'success') {
+                                alertify.success(response.message);
+                                loadPaiementData();
+                            } else {
+                                alertify.error(response.message);
+                            }
+                        },
+                        error: function() {
+                            alertify.error("Une erreur s'est produite.");
+                        }
+                    });
+                },
+                function(){
+                    // Canceled
+                }
+            );
+        });
 
         function loadBankAccount(){
           $.ajax({
@@ -1590,7 +1598,10 @@
             success : function(data){
               var option = "<option value='0'>Veuillez sélectionner un compte bancaire</option>";
               $.each(data, function(index, p){
-                option += "<option value="+p.id+">"+p.bank_code+'-'+p.bank_name+"</option>";
+                var iban_text = p.bank_iban ? " - IBAN: " + p.bank_iban : "";
+                var bank_code = p.bank_code ? p.bank_code + '-' : "";
+                var bank_name = p.bank_name ? p.bank_name : "Compte sans nom";
+                option += "<option value="+p.id+">"+bank_code+bank_name+iban_text+"</option>";
               });
               $('#compteRapprochement').html(option);
             },
@@ -1628,6 +1639,7 @@
                  $('#detailEncStatut').text(data.is_paid ? 'Validé' : 'En attente').attr('class', data.is_paid ? 'badge bg-success' : 'badge bg-warning');
                  $('#detailEncCompte').text(data.compte_name);
                  $('#detailEncObs').text(data.observations);
+                 $('#detailEncaissementModal .btn-success[data-bs-target="#modifierEncaissementModal"]').attr('data-id', id_operation);
                  $('#detailEncaissementModal').modal('show');
               } else {
                  $('#detailDecFourn').text(data.fournisseur_name !== 'N/A' ? data.fournisseur_name : data.client_name);
@@ -1642,6 +1654,7 @@
                  $('#detailDecStatut').text(data.is_paid ? 'Validé' : 'En attente').attr('class', data.is_paid ? 'badge bg-success' : 'badge bg-warning');
                  $('#detailDecCompte').text(data.compte_name);
                  $('#detailDecObs').text(data.observations);
+                 $('#detailDecaissementModal .btn-danger[data-bs-target="#modifierDecaissementModal"]').attr('data-id', id_operation);
                  $('#detailDecaissementModal').modal('show');
               }
             }
@@ -1658,6 +1671,132 @@
           e.preventDefault();
           var id = $(this).data('id');
           loadPaiementDetails(id, 'decaissement');
+        });
+
+        // Add auto-fill logic for edit modals
+        $('#modifierEncaissementModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var id = button.attr('data-id');
+            
+            if (!id) {
+                id = $(this).data('operation-id');
+            } else {
+                $(this).data('operation-id', id);
+            }
+
+            if (id) {
+                $.ajax({
+                    url : "{% url 't_tresorerie:ApiDetailsPaiement' %}",
+                    type : "GET",
+                    dataType: "JSON",
+                    data : { 'id' : id },
+                    success : function(data){
+                        if(data.status !== 'error') {
+                            var clientSelect = $('#client_modif_encaissement');
+                            if(clientSelect.find("option[value='" + data.client_name + "']").length === 0) {
+                                clientSelect.append(new Option(data.client_name, data.client_name, true, true));
+                            } else {
+                                clientSelect.val(data.client_name);
+                            }
+                            
+                            $('#montant_modif_encaissement').val(data.montant);
+                            
+                            var methodeSelect = $('#methode_modif_encaissement');
+                            var matchedMode = false;
+                            methodeSelect.find("option").each(function() {
+                                if ($(this).text() === data.mode_paiement_label) {
+                                    $(this).prop('selected', true);
+                                    matchedMode = true;
+                                }
+                            });
+                            if(!matchedMode) {
+                                methodeSelect.append(new Option(data.mode_paiement_label, data.mode_paiement_label, true, true));
+                            }
+
+                            $('#date_modif_encaissement').val(data.date_paiement || data.date_operation);
+                            
+                            var compteSelect = $('#compte_modif_encaissement');
+                            if(compteSelect.find("option[value='" + data.compte_name + "']").length === 0) {
+                                compteSelect.append(new Option(data.compte_name, data.compte_name, true, true));
+                            } else {
+                                compteSelect.val(data.compte_name);
+                            }
+
+                            $('#statut_modif_encaissement').val(data.is_paid ? 'valide' : 'attente');
+                            $('#observation_modif_encaissement').val(data.observations);
+                        }
+                    }
+                });
+            }
+        });
+
+        $('#modifierDecaissementModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var id = button.attr('data-id');
+            
+            if (!id) {
+                id = $(this).data('operation-id');
+            } else {
+                $(this).data('operation-id', id);
+            }
+
+            if (id) {
+                $.ajax({
+                    url : "{% url 't_tresorerie:ApiDetailsPaiement' %}",
+                    type : "GET",
+                    dataType: "JSON",
+                    data : { 'id' : id },
+                    success : function(data){
+                        if(data.status !== 'error') {
+                            var fournSelect = $('#fournisseur_modif_decaissement');
+                            var name = data.fournisseur_name !== 'N/A' ? data.fournisseur_name : data.client_name;
+                            if(fournSelect.find("option[value='" + name + "']").length === 0) {
+                                fournSelect.append(new Option(name, name, true, true));
+                            } else {
+                                fournSelect.val(name);
+                            }
+                            
+                            $('#montant_modif_decaissement').val(data.montant);
+                            
+                            var methodeSelect = $('#methode_modif_decaissement');
+                            var matchedMode = false;
+                            methodeSelect.find("option").each(function() {
+                                if ($(this).text() === data.mode_paiement_label) {
+                                    $(this).prop('selected', true);
+                                    matchedMode = true;
+                                }
+                            });
+                            if(!matchedMode) {
+                                methodeSelect.append(new Option(data.mode_paiement_label, data.mode_paiement_label, true, true));
+                            }
+
+                            var catSelect = $('#categorie_modif_decaissement');
+                            var matchedCat = false;
+                            catSelect.find("option").each(function() {
+                                if ($(this).text() === data.categorie) {
+                                    $(this).prop('selected', true);
+                                    matchedCat = true;
+                                }
+                            });
+                            if(!matchedCat && data.categorie !== 'N/A') {
+                                catSelect.append(new Option(data.categorie, data.categorie, true, true));
+                            }
+
+                            $('#date_modif_decaissement').val(data.date_paiement || data.date_operation);
+                            
+                            var compteSelect = $('#compte_modif_decaissement');
+                            if(compteSelect.find("option[value='" + data.compte_name + "']").length === 0) {
+                                compteSelect.append(new Option(data.compte_name, data.compte_name, true, true));
+                            } else {
+                                compteSelect.val(data.compte_name);
+                            }
+
+                            $('#statut_modif_decaissement').val(data.is_paid ? 'valide' : 'attente');
+                            $('#observation_modif_decaissement').val(data.observations);
+                        }
+                    }
+                });
+            }
         });
 
         $(document).on('click','#rapprochementBtn', function(){

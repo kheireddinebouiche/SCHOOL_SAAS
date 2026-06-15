@@ -1,3 +1,5 @@
+from decimal import Decimal
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect, get_object_or_404
 from .utils import calculate_leave_duration
 from django.http import JsonResponse, HttpResponse
@@ -29,7 +31,11 @@ def remplacer_tags(contenu, employe, contrat):
 
 def view_contrat(request, pk):
     employe = Employees.objects.get(id=pk)
-    contrat = Contrats.objects.get(employee=employe)
+    contrat = Contrats.objects.filter(employee=employe).last()
+    
+    if not contrat:
+        messages.error(request, "Cet employé n'a aucun contrat associé.")
+        return redirect('t_rh:detailsEmploye', pk)
     articles = ArticlesContratStandard.objects.filter(type_contrat=contrat.type_contrat)
 
     articles_personnalises = []
@@ -57,6 +63,7 @@ def view_contrat(request, pk):
 #     }
 #     return render(request, 'tenant_folder/rh/contrats/contrat_template.html', context)
 
+@module_permission_required('rh', 'view')
 def listeEmployes(request):
     liste = Employees.objects.prefetch_related('contrats').all()
    
@@ -66,6 +73,7 @@ def listeEmployes(request):
     return render(request,"tenant_folder/rh/liste_des_employee.html", context)
 
 @transaction.atomic
+@module_permission_required('rh', 'add')
 def nouveauEmploye(request):
     form = NouveauEmploye()
     if request.method == 'POST':
@@ -82,6 +90,7 @@ def nouveauEmploye(request):
 
     return render(request, 'tenant_folder/rh/nouveau_employe.html', context)
 
+@module_permission_required('rh', 'view')
 def detailsEmploye(request, pk):
     employe = Employees.objects.prefetch_related('contrats').get(id = pk)
     # Get active contract (the one with the latest date_embauche)
@@ -110,6 +119,7 @@ def detailsEmploye(request, pk):
     return render(request,'tenant_folder/rh/details_employe.html', context)
 
 @transaction.atomic
+@module_permission_required('rh', 'change')
 def updateEmploye(request,pk):
     emp = Employees.objects.get(id = pk)
     form = NouveauEmploye(instance=emp)
@@ -126,7 +136,22 @@ def updateEmploye(request,pk):
     }
     return render(request, "tenant_folder/rh/update_employe.html", context)
 
+@module_permission_required('rh', 'delete')
+def ApiDeleteEmploye(request):
+    if request.method == "POST":
+        id = request.POST.get('id')
+        if id:
+            try:
+                emp = Employees.objects.get(id=id)
+                emp.delete()
+                return JsonResponse({'status': 'success', 'message': "L'employé et toutes ses informations ont été supprimés avec succès."})
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'message': f"Erreur lors de la suppression: {str(e)}"})
+        return JsonResponse({'status': 'error', 'message': "ID manquant."})
+    return JsonResponse({'status': 'error', 'message': "Méthode non autorisée."})
+
 @transaction.atomic
+@module_permission_required('rh', 'add')
 def nouveauService(request):
     form = NouveauService()
     if request.method == 'POST':
@@ -142,6 +167,7 @@ def nouveauService(request):
     }
     return render(request, 'tenant_folder/rh/services/nouveau_service.html', context)
 
+@module_permission_required('rh', 'view')
 def listeServices(request):
 
     context = {
@@ -150,10 +176,12 @@ def listeServices(request):
     }
     return render(request, 'tenant_folder/rh/services/liste_des_services.html', context)
 
+@module_permission_required('rh', 'view')
 def ApiListeServices(request):
     liste = Services.objects.filter().values('id','label', 'description','created_at')
     return JsonResponse(list(liste), safe=False)
 
+@module_permission_required('rh', 'add')
 def ApiAddService(request):
     label = request.POST.get('label')
     description = request.POST.get('description')
@@ -165,35 +193,45 @@ def ApiAddService(request):
     else:
         return JsonResponse({'status': 'error', 'message':"Erreur lors de l'ajout du service"})
 
+@module_permission_required('rh', 'view')
 def ApiGetService(request):
     id = request.GET.get('id')
     service = Services.objects.filter(id=id).values('id','label', 'description')
     return JsonResponse(list(service), safe=False)
 
+@module_permission_required('rh', 'change')
 def ApiUpdateService(request):
     id = request.POST.get('id')
     label = request.POST.get('label')
     description = request.POST.get('description')
 
     if id and label and description:
-        service = Services.objects.get(id=id)
-        service.label = label
-        service.description = description
-        service.save()
-        return JsonResponse({'status': 'success', 'message':"Service mis à jour avec succès"})
+        try:
+            service = Services.objects.get(id=id)
+            service.label = label
+            service.description = description
+            service.save()
+            return JsonResponse({'status': 'success', 'message':"Service mis à jour avec succès"})
+        except Services.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': "Service introuvable."})
     else:
         return JsonResponse({'status': 'error', 'message':"Erreur lors de la mise à jour du service"})
 
+@module_permission_required('rh', 'delete')
 def ApiDeleteService(request):
     id = request.POST.get('id')
     if id:
-        service = Services.objects.get(id=id)
-        service.delete()
-        return JsonResponse({'status': 'success', 'message':"Service supprimé avec succès"})
+        try:
+            service = Services.objects.get(id=id)
+            service.delete()
+            return JsonResponse({'status': 'success', 'message':"Service supprimé avec succès"})
+        except Services.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': "Service introuvable."})
     else:
         return JsonResponse({'status': 'error', 'message':"Erreur lors de la suppression du service"})
 
 @transaction.atomic
+@module_permission_required('rh', 'add')
 def NouveauArticleContrat(request):
     form = ArticlesContratStandard()
     if request.method == 'POST':
@@ -208,6 +246,7 @@ def NouveauArticleContrat(request):
     }
     return render(request, 'tenant_folder/rh/contrats/nouveau_article.html', context)
 
+@module_permission_required('rh', 'view')
 def listeArticlesContrat(request):
     liste = ArticlesContratStandard.objects.all()
     context = {
@@ -216,16 +255,19 @@ def listeArticlesContrat(request):
     }
     return render(request, 'tenant_folder/rh/contrats/liste_des_articles.html', context)
 
+@module_permission_required('rh', 'view')
 def listeTypeContrat(request):
     context = {
         'tenant' : request.tenant,
     }
     return render(request, 'tenant_folder/rh/contrats/liste_des_types_contrat.html', context)
 
+@module_permission_required('rh', 'view')
 def ApiListeTypeContrat(request):
     liste = TypesContrat.objects.all().values('id','label','description','created_at')
     return JsonResponse(list(liste), safe=False)
 
+@module_permission_required('rh', 'add')
 def ApiAddTypeContrat(request):
     label = request.POST.get('label')
     description = request.POST.get('description')
@@ -239,6 +281,7 @@ def ApiAddTypeContrat(request):
     else:
         return JsonResponse({'status': 'error', 'message':"Le champ label est requis"})
     
+@module_permission_required('rh', 'change')
 def ApiUpdateTypeContrat(request):
     id = request.POST.get('id')
     label = request.POST.get('label')
@@ -254,6 +297,7 @@ def ApiUpdateTypeContrat(request):
     else:
         return JsonResponse({'status' : 'error', 'message' : "Veuillez saisir les champs requis"})
 
+@module_permission_required('rh', 'delete')
 def ApiDeleteTypeContrat(request):
     id = request.GET.get('id')
 
@@ -266,6 +310,7 @@ def ApiDeleteTypeContrat(request):
         type.delete()
         return JsonResponse({'status' : 'success', "message" : "La suppression est effectué avec succès."})
 
+@module_permission_required('rh', 'view')
 def ClausesTypeContrat(request, pk):
     type = TypesContrat.objects.get(id= pk)
     context = {
@@ -274,12 +319,14 @@ def ClausesTypeContrat(request, pk):
     }
     return render(request, 'tenant_folder/rh/contrats/type_contrat_articles.html', context)
 
+@module_permission_required('rh', 'view')
 def ApiGetClauseStandardOfType(request):
     id = request.GET.get('id')
     type = TypesContrat.objects.get(id=id)
     liste = ArticlesContratStandard.objects.filter(type_contrat = type).values('id', 'titre','contenu','created_at')
     return JsonResponse(list(liste), safe=False)
 
+@module_permission_required('rh', 'add')
 def ApiAddNewClause(request):
     titre = request.POST.get('titre')
     contenu = request.POST.get('contenu')
@@ -297,12 +344,14 @@ def ApiAddNewClause(request):
     else:
         return JsonResponse({'status' : "error", "message" : "Tous les champs sont requis."})
 
+@module_permission_required('rh', 'delete')
 def ApiDeleteClause(request):
     id = request.GET.get('id')
     obj = ArticlesContratStandard.objects.get(id = id)
     obj.delete()
     return JsonResponse({'status' : 'success', 'message' : "La clause à été supprimé avec succès"})
 
+@module_permission_required('rh', 'change')
 def ApiUpdateClause(request):
     id = request.POST.get('id')
     titre = request.POST.get('update_titre')
@@ -316,16 +365,19 @@ def ApiUpdateClause(request):
     else:
         return JsonResponse({'status' : 'error', 'message' : "Tous les champs sont requis"})
 
+@module_permission_required('rh', 'view')
 def ListeCategorieContrat(request):
     context = {
         'tenant' : request.tenant
     }
     return render(request,'tenant_folder/rh/contrats/liste_categorie_contrat.html', context)
 
+@module_permission_required('rh', 'view')
 def ApiListCategorie(request):
     liste = CategoriesContrat.objects.filter().values('id', 'label', 'entite_legal','entite_legal__designation', 'description')
     return JsonResponse(list(liste), safe=False)
 
+@module_permission_required('rh', 'add')
 def ApiAddCategorieContrat(request):
     label = request.POST.get('label')
     description = request.POST.get('description')
@@ -344,12 +396,14 @@ def ApiAddCategorieContrat(request):
     else:
         return JsonResponse({'status' : "error", 'message': "Champs requis manquants, veuillez completer les champs"})
 
+@module_permission_required('rh', 'view')
 def ApiGetDefaultValueForContrat(request):
     entreprises = list(Entreprise.objects.filter().values('id', 'designation'))
     services = list(Services.objects.values('id', 'label'))
     postes = list(Posts.objects.filter().values('id','label'))
     return JsonResponse({'entreprises': entreprises, 'services': services, 'postes' : postes}, safe=False)
 
+@module_permission_required('rh', 'view')
 def detailsCategorie(request, pk):
     cate = CategoriesContrat.objects.get(id = pk)
     context = {
@@ -357,17 +411,20 @@ def detailsCategorie(request, pk):
     }
     return render(request,'tenant_folder/rh/contrats/details_categorie_contrat.html', context)
 
+@module_permission_required('rh', 'view')
 def ApiGetListeTypeContratByCategorie(request):
     id = request.GET.get('id_categorie')
     liste = TypesContrat.objects.filter(categorie = id).values('id','label','description','created_at')
     return JsonResponse(list(liste), safe=False)
 
+@module_permission_required('rh', 'view')
 def ApiGetCategorieContrat(request):
     id_entite = request.GET.get('id_entite')
     entite = Entreprise.objects.get(id = id_entite)
     categories = CategoriesContrat.objects.filter(entite_legal = entite).values('id', 'label')
     return JsonResponse(list(categories), safe=False)
 
+@module_permission_required('rh', 'view')
 def ApiGetTypeContrat(request):
     id_categorie = request.GET.get('id_categorie')
     types = TypesContrat.objects.filter(categorie=id_categorie)
@@ -379,6 +436,7 @@ def ApiGetTypeContrat(request):
         })
     return JsonResponse(data, safe=False)
 
+@module_permission_required('rh', 'view')
 def ApiGetRubriquesOfType(request):
     id_type = request.GET.get('id')
     from t_ressource_humaine.models import Rubrique
@@ -395,6 +453,7 @@ def ApiGetRubriquesOfType(request):
         'globals': list(globals)
     }, safe=False)
 
+@module_permission_required('rh', 'add')
 def ApiCreateContrat(request):
     import json
     id_employe = request.POST.get('id_employe')
@@ -417,10 +476,13 @@ def ApiCreateContrat(request):
         except:
             pass
 
-    employe = Employees.objects.get(id=id_employe)
-    type_contrat = TypesContrat.objects.get(id=id_type_contrat)
-    service = Services.objects.get(id=id_service)
-    poste = Posts.objects.get(id=id_poste)
+    try:
+        employe = Employees.objects.get(id=id_employe)
+        type_contrat = TypesContrat.objects.get(id=id_type_contrat)
+        service = Services.objects.get(id=id_service)
+        poste = Posts.objects.get(id=id_poste)
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": "ID(s) invalide(s) fourni(s)."})
 
     new_contrat = Contrats(
         service = service,
@@ -488,6 +550,7 @@ def ApiCreateContrat(request):
 
     return JsonResponse({"status" : "success", 'message' : "Le contrat a été créé et les rubriques de paie ont été associées."})
 
+@module_permission_required('rh', 'view')
 def ApiGetListContratForEmploye(request):
     id_employe = request.GET.get('id_employe')
     employe = get_object_or_404(Employees, id=id_employe)
@@ -508,6 +571,7 @@ def ApiGetListContratForEmploye(request):
         
     return JsonResponse(liste, safe=False)
 
+@module_permission_required('rh', 'view')
 def ApiGetCategorieContratDetails(request):
     id = request.GET.get('id')
 
@@ -523,6 +587,7 @@ def ApiGetCategorieContratDetails(request):
 
     return JsonResponse(data, safe=False)
 
+@module_permission_required('rh', 'change')
 def ApiUpdateCategorieGroupe(request):
     update_label = request.POST.get('update_label')
     update_description = request.POST.get('update_description')
@@ -542,6 +607,7 @@ def ApiUpdateCategorieGroupe(request):
     except:
         return JsonResponse({'status' : "error", "message" : "Une erreur est survenue lors du traitement de la réquete"})
 
+@module_permission_required('rh', 'view')
 def ApiGetDetailsOfContract(request):
     id = request.GET.get('id')
     obj = get_object_or_404(Contrats, id=id)
@@ -572,14 +638,158 @@ def ApiGetDetailsOfContract(request):
         'duree': obj.duree or 'Indéterminée',
         'date_embauche': obj.date_embauche.strftime('%d/%m/%Y') if obj.date_embauche else '-',
         'salaire_base': float(payroll_contract.salaire_base) if payroll_contract else 0,
-        'primes': primes
+        'primes': primes,
+        'service_id': obj.service.id if obj.service else '',
+        'poste_id': obj.poste.id if obj.poste else '',
+        'date_embauche_raw': obj.date_embauche.strftime('%Y-%m-%d') if obj.date_embauche else '',
+        'duree_raw': obj.duree or ''
     }
     return JsonResponse(data, safe=False)
 
+@module_permission_required('rh', 'delete')
+def ApiDeleteContrat(request):
+    if request.method == "POST":
+        id = request.POST.get('id')
+        try:
+            contrat = Contrats.objects.get(id=id)
+            from t_ressource_humaine.models import Contrat as PayrollContrat
+            payroll_contrats = PayrollContrat.objects.filter(employee=contrat.employee)
+            for pc in payroll_contrats:
+                pc.delete()
+            
+            # Update employee status if no other contracts
+            if Contrats.objects.filter(employee=contrat.employee).count() <= 1:
+                contrat.employee.has_contract = False
+                contrat.employee.save()
+                
+            contrat.delete()
+            return JsonResponse({"status": "success", "message": "Contrat supprimé avec succès"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+@module_permission_required('rh', 'change')
+def updateContratPage(request, pk):
+    contrat = get_object_or_404(Contrats, id=pk)
+    employes = Employees.objects.all().order_by('nom', 'prenom')
+    
+    from t_ressource_humaine.models import Contrat as PayrollContrat, RubriqueContrat
+    payroll_contract = PayrollContrat.objects.filter(employee=contrat.employee).first()
+    
+    import json
+    prefill_dict = {
+        'employe_id': contrat.employee_id if contrat.employee else '',
+        'service_id': contrat.service_id if contrat.service else '',
+        'poste_id': contrat.poste_id if contrat.poste else '',
+        'date_embauche': contrat.date_embauche.strftime('%Y-%m-%d') if contrat.date_embauche else '',
+        'duree': contrat.duree or '',
+        'has_essai': contrat.has_essai or 0,
+        'periode_essai': contrat.periode_essai or '',
+        'salaire_base': float(payroll_contract.salaire_base) if payroll_contract else (float(contrat.salaire_base) if contrat.salaire_base else 0),
+        'type_contrat_id': contrat.type_contrat_id if contrat.type_contrat else '',
+        'categorie_id': contrat.type_contrat.categorie.id if contrat.type_contrat and contrat.type_contrat.categorie else '',
+        'entite_id': contrat.type_contrat.categorie.entite_legal.id if contrat.type_contrat and contrat.type_contrat.categorie and contrat.type_contrat.categorie.entite_legal else '',
+    }
+
+    # We will pass the contract data to the template to prefill it
+    context = {
+        'page_title': 'Modifier Contrat',
+        'contrat': contrat,
+        'employes': employes,
+        'payroll_contract': payroll_contract,
+        'tenant': request.tenant,
+        'prefill': json.dumps(prefill_dict),
+    }
+    return render(request, 'tenant_folder/rh/contrats/update_contrat.html', context)
+
+@module_permission_required('rh', 'change')
+def ApiUpdateContratFull(request):
+    if request.method == "POST":
+        import json
+        id_contrat = request.POST.get('id')
+        id_employe = request.POST.get('id_employe')
+        id_type_contrat = request.POST.get('type_contrat')
+        date_embauche = request.POST.get('date_embauche')
+        duree_contrat = request.POST.get('duree_contrat')
+        id_service = request.POST.get('service')
+        id_poste = request.POST.get('posts')
+        has_essaie = request.POST.get('periode_essaie')
+        duree_essaie = request.POST.get('duree_essaie')
+        salaire_base_raw = request.POST.get('salaire_base')
+        salaire_base = float(salaire_base_raw) if salaire_base_raw and salaire_base_raw.strip() else 0
+        
+        rubriques_json = request.POST.get('rubriques_data')
+        rubriques_data = []
+        if rubriques_json:
+            try:
+                rubriques_data = json.loads(rubriques_json)
+            except:
+                pass
+
+        try:
+            contrat = Contrats.objects.get(id=id_contrat)
+            employe = Employees.objects.get(id=id_employe)
+            type_contrat = TypesContrat.objects.get(id=id_type_contrat)
+            service = Services.objects.get(id=id_service)
+            poste = Posts.objects.get(id=id_poste)
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": "Données invalides."})
+
+        contrat.service = service
+        contrat.employee = employe
+        contrat.date_embauche = date_embauche
+        contrat.periode_essai = duree_essaie
+        contrat.has_essai = has_essaie
+        contrat.poste = poste
+        contrat.type_contrat = type_contrat
+        contrat.duree = duree_contrat
+        contrat.salaire_base = salaire_base
+        contrat.save()
+
+        from t_ressource_humaine.models import Contrat as PayrollContrat, Rubrique, RubriqueContrat
+        payroll_contract = PayrollContrat.objects.filter(employee=employe).first()
+        if payroll_contract:
+            payroll_contract.date_debut = date_embauche
+            payroll_contract.salaire_base = salaire_base
+            payroll_contract.save()
+        else:
+            payroll_contract = PayrollContrat.objects.create(
+                employee=employe,
+                date_debut=date_embauche,
+                salaire_base=salaire_base,
+                actif=True
+            )
+
+        # Apply Rubriques
+        if rubriques_data:
+            # Optionally, disable/delete old RubriqueContrat that are not in rubriques_data
+            incoming_ids = [r_item['id'] for r_item in rubriques_data]
+            RubriqueContrat.objects.filter(contrat=payroll_contract).exclude(rubrique_id__in=incoming_ids).update(actif=False)
+            
+            for r_item in rubriques_data:
+                rubrique_obj = Rubrique.objects.get(id=r_item['id'])
+                rc, created_rc = RubriqueContrat.objects.get_or_create(
+                    contrat=payroll_contract,
+                    rubrique=rubrique_obj,
+                    defaults={
+                        'valeur': r_item['valeur'],
+                        'actif': r_item['actif']
+                    }
+                )
+                if not created_rc:
+                    rc.valeur = r_item['valeur']
+                    rc.actif = r_item['actif']
+                    rc.save()
+
+        return JsonResponse({"status": "success", "message": "Contrat mis à jour avec succès"})
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
+
+@module_permission_required('rh', 'view')
 def ApiListePostes(request):
     liste = Posts.objects.filter().values('id', 'label', 'description')
     return JsonResponse(list(liste), safe=False)
 
+@module_permission_required('rh', 'add')
 def ApiAddPoste(request):
     poste = request.POST.get('poste')
     description = request.POST.get('description')
@@ -592,12 +802,14 @@ def ApiAddPoste(request):
     messages.success(request, 'Le poste à été ajouté avec succès')
     return JsonResponse({'status' : "success", "message" : "Le poste à été ajouter avec suucès",'id' : new_poste.id})
 
+@module_permission_required('rh', 'view')
 def ListeDesPostes(request):
     context = {
         'tenant' : request.tenant,
     }
     return render(request, 'tenant_folder/rh/postes/liste_des_postes.html', context)
 
+@module_permission_required('rh', 'change')
 def UpdatePoste(request, pk):
     poste = Posts.objects.get(id = pk)
     form = NouveauPoste(instance=poste)
@@ -615,6 +827,7 @@ def UpdatePoste(request, pk):
     }
     return render(request, 'tenant_folder/rh/postes/update_poste.html', context)
 
+@module_permission_required('rh', 'view')
 def ApiGetPostDetails(request):
     id=  request.GET.get('id')
     obj = Posts.objects.get(id = id)
@@ -627,6 +840,7 @@ def ApiGetPostDetails(request):
 
     return JsonResponse(data, safe=False)
 
+@module_permission_required('rh', 'view')
 def ApiGetListPostTaches(request):
     id = request.GET.get('postId')
     liste = TachesPoste.objects.filter(poste = Posts.objects.get(id=id))
@@ -640,26 +854,33 @@ def ApiGetListPostTaches(request):
 
     return JsonResponse(data, safe=False)
 
+@module_permission_required('rh', 'change')
 def ApiUpdateCategorie(request):
     pass
 
+@module_permission_required('rh', 'delete')
 def ApiDeleteCategorie(request):
     pass
 
 
+@module_permission_required('rh', 'change')
 def modifierArticleContrat(request):
     pass
 
+@module_permission_required('rh', 'view')
 def detailsArticleContrat(request):
     pass
 
+@module_permission_required('rh', 'delete')
 def supprimerArticleContrat(request):
     pass
 
+@module_permission_required('rh', 'view')
 def ApiGetEntite(request):
     liste = Entreprise.objects.all().values('id','designation')
     return JsonResponse(list(liste),safe=False)
 
+@module_permission_required('rh', 'view')
 def listeDesContrats(request):
     contrats = Contrats.objects.select_related('employee', 'type_contrat', 'poste').all().order_by('-created_at')
     from pdf_editor.models import DocumentTemplate
@@ -671,6 +892,7 @@ def listeDesContrats(request):
     }
     return render(request, 'tenant_folder/rh/contrats/liste_des_contrats.html', context)
 
+@module_permission_required('rh', 'view')
 def imprimerContrat(request, contrat_id, template_id):
     from pdf_editor.models import DocumentTemplate, DocumentGeneration
     from django.template import Template, Context
@@ -708,6 +930,7 @@ def imprimerContrat(request, contrat_id, template_id):
         messages.error(request, f"Erreur lors de la génération du contrat: {str(e)}")
         return redirect('t_rh:liste_des_contrats')
 
+@module_permission_required('rh', 'view')
 def imprimerAttestation(request, employe_id, template_id):
     """Generate attestation document via pdf_editor."""
     from django.shortcuts import get_object_or_404, redirect
@@ -735,6 +958,7 @@ def imprimerAttestation(request, employe_id, template_id):
     )
     return redirect('pdf_editor:document-export', pk=doc_gen.pk)
 
+@module_permission_required('rh', 'view')
 def imprimerBadge(request, employe_id, template_id):
     """Generate badge document via pdf_editor."""
     from django.shortcuts import get_object_or_404, redirect
@@ -762,6 +986,7 @@ def imprimerBadge(request, employe_id, template_id):
     )
     return redirect('pdf_editor:document-export', pk=doc_gen.pk)
 
+@module_permission_required('rh', 'add')
 def nouveauContrat(request):
     employes = Employees.objects.all().order_by('nom', 'prenom')
     context = {
@@ -770,6 +995,7 @@ def nouveauContrat(request):
     }
     return render(request, 'tenant_folder/rh/contrats/nouveau_contrat.html', context)
 
+@module_permission_required('rh', 'view')
 def listePresences(request):
     # Get filtering parameters
     date_str = request.GET.get('date', datetime.now().strftime('%Y-%m-%d'))
@@ -778,7 +1004,8 @@ def listePresences(request):
     date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
     
     # Base queryset for employees
-    employees = Employees.objects.filter(etat="en cours", is_teacher=False)
+    from django.db.models import Q
+    employees = Employees.objects.filter(Q(etat="en cours") | Q(etat__isnull=True) | Q(etat=""), is_teacher=False)
 
 
     
@@ -832,6 +1059,7 @@ def listePresences(request):
     }
     return render(request, 'tenant_folder/rh/presences/liste_presences.html', context)
 
+@module_permission_required('rh', 'view')
 def fichesMensuelles(request):
     import calendar
     from django.db.models import Count, Q
@@ -843,7 +1071,7 @@ def fichesMensuelles(request):
     service_id = request.GET.get('service')
 
     # Base queryset for active employees
-    employees = Employees.objects.filter(etat="en cours", is_teacher=False)
+    employees = Employees.objects.filter(Q(etat="en cours") | Q(etat__isnull=True) | Q(etat=""), is_teacher=False)
     if service_id:
         employees = employees.filter(contrats__service_id=service_id).distinct()
 
@@ -910,6 +1138,7 @@ def fichesMensuelles(request):
 
 
 @transaction.atomic
+@module_permission_required('rh', 'add')
 def ApiMarkPresence(request):
     if request.method == 'POST':
         employee_id = request.POST.get('employee_id')
@@ -920,7 +1149,10 @@ def ApiMarkPresence(request):
             return JsonResponse({'status': 'error', 'message': 'Paramètres manquants'})
             
         date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-        employee = Employees.objects.get(id=employee_id)
+        try:
+            employee = Employees.objects.get(id=employee_id)
+        except Employees.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Employé introuvable'})
         
         presence, created = Presence.objects.update_or_create(
             employee=employee,
@@ -932,6 +1164,7 @@ def ApiMarkPresence(request):
     
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
 
+@module_permission_required('rh', 'view')
 def listeConges(request):
     conges = Conges.objects.all().order_by('-created_at')
     context = {
@@ -940,6 +1173,7 @@ def listeConges(request):
     }
     return render(request, 'tenant_folder/rh/conges/liste_conges.html', context)
 
+@module_permission_required('rh', 'add')
 def demandeConge(request):
     if request.method == 'POST':
         employee_id = request.POST.get('employee')
@@ -1007,6 +1241,7 @@ def demandeConge(request):
     }
     return render(request, 'tenant_folder/rh/conges/demande_conge.html', context)
 
+@module_permission_required('rh', 'approuv')
 def validerConge(request, pk):
     conge = get_object_or_404(Conges, pk=pk)
     action = request.POST.get('action') # 'valider' or 'refuser'
@@ -1036,12 +1271,20 @@ from t_ressource_humaine.models import Rubrique, FichePaie, LignePaie, Parametre
 
 from .reporting_paie import generate_payroll_journal_csv, generate_bank_transfer_csv
 
+@module_permission_required('rh', 'view')
 def assistantPaie(request):
     month = int(request.GET.get('month', timezone.now().month))
     year = int(request.GET.get('year', timezone.now().year))
     action = request.GET.get('action')
+    entreprise_id = request.GET.get('entreprise')
     
-    employees = Employees.objects.filter(etat='en cours', has_contract=True)
+    from django.db.models import Q
+    from t_ressource_humaine.models import Contrat as PayrollContrat, Rubrique, RubriqueContrat, LignePaie, FichePaie
+    
+    employees = Employees.objects.filter(Q(etat='en cours') | Q(etat__isnull=True) | Q(etat=""), has_contract=True)
+
+    if entreprise_id and entreprise_id.isdigit():
+        employees = employees.filter(contrats__type_contrat__categorie__entite_legal_id=int(entreprise_id)).distinct()
     
     payroll_data = []
     for emp in employees:
@@ -1049,15 +1292,87 @@ def assistantPaie(request):
         if not contrat_rh:
             continue
             
+        # Get or create the matching PayrollContrat
+        type_c = 'CDD'
+        if contrat_rh.type_contrat and contrat_rh.type_contrat.label:
+            lbl = contrat_rh.type_contrat.label.upper()
+            if 'CDI' in lbl:
+                type_c = 'CDI'
+            elif 'VACATION' in lbl or 'VACAT' in lbl:
+                type_c = 'VACATION'
+                
+        entreprise_obj = None
+        try:
+            entreprise_obj = contrat_rh.type_contrat.categorie.entite_legal
+        except AttributeError:
+            pass
+        
+        if not entreprise_obj:
+            entreprise_obj = Entreprise.objects.first()
+
+        rh_contrat, created = PayrollContrat.objects.get_or_create(
+            employee=emp,
+            defaults={
+                'entreprise': entreprise_obj,
+                'type_contrat': type_c,
+                'date_debut': contrat_rh.date_embauche or '2020-01-01',
+                'salaire_base': Decimal(getattr(contrat_rh, 'salaire_base', 0) or 0),
+                'prime_panier': Decimal(getattr(contrat_rh, 'prime_panier', 0) or 0),
+                'prime_transport': Decimal(getattr(contrat_rh, 'prime_transport', 0) or 0),
+            }
+        )
+        
+        if not created:
+            # Sync variables from t_rh.Contrats to t_ressource_humaine.Contrat
+            rh_contrat.entreprise = entreprise_obj
+            rh_contrat.salaire_base = Decimal(getattr(contrat_rh, 'salaire_base', 0) or 0)
+            rh_contrat.prime_panier = Decimal(getattr(contrat_rh, 'prime_panier', 0) or 0)
+            rh_contrat.prime_transport = Decimal(getattr(contrat_rh, 'prime_transport', 0) or 0)
+            if contrat_rh.type_contrat and contrat_rh.type_contrat.label:
+                lbl = contrat_rh.type_contrat.label.upper()
+                if 'CDI' in lbl:
+                    rh_contrat.type_contrat = 'CDI'
+                elif 'VACATION' in lbl or 'VACAT' in lbl:
+                    rh_contrat.type_contrat = 'VACATION'
+                else:
+                    rh_contrat.type_contrat = 'CDD'
+            rh_contrat.save()
+
+        # Skip this employee if a FichePaie already exists for the selected month/year
+        if FichePaie.objects.filter(contrat=rh_contrat, mois=month, annee=year).exists():
+            continue
+
+        # Load active rubriques and custom overrides for this contract
+        contract_rubrics_config = {rc.rubrique_id: rc for rc in RubriqueContrat.objects.filter(contrat=rh_contrat)}
+        all_rubriques = Rubrique.objects.filter(actif=True).prefetch_related('eligible_types')
+        
+        lignes_rubriques = []
+        for r in all_rubriques:
+            # check eligibility
+            if r.eligible_types.exists() and not r.eligible_types.filter(label__icontains=rh_contrat.type_contrat).exists():
+                continue
+            rc = contract_rubrics_config.get(r.id)
+            valeur = r.valeur_defaut
+            if rc:
+                if not rc.actif:
+                    continue
+                valeur = rc.valeur
+            
+            if valeur != 0:
+                lignes_rubriques.append({'rubrique': r, 'valeur': valeur})
+            
         vars = get_monthly_payroll_variables(emp, month, year)
         res = PaieEngine.calculer_paie(
-            contrat_rh, 
+            rh_contrat, 
             jours_travailles=vars['jours_travailles'],
             heures_absence=vars['absences_jours'] * 8,
+            lignes_rubriques=lignes_rubriques
         )
         
         payroll_data.append({
             'employee': emp,
+            'contrat_obj': contrat_rh,
+            'rh_contrat_obj': rh_contrat,
             'variables': vars,
             'result': res
         })
@@ -1076,38 +1391,20 @@ def assistantPaie(request):
         return response
         
     if action == 'valider':
-        from t_ressource_humaine.models import FichePaie, LignePaie, Contrat, Rubrique
         from django.db import transaction
         
         with transaction.atomic():
             for data in payroll_data:
-                contrat_rh = data['contrat_obj'] # The t_rh.Contrats object
-                
-                # Check if a FichePaie already exists for this month/year/contrat
-                # We need a t_ressource_humaine.Contrat link. 
-                # If it doesn't exist, we skip or create one.
-                # For now, let's assume we map t_rh.Contrats to a temporary or persistent RH Contrat
-                
-                # Retrieve or create the corresponding Contrat in t_ressource_humaine
-                rh_contrat, _ = Contrat.objects.get_or_create(
-                    employee=data['employee'],
-                    defaults={
-                        'entreprise': Entreprise.objects.first(),
-                        'date_debut': contrat_rh.date_debut or '2020-01-01',
-                        'salaire_base': Decimal(getattr(contrat_rh, 'salaire_base', 0) or 0),
-                        'prime_panier': Decimal(getattr(contrat_rh, 'prime_panier', 0) or 0),
-                        'prime_transport': Decimal(getattr(contrat_rh, 'prime_transport', 0) or 0),
-                    }
-                )
+                rh_contrat = data['rh_contrat_obj']
                 
                 fiche, created = FichePaie.objects.update_or_create(
                     contrat=rh_contrat,
                     mois=month,
                     annee=year,
                     defaults={
-                        'entreprise': Entreprise.objects.first(),
+                        'entreprise': rh_contrat.entreprise,
                         'jours_travailles': data['variables']['jours_travailles'],
-                        'heures_absence': data['variables']['absences_heures'],
+                        'heures_absence': data['variables']['absences_jours'] * 8,
                         'salaire_base_calcule': data['result']['salaire_base_calcule'],
                         'montant_ss': data['result']['montant_ss'],
                         'base_ss': data['result']['base_ss'],
@@ -1116,15 +1413,82 @@ def assistantPaie(request):
                         'net_a_payer': data['result']['net_a_payer'],
                         'prime_panier': data['result']['prime_panier'],
                         'prime_transport': data['result']['prime_transport'],
+                        'is_validated': True,
                     }
                 )
+                
+                # Clear existing lines to prevent duplicates
+                LignePaie.objects.filter(fiche_paie=fiche).delete()
+                
+                # Save new lines
+                for ligne in data['result']['detail_lignes']:
+                    LignePaie.objects.create(
+                        fiche_paie=fiche,
+                        rubrique=ligne['rubrique'],
+                        valeur_saisie=ligne['valeur_saisie'],
+                        montant=ligne['montant']
+                    )
         
         return redirect('t_rh:liste_fiches_paie')
+
+    total_primes = 0
+    total_retenues = 0
+    for data in payroll_data:
+        total_primes += data['result'].get('prime_panier', 0) + data['result'].get('prime_transport', 0)
+        for ligne in data['result'].get('detail_lignes', []):
+            if ligne['rubrique'].type_rubrique == 'GAIN':
+                total_primes += ligne['montant']
+            elif ligne['rubrique'].type_rubrique == 'RETENUE':
+                total_retenues += ligne['montant']
+
+    totals = {
+        'net_a_payer': sum(data['result']['net_a_payer'] for data in payroll_data),
+        'irg': sum(data['result']['irg'] for data in payroll_data),
+        'montant_ss': sum(data['result']['montant_ss'] for data in payroll_data),
+        'salaire_base_calcule': sum(data['result']['salaire_base_calcule'] for data in payroll_data),
+        'total_primes': total_primes,
+        'total_retenues': total_retenues,
+        'count': len(payroll_data)
+    }
+
+    from django.db.models import Sum
+    existing_fiches = FichePaie.objects.filter(mois=month, annee=year, contrat__employee__isnull=False)
+    existing_count = existing_fiches.count()
+    existing_totals = None
+    
+    if existing_count > 0 and len(payroll_data) == 0:
+        aggs = existing_fiches.aggregate(
+            sum_net=Sum('net_a_payer'),
+            sum_ss=Sum('montant_ss'),
+            sum_irg=Sum('irg'),
+            sum_base=Sum('salaire_base_calcule'),
+            sum_panier=Sum('prime_panier'),
+            sum_transport=Sum('prime_transport')
+        )
+        # Add Gains from LignePaie
+        sum_gains = LignePaie.objects.filter(fiche_paie__in=existing_fiches, rubrique__type_rubrique='GAIN').aggregate(sum_g=Sum('montant'))['sum_g'] or 0
+        total_primes_existing = (aggs['sum_panier'] or 0) + (aggs['sum_transport'] or 0) + sum_gains
+        
+        existing_totals = {
+            'net_a_payer': aggs['sum_net'] or 0,
+            'montant_ss': aggs['sum_ss'] or 0,
+            'irg': aggs['sum_irg'] or 0,
+            'salaire_base_calcule': aggs['sum_base'] or 0,
+            'total_primes': total_primes_existing,
+            'count': existing_count
+        }
+
+    entreprises = Entreprise.objects.all().order_by('designation')
 
     context = {
         'month': month,
         'year': year,
         'payroll_data': payroll_data,
+        'totals': totals,
+        'existing_count': existing_count,
+        'existing_totals': existing_totals,
+        'entreprises': entreprises,
+        'selected_entreprise': int(entreprise_id) if entreprise_id and entreprise_id.isdigit() else None,
         'months_choices': [
             (1, 'Janvier'), (2, 'Février'), (3, 'Mars'), (4, 'Avril'),
             (5, 'Mai'), (6, 'Juin'), (7, 'Juillet'), (8, 'Août'),
@@ -1137,10 +1501,19 @@ def assistantPaie(request):
 
 from t_ressource_humaine.models import TrancheIRG
 
+@module_permission_required('rh', 'change')
 def configFiscalite(request):
     # Retrieve the legal entity for the current tenant
     entreprise = Entreprise.objects.first()
     config = ParametresPaie.get_config(entreprise=entreprise)
+
+    if not TrancheIRG.objects.exists():
+        TrancheIRG.objects.bulk_create([
+            TrancheIRG(min_montant=0, max_montant=30000, taux=0.00),
+            TrancheIRG(min_montant=30000, max_montant=35000, taux=0.20),
+            TrancheIRG(min_montant=35000, max_montant=120000, taux=0.30),
+            TrancheIRG(min_montant=120000, max_montant=None, taux=0.35),
+        ])
 
     tranches = TrancheIRG.objects.all().order_by('min_montant')
     
@@ -1161,27 +1534,197 @@ def configFiscalite(request):
 
 from t_ressource_humaine.models import FichePaie
 
+@module_permission_required('rh', 'view')
 def listeFichesPaie(request):
     fiches = FichePaie.objects.filter(contrat__employee__isnull=False).order_by('-annee', '-mois', 'contrat__employee__nom')
     
-    # Filter by month/year if provided
+    # Filter by month/year/employee/status if provided
     month = request.GET.get('month')
     year = request.GET.get('year')
-    if month:
-        fiches = fiches.filter(mois=month)
-    if year:
-        fiches = fiches.filter(annee=year)
+    employee_id = request.GET.get('employee')
+    status = request.GET.get('status')
+    entreprise_id = request.GET.get('entreprise')
+    
+    if month and month.isdigit():
+        fiches = fiches.filter(mois=int(month))
+    if year and year.isdigit():
+        fiches = fiches.filter(annee=int(year))
+    if employee_id and employee_id.isdigit():
+        fiches = fiches.filter(contrat__employee_id=int(employee_id))
+    if entreprise_id and entreprise_id.isdigit():
+        fiches = fiches.filter(entreprise_id=int(entreprise_id))
+    if status:
+        if status == 'validated':
+            fiches = fiches.filter(is_validated=True)
+        elif status == 'draft':
+            fiches = fiches.filter(is_validated=False)
+            
+    employees = Employees.objects.all().order_by('nom', 'prenom')
+    entreprises = Entreprise.objects.all().order_by('designation')
+    years = FichePaie.objects.values_list('annee', flat=True).distinct().order_by('-annee')
+    if not list(years):
+        years = [timezone.now().year]
         
     context = {
         'fiches': fiches,
+        'employees': employees,
+        'entreprises': entreprises,
+        'years': years,
+        'selected_month': int(month) if month and month.isdigit() else None,
+        'selected_year': int(year) if year and year.isdigit() else None,
+        'selected_employee': int(employee_id) if employee_id and employee_id.isdigit() else None,
+        'selected_entreprise': int(entreprise_id) if entreprise_id and entreprise_id.isdigit() else None,
+        'selected_status': status,
         'months_choices': [
             (1, 'Janvier'), (2, 'Février'), (3, 'Mars'), (4, 'Avril'),
             (5, 'Mai'), (6, 'Juin'), (7, 'Juillet'), (8, 'Août'),
             (9, 'Septembre'), (10, 'Octobre'), (11, 'Novembre'), (12, 'Décembre')
         ]
     }
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 'tenant_folder/rh/paie/_liste_fiches_paie_table.html', context)
+        
     return render(request, 'tenant_folder/rh/paie/liste_fiches_paie.html', context)
 
+@module_permission_required('rh', 'delete')
+def ApiDeleteFichePaie(request):
+    if request.method == 'POST':
+        fiche_id = request.POST.get('fiche_id')
+        if not fiche_id:
+            import json
+            try:
+                data = json.loads(request.body)
+                fiche_id = data.get('fiche_id')
+            except:
+                pass
+        
+        if not fiche_id:
+            return JsonResponse({'status': 'error', 'message': 'Fiche de paie non spécifiée.'})
+            
+        try:
+            from t_ressource_humaine.models import FichePaie
+            fiche = FichePaie.objects.get(id=fiche_id)
+            if fiche.is_validated:
+                return JsonResponse({'status': 'error', 'message': 'Impossible de supprimer un bulletin de paie validé et scellé.'})
+            
+            fiche.delete()
+            return JsonResponse({'status': 'success', 'message': 'Bulletin de paie supprimé avec succès.'})
+        except FichePaie.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Bulletin de paie introuvable.'})
+            
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
+@module_permission_required('rh', 'change')
+def ApiValiderFichePaie(request):
+    if request.method == 'POST':
+        action = request.POST.get('action', 'valider')
+        fiche_ids = request.POST.getlist('fiche_ids[]')
+        
+        if not fiche_ids:
+            fiche_id = request.POST.get('fiche_id')
+            if fiche_id:
+                fiche_ids = [fiche_id]
+                
+        if not fiche_ids:
+            import json
+            try:
+                data = json.loads(request.body)
+                fiche_ids = data.get('fiche_ids', [])
+                if not isinstance(fiche_ids, list) and data.get('fiche_id'):
+                    fiche_ids = [data.get('fiche_id')]
+                action = data.get('action', 'valider')
+            except:
+                pass
+
+        if not fiche_ids:
+            return JsonResponse({'status': 'error', 'message': 'Aucun bulletin sélectionné.'})
+
+        from t_ressource_humaine.models import FichePaie
+        fiches = FichePaie.objects.filter(id__in=fiche_ids)
+        
+        is_val = (action == 'valider')
+        count = fiches.update(is_validated=is_val)
+        
+        msg = f"{count} bulletin(s) de paie validé(s) avec succès." if is_val else f"Validation annulée pour {count} bulletin(s)."
+        return JsonResponse({'status': 'success', 'message': msg})
+
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
+@module_permission_required('rh', 'change')
+def ApiValiderPaieMois(request):
+    if request.method == 'POST':
+        import json
+        try:
+            data = json.loads(request.body)
+            month = data.get('month')
+            year = data.get('year')
+            entreprise_id = data.get('entreprise')
+        except:
+            month = request.POST.get('month')
+            year = request.POST.get('year')
+            entreprise_id = request.POST.get('entreprise')
+            
+        if not month or not year:
+            return JsonResponse({'status': 'error', 'message': 'Mois et année requis.'})
+            
+        from t_ressource_humaine.models import FichePaie
+        fiches = FichePaie.objects.filter(mois=int(month), annee=int(year), is_validated=False)
+        if entreprise_id:
+            fiches = fiches.filter(entreprise_id=int(entreprise_id))
+            
+        count = fiches.update(is_validated=True)
+        
+        if count > 0:
+            # Envoi de la notification
+            try:
+                from institut_app.models import GlobalConfiguration, SaaSNotification
+                from django.contrib.auth.models import User
+                config = GlobalConfiguration.get_solo()
+                
+                mois_noms = {
+                    1: 'Janvier', 2: 'Février', 3: 'Mars', 4: 'Avril',
+                    5: 'Mai', 6: 'Juin', 7: 'Juillet', 8: 'Août',
+                    9: 'Septembre', 10: 'Octobre', 11: 'Novembre', 12: 'Décembre'
+                }
+                nom_mois = mois_noms.get(int(month), month)
+                
+                entite_nom = ""
+                if entreprise_id:
+                    try:
+                        from institut_app.models import Entreprise
+                        entite = Entreprise.objects.get(id=int(entreprise_id))
+                        entite_nom = f" ({entite.designation})"
+                    except Exception:
+                        pass
+                
+                message = f"La paie du mois de {nom_mois} {year}{entite_nom} a été validée par les RH. Elle est disponible pour règlement en comptabilité."
+                
+                receivers = []
+                if config.paie_notification_mode == 'role':
+                    receivers = User.objects.filter(is_superuser=True)
+                else:
+                    receivers = config.paie_notification_receivers.all()
+                    
+                for user in receivers:
+                    SaaSNotification.objects.create(
+                        titre="Paie Validée",
+                        message=message,
+                        module="Finance",
+                        icon="ri-money-dollar-circle-line",
+                        url="/comptabilite/tresorerie/paies/liste/",
+                        user=user,
+                        tenant=request.tenant
+                    )
+            except Exception as e:
+                print("Erreur lors de l'envoi de la notification :", str(e))
+        
+        return JsonResponse({'status': 'success', 'message': f'{count} fiche(s) validée(s) pour le mois avec succès.'})
+        
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})
+
+
+@module_permission_required('rh', 'view')
 def detailFichePaie(request, pk):
     fiche = get_object_or_404(FichePaie, pk=pk)
     context = {
@@ -1190,6 +1733,7 @@ def detailFichePaie(request, pk):
     }
     return render(request, 'tenant_folder/rh/paie/fiche_paie_detail.html', context)
 
+@module_permission_required('rh', 'view')
 def hubConfigRH(request):
 
 
@@ -1199,6 +1743,7 @@ def hubConfigRH(request):
     }
     return render(request, 'tenant_folder/rh/hub_config_rh.html', context)
 
+@module_permission_required('rh', 'change')
 def configRH(request):
 
     config, created = HRConfig.objects.get_or_create(pk=1)
@@ -1218,6 +1763,7 @@ def configRH(request):
     }
     return render(request, 'tenant_folder/rh/config_rh.html', context)
 
+@module_permission_required('rh', 'view')
 def dashboardRH(request):
     today = timezone.now().date()
     start_of_month = today.replace(day=1)
@@ -1314,4 +1860,4 @@ def dashboardRH(request):
 
 
 
-
+

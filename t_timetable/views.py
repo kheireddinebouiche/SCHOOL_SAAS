@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from .forms import *
@@ -14,6 +15,7 @@ from t_etudiants.models import *
 from t_formations.models import Formateurs
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ListeDesSalles(request):
     salles = Salle.objects.all()
     context = {
@@ -23,6 +25,7 @@ def ListeDesSalles(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ListeDesEmploie(request):
     liste = Timetable.objects.all()
     
@@ -32,6 +35,7 @@ def ListeDesEmploie(request):
     return render(request ,'tenant_folder/timetable/liste_des_emploies.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'add')
 def CreateTimeTable(request):
     groupes = Groupe.objects.all()
     context = {
@@ -40,6 +44,7 @@ def CreateTimeTable(request):
     return render(request, 'tenant_folder/timetable/ajouter_emploi_temps.html', context)
 
 @login_required(login_url="insitut_app:login")
+@module_permission_required('int', 'add')
 @transaction.atomic
 def ApiCreateTimeTable(request):
     if request.method == "POST":
@@ -80,6 +85,7 @@ def ApiCreateTimeTable(request):
         return JsonResponse({"status" : "error",'message' : "Methode non autoriser"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'delete')
 @transaction.atomic
 def ApiDeleteTimeTable(request):
     if request.method == 'GET':
@@ -100,6 +106,7 @@ def ApiDeleteTimeTable(request):
         return JsonResponse({'status':'error'})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def timetable_view(request, pk):
     timetable = Timetable.objects.get(id = pk)
     sessions = timetable.entries.all()  # Using the related name
@@ -173,6 +180,7 @@ def timetable_view(request, pk):
     return render(request, 'tenant_folder/timetable/details_timetable.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 @transaction.atomic
 def ApiPausetimeTable(request):
     if request.method == "GET":
@@ -189,6 +197,7 @@ def ApiPausetimeTable(request):
         return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 @transaction.atomic
 def ApiClotureTimeTable(request):
     if request.method == "GET":
@@ -213,6 +222,7 @@ def CheckIfExistsEncTimetable(groupe,semestre):
     ).exists()
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 @transaction.atomic
 def ApiActivateTimeTable(request):
     if request.method == "GET":
@@ -236,6 +246,7 @@ def ApiActivateTimeTable(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'delete')
 @transaction.atomic
 def ApiDeleteCoursSession(request):
     if request.method == "POST":
@@ -251,6 +262,7 @@ def ApiDeleteCoursSession(request):
 
 ### FONCTION PERMETANT DE CONFIGURER LE MODELE DE CRENEAU ###
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 def timetable_configure(request, pk):
     timetable = Timetable.objects.get(id = pk)
     crenau = ModelCrenau.objects.filter(is_active=True)
@@ -264,6 +276,7 @@ def timetable_configure(request, pk):
         return render(request, 'tenant_folder/timetable/configuration_emploie.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def FilterFormateur(request):
     if request.method == "GET":
         code_module = request.GET.get('code_module')
@@ -277,6 +290,7 @@ def FilterFormateur(request):
         return JsonResponse({"status": "error",'message' : "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 @transaction.atomic
 def ApiMakeTimetableDone(request):
     if request.method == "GET":
@@ -293,7 +307,9 @@ def ApiMakeTimetableDone(request):
         return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 @transaction.atomic
+@module_permission_required('int', 'approuv')
 def ApiValidateTimetable(request):
     id_emploie = request.GET.get('id_emploie')
     obj = Timetable.objects.get(id = id_emploie)
@@ -305,6 +321,7 @@ def ApiValidateTimetable(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'add')
 @transaction.atomic
 def ApiGenerateRegistre(request):
     if request.method == "GET":
@@ -365,6 +382,7 @@ def CreateRegisterLine(module, teacher, salle, registre, heure_debut, heure_fin,
     
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'delete')
 def ApiDeleteRegistre(request):
     if request.method == "GET":
         registreId = request.GET.get('registreId')
@@ -384,6 +402,7 @@ def ApiDeleteRegistre(request):
         return JsonResponse({"status" : "error"})
 
 @login_required(login_url="insitut_app:login")
+@module_permission_required('int', 'change')
 @transaction.atomic
 def ApiMakeTimetableDraft(request):
     if request.method == "GET":
@@ -398,6 +417,7 @@ def ApiMakeTimetableDraft(request):
 
 
 @login_required(login_url="insitut_app:login")
+@module_permission_required('int', 'view')
 def get_formateur_dispo_status(request):
     formateur_id = request.GET.get('teacherId')
     formateur = Formateurs.objects.get(id=formateur_id)
@@ -451,6 +471,7 @@ def get_formateur_dispo_status(request):
     return JsonResponse({"result":result})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'add')
 @transaction.atomic
 def save_session(request):
 
@@ -519,6 +540,8 @@ def get_salles_disponibles(jour, heure_debut, heure_fin):
 
 from datetime import time
 
+@login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def salles_disponibles_view(request):
     
     heure_debut = request.GET.get('heur_debut')

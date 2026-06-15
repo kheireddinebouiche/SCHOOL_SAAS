@@ -35,20 +35,24 @@ def send_notification_to_user(user, message, link=None, extra_data=None):
 
 def send_notification_to_role(role_name, message, link=None):
     """
-    Sends a notification to all users who have the specified role name.
+    Sends a notification to all users who have the specified role name, and to superusers.
     """
-    users = get_user_model().objects.filter(module_roles__role__name=role_name).distinct()
+    from django.db.models import Q
+    users = get_user_model().objects.filter(
+        Q(module_roles__role__name=role_name) | Q(is_superuser=True)
+    ).distinct()
     for user in users:
         send_notification_to_user(user, message, link)
 
 def send_notification_to_module_level(module_name, role_levels, message, link=None):
     """
-    Sends a notification to users who have a specific role level in a specific module.
+    Sends a notification to users who have a specific role level in a specific module, and to superusers.
     role_levels: list of integers (e.g. [2, 3] for Supervisor, Manager)
     """
+    from django.db.models import Q
     users = get_user_model().objects.filter(
-        module_roles__module__name=module_name, 
-        module_roles__role__level__in=role_levels
+        Q(module_roles__module__name=module_name, module_roles__role__level__in=role_levels) |
+        Q(is_superuser=True)
     ).distinct()
     
     for user in users:

@@ -99,6 +99,35 @@
         color: var(--primary-color);
         font-weight: 500;
     }
+
+    /* Fix Select2 inside Input Group */
+    .input-group .select2-container {
+        flex: 1 1 auto;
+        width: 1% !important;
+    }
+    .input-group .select2-container--default .select2-selection--single {
+        height: 43px;
+        border: 1px solid var(--border-color);
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        display: flex;
+        align-items: center;
+    }
+    .input-group .select2-container--default .select2-selection--single .select2-selection__rendered {
+        padding-left: 16px;
+        color: #495057;
+        font-size: 14px;
+        line-height: normal;
+    }
+    .input-group .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 41px;
+        right: 10px;
+    }
+    .input-group .select2-container--default.select2-container--focus .select2-selection--single {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px var(--primary-soft);
+        outline: 0;
+    }
 </style>
 
 <div class="main-content">
@@ -125,7 +154,7 @@
             </div>
 
             <div class="row justify-content-center">
-                <div class="col-xl-9 col-lg-10">
+                <div class="col-12">
                     <div class="card card-premium">
                         <!-- Header -->
                         <div class="card-header-premium">
@@ -381,24 +410,49 @@
             loadClients(type, context);
         });
 
-        // Load payment types
+        // Load payment categories instead of types
         function loadPaymentTypes(){
             $.ajax({
-                url: "{% url 't_tresorerie:ApiListePaymentTypes' %}",
+                url: "{% url 't_tresorerie:ApiListeCategoriesProduits' %}",
                 type: "GET",
                 success: function(response) {
                     var select = $('#compte');
                     select.empty();
                     select.append('<option value="">Veuillez sélectionner une catégorie</option>');
 
-                    if(response && response.length > 0) {
-                        response.forEach(function(type) {
-                            select.append('<option value="'+type.id+'">' + type.name + '</option>');
+                    function renderCategory(cat, level) {
+                        var prefix = '';
+                        for (var i = 0; i < level; i++) {
+                            prefix += '&nbsp;&nbsp;&nbsp;';
+                        }
+                        if (level > 0) {
+                            prefix += '-- ';
+                        }
+                        
+                        var style = level === 0 ? 'font-weight: bold;' : '';
+                        select.append('<option value="'+cat.id+'" style="'+style+'">' + prefix + cat.name + '</option>');
+                        
+                        if (cat.children && cat.children.length > 0) {
+                            cat.children.forEach(function(child) {
+                                renderCategory(child, level + 1);
+                            });
+                        }
+                    }
+
+                    if(response && response.data && response.data.length > 0) {
+                        response.data.forEach(function(cat) {
+                            renderCategory(cat, 0);
                         });
                     }
+
+                    // Initialize Select2 after options are added
+                    $('#compte').select2({
+                        width: '100%',
+                        placeholder: 'Sélectionner une catégorie'
+                    });
                 },
                 error: function(xhr, status, error) {
-                    console.log("Erreur lors du chargement des types: " + error);
+                    console.log("Erreur lors du chargement des catégories: " + error);
                 }
             });
         }

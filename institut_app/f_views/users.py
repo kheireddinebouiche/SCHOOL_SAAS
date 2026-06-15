@@ -1,3 +1,5 @@
+from institut_app.decorators import superuser_required
+from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
@@ -11,10 +13,12 @@ from ..models import UserSession, UserDeviceLog
 User = get_user_model()
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def liste_users(request):
     return render(request, 'tenant_folder/users/liste_users.html')
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiListeUtilisateurs(request):
     if request.method == "GET":
         try:
@@ -49,6 +53,7 @@ def ApiListeUtilisateurs(request):
         return JsonResponse({"status": "error", "message": "Method not allowed"})
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiShowUserDetails(request):
     if request.method == "GET":
         user_id = request.GET.get('id')
@@ -82,6 +87,7 @@ def ApiShowUserDetails(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiUpdateUser(request):
     if request.method == "POST":
         user_id = request.POST.get('id')
@@ -117,6 +123,16 @@ def ApiUpdateUser(request):
             
             user.save()
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='User',
+                target_id=str(user.id),
+                details=f"Modification des informations de l'utilisateur {user.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({"status": "success", "message": "User updated successfully"})
         except User.DoesNotExist:
             return JsonResponse({"status": "error", "message": "User not found"})
@@ -127,6 +143,7 @@ def ApiUpdateUser(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiDeleteUser(request):
     if request.method == "POST":
         user_id = request.POST.get('id')
@@ -141,8 +158,19 @@ def ApiDeleteUser(request):
             if user.is_superuser:
                 return JsonResponse({"status": "error", "message": "Cannot delete superuser account"})
             
+            username = user.username
             user.delete()
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='User',
+                target_id=str(user_id),
+                details=f"Suppression de l'utilisateur {username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({"status": "success", "message": "User deleted successfully"})
         except User.DoesNotExist:
             return JsonResponse({"status": "error", "message": "User not found"})
@@ -153,6 +181,7 @@ def ApiDeleteUser(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiChangeUserStatus(request):
     if request.method == "POST":
         user_id = request.POST.get('id')
@@ -174,6 +203,16 @@ def ApiChangeUserStatus(request):
 
             status_text = "activé" if new_status else "désactivé"
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='User',
+                target_id=str(user.id),
+                details=f"Statut {status_text} pour l'utilisateur {user.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 "status": "success",
                 "message": f"Compte utilisateur {status_text} avec succès",
@@ -188,6 +227,7 @@ def ApiChangeUserStatus(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiCreateUser(request):
     if request.method == "POST":
         username = request.POST.get('username')
@@ -231,6 +271,16 @@ def ApiCreateUser(request):
                 last_password_change=timezone.now()
             )
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='User',
+                target_id=str(user.id),
+                details=f"Création de l'utilisateur {user.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 "status": "success",
                 "message": "Utilisateur créé avec succès",
@@ -243,6 +293,7 @@ def ApiCreateUser(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
 def ApiChangeUserPassword(request):
     if request.method == "POST":
         user_id = request.POST.get('id')
@@ -279,6 +330,16 @@ def ApiChangeUserPassword(request):
                 handled_by=request.user
             )
 
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='User',
+                target_id=str(user.id),
+                details=f"Modification du mot de passe de l'utilisateur {user.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 "status": "success",
                 "message": "Mot de passe changé avec succès"
@@ -292,6 +353,45 @@ def ApiChangeUserPassword(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@superuser_required
+def ApiForcePasswordChangeAdmin(request):
+    if request.method == "POST":
+        user_id = request.POST.get('id')
+
+        if not user_id:
+            return JsonResponse({"status": "error", "message": "User ID is required"})
+
+        try:
+            user = User.objects.get(id=user_id)
+            from ..models import Profile
+            profile, created = Profile.objects.get_or_create(user=user)
+            profile.force_password_change = True
+            profile.save()
+
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='User',
+                target_id=str(user.id),
+                details=f"Changement de mot de passe forcé pour l'utilisateur {user.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
+            return JsonResponse({
+                "status": "success",
+                "message": f"Le changement de mot de passe a été forcé pour {user.username}. Il devra le modifier à sa prochaine connexion."
+            })
+        except User.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Utilisateur introuvable"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    else:
+        return JsonResponse({"status": "error", "message": "Method not allowed"})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+@superuser_required
 def ApiResetDeviceLock(request):
     """
     Réinitialise le verrouillage de l'appareil pour un utilisateur.
@@ -308,6 +408,16 @@ def ApiResetDeviceLock(request):
             session_info.last_session_key = None # On force aussi la déconnexion
             session_info.save()
             
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='UserSession',
+                target_id=str(user_id),
+                details=f"Réinitialisation du verrouillage appareil pour l'utilisateur (ID: {user_id})",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 "status": "success", 
                 "message": "Le verrouillage de l'appareil a été réinitialisé. L'utilisateur peut maintenant se connecter sur un nouveau poste."
@@ -318,6 +428,7 @@ def ApiResetDeviceLock(request):
         return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def DeviceManagementPage(request):
     """
     Page affichant l'historique des appareils et des connexions.
@@ -339,6 +450,7 @@ def DeviceManagementPage(request):
     return render(request, 'tenant_folder/users/device_management.html', context)
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def ApiToggleDeviceLock(request):
     """
     Active ou désactive le verrouillage par appareil pour un utilisateur.
@@ -358,6 +470,17 @@ def ApiToggleDeviceLock(request):
             session_info.save()
             
             status_text = "activé" if session_info.is_device_lock_enabled else "désactivé"
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='UserSession',
+                target_id=str(user_id),
+                details=f"Verrouillage appareil {status_text} pour l'utilisateur {user.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({
                 "status": "success", 
                 "message": f"Le verrouillage par appareil a été {status_text} pour {user.username}.",
@@ -370,6 +493,7 @@ def ApiToggleDeviceLock(request):
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@superuser_required
 def LoginAsUser(request, user_id):
     if not request.user.is_superuser:
         messages.error(request, "Permission refusée.")
@@ -381,6 +505,16 @@ def LoginAsUser(request, user_id):
     # login flushes session, so set variable after login
     login(request, target_user, backend='django.contrib.auth.backends.ModelBackend')
     request.session['impersonator_id'] = original_user_id
+    
+    from t_crm.models import UserActionLog
+    UserActionLog.objects.create(
+        user=User.objects.get(id=original_user_id),
+        action_type='LOGIN',
+        target_model='User',
+        target_id=str(target_user.id),
+        details=f"Connexion en tant que l'utilisateur {target_user.username}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
     
     messages.success(request, f"Vous êtes maintenant connecté(e) en tant que {target_user.username}.")
     return redirect('institut_app:index')
@@ -394,9 +528,97 @@ def RestoreOriginalUser(request):
             login(request, impersonator, backend='django.contrib.auth.backends.ModelBackend')
             if 'impersonator_id' in request.session:
                 del request.session['impersonator_id']
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=impersonator,
+                action_type='OTHER',
+                target_model='User',
+                details="Restauration de la session administrateur d'origine",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             messages.success(request, f"De retour sur votre compte administrateur ({impersonator.username}).")
         except User.DoesNotExist:
             messages.error(request, "Impossible de retrouver le compte d'origine.")
     else:
         messages.info(request, "Aucune session d'origine trouvée.")
     return redirect('institut_app:index')
+
+@login_required(login_url="institut_app:login")
+@superuser_required
+def ApiGetSubMenuAccess(request):
+    user_id = request.GET.get('id')
+    module_code = request.GET.get('module_code', 'tre')
+    
+    if not user_id:
+        return JsonResponse({"status": "error", "message": "ID utilisateur requis"})
+        
+    try:
+        from institut_app.models import UserSubMenuAccess
+        target_user = User.objects.get(id=user_id)
+        
+        # Liste des sous-menus connus pour forcer l'activation par défaut
+        submenus = []
+        if module_code == 'tre':
+            submenus = ['dashboard', 'tresorerie', 'exec_edu', 'remboursement', 'remises', 'caisse', 'banque', 'autres_paiements', 'depenses', 'fournisseurs', 'factures', 'parametres', 'echeanciers']
+        elif module_code == 'scol':
+            submenus = ['groupes', 'affectations', 'etudiants', 'transferts', 'presences', 'contrats']
+            
+        # "l'accès aux sous menu scolarité et finance doivent etre activé par default (si dans le systeme on les trouve descativé il faut les activé)"
+        # Modifié pour ne pas écraser les désactivations manuelles.
+        for sc in submenus:
+            UserSubMenuAccess.objects.get_or_create(
+                user=target_user,
+                module_code=module_code,
+                submenu_code=sc,
+                defaults={'is_active': True}
+            )
+                
+        accesses = UserSubMenuAccess.objects.filter(user=target_user, module_code=module_code)
+        
+        data = {acc.submenu_code: acc.is_active for acc in accesses}
+        return JsonResponse({"status": "success", "data": data})
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)})
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+@superuser_required
+def ApiToggleSubMenuAccess(request):
+    if request.method == "POST":
+        import json
+        data = json.loads(request.body)
+        user_id = data.get('id')
+        module_code = data.get('module_code', 'tre')
+        submenu_code = data.get('submenu_code')
+        is_active = data.get('is_active')
+        
+        if not user_id or not submenu_code:
+            return JsonResponse({"status": "error", "message": "Données incomplètes"})
+            
+        try:
+            from institut_app.models import UserSubMenuAccess
+            target_user = User.objects.get(id=user_id)
+            access, created = UserSubMenuAccess.objects.get_or_create(
+                user=target_user, 
+                module_code=module_code, 
+                submenu_code=submenu_code
+            )
+            access.is_active = is_active
+            access.save()
+            
+            from t_crm.models import UserActionLog
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='UserSubMenuAccess',
+                target_id=str(target_user.id),
+                details=f"Mise à jour de l'accès au sous-menu {submenu_code} (Module {module_code}) pour {target_user.username}: {'Activé' if is_active else 'Désactivé'}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
+            return JsonResponse({"status": "success", "message": "Paramètre mis à jour"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})

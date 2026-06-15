@@ -2,8 +2,9 @@ from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from ..models import *
 from django.contrib.auth.decorators import login_required
+from institut_app.decorators import module_permission_required
 from ..forms import *
-from t_crm.models import NotesProcpects, RendezVous
+from t_crm.models import NotesProcpects, RendezVous, UserActionLog
 from django.db import transaction
 from t_formations.models import *
 from t_groupe.models import GroupeLine, Group
@@ -15,6 +16,7 @@ from django.shortcuts import get_object_or_404
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def RegistrePage(request):
 
     groupes = Groupe.objects.all()
@@ -92,6 +94,7 @@ def RegistrePage(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'add')
 @transaction.atomic
 def ApiSaveRegistreGroupe(request):
     registerName = request.POST.get('registerName')
@@ -100,10 +103,19 @@ def ApiSaveRegistreGroupe(request):
 
 
     try:
-        RegistrePresence.objects.create(
+        registre = RegistrePresence.objects.create(
             label = registerName,
             semestre = semester,
             groupe_id = group,
+        )
+
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='RegistrePresence',
+            target_id=str(registre.id),
+            details=f"Création d'un registre de présence : {registerName} (Semestre {semester})",
+            ip_address=request.META.get('REMOTE_ADDR')
         )
 
         return JsonResponse({"status" : "success"})
@@ -112,6 +124,7 @@ def ApiSaveRegistreGroupe(request):
     
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def DetailsRegistrePresence(request, pk):
     registre = RegistrePresence.objects.get(id= pk)
 
@@ -129,6 +142,7 @@ def DetailsRegistrePresence(request, pk):
     return render(request, 'tenant_folder/presences/details_registre.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'add')
 def liste_registres(request):
     if request.method == "POST":
         module_id = request.POST.get('module_id')
@@ -158,6 +172,7 @@ def liste_registres(request):
     
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def DetailsListePresence(request, pk):
     object = LigneRegistrePresence.objects.get(id = pk)
 
@@ -171,6 +186,7 @@ def DetailsListePresence(request, pk):
     return render(request, 'tenant_folder/presences/details_ligne_presence.html', context)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ApiLoadDatas(request):
     if request.method == "GET":
         id_ligne_presence = request.GET.get('id_ligne_presence')
@@ -212,6 +228,7 @@ def ApiLoadDatas(request):
         return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'add')
 @csrf_exempt
 def ApiAjouterHistoriqueAbsence(request):
     if request.method == "POST":
@@ -251,6 +268,15 @@ def ApiAjouterHistoriqueAbsence(request):
                     # Appel de la méthode du modèle
                     historique.ajouter_entree(date_obj, module_label, module_code, status)
 
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='LigneRegistrePresence',
+                target_id=str(ligne_id),
+                details=f"Mise à jour des présences/absences pour le {date_str} (Module: {ligne.module.label if ligne.module else 'N/A'})",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             return JsonResponse({"status": "success", "message": "Historique mis à jour avec succès"})
         
         except Exception as e:
@@ -259,6 +285,7 @@ def ApiAjouterHistoriqueAbsence(request):
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ApiGetHistoriqueEtudiant(request, pk, id_ligne):
     try:
         historique_obj = get_object_or_404(HistoriqueAbsence, etudiant_id=pk, ligne_presence_id=id_ligne)
@@ -268,6 +295,7 @@ def ApiGetHistoriqueEtudiant(request, pk, id_ligne):
         return JsonResponse({"status": "error", "message": str(e)})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 @csrf_exempt
 def ApiUpdateAbsenceReason(request):
     if request.method == "POST":
@@ -335,6 +363,16 @@ def ApiUpdateAbsenceReason(request):
                 if updated:
                     historique_obj.historique = new_historique
                     historique_obj.save()
+                    
+                    UserActionLog.objects.create(
+                        user=request.user,
+                        action_type='UPDATE',
+                        target_model='HistoriqueAbsence',
+                        target_id=str(historique_obj.id),
+                        details=f"Mise à jour du motif d'absence pour l'étudiant ID {student_id} au {date_str} (Nouveau motif: {new_reason})",
+                        ip_address=request.META.get('REMOTE_ADDR')
+                    )
+                    
                     return JsonResponse({"status": "success", "message": "Enregistrement réussi."})
             
             return JsonResponse({"status": "error", "message": f"Erreur : {error_details}"})
@@ -346,6 +384,7 @@ def ApiUpdateAbsenceReason(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ListeDesEtudiants(request):
     liste = Prospets.objects.filter(statut = "convertit")
     context = {
@@ -453,6 +492,7 @@ def get_attendance_data(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def EtatPresences(request):
     """Vue HTML principale"""
     final_stats = get_attendance_data(request)
@@ -461,6 +501,7 @@ def EtatPresences(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'export')
 def ExportPresencesExcel(request):
     """Génération du fichier Excel"""
     from openpyxl import Workbook
@@ -521,6 +562,7 @@ def ExportPresencesExcel(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'export')
 def ExportPresencesPDF(request):
     """Génération du fichier PDF via WeasyPrint"""
     from weasyprint import HTML

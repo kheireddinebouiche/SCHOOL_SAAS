@@ -6,12 +6,14 @@ from institut_app.models import *
 from django.contrib import messages
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
+from institut_app.decorators import module_permission_required
 from t_groupe.models import *
 from django.views.decorators.http import require_http_methods
 from django.db.models import Count
 import json
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def PageAffectation(request):
 
     modules = Modules.objects.annotate(nombre_formateur = Count('affect_module'))
@@ -31,6 +33,7 @@ def PageAffectation(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def LoadFormateurs(request):
     if request.method == "GET":
         formateur = Formateurs.objects.all().values('id','nom','prenom','email','telephone')
@@ -39,6 +42,7 @@ def LoadFormateurs(request):
         return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ApiLoadFormation(request):
     if request.method == "GET":
         formations = Formation.objects.all().values('id','code','nom')
@@ -48,6 +52,7 @@ def ApiLoadFormation(request):
     return JsonResponse({"status":"error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ApiFilterSpecialite(request):
     if request.method == "GET":
         formation = request.GET.get('id')
@@ -59,6 +64,7 @@ def ApiFilterSpecialite(request):
         return JsonResponse({"status" : "error"})
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ApiFilterModules(request):
     if request.method == "GET":
         specialite = request.GET.get('id')
@@ -71,6 +77,7 @@ def ApiFilterModules(request):
     
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ApiLoaAffectation(request):
     if request.method == "GET":
         formateurId = request.GET.get('formateurId')
@@ -83,11 +90,13 @@ def ApiLoaAffectation(request):
         return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ApiGetAffectations(request):
     affectations = list(EnseignantModule.objects.values('id', 'formateur_id', 'module_id'))
     return JsonResponse({'affectations': affectations})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def ApiLoadModules(request):
     modules = Modules.objects.annotate(nombre_formateur = Count('affect_module')).values('id','label','code','specialite__label', 'nombre_formateur')
 
@@ -95,6 +104,7 @@ def ApiLoadModules(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def LoadAssignedProf(request):
     if request.method == "GET":
         moduleId = request.GET.get('moduleId')
@@ -108,6 +118,7 @@ def LoadAssignedProf(request):
         return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'view')
 def LoadAffectation(request):
     """
     Vue pour charger les affectations avec le bouton de suppression
@@ -151,6 +162,7 @@ def LoadAffectation(request):
         return JsonResponse({"status" : "error", "message" : "Méthode non autorisée"})
     
 @login_required(login_url="insitut_app:login")
+@module_permission_required('int', 'change')
 @transaction.atomic
 def ApiAffectTrainer(request):
     if request.method == "POST":
@@ -182,6 +194,7 @@ def CheckIfModuleIsPlanned(moduleId, trainerId):
     ).exists()
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'change')
 def ApiDeaffectTrainer(request):
     if request.method == "POST":
         moduleId = request.POST.get('module_id')
@@ -203,6 +216,7 @@ def ApiDeaffectTrainer(request):
         return JsonResponse({"status" : "error", "message" : "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('int', 'delete')
 def ApiDeleteAffectation(request):
     """
     Vue pour supprimer une affectation spécifique via une action dans une fenêtre modale

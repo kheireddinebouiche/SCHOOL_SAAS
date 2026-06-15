@@ -1,0 +1,354 @@
+{% extends 'saas_admin_app/saas_base.html' %}
+{% load static %}
+
+{% block title %} Annonces & Notifications {% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="glass-card p-4 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-box primary">
+                        <i class="ri-notification-3-line"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-1 text-primary">Annonces & Notifications</h4>
+                        <p class="text-muted mb-0 fs-13">Gérez les annonces diffusées aux utilisateurs de la plateforme.</p>
+                    </div>
+                </div>
+                <div>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createAnnouncementModal">
+                        <i class="ri-add-line me-1"></i> Nouvelle Annonce
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="glass-card p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Titre</th>
+                                <th>Cible</th>
+                                <th>Statut</th>
+                                <th>Date</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ann in announcements %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm me-3">
+                                            <div class="avatar-title bg-primary-subtle text-primary rounded-circle">
+                                                <i class="ri-notification-badge-line"></i>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-semibold">{{ ann.title }}</h6>
+                                            <small class="text-muted text-truncate d-inline-block" style="max-width: 250px;">{{ ann.message }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if ann.target_type == 'all' %}
+                                        <span class="badge bg-secondary-subtle text-secondary">Tous les utilisateurs</span>
+                                    {% elif ann.target_type == 'tenant' %}
+                                        <span class="badge bg-info-subtle text-info">Tenant : {{ ann.target_tenant.nom }}</span>
+                                    {% elif ann.target_type == 'user' %}
+                                        <span class="badge bg-warning-subtle text-warning">Utilisateur : {{ ann.target_user.username }} ({{ ann.target_tenant.nom }})</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="form-check form-switch form-switch-success form-switch-md mb-0">
+                                        <input class="form-check-input toggle-status" type="checkbox" data-id="{{ ann.id }}" {% if ann.is_active %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td>{{ ann.created_at|date:"d/m/Y H:i" }}</td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-soft-info btn-resend me-1" data-id="{{ ann.id }}" title="Relancer l'annonce">
+                                        <i class="ri-refresh-line"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-soft-danger btn-delete" data-id="{{ ann.id }}" title="Supprimer">
+                                        <i class="ri-delete-bin-line"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <div class="text-muted">
+                                        <i class="ri-inbox-line fs-1"></i>
+                                        <p class="mt-2 mb-0">Aucune annonce trouvée.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Creation -->
+<div class="modal fade" id="createAnnouncementModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Créer une Nouvelle Annonce</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createAnnouncementForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Titre de l'annonce</label>
+                        <input type="text" class="form-control" name="title" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Message</label>
+                        <textarea class="form-control" name="message" rows="4" required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Cible de l'annonce</label>
+                        <select class="form-select" name="target_type" id="target_type_select" required>
+                            <option value="all">Tous les utilisateurs (Global)</option>
+                            <option value="tenant">Tous les utilisateurs d'un Tenant spécifique</option>
+                            <option value="user">Un utilisateur spécifique d'un Tenant</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3" id="tenant_select_container" style="display: none;">
+                        <label class="form-label">Sélectionner le Tenant</label>
+                        <select class="form-select" name="target_tenant" id="target_tenant_select">
+                            <option value="">-- Choisir un Tenant --</option>
+                            {% for tenant in tenants %}
+                            <option value="{{ tenant.id }}">{{ tenant.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3" id="user_select_container" style="display: none;">
+                        <label class="form-label">Sélectionner l'Utilisateur</label>
+                        <select class="form-select" name="target_user" id="target_user_select">
+                            <option value="">-- Sélectionnez d'abord un Tenant --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="is_active" id="isActiveCheck" checked value="true">
+                        <label class="form-check-label" for="isActiveCheck">Publier immédiatement (Actif)</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="saveAnnouncementBtn">Créer l'annonce</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+$(document).ready(function() {
+    
+    // Logique d'affichage dynamique pour le formulaire
+    $('#target_type_select').change(function() {
+        var val = $(this).val();
+        if (val === 'all') {
+            $('#tenant_select_container').hide();
+            $('#user_select_container').hide();
+            $('#target_tenant_select').prop('required', false);
+            $('#target_user_select').prop('required', false);
+        } else if (val === 'tenant') {
+            $('#tenant_select_container').show();
+            $('#user_select_container').hide();
+            $('#target_tenant_select').prop('required', true);
+            $('#target_user_select').prop('required', false);
+        } else if (val === 'user') {
+            $('#tenant_select_container').show();
+            $('#user_select_container').show();
+            $('#target_tenant_select').prop('required', true);
+            $('#target_user_select').prop('required', true);
+        }
+    });
+
+    // Chargement dynamique des utilisateurs selon le tenant
+    $('#target_tenant_select').change(function() {
+        if ($('#target_type_select').val() === 'user') {
+            var tenant_id = $(this).val();
+            var user_select = $('#target_user_select');
+            
+            if (!tenant_id) {
+                user_select.html('<option value="">-- Sélectionnez d\'abord un Tenant --</option>');
+                return;
+            }
+            
+            user_select.html('<option value="">Chargement...</option>');
+            
+            $.ajax({
+                url: "{% url 'saas_admin_app:ApiGetTenantUsers' %}",
+                type: "GET",
+                data: { 'tenant_id': tenant_id },
+                success: function(res) {
+                    if (res.status === 'success') {
+                        var options = '<option value="">-- Choisir un utilisateur --</option>';
+                        res.users.forEach(function(u) {
+                            options += `<option value="${u.id}">${u.username} (${u.first_name} ${u.last_name})</option>`;
+                        });
+                        user_select.html(options);
+                    } else {
+                        user_select.html('<option value="">Erreur de chargement</option>');
+                    }
+                }
+            });
+        }
+    });
+
+    // Sauvegarde de l'annonce
+    $('#saveAnnouncementBtn').click(function() {
+        var form = document.getElementById('createAnnouncementForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+        var formData = new FormData(form);
+        if(!formData.has('is_active')) {
+            formData.append('is_active', 'false');
+        }
+        
+        $.ajax({
+            url: "{% url 'saas_admin_app:saas_announcements' %}",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(res) {
+                if(res.status === 'success') {
+                    Swal.fire('Succès!', res.message, 'success').then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire('Erreur', res.message || 'Une erreur est survenue', 'error');
+                }
+            },
+            error: function(xhr) {
+                Swal.fire('Erreur 500', 'Une erreur s\'est produite. Veuillez vérifier la console.', 'error');
+                console.error(xhr.responseText);
+            }
+        });
+    });
+
+    // Toggle status
+    $('.toggle-status').change(function() {
+        var id = $(this).data('id');
+        var is_active = $(this).is(':checked');
+        
+        $.ajax({
+            url: "{% url 'saas_admin_app:ApiToggleAnnouncementStatus' %}",
+            type: "POST",
+            data: {
+                'id': id,
+                'is_active': is_active,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(res) {
+                if(res.status === 'success') {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                    Toast.fire({
+                        icon: 'success',
+                        title: 'Statut mis à jour'
+                    });
+                }
+            }
+        });
+    });
+
+    // Suppression
+    $('.btn-delete').click(function() {
+        var id = $(this).data('id');
+        Swal.fire({
+            title: 'Êtes-vous sûr?',
+            text: "Cette annonce sera supprimée définitivement.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Oui, supprimer!',
+            cancelButtonText: 'Annuler'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: "{% url 'saas_admin_app:ApiDeleteAnnouncement' %}",
+                    type: "POST",
+                    data: {
+                        'id': id,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function(res) {
+                        if(res.status === 'success') {
+                            window.location.reload();
+                        }
+                    }
+                });
+            }
+        });
+    });
+
+    // Relancer
+    $('.btn-resend').click(function() {
+        var id = $(this).data('id');
+        Swal.fire({
+            title: 'Relancer l\'annonce ?',
+            text: "Cela effacera l'historique de lecture de cette annonce et la réaffichera à tous les utilisateurs ciblés en temps réel.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#0dcaf0',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Oui, relancer!',
+            cancelButtonText: 'Annuler'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: "{% url 'saas_admin_app:ApiResendAnnouncement' %}",
+                    type: "POST",
+                    data: {
+                        'id': id,
+                        'csrfmiddlewaretoken': '{{ csrf_token }}'
+                    },
+                    success: function(res) {
+                        if(res.status === 'success') {
+                            Swal.fire('Succès', 'L\'annonce a été relancée avec succès !', 'success').then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire('Erreur', 'Une erreur est survenue lors de la relance.', 'error');
+                        }
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock extra_js %}

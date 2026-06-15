@@ -138,6 +138,34 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         font-weight: 600;
     }
+
+    /* Select2 Customization */
+    .input-group .select2-container {
+        flex: 1 1 auto;
+        width: 1% !important;
+    }
+    .select2-container--default .select2-selection--single {
+        border: 1px solid var(--border-color) !important;
+        height: 42px !important;
+        padding: 6px 12px;
+        font-size: 14px;
+        border-radius: 0 8px 8px 0 !important;
+        display: flex;
+        align-items: center;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: normal;
+        padding-left: 0;
+        color: #495057;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 100%;
+        right: 10px;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--single {
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 0 3px var(--primary-soft);
+    }
 </style>
 
 <div class="main-content">
@@ -367,6 +395,7 @@
         const devisForm = document.getElementById('devisForm');
         const dateEmissionInput = document.getElementById('{{ form.date_emission.id_for_label }}');
         const dateEcheanceInput = document.getElementById('{{ form.date_echeance.id_for_label }}');
+        const clientSelect = document.getElementById('{{ form.client.id_for_label }}');
         
         // Defaults
         if (!dateEmissionInput.value) {
@@ -379,6 +408,13 @@
             dateEcheanceInput.value = echeanceDate.toISOString().split('T')[0];
         }
         
+        // Init Select2 for Client
+        $(clientSelect).select2({
+            placeholder: "Sélectionnez un client ou prospect",
+            width: '100%',
+            allowClear: true
+        });
+
         // Validation
         function validateDates() {
             const emissionDate = new Date(dateEmissionInput.value);
@@ -412,7 +448,7 @@
         const quickProspectForm = document.getElementById('quickProspectForm');
         const prospectError = document.getElementById('prospectError');
         const errorText = document.getElementById('errorText');
-        const clientSelect = document.getElementById('{{ form.client.id_for_label }}');
+        
         const modalEl = document.getElementById('newProspectModal');
         const modal = new bootstrap.Modal(modalEl);
 
@@ -444,7 +480,7 @@
                     const label = data.prospect.entreprise ? `${data.prospect.entreprise} (Entreprise)` : `${data.prospect.nom} ${data.prospect.prenom || ''}`;
                     const option = new Option(label, data.prospect.id, true, true);
                     clientSelect.add(option, undefined);
-                    clientSelect.dispatchEvent(new Event('change'));
+                    $(clientSelect).trigger('change');
                     quickProspectForm.reset();
                 } else {
                     errorText.textContent = data.message || 'Erreur inconnue.';

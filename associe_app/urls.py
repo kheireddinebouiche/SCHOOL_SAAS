@@ -62,7 +62,10 @@ from .views import (
     notify_tenants_of_campaign,
     api_mark_saas_notification_read,
     api_mark_all_saas_notifications_read,
-    api_delete_saas_notification
+    api_delete_saas_notification,
+    satisfaction_pending,
+    crm_user_logs,
+    platform_usage_rate
 )
 
 
@@ -71,6 +74,7 @@ app_name = 'associe_app'
 urlpatterns = [
     path('', index, name='configuration_index'),
     path('mise-en-route/', mise_en_route, name='mise_en_route'),
+    path('satisfaction/', satisfaction_pending, name='satisfaction_pending'),
 
 
 
@@ -130,6 +134,8 @@ urlpatterns = [
     # CRM Statistics
     path('crm-statistics/', crm_statistics, name='crm_statistics'),
     path('crm-statistics/api/<int:tenant_id>/', get_crm_stats_api, name='get_crm_stats_api'),
+    path('crm-user-logs/', crm_user_logs, name='crm_user_logs'),
+    path('platform-usage-rate/', platform_usage_rate, name='platform_usage_rate'),
 
     # User Management
     path('users/', user_list, name='user_list'),

@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from .models import *
@@ -13,6 +14,7 @@ from django.views.decorators.http import require_http_methods
 from institut_app.decorators import *
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def AttentesPaiements(request):
     context = {
        
@@ -22,6 +24,7 @@ def AttentesPaiements(request):
     return render(request, 'tenant_folder/comptabilite/tresorerie/attentes_de_paiement.html', context)
 
 @login_required(login_url="insitut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListeDemandePaiement(request):
     listes = ClientPaiementsRequest.objects.select_related("promo", "specialite", "client",'specialite_double').filter(client__statut = "instance")
     
@@ -97,6 +100,7 @@ def ApiListeDemandePaiement(request):
     return JsonResponse(data, safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageDetailsDemandePaiement(request, pk):
 
     obj = ClientPaiementsRequest.objects.get(id = pk)
@@ -124,6 +128,7 @@ def PageDetailsDemandePaiement(request, pk):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('tre', 'view')
 def ApiLoadRefundData(request):
     liste = Rembourssements.objects.all().values('is_done','client__nom', 'client__prenom', 'client__id', 'motif_rembourssement', 'etat','created_at', 'id').order_by('-created_at')
     for i in liste:
@@ -133,11 +138,13 @@ def ApiLoadRefundData(request):
 
 @login_required(login_url="institut_app:login")
 @ajax_required
+@module_permission_required('tre', 'view')
 def ApiLoadRefundDetails(request):
     if request.method == "GET":
         id = request.GET.get('id')
         obj = Rembourssements.objects.get(id = id)
-        paiement_lines = Paiements.objects.filter(prospect = obj.client, context='frais_f').aggregate(total=Sum('montant_paye'))['total'] or 0
+        paiements_qs = Paiements.objects.filter(prospect=obj.client, is_refund=False).exclude(Q(context='frais_i') | Q(is_frais_inscription=True) | Q(paiement_label__icontains="inscription"))
+        paiement_lines = paiements_qs.filter(Q(is_done=True) | Q(mode_paiement='esp')).aggregate(total=Sum('montant_paye'))['total'] or 0
 
         # Récupération des informations de groupe
         groupes = []
@@ -170,13 +177,16 @@ def ApiLoadRefundDetails(request):
         due_query = DuePaiements.objects.filter(client=obj.client).order_by('date_echeance', 'id')
         echeancier_list = []
         for due in due_query:
-            paid_amount = Paiements.objects.filter(due_paiements=due).aggregate(total=Sum('montant_paye'))['total'] or 0
-            is_factured = Paiements.objects.filter(due_paiements=due, facture__isnull=False).exists()
+            paiements_due = Paiements.objects.filter(due_paiements=due)
+            paid_amount = paiements_due.filter(Q(is_done=True) | Q(mode_paiement='esp')).aggregate(total=Sum('montant_paye'))['total'] or 0
+            attente_amount = paiements_due.filter(is_done=False).exclude(mode_paiement='esp').aggregate(total=Sum('montant_paye'))['total'] or 0
+            is_factured = paiements_due.filter(facture__isnull=False).exists()
             echeancier_list.append({
                 'label': due.label or 'N/A',
                 'montant_due': float(due.montant_due) if due.montant_due else 0.0,
                 'montant_paye': float(paid_amount),
-                'montant_restant': float(due.montant_restant) if due.montant_restant is not None else float((due.montant_due or 0) - paid_amount),
+                'montant_attente': float(attente_amount),
+                'montant_restant': float(due.montant_restant) if due.montant_restant is not None else float((due.montant_due or 0) - paid_amount - attente_amount),
                 'date_echeance': due.date_echeance.strftime("%d/%m/%Y") if due.date_echeance else "N/A",
                 'is_done': due.is_done,
                 'is_factured': is_factured
@@ -201,6 +211,7 @@ def ApiLoadRefundDetails(request):
         
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'view')
 def ApiAccepteRembourssement(request):
     montantRembourser = request.GET.get('montantRembourser')
     dateRemboursement = request.GET.get('dateRemboursement')
@@ -220,6 +231,7 @@ def ApiAccepteRembourssement(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'view')
 def ApiRejectRembourssement(request):
     id_remboursement = request.GET.get('id_remboursement') 
     motif = request.GET.get('motifRejet') 
@@ -234,6 +246,7 @@ def ApiRejectRembourssement(request):
 
 @login_required(login_url="institut_app:login")
 @require_http_methods(["POST"])
+@module_permission_required('tre', 'add')
 def ApiSaveSelectedEcheancier(request):
     try:
         id_demande = request.POST.get('id_demande')
@@ -264,6 +277,7 @@ def ApiSaveSelectedEcheancier(request):
 
 ########################################## Fonction qui permet d'afficher tous les détails du demandeur de paiement ###############################
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetDetailsDemandePaiement(request):  
     if request.method == "GET":
         id= request.GET.get('id_demande')
@@ -586,6 +600,7 @@ def ApiGetDetailsDemandePaiement(request):
         return JsonResponse(data, safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetDetailsDemandePaiementDouble(request):
     if request.method == "GET":
         special_echeancier_data = []
@@ -935,6 +950,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'add')
 def ApiLoadDoubleFormation(request):
     if request.method == "GET":
         liste = DoubleDiplomation.objects.all().values(
@@ -949,6 +965,7 @@ def ApiLoadDoubleFormation(request):
 
 ########################################## Fonction qui permet d'afficher tous les détails du demandeur de paiement ###############################
 
+@module_permission_required('tre', 'delete')
 def ApiDeleteDemandePaiement(request):
     id_demande = request.GET.get('id_demande')
     try:
@@ -975,9 +992,11 @@ def ApiDeleteDemandePaiement(request):
     except Exception as e:
         return JsonResponse({'status' : 'error', "message" : str(e)})
 
+@module_permission_required('tre', 'change')
 def PageConfigPaiementSeuil(request):
     return render(request, 'tenant_folder/comptabilite/tresorerie/config.html', {'tenant' : request.tenant})
 
+@module_permission_required('tre', 'change')
 def PageConfigPaiementFacturation(request):
     try:
         from t_conseil.models import ConseilConfiguration, TvaConseil
@@ -1033,23 +1052,30 @@ def PageConfigPaiementFacturation(request):
         tvas = []
         comptes_comptables = []
         
+    from institut_app.models import Entreprise
+    entreprises = Entreprise.objects.all().order_by('designation')
+
     return render(request, 'tenant_folder/comptabilite/tresorerie/config_paiement_facturation.html', {
         'tenant': request.tenant,
         'config': config,
         'tvas': tvas,
         'recettes_categories': recettes_categories,
-        'depenses_categories': depenses_categories
+        'depenses_categories': depenses_categories,
+        'entreprises': entreprises,
     })
 
+@module_permission_required('tre', 'view')
 def ApiListSeuilPaiement(request):
     liste = SeuilPaiements.objects.all().values('id','specialite','specialite__label','specialite__code','label','valeur','created_at','updated_at')
     
     return JsonResponse(list(liste), safe=False)
 
+@module_permission_required('tre', 'view')
 def ApiListeSpecialite(request):
     liste = Specialites.objects.all().values('id','label','code')
     return JsonResponse(list(liste), safe=False)
 
+@module_permission_required('tre', 'add')
 def ApiAddNewSeuil(request):
     label = request.POST.get('label')
     specialite = request.POST.get('specialite')
@@ -1065,6 +1091,7 @@ def ApiAddNewSeuil(request):
     else:
         return JsonResponse({'status' : 'error', 'message' : "Veuillez remplir tous les champs"})
     
+@module_permission_required('tre', 'delete')
 def ApiDeleteSeuil(request):
 
     id = request.GET.get('id')
@@ -1075,12 +1102,14 @@ def ApiDeleteSeuil(request):
     else:
         return JsonResponse({'status' : 'error' , 'message' : "Erreur, l'objet n'a pas été trouvé !"})
     
+@module_permission_required('tre', 'view')
 def ApiGetPaiementLine(request):
     pass
 
 
 from django.db.models import Q
 
+@module_permission_required('tre', 'view')
 def ApiGetRequestPaiementsLine(request):
     id= request.GET.get('id')
 
@@ -1100,6 +1129,7 @@ def ApiGetRequestPaiementsLine(request):
 
     return JsonResponse(data, safe=False)
 
+@module_permission_required('tre', 'view')
 def ApiListPaiementDone(request):
     id = request.GET.get('id')
 
@@ -1121,6 +1151,7 @@ def ApiListPaiementDone(request):
     return JsonResponse(data, safe=False)
 
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiStorePaiement(request):
 
     due_paiements = request.POST.get('due_paiements')
@@ -1186,6 +1217,7 @@ def ApiStorePaiement(request):
         else:
             return JsonResponse({'status' : 'error', 'message' : 'Le montant payé ne peut pas être supérieur au montant restant à payer'})
 
+@module_permission_required('tre', 'view')
 def ApiDetailsReceivedPaiement(request):
     id = request.GET.get('id')
 
@@ -1204,6 +1236,7 @@ def ApiDetailsReceivedPaiement(request):
 
     return JsonResponse(data, safe=False)
 
+@module_permission_required('tre', 'delete')
 def ApiDeletePaiement(request):
     if request.user.has_perm('t_tresorerie.delete_paiements'):
         id= request.GET.get('id')
@@ -1226,11 +1259,13 @@ def ApiDeletePaiement(request):
         return JsonResponse({'status' : 'error', 'message' : "Vous n'avez pas le droit d'effectuer cette action"})
     
 @login_required(login_url='institut_app:login')
+@module_permission_required('tre', 'view')
 def PageRemboursement(request):
     return render(request, 'tenant_folder/comptabilite/tresorerie/remboursement.html',{'tenant' : request.tenant})
 
 @login_required(login_url='institut_app:login')
 @transaction.atomic
+@module_permission_required('tre', 'view')
 def ApiSetRembourssement(request):
     id = request.GET.get('id')
     paiement = Paiements.objects.get(id = id)
@@ -1241,6 +1276,7 @@ def ApiSetRembourssement(request):
     return JsonResponse({'status' : 'success', 'message' : "La demande de remboursement a été enregistrée avec succès"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetEntrepriseDetails(request):
     id_demande = request.GET.get('id_demande')
     try:
@@ -1276,6 +1312,7 @@ def ApiGetEntrepriseDetails(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiCheckForPayments(request):
     if request.method == "GET":
         id_demande = request.GET.get('id_demande')
@@ -1296,11 +1333,13 @@ def ApiCheckForPayments(request):
         return JsonResponse({'status' : "system-error",'message' : "Methode non autoriser"})
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def liste_types_depenses(request):
     return render(request, 'tenant_folder/comptabilite/depenses/type_depense.html')
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetEntite(request):
     if request.method == "GET":
         entite = Entreprise.objects.all().values("id","designation")
@@ -1310,6 +1349,7 @@ def ApiGetEntite(request):
         return JsonResponse({"status":"error","message":"methode non autoriser"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListeFormationsPrices(request):
     from t_formations.models import Formation
     formations = Formation.objects.all().values('id', 'nom', 'code', 'frais_inscription', 'prix_formation')
@@ -1317,6 +1357,7 @@ def ApiListeFormationsPrices(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'change')
 def ApiUpdateFormationPrice(request):
     from t_formations.models import Formation
     if request.method == "POST":
@@ -1337,6 +1378,7 @@ def ApiUpdateFormationPrice(request):
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListeSpecialitesPrices(request):
     from t_formations.models import Specialites
     formation_code = request.GET.get('formation_id')
@@ -1349,6 +1391,7 @@ def ApiListeSpecialitesPrices(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'change')
 def ApiUpdateSpecialitePrice(request):
     from t_formations.models import Specialites
     if request.method == "POST":
@@ -1370,6 +1413,7 @@ def ApiUpdateSpecialitePrice(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'change')
 def ApiBulkUpdateSpecialitePrice(request):
     from t_formations.models import Specialites
     if request.method == "POST":
@@ -1389,6 +1433,7 @@ def ApiBulkUpdateSpecialitePrice(request):
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListeDoubleDiplomationPrices(request):
     from t_formations.models import DoubleDiplomation
     combinaisons = DoubleDiplomation.objects.all().values(
@@ -1399,6 +1444,7 @@ def ApiListeDoubleDiplomationPrices(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'change')
 def ApiUpdateDoubleDiplomationPrice(request):
     from t_formations.models import DoubleDiplomation
     if request.method == "POST":
@@ -1426,6 +1472,7 @@ def ApiUpdateDoubleDiplomationPrice(request):
 
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetParametreFinancier(request):
     """Returns the current financial parameter settings."""
     import json
@@ -1451,6 +1498,7 @@ def ApiGetParametreFinancier(request):
     })
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'change')
 def ApiUpdateParametreFinancier(request):
     """Updates the financial parameter settings."""
     if request.method == 'POST':
@@ -1522,3 +1570,20 @@ def ApiUpdateParametreFinancier(request):
             'activer_timbre': params.activer_timbre
         })
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
+
+@module_permission_required('tre', 'change')
+def ApiUpdateQuittanceFormat(request):
+    if request.method == 'POST':
+        try:
+            entreprise_id = request.POST.get('entreprise_id')
+            format_str = request.POST.get('quittance_format', 'N°{seq}/ST/{entite}/{wilaya}/{annexe}/{mois}/{annee}')
+            seq_length = int(request.POST.get('quittance_sequence_length', 6))
+            from institut_app.models import Entreprise
+            entreprise = Entreprise.objects.get(id=entreprise_id)
+            entreprise.quittance_format = format_str
+            entreprise.quittance_sequence_length = seq_length
+            entreprise.save()
+            return JsonResponse({'status': 'success', 'message': 'Format mis à jour avec succès'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'})

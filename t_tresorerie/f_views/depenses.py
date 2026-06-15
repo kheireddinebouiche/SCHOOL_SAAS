@@ -1,3 +1,4 @@
+from institut_app.decorators import module_permission_required
 from django.shortcuts import render
 from django.http import JsonResponse
 from ..models import *
@@ -7,15 +8,18 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageDepenses(request):
     return render(request,'tenant_folder/comptabilite/depenses/liste_des_depenses.html')
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiListeDepenses(request):
-    liste = Depenses.objects.all().values('id','label', 'category__name', 'category__parent__name','montant_ht','tva','montant_ttc','date_paiement','client__prenom','client__nom','fournisseur__designation','etat','created_at', 'mode_paiement', 'entite__id', 'entite__designation').order_by('-id')
+    liste = Depenses.objects.all().values('id','label','montant_ht','tva','montant_ttc','date_paiement','client__prenom','client__nom','fournisseur__designation','etat','created_at', 'mode_paiement', 'entite__id', 'entite__designation', 'reference', 'reference_document').order_by('-id')
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadEntites(request):
     if request.method == "GET":
         # Fetch all enterprises/entities
@@ -26,11 +30,13 @@ def ApiLoadEntites(request):
         return JsonResponse({"status": "error", "message": "Method not allowed"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def PageNouvelleDepense(request):
     entites = Entreprise.objects.all()
     return render(request, "tenant_folder/comptabilite/depenses/nouvelle_depense.html", {'entites': entites})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadTypeDepense(request):
     if request.method == 'GET':
         types = TypeDepense.objects.all()
@@ -56,6 +62,7 @@ def ApiLoadTypeDepense(request):
     
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiStoreNewType(request):
     if request.method == "POST":
         typeName = request.POST.get('typeName')
@@ -81,6 +88,7 @@ def ApiStoreNewType(request):
         return JsonResponse({"status":"error",'message':"methode non autoriser"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'add')
 def ApiAddCategorieComptable(request):
     if request.method == "POST":
         label = request.POST.get('label')
@@ -99,11 +107,13 @@ def ApiAddCategorieComptable(request):
         return JsonResponse({"status":"error",'message':"methode non autoriser"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiLoadCategories(request):
     liste = TypeDepense.objects.all().values('id','label')
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetCategorie(request):
     if request.method == "GET":
         liste = TypeDepense.objects.all().values('id','label')
@@ -112,6 +122,7 @@ def ApiGetCategorie(request):
         return JsonResponse({"status":"error"})
 
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiFilterSousCategrorie(request):
     if request.method == "GET":
         option = request.GET.get('option')
@@ -120,54 +131,140 @@ def ApiFilterSousCategrorie(request):
     else:
         return JsonResponse({"status":"error"})
 
+import json
+from django.shortcuts import render, get_object_or_404
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
+def PageDetailDepense(request, id):
+    depense = get_object_or_404(Depenses, id=id)
+    lignes = DepenseLigne.objects.filter(depense=depense)
+    return render(request, "tenant_folder/comptabilite/depenses/details_depense.html", {
+        'depense': depense,
+        'lignes': lignes
+    })
+
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'add')
 def ApiStoreDepense(request):
     if request.method == "POST":
         label = request.POST.get('label')
         fournisseur = request.POST.get('fournisseur')
         date = request.POST.get('date_depense')
-        montant_ht = request.POST.get('montant_ht')
-        tva = request.POST.get('tva')
-        montant_ttc = request.POST.get('montant_ttc')
         piece = request.FILES.get('piece')
         description = request.POST.get('description')
         mode_paiement = request.POST.get('mode_paiement')
         reference_paiement = request.POST.get('reference_paiement')
+        reference_document = request.POST.get('reference_document')
+        entite_id = request.POST.get('entite')
 
-        categoryId = request.POST.get('category')
+        lignes_json = request.POST.get('lignes')
+        lignes = []
+        if lignes_json:
+            try:
+                lignes = json.loads(lignes_json)
+            except:
+                pass
+
+        total_ht = Decimal('0.00')
+        total_tva = Decimal('0.00')
+        total_ttc = Decimal('0.00')
         
-        # Handle '0' or empty string for category
-        if categoryId == '0' or categoryId == '':
-            categoryId = None
+        for ligne in lignes:
+            qte = Decimal(str(ligne.get('quantite', 1)))
+            pu_ht = Decimal(str(ligne.get('prix_unitaire_ht', 0)))
+            tva_rate = Decimal(str(ligne.get('tva', 0)))
+            
+            l_ht = qte * pu_ht
+            l_tva = l_ht * (tva_rate / Decimal('100.00'))
+            l_ttc = l_ht + l_tva
+            
+            total_ht += l_ht
+            total_tva += l_tva
+            total_ttc += l_ttc
+
+        # Calcul Timbre
+        timbre_val = Decimal('0.00')
+        if mode_paiement == 'esp':
+            param = ParametreFinancier.get_instance()
+            if param.activer_timbre and param.timbre_cash_only:
+                timbre_calc = total_ttc * (param.taux_timbre / Decimal('100.00'))
+                if timbre_calc < param.timbre_min:
+                    timbre_val = param.timbre_min
+                elif timbre_calc > param.timbre_max:
+                    timbre_val = param.timbre_max
+                else:
+                    timbre_val = timbre_calc
 
         depense = Depenses.objects.create(
-            label = label,
-            fournisseur_id = fournisseur,
-            category_id = categoryId,
-            date_depense = date,
-            montant_ht = montant_ht,
-            tva = tva,
-            montant_ttc = montant_ttc,
-            piece = piece,
-            description = description,
-            mode_paiement = mode_paiement,
-            reference = reference_paiement,
-            entite_id = request.POST.get('entite')
+            label=label,
+            fournisseur_id=fournisseur,
+            date_depense=date,
+            montant_ht=total_ht,
+            tva=str(total_tva), # Conserver pour la compatibilité
+            montant_ttc=total_ttc,
+            timbre=timbre_val,
+            piece=piece,
+            description=description,
+            mode_paiement=mode_paiement,
+            reference=reference_paiement,
+            reference_document=reference_document,
+            entite_id=entite_id
         )
 
+        for ligne in lignes:
+            qte = Decimal(str(ligne.get('quantite', 1)))
+            pu_ht = Decimal(str(ligne.get('prix_unitaire_ht', 0)))
+            tva_rate = Decimal(str(ligne.get('tva', 0)))
+            
+            l_ht = qte * pu_ht
+            l_tva = l_ht * (tva_rate / Decimal('100.00'))
+            l_ttc = l_ht + l_tva
+
+            cat_id = ligne.get('category')
+            if cat_id == '0' or cat_id == '':
+                cat_id = None
+
+            DepenseLigne.objects.create(
+                depense=depense,
+                designation=ligne.get('designation', 'Ligne'),
+                category_id=cat_id,
+                quantite=qte,
+                prix_unitaire_ht=pu_ht,
+                tva=tva_rate,
+                montant_ht=l_ht,
+                montant_tva=l_tva,
+                montant_ttc=l_ttc
+            )
 
         messages.success(request, 'Les informations ont été enregistrer avec succès')
         return JsonResponse({"status":"success"})
-
     else:
         return JsonResponse({"status":"error"})
     
 @login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
 def ApiGetDepenseDetails(request):
     if request.method == "GET":
         id = request.GET.get('id')
         obj = Depenses.objects.get(id = id)
+        
+        lignes = []
+        for l in obj.lignes.all():
+            lignes.append({
+                'id': l.id,
+                'designation': l.designation,
+                'category': l.category.id if l.category else '',
+                'category_name': l.category.name if l.category else '',
+                'quantite': str(l.quantite),
+                'prix_unitaire_ht': str(l.prix_unitaire_ht),
+                'tva': str(l.tva),
+                'montant_ht': str(l.montant_ht),
+                'montant_tva': str(l.montant_tva),
+                'montant_ttc': str(l.montant_ttc),
+            })
+
         data = {
             'id' : obj.id,
             'label' : obj.label,
@@ -177,18 +274,18 @@ def ApiGetDepenseDetails(request):
             'client_prenom' : obj.client.prenom if obj.client else None,
             'date' : obj.date_depense,
             'date_paiement' : obj.date_paiement,
-            'category': obj.category.id if obj.category else None,
-            'category_name': obj.category.name if obj.category else None,
-            'category_parent_name': obj.category.parent.name if obj.category and obj.category.parent else None,
             'montant_ht': obj.montant_ht,
             'montant_ttc' : obj.montant_ttc,
+            'timbre': obj.timbre,
             'piece' : obj.piece.url if obj.piece else None,
             'description' : obj.description,
+            'reference_document': obj.reference_document,
             'tva'  : obj.tva,
             'entite' : obj.entite.id if obj.entite else None,
             'mode_paiement' : obj.mode_paiement,
             'reference' : obj.reference,
             'etat': obj.etat,
+            'lignes': lignes
         }
         return JsonResponse(data)
     else:
@@ -196,35 +293,70 @@ def ApiGetDepenseDetails(request):
     
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'change')
 def ApiUpdateDepense(request):
     if request.method == "POST":
         id = request.POST.get('id')
         edit_label = request.POST.get('edit_label')
         edit_fournisseur = request.POST.get('edit_fournisseur')
-        edit_montant_ht = request.POST.get('edit_montant_ht')
-        edit_tva = request.POST.get('edit_tva')
-        edit_montant_ttc = request.POST.get('edit_montant_ttc')
         edit_date = request.POST.get('edit_date')
-        edit_categorie = request.POST.get('edit_categorie')
-        edit_sous_categorie = request.POST.get('edit_sous_categorie')
         edit_description = request.POST.get('edit_description')
         edit_piece = request.FILES.get('edit_piece')
         edit_entite = request.POST.get('edit_entite')
         edit_mode_paiement = request.POST.get('edit_mode_paiement')
         edit_reference = request.POST.get('edit_reference')
+        edit_reference_document = request.POST.get('edit_reference_document')
         obj = Depenses.objects.get(id = id)
+             
+        lignes_json = request.POST.get('edit_lignes')
+        lignes = []
+        if lignes_json:
+            try:
+                lignes = json.loads(lignes_json)
+            except:
+                pass
 
-        if request.POST.get('edit_category'):
-             obj.category_id = request.POST.get('edit_category')
+        total_ht = Decimal('0.00')
+        total_tva = Decimal('0.00')
+        total_ttc = Decimal('0.00')
+        
+        # Calculate totals from lignes
+        for ligne in lignes:
+            qte = Decimal(str(ligne.get('quantite', 1)))
+            pu_ht = Decimal(str(ligne.get('prix_unitaire_ht', 0)))
+            tva_rate = Decimal(str(ligne.get('tva', 0)))
+            
+            l_ht = qte * pu_ht
+            l_tva = l_ht * (tva_rate / Decimal('100.00'))
+            l_ttc = l_ht + l_tva
+            
+            total_ht += l_ht
+            total_tva += l_tva
+            total_ttc += l_ttc
+
+        # Recalcul Timbre
+        timbre_val = Decimal('0.00')
+        if edit_mode_paiement == 'esp':
+            param = ParametreFinancier.get_instance()
+            if param.activer_timbre and param.timbre_cash_only:
+                timbre_calc = total_ttc * (param.taux_timbre / Decimal('100.00'))
+                if timbre_calc < param.timbre_min:
+                    timbre_val = param.timbre_min
+                elif timbre_calc > param.timbre_max:
+                    timbre_val = param.timbre_max
+                else:
+                    timbre_val = timbre_calc
         
         obj.label = edit_label
         obj.fournisseur_id = edit_fournisseur
         obj.date_depense = edit_date
-        obj.montant_ht = edit_montant_ht
-        obj.tva = edit_tva
-        obj.montant_ttc = edit_montant_ttc
+        obj.montant_ht = total_ht
+        obj.tva = str(total_tva)
+        obj.montant_ttc = total_ttc
+        obj.timbre = timbre_val
         if edit_piece:
             obj.piece = edit_piece
+        obj.reference_document = edit_reference_document
         obj.description = edit_description
         obj.entite_id = edit_entite
         if edit_mode_paiement:
@@ -233,12 +365,41 @@ def ApiUpdateDepense(request):
 
         obj.save()
         
+        # Sync Lignes
+        # Delete existing lignes and recreate for simplicity, or sync
+        # Here we just delete and recreate
+        obj.lignes.all().delete()
+        for ligne in lignes:
+            qte = Decimal(str(ligne.get('quantite', 1)))
+            pu_ht = Decimal(str(ligne.get('prix_unitaire_ht', 0)))
+            tva_rate = Decimal(str(ligne.get('tva', 0)))
+            
+            l_ht = qte * pu_ht
+            l_tva = l_ht * (tva_rate / Decimal('100.00'))
+            l_ttc = l_ht + l_tva
+
+            cat_id = ligne.get('category')
+            if cat_id == '0' or cat_id == '':
+                cat_id = None
+
+            DepenseLigne.objects.create(
+                depense=obj,
+                designation=ligne.get('designation', 'Ligne'),
+                category_id=cat_id,
+                quantite=qte,
+                prix_unitaire_ht=pu_ht,
+                tva=tva_rate,
+                montant_ht=l_ht,
+                montant_tva=l_tva,
+                montant_ttc=l_ttc
+            )
+        
         # Update OperationsBancaire if it exists
         from t_tresorerie.models import OperationsBancaire
         op = OperationsBancaire.objects.filter(depense=obj).first()
         if op:
             if obj.mode_paiement in ['che', 'vir']:
-                op.montant = obj.montant_ttc
+                op.montant = obj.montant_ttc # or ttc + timbre depending on logic. Bank is usually just TTC
                 op.reference_bancaire = obj.reference
                 op.save()
             else:
@@ -252,6 +413,7 @@ def ApiUpdateDepense(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'approuv')
 def ApiValidateDepense(request):
     if request.method == "GET":
         id = request.GET.get('id')
@@ -265,6 +427,7 @@ def ApiValidateDepense(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'delete')
 def ApiDeleteDepense(request):
     if request.method == "GET":
         id = request.GET.get('id')
@@ -276,6 +439,7 @@ def ApiDeleteDepense(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+@module_permission_required('tre', 'view')
 def ApiRecordExpensePayment(request):
     if request.method == "POST":
         try:

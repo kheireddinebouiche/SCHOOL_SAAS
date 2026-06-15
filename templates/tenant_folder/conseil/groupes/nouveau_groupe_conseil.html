@@ -100,6 +100,31 @@
         text-transform: uppercase;
         letter-spacing: 0.025em;
     }
+
+    /* Select2 Customization */
+    .select2-container--default .select2-selection--single {
+        border: 1px solid #e9ecef;
+        height: 42px;
+        padding: 6px 12px;
+        font-size: 14px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        background-color: #fff;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: normal;
+        padding-left: 0;
+        color: #495057;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 100%;
+        right: 12px;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--single {
+        border-color: #405189;
+        box-shadow: 0 0 0 3px rgba(64, 81, 137, 0.1);
+    }
 </style>
 
 <div class="main-content">
@@ -169,7 +194,13 @@
 
                             <!-- Step 3: Participants -->
                             <div class="wizard-step" id="step3">
-                                <h5 class="fw-bold mb-4">Étape 3 : Sélection des Participants</h5>
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold mb-0">Étape 3 : Sélection des Participants</h5>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="skipParticipants">
+                                        <label class="form-check-label text-muted" for="skipParticipants">Passer pour le moment</label>
+                                    </div>
+                                </div>
                                 <div id="participantsList" class="row g-3">
                                     <!-- Dynamic -->
                                 </div>
@@ -217,6 +248,65 @@
                         </form>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<!-- Quick Add Participant Modal -->
+<div class="modal fade" id="quickAddParticipantModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-0 overflow-hidden" style="border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1);">
+            <div class="modal-header border-0 bg-primary bg-opacity-10 p-4 pb-3">
+                <h5 class="modal-title fw-bold text-primary d-flex align-items-center">
+                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                        <i class="ri-user-add-line fs-4"></i>
+                    </div>
+                    Nouveau Participant
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="quickAddParticipantForm">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted fw-bold small text-uppercase">Nom <span class="text-danger">*</span></label>
+                            <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                                <span class="input-group-text bg-light border-0"><i class="ri-user-3-line text-primary"></i></span>
+                                <input type="text" class="form-control bg-light border-0 px-3" id="qa_nom" placeholder="Ex: Dupont" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted fw-bold small text-uppercase">Prénom <span class="text-danger">*</span></label>
+                            <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                                <span class="input-group-text bg-light border-0"><i class="ri-user-smile-line text-primary"></i></span>
+                                <input type="text" class="form-control bg-light border-0 px-3" id="qa_prenom" placeholder="Ex: Jean" required>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label text-muted fw-bold small text-uppercase">Adresse Email</label>
+                            <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                                <span class="input-group-text bg-light border-0"><i class="ri-mail-line text-primary"></i></span>
+                                <input type="email" class="form-control bg-light border-0 px-3" id="qa_email" placeholder="jean.dupont@example.com">
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label text-muted fw-bold small text-uppercase">Poste / Fonction</label>
+                            <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                                <span class="input-group-text bg-light border-0"><i class="ri-briefcase-line text-primary"></i></span>
+                                <input type="text" class="form-control bg-light border-0 px-3" id="qa_poste" placeholder="Ex: Directeur Général">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="button" class="btn btn-light btn-rounded px-4 shadow-sm" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary btn-rounded px-4 shadow-sm" id="btnSaveQuickParticipant">
+                    <i class="ri-save-line me-1"></i> Enregistrer
+                </button>
             </div>
         </div>
     </div>
@@ -275,13 +365,17 @@
                 loadDevisDetails();
             }
             if(currentStep == 3) {
-                selectedParticipants = [];
-                $('.participant-check:checked').each(function() {
-                    selectedParticipants.push($(this).val());
-                });
-                if(selectedParticipants.length == 0) {
-                    alertify.error('Veuillez sélectionner au moins un participant');
-                    return;
+                if ($('#skipParticipants').is(':checked')) {
+                    selectedParticipants = [];
+                } else {
+                    selectedParticipants = [];
+                    $('.participant-check:checked').each(function() {
+                        selectedParticipants.push($(this).val());
+                    });
+                    if(selectedParticipants.length == 0) {
+                        alertify.error('Veuillez sélectionner au moins un participant, ou cochez l\'option pour passer.');
+                        return;
+                    }
                 }
             }
             
@@ -301,26 +395,93 @@
         function loadClientDevis() {
             $('#devisList').html('<div class="col-12 text-center"><div class="spinner-border text-primary"></div></div>');
             $.get("{% url 't_conseil:ApiGetClientDevis' %}", {client_id: selectedClient}, function(data) {
-                if(data.length == 0) {
-                    $('#devisList').html('<div class="col-12 text-center py-4"><p class="text-danger">Aucun devis accepté trouvé pour ce client.</p></div>');
-                } else {
-                    let html = '';
-                    data.forEach(d => {
-                        html += `
-                            <div class="col-md-6">
-                                <div class="glass-card p-3 d-flex align-items-center">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="devisRadio" id="devis_${d.id}" value="${d.id}">
+                let html = '';
+                
+                if (data.has_active_group) {
+                    alertify.warning(`Ce client possède déjà un groupe actif : ${data.active_group_info.nom}`, 5);
+                    html += `
+                        <div class="col-12 mb-3">
+                            <div class="alert alert-warning d-flex align-items-center shadow-sm" style="border-radius:14px; border: 1px solid #fcd34d; background: #fffbeb;">
+                                <i class="ri-alert-line fs-3 me-3 text-warning"></i>
+                                <div>
+                                    <h6 class="fw-bold mb-1 text-warning-emphasis">Attention : Groupe existant</h6>
+                                    <p class="mb-0 small text-warning-emphasis">
+                                        Ce client possède déjà le groupe <strong>${data.active_group_info.nom}</strong> en cours.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                    if (data.factures && data.factures.length > 0) {
+                        // Client a été facturé : Afficher factures et devis reliés
+                        html += '<div class="col-12 mb-2"><h6 class="text-primary fw-bold"><i class="ri-bill-line me-2"></i>Documents Facturés / Payés</h6></div>';
+                        data.factures.forEach(f => {
+                            // Find linked devis
+                            let linkedDevis = data.devis.find(d => d.id === f.devis_source__id);
+                            let devisText = linkedDevis ? `(Devis lié : ${linkedDevis.num_devis})` : '(Aucun devis lié)';
+                            
+                            let valId = f.devis_source__id ? 'devis_' + f.devis_source__id : 'facture_' + f.id;
+                            
+                            html += `
+                                <div class="col-md-6">
+                                    <div class="glass-card p-3 d-flex align-items-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="devisRadio" id="doc_${f.id}" value="${valId}">
+                                            <label class="form-check-label ms-2 h6 mb-0" for="doc_${f.id}">
+                                                Facture ${f.num_facture} <span class="badge bg-success-subtle text-success ms-2">${f.etat}</span>
+                                                <small class="text-muted d-block mt-1">Émise le ${f.date_emission} <span class="text-primary fw-medium">${devisText}</span></small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        
+                        // Show remaining devis not linked to factures
+                        let devisNonFactures = data.devis.filter(d => !data.factures.some(f => f.devis_source__id === d.id));
+                        if (devisNonFactures.length > 0) {
+                            html += '<div class="col-12 mt-4 mb-2"><h6 class="text-muted fw-bold"><i class="ri-file-list-3-line me-2"></i>Devis Acceptés (Non facturés)</h6></div>';
+                            devisNonFactures.forEach(d => {
+                                html += `
+                                    <div class="col-md-6">
+                                        <div class="glass-card p-3 d-flex align-items-center bg-light bg-opacity-50">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="devisRadio" id="devis_${d.id}" value="devis_${d.id}">
+                                                <label class="form-check-label ms-2 h6 mb-0" for="devis_${d.id}">
+                                                    ${d.num_devis}
+                                                    <small class="text-muted d-block mt-1">Émis le ${d.date_emission}</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        }
+                    } else if (data.devis && data.devis.length > 0) {
+                        // Aucune facture, afficher uniquement les devis
+                        html += '<div class="col-12 mb-2"><h6 class="text-muted fw-bold"><i class="ri-file-list-3-line me-2"></i>Devis Acceptés</h6></div>';
+                        data.devis.forEach(d => {
+                            html += `
+                                <div class="col-md-6">
+                                    <div class="glass-card p-3 d-flex align-items-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="devisRadio" id="devis_${d.id}" value="devis_${d.id}">
                                         <label class="form-check-label ms-2 h6 mb-0" for="devis_${d.id}">
-                                            ${d.num_devis} <small class="text-muted d-block">Émis le ${d.date_emission}</small>
+                                            ${d.num_devis}
+                                            <small class="text-muted d-block mt-1">Émis le ${d.date_emission}</small>
                                         </label>
                                     </div>
                                 </div>
                             </div>
                         `;
                     });
-                    $('#devisList').html(html);
+                } else {
+                    html = '<div class="col-12 text-center py-4"><p class="text-danger">Aucun document (Devis/Facture) trouvé pour ce client.</p></div>';
                 }
+                
+                $('#devisList').html(html);
             });
         }
 
@@ -332,35 +493,73 @@
                 
                 // Participants
                 let p_html = '';
-                data.participants.forEach(p => {
-                    p_html += `
-                        <div class="col-md-4">
-                            <label class="participant-card rounded-3 p-3 d-block position-relative" for="p_${p.id}">
-                                <div class="form-check position-absolute top-0 end-0 m-3">
-                                    <input class="form-check-input participant-check" type="checkbox" value="${p.id}" id="p_${p.id}" checked>
+                if(data.participants.length === 0) {
+                    p_html = `
+                        <div class="col-12 text-center py-4">
+                            <div class="avatar-md mx-auto mb-3">
+                                <div class="avatar-title bg-warning bg-opacity-10 text-warning rounded-circle fs-1">
+                                    <i class="ri-user-unfollow-line"></i>
                                 </div>
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-sm bg-soft-primary text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
-                                        ${p.nom.charAt(0)}
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-0 text-truncate" style="max-width: 150px;">${p.nom} ${p.prenom}</h6>
-                                        <small class="text-muted">${p.poste || 'Participant'}</small>
-                                    </div>
-                                </div>
-                            </label>
+                            </div>
+                            <h5 class="text-danger fw-bold">Aucun participant disponible</h5>
+                            <p class="text-muted">Vous devez ajouter des participants pour continuer.</p>
+                            <button type="button" class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#quickAddParticipantModal">
+                                <i class="ri-add-line me-1"></i> Ajouter un participant
+                            </button>
                         </div>
                     `;
-                });
+                } else {
+                    p_html += `
+                        <div class="col-12 mb-3 text-end">
+                            <button type="button" class="btn btn-soft-primary btn-sm" data-bs-toggle="modal" data-bs-target="#quickAddParticipantModal">
+                                <i class="ri-add-line me-1"></i> Ajouter un autre participant
+                            </button>
+                        </div>
+                    `;
+                    data.participants.forEach(p => {
+                        p_html += `
+                            <div class="col-md-4">
+                                <label class="participant-card rounded-3 p-3 d-block position-relative" for="p_${p.id}">
+                                    <div class="form-check position-absolute top-0 end-0 m-3">
+                                        <input class="form-check-input participant-check" type="checkbox" value="${p.id}" id="p_${p.id}" checked>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-soft-primary text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                            ${p.nom.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 text-truncate" style="max-width: 150px;">${p.nom} ${p.prenom}</h6>
+                                            <small class="text-muted">${p.poste || 'Participant'}</small>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        `;
+                    });
+                }
                 $('#participantsList').html(p_html);
 
                 // Thematics for Assignments
                 let a_html = '';
                 data.thematics.forEach(th => {
-                    let trainerOptions = '<option value="">-- Sélectionner un formateur --</option>';
+                    let f_options = '';
+                    let c_options = '';
+                    
                     data.trainers.forEach(tr => {
-                        trainerOptions += `<option value="${tr.id}">${tr.nom} ${tr.prenom}</option>`;
+                        if(tr.type === 'Formateur') {
+                            f_options += `<option value="${tr.id}">${tr.nom} ${tr.prenom}</option>`;
+                        } else if (tr.type === 'Consultant') {
+                            c_options += `<option value="${tr.id}">${tr.nom} ${tr.prenom}</option>`;
+                        } else {
+                            // Rétrocompatibilité
+                            f_options += `<option value="${tr.id}">${tr.nom} ${tr.prenom}</option>`;
+                        }
                     });
+                    
+                    let trainerOptions = '<option value="">-- Sélectionner un intervenant --</option>';
+                    if(f_options) trainerOptions += `<optgroup label="Formateurs (Pédagogie)">${f_options}</optgroup>`;
+                    if(c_options) trainerOptions += `<optgroup label="Consultants (Conseil)">${c_options}</optgroup>`;
+                    
                     a_html += `
                         <div class="col-md-6 assignment-block" data-th-id="${th.thematique__id}">
                             <div class="glass-card p-3">
@@ -378,6 +577,13 @@
                     `;
                 });
                 $('#thematicAssignments').html(a_html);
+                
+                // Initialize Select2 on the dynamically added selects
+                $('.trainer-select').select2({
+                    width: '100%',
+                    placeholder: "-- Sélectionner un intervenant --",
+                    allowClear: true
+                });
 
                 // Auto-fill metadata suggestions
                 if(data.thematics.length > 0) {
@@ -399,7 +605,6 @@
                 nom: $('#groupName').val(),
                 devis_id: selectedDevis,
                 start_date: $('#startDate').val(),
-                start_date: $('#startDate').val(),
                 end_date: $('#endDate').val(),
                 participants: selectedParticipants,
                 assignments: assignments
@@ -407,6 +612,11 @@
 
             if(!groupData.nom || !groupData.start_date) {
                 alertify.error('Veuillez remplir le nom et la date de début');
+                return;
+            }
+
+            if(groupData.end_date && new Date(groupData.start_date) > new Date(groupData.end_date)) {
+                alertify.error('La date de début ne peut pas être supérieure à la date de fin');
                 return;
             }
 
@@ -433,6 +643,57 @@
         // Toggle selected class on participant cards
         $(document).on('change', '.participant-check', function() {
             $(this).closest('.participant-card').toggleClass('selected', this.checked);
+        });
+
+        // Quick add participant logic
+        $('#btnSaveQuickParticipant').click(function() {
+            let nom = $('#qa_nom').val();
+            let prenom = $('#qa_prenom').val();
+            let email = $('#qa_email').val();
+            let poste = $('#qa_poste').val();
+
+            if(!nom || !prenom) {
+                alertify.error('Nom et prénom sont obligatoires');
+                return;
+            }
+
+            $(this).prop('disabled', true).text('Enregistrement...');
+
+            let payload = {
+                nom: nom,
+                prenom: prenom,
+                email: email,
+                poste: poste,
+                devis_id: selectedDevis
+            };
+            
+            // Also link to prospect if available
+            if (selectedClient) {
+                payload.prospect_id = selectedClient;
+            }
+
+            $.ajax({
+                url: "{% url 't_conseil:ApiSaveParticipant' %}",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(payload),
+                headers: {"X-CSRFToken": "{{ csrf_token }}"},
+                success: function(res) {
+                    $('#btnSaveQuickParticipant').prop('disabled', false).text('Enregistrer');
+                    if(res.status == 'success') {
+                        $('#quickAddParticipantModal').modal('hide');
+                        $('#quickAddParticipantForm')[0].reset();
+                        alertify.success('Participant ajouté avec succès');
+                        loadDevisDetails(); // Reload participants list
+                    } else {
+                        alertify.error(res.message || 'Erreur lors de l\'ajout');
+                    }
+                },
+                error: function() {
+                    $('#btnSaveQuickParticipant').prop('disabled', false).text('Enregistrer');
+                    alertify.error('Erreur de connexion');
+                }
+            });
         });
     });
 </script>
