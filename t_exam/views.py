@@ -27,27 +27,33 @@ def NewSession(request):
     if request.method == "POST":
         form = SessionForm(request.POST)
         if form.is_valid():
-            code = form.cleaned_data.get('code')
-            try:
-                SessionExam.objects.get(code = code)
-
-                return JsonResponse({'statut': False, 'message': "Une session sous le même code existe déjà."})
             
-            except SessionExam.DoesNotExist:
+            # Generate the unique code
+            year = datetime.now().year
+            count = SessionExam.objects.filter(created_at__year=year).count() + 1
+            generated_code = f"SESS-{str(year)[-2:]}-{count:03d}"
+            
+            # Ensure uniqueness
+            while SessionExam.objects.filter(code=generated_code).exists():
+                count += 1
+                generated_code = f"SESS-{str(year)[-2:]}-{count:03d}"
+
+            # Save the session instance with the generated code
+            instance = form.save(commit=False)
+            instance.code = generated_code
+            instance.save()
+            code = instance.code
                 
-                instance = form.save()
-                code = instance.code
-                
-                UserActionLog.objects.create(
-                    user=request.user,
-                    action_type='CREATE',
-                    target_model='SessionExamen',
-                    target_id=str(instance.id),
-                    details=f"Création de la session d'examen code: {instance.code}, libellé: {instance.label}",
-                    ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
-                )
-                
-                return JsonResponse({'statut' : 'success','id' : code})
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='SessionExamen',
+                target_id=str(instance.id),
+                details=f"Création de la session d'examen code: {instance.code}, libellé: {instance.label}",
+                ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+            )
+            
+            return JsonResponse({'statut' : 'success','id' : code})
         else:
             return JsonResponse({'statut' : False, 'message' : "Une erreur s'est produite lors du traitement du formulaire"})
     else:

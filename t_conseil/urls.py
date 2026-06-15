@@ -50,6 +50,10 @@ urlpatterns = [
   path('ApiLoadProspectFinancials', ApiLoadProspectFinancials, name="ApiLoadProspectFinancials"),
   
   path('ApiCreateProspect', ApiCreateProspect, name="ApiCreateProspect"),
+  path('ApiAddContactEntreprise', ApiAddContactEntreprise, name="ApiAddContactEntreprise"),
+  path('ApiEditContactEntreprise', ApiEditContactEntreprise, name="ApiEditContactEntreprise"),
+  path('ApiDeleteContactEntreprise', ApiDeleteContactEntreprise, name="ApiDeleteContactEntreprise"),
+  path('ApiLoadContactsEntreprise', ApiLoadContactsEntreprise, name="ApiLoadContactsEntreprise"),
   path('ApiQuickCreateProspect', ApiQuickCreateProspect, name="ApiQuickCreateProspect"),
   path('ApiSaveLigneDevis', ApiSaveLigneDevis, name="ApiSaveLigneDevis"),
   path('ApiSaveDevisItems', ApiSaveDevisItems, name="ApiSaveDevisItems"),

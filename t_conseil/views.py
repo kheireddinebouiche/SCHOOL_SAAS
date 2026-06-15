@@ -622,7 +622,7 @@ def DetailsClient(request, slug):
 @module_permission_required('con', 'view')
 def ApiListeClients(request):
     liste = Prospets.objects.filter(context='con', is_client=True).values(
-        'id', 'slug', 'nom', 'prenom', 'entreprise', 'email', 'telephone', 'created_at', 'convertit_date'
+        'id', 'slug', 'nom', 'prenom', 'entreprise', 'email', 'telephone', 'created_at', 'convertit_date', 'type_prospect'
     )
     return JsonResponse(list(liste), safe=False)
 
@@ -848,6 +848,14 @@ def ApiSaveDevisItems(request):
         conditions = data.get('conditions_commerciales')
         if conditions is not None:
             devis.conditions_commerciales = conditions
+
+        # Dates
+        date_emission = data.get('date_emission')
+        if date_emission:
+            devis.date_emission = date_emission
+        date_echeance = data.get('date_echeance')
+        if date_echeance:
+            devis.date_echeance = date_echeance
         
         # Clear existing lines to replace with new ones (full sync) or append?
         # Usually full sync is safer for "Save" button unless we track IDs.
@@ -1238,12 +1246,14 @@ def ApiQuickCreateProspect(request):
     prenom = request.POST.get('prenom')
     email = request.POST.get('email')
     telephone = request.POST.get('telephone')
+    email_entreprise = request.POST.get('email_entreprise')
+    telephone_entreprise = request.POST.get('telephone_entreprise')
     type_prospect = 'entreprise'
     entreprise_nom = request.POST.get('entreprise')
     poste = request.POST.get('poste')
     
-    if not nom or not telephone or not entreprise_nom:
-         return JsonResponse({'status': 'error', 'message': "Le nom, le téléphone et le nom de l'entreprise sont obligatoires."})
+    if not entreprise_nom:
+         return JsonResponse({'status': 'error', 'message': "La désignation de l'entreprise est obligatoire."})
          
     try:
         # Check for duplicates? For now, we assume standard creation.
@@ -1251,8 +1261,8 @@ def ApiQuickCreateProspect(request):
         prospect = Prospets.objects.create(
             nom=nom,
             prenom=prenom,  # Keep prenom for both types - it's the contact person name
-            email=email,
-            telephone=telephone,
+            email=email_entreprise or email,
+            telephone=telephone_entreprise or telephone,
             type_prospect=type_prospect,
             context='con', # Conseil
             indic='+213', # Default
@@ -1260,6 +1270,18 @@ def ApiQuickCreateProspect(request):
             entreprise=entreprise_nom,
             poste_dans_entreprise=poste,
         )
+        
+        if nom or prenom or telephone or email:
+            from t_crm.models import ContactEntreprise
+            ContactEntreprise.objects.create(
+                prospect=prospect,
+                nom=nom,
+                prenom=prenom,
+                telephone=telephone,
+                email=email,
+                poste=poste,
+                is_primary=True
+            )
         
         from t_crm.models import UserActionLog
         UserActionLog.objects.create(
@@ -2587,16 +2609,40 @@ def ApiFetchEnterpriseTvas(request):
     return JsonResponse({'status': 'success', 'tvas': list(tvas)})
 
 
+from django.core.paginator import Paginator
+
 @login_required(login_url='institut_app:login')
 @module_permission_required('con', 'view')
 def ListeDAS(request):
     """
     Renders the page to manage DAS mappings (Products/Services to PaymentCategory).
     """
+    filter_type = request.GET.get('filter', 'all')
+    
+    thematiques = Thematiques.objects.filter(etat='active').prefetch_related('das_mappings__payment_category').order_by('-created_at')
+    
+    thematique_list = []
+    for t in thematiques:
+        mapping = t.das_mappings.first()
+        
+        if filter_type == 'mapped' and not mapping:
+            continue
+        if filter_type == 'unmapped' and mapping:
+            continue
+            
+        thematique_list.append({
+            'thematique': t,
+            'mapping': mapping,
+        })
+        
+    paginator = Paginator(thematique_list, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     context = {
         'tenant': request.tenant,
-        'mappings': DASMapping.objects.all().select_related('thematique', 'payment_category'),
-        'thematiques': Thematiques.objects.filter(etat='active'),
+        'page_obj': page_obj,
+        'filter_type': filter_type,
         'payment_categories': PaymentCategory.objects.all(),
     }
     return render(request, 'tenant_folder/conseil/liste_das.html', context)
@@ -2611,47 +2657,45 @@ def ApiSaveDAS(request):
     API to create or update a DAS mapping.
     """
     if request.method == "POST":
-        das_id = request.POST.get('das_id')
-        designation = request.POST.get('designation')
         thematique_id = request.POST.get('thematique_id')
         category_id = request.POST.get('category_id')
 
-        if not designation or not thematique_id or not category_id:
-            return JsonResponse({'status': 'error', 'message': 'Tous les champs sont obligatoires.'})
+        if not thematique_id or not category_id:
+            return JsonResponse({'status': 'error', 'message': 'Produit et Catégorie sont obligatoires.'})
 
         try:
             thematique = Thematiques.objects.get(id=thematique_id)
             category = PaymentCategory.objects.get(id=category_id)
+            
+            auto_designation = f"{thematique.label} - {category.name}"
 
-            if das_id:
-                try:
-                    mapping = DASMapping.objects.get(id=das_id) 
-                except DASMapping.DoesNotExist:
-                    return JsonResponse({'status': 'error', 'message': 'DASMapping introuvable.'})
-                mapping.designation = designation
-                mapping.thematique = thematique
+            mapping = DASMapping.objects.filter(thematique=thematique).first()
+            if mapping:
                 mapping.payment_category = category
+                mapping.designation = auto_designation
                 mapping.save()
-                message = "Mapping DAS mis Ã  jour avec succès."
+                message = "Mapping mis à jour avec succès."
+                action_type = 'UPDATE'
             else:
-                DASMapping.objects.create(
-                    designation=designation,
+                mapping = DASMapping.objects.create(
+                    designation=auto_designation,
                     thematique=thematique,
                     payment_category=category
                 )
-                message = "Nouveau mapping DAS créé avec succès."
+                message = "Mapping créé avec succès."
+                action_type = 'CREATE'
 
             from t_crm.models import UserActionLog
             UserActionLog.objects.create(
                 user=request.user,
-                action_type='UPDATE' if das_id else 'CREATE',
+                action_type=action_type,
                 target_model='DASMapping',
-                target_id=str(mapping.id if das_id else category.id), # Note: using category id if creating as we don't return the new mapping id
-                details=f"Création/Mise à jour d'un mapping DAS: {designation}",
+                target_id=str(mapping.id),
+                details=f"Création/Mise à jour d'un mapping DAS pour: {thematique.label}",
                 ip_address=request.META.get('REMOTE_ADDR')
             )
 
-            return JsonResponse({'status': 'success', 'message': message})
+            return JsonResponse({'status': 'success', 'message': message, 'mapping_id': mapping.id, 'designation': mapping.designation})
 
         except (Thematiques.DoesNotExist, PaymentCategory.DoesNotExist):
             return JsonResponse({'status': 'error', 'message': 'Produit ou catégorie introuvable.'})

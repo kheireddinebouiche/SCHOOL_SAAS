@@ -29,9 +29,13 @@ from django.core.paginator import Paginator
 @login_required(login_url='institut_app:login')
 def ListeDesPrinscrits(request):
     promos = Promos.objects.filter(is_archived=False).order_by('-begin_year')
+    specialites = Specialites.objects.all()
+    double_specialites = DoubleDiplomation.objects.all()
     context = {
         'tenant' : request.tenant,
         'promos': promos,
+        'specialites': specialites,
+        'double_specialites': double_specialites,
     }
 
     return render(request,'tenant_folder/crm/preinscrits/liste-des-preinscrits.html', context)
@@ -91,6 +95,7 @@ def ApiLoadPrinscrits(request):
     month_filter = request.GET.get('month')
     search_term = request.GET.get('search', '').strip().lower() if request.GET.get('search') else ''
     client_type = request.GET.get('client_type')
+    specialite_id = request.GET.get('specialite')
     sort_order = request.GET.get('sort', 'nom_asc')
     page_number = request.GET.get('page', 1)
     page_size = 10
@@ -134,6 +139,18 @@ def ApiLoadPrinscrits(request):
             qs = qs.filter(Q(entreprise__isnull=True) | Q(entreprise=''))
         elif client_type == 'entreprise':
             qs = qs.exclude(Q(entreprise__isnull=True) | Q(entreprise=''))
+
+    # Specialite filter
+    if specialite_id:
+        if specialite_id.startswith('d_'):
+            s_id = specialite_id[2:]
+            qs = qs.filter(
+                prospect_fiche_voeux_double__specialite_id=s_id
+            ).distinct()
+        else:
+            qs = qs.filter(
+                prospect_fiche_voeux__specialite_id=specialite_id
+            ).distinct()
 
     # Dynamic sorting
     if sort_order == 'nom_desc':

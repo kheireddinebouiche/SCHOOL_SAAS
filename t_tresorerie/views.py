@@ -143,7 +143,8 @@ def ApiLoadRefundDetails(request):
     if request.method == "GET":
         id = request.GET.get('id')
         obj = Rembourssements.objects.get(id = id)
-        paiement_lines = Paiements.objects.filter(prospect = obj.client, context='frais_f').aggregate(total=Sum('montant_paye'))['total'] or 0
+        paiements_qs = Paiements.objects.filter(prospect=obj.client, is_refund=False).exclude(Q(context='frais_i') | Q(is_frais_inscription=True) | Q(paiement_label__icontains="inscription"))
+        paiement_lines = paiements_qs.filter(Q(is_done=True) | Q(mode_paiement='esp')).aggregate(total=Sum('montant_paye'))['total'] or 0
 
         # Récupération des informations de groupe
         groupes = []
@@ -176,13 +177,16 @@ def ApiLoadRefundDetails(request):
         due_query = DuePaiements.objects.filter(client=obj.client).order_by('date_echeance', 'id')
         echeancier_list = []
         for due in due_query:
-            paid_amount = Paiements.objects.filter(due_paiements=due).aggregate(total=Sum('montant_paye'))['total'] or 0
-            is_factured = Paiements.objects.filter(due_paiements=due, facture__isnull=False).exists()
+            paiements_due = Paiements.objects.filter(due_paiements=due)
+            paid_amount = paiements_due.filter(Q(is_done=True) | Q(mode_paiement='esp')).aggregate(total=Sum('montant_paye'))['total'] or 0
+            attente_amount = paiements_due.filter(is_done=False).exclude(mode_paiement='esp').aggregate(total=Sum('montant_paye'))['total'] or 0
+            is_factured = paiements_due.filter(facture__isnull=False).exists()
             echeancier_list.append({
                 'label': due.label or 'N/A',
                 'montant_due': float(due.montant_due) if due.montant_due else 0.0,
                 'montant_paye': float(paid_amount),
-                'montant_restant': float(due.montant_restant) if due.montant_restant is not None else float((due.montant_due or 0) - paid_amount),
+                'montant_attente': float(attente_amount),
+                'montant_restant': float(due.montant_restant) if due.montant_restant is not None else float((due.montant_due or 0) - paid_amount - attente_amount),
                 'date_echeance': due.date_echeance.strftime("%d/%m/%Y") if due.date_echeance else "N/A",
                 'is_done': due.is_done,
                 'is_factured': is_factured

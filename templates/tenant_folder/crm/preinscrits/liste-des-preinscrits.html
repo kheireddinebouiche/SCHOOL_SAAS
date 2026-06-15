@@ -537,6 +537,39 @@
       display: inline-flex;
       border: 1px solid rgba(0,0,0,0.05);
   }
+
+  /* Select2 Customization for Modern Select */
+  .select2-container--default .select2-selection--single {
+      border: 1px solid rgba(0,0,0,0.08) !important;
+      border-radius: 2rem !important;
+      font-size: 0.875rem !important;
+      font-weight: 500 !important;
+      color: #495057 !important;
+      background-color: #ffffff !important;
+      height: 39px !important; 
+      padding: 0.35rem 1rem !important;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02) !important;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+  }
+  
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+      color: #495057 !important;
+      padding-left: 0 !important;
+      line-height: normal !important;
+  }
+
+  .select2-container--default .select2-selection--single .select2-selection__arrow {
+      height: 37px !important;
+      right: 10px !important;
+  }
+
+  .select2-container--default.select2-container--open .select2-selection--single,
+  .select2-container--default.select2-container--focus .select2-selection--single {
+      border-color: #405189 !important;
+      box-shadow: 0 0 0 0.15rem rgba(64, 81, 137, 0.15) !important;
+  }
 </style>
 
 <div class="main-content">
@@ -694,21 +727,35 @@
                     <!-- Other Filters -->
                     <div class="col-lg-7 col-xl-8">
                         <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-3">
-                            <select id="sort-order" class="form-select modern-select py-2 px-4 w-auto" title="Trier par">
-                                <option value="nom_asc">Trier par : Nom (A-Z)</option>
-                                <option value="nom_desc">Trier par : Nom (Z-A)</option>
-                                <option value="date_desc">Trier par : Date (Récent)</option>
-                                <option value="date_asc">Trier par : Date (Ancien)</option>
-                            </select>
-
-                            <select id="filter-promo" class="form-select modern-select py-2 px-4 w-auto">
+                            <select id="filter-promo" class="form-select modern-select py-2 px-3" style="max-width: 220px;">
                                 <option value="">Toutes les promos</option>
                                 {% for promo in promos %}
                                     <option value="{{ promo.id }}">{{ promo.label }} ({{ promo.begin_year }}/{{ promo.end_year }})</option>
                                 {% endfor %}
                             </select>
 
-                            <input type="month" id="month-filter" class="form-control modern-input py-2 px-4 w-auto" title="Filtrer par mois">
+                            <select id="filter-specialite" class="form-select modern-select py-2 px-3" style="max-width: 250px;">
+                                <option value="">Toutes les spécialités</option>
+                                <optgroup label="Spécialités Standards">
+                                {% for spec in specialites %}
+                                    <option value="{{ spec.id }}">{{ spec.label }}</option>
+                                {% endfor %}
+                                </optgroup>
+                                <optgroup label="Double Diplomation">
+                                {% for d_spec in double_specialites %}
+                                    <option value="d_{{ d_spec.id }}">{{ d_spec.specialite1.label }} / {{ d_spec.specialite2.label }}</option>
+                                {% endfor %}
+                                </optgroup>
+                            </select>
+
+                            <input type="month" id="month-filter" class="form-control modern-input py-2 px-3" style="max-width: 180px;" title="Filtrer par mois">
+
+                            <select id="sort-order" class="form-select modern-select py-2 px-3" style="max-width: 220px;" title="Trier par">
+                                <option value="nom_asc">Trier par : Nom (A-Z)</option>
+                                <option value="nom_desc">Trier par : Nom (Z-A)</option>
+                                <option value="date_desc">Trier par : Date (Récent)</option>
+                                <option value="date_asc">Trier par : Date (Ancien)</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -1225,6 +1272,14 @@
     let pendingFormData = null;
     let pendingModalId = null;
 
+    // Initialize Select2 for the specialty filter
+    $('#filter-specialite').select2({
+        width: '100%'
+    });
+    
+    // Ensure select2 container inherits the max-width
+    $('#filter-specialite').next('.select2-container').css('max-width', '250px');
+
     // Ensure table responsive container doesn't hide dropdowns
     $('.table-responsive').css('overflow-x', 'visible');
 
@@ -1298,6 +1353,7 @@
         }
 
         var promo_id = $('#filter-promo').val();
+        var specialite_id = $('#filter-specialite').val();
         var selectedStatuses = [];
         $('.status-checkbox:checked').each(function() {
             selectedStatuses.push($(this).val());
@@ -1313,6 +1369,7 @@
           type: 'GET',
           data: {
               'promo': promo_id,
+              'specialite': specialite_id,
               'statuses': selectedStatuses,
               'month': monthFilter,
               'search': searchTerm,
@@ -1650,6 +1707,11 @@
         loadProspects(true);
     });
 
+    // Handle specialite filter change
+    $(document).on('change', '#filter-specialite', function() {
+        loadProspects(true);
+    });
+
     // Handle status checkboxes change
     $(document).on('change', '.status-checkbox', function() {
         loadProspects(true);
@@ -1679,6 +1741,7 @@
         $('#table-filter').val('');
         $('#filter-prospect').val('');
         $('#filter-promo').val('');
+        $('#filter-specialite').val('').trigger('change.select2');
         $('#month-filter').val('');
         $('#sort-order').val('nom_asc');
         $('.status-checkbox').prop('checked', true);

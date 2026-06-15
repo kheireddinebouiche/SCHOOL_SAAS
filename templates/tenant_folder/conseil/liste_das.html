@@ -4,6 +4,10 @@
 {% block title %} Conseil - Mapping des Domaines d'Activité (DAS) {% endblock title %}
 
 {% block content %}
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
 <style>
     /* Premium Look & Feel - Harmonized with Tresorerie */
     .glass-card {
@@ -73,6 +77,21 @@
         padding: 0.75rem 1rem;
         border: 1px solid #e2e8f0;
     }
+    
+    /* Custom Select2 Modern Harmonization */
+    .select2-container--bootstrap-5 .select2-selection {
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 0.75rem;
+        padding: 0.5rem;
+        min-height: 42px;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+        transition: all 0.2s ease-in-out;
+    }
+    .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+    }
 </style>
 
 <div class="main-content">
@@ -92,11 +111,6 @@
                                 <p class="text-muted mb-0">Associez vos thématiques aux catégories financières</p>
                             </div>
                         </div>
-                        <div class="mt-3 mt-sm-0">
-                            <button class="btn btn-primary d-flex align-items-center py-2 px-4 btn-rounded shadow-sm" onclick="openDASModal()">
-                                <i class="ri-add-line me-1 fs-5"></i> <span>Nouveau Mapping</span>
-                            </button>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -105,54 +119,77 @@
       <div class="row">
         <div class="col-12">
             <div class="glass-card p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0">Liste des Thématiques</h5>
+                    <div class="btn-group shadow-sm" role="group" aria-label="Filtre de mapping">
+                        <input type="radio" class="btn-check filter-mapping" name="mappingFilter" id="filterAll" value="all" autocomplete="off" {% if filter_type == 'all' %}checked{% endif %} onchange="window.location.href='?filter=all'">
+                        <label class="btn btn-outline-primary btn-sm px-3" for="filterAll">Toutes</label>
+
+                        <input type="radio" class="btn-check filter-mapping" name="mappingFilter" id="filterMapped" value="mapped" autocomplete="off" {% if filter_type == 'mapped' %}checked{% endif %} onchange="window.location.href='?filter=mapped'">
+                        <label class="btn btn-outline-success btn-sm px-3" for="filterMapped">Mappées</label>
+
+                        <input type="radio" class="btn-check filter-mapping" name="mappingFilter" id="filterUnmapped" value="unmapped" autocomplete="off" {% if filter_type == 'unmapped' %}checked{% endif %} onchange="window.location.href='?filter=unmapped'">
+                        <label class="btn btn-outline-warning btn-sm px-3" for="filterUnmapped">Non Mappées</label>
+                    </div>
+                </div>
                 <div class="table-responsive">
-                    <table class="table table-premium align-middle table-nowrap mb-0">
+                    <table class="table table-premium align-middle table-nowrap mb-0" id="dasTable">
                         <thead>
                             <tr>
-                                <th class="ps-4">Designation</th>
-                                <th>Thematique</th>
-                                <th>Categorie Financiere</th>
-                                <th>Date Creation</th>
-                                <th class="text-end pe-4">Actions</th>
+                                <th class="ps-4">Thématique (Produit/Service)</th>
+                                <th>Statut Mapping</th>
+                                <th>Catégorie Financière Associée</th>
+                                <th>Désignation (DAS)</th>
+                                <th class="text-end pe-4">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for mapping in mappings %}
-                            <tr>
+                            {% for item in page_obj %}
+                            <tr class="das-row" data-status="{% if item.mapping %}mapped{% else %}unmapped{% endif %}" id="row-{{ item.thematique.id }}">
                                 <td class="ps-4">
                                     <div class="d-flex align-items-center">
                                         <div class="avatar-xs me-3">
                                             <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded-lg fw-bold">
-                                                {{ mapping.designation|slice:":1"|upper }}
+                                                {{ item.thematique.label|slice:":1"|upper }}
                                             </div>
                                         </div>
-                                        <span class="fw-bold text-dark">{{ mapping.designation }}</span>
+                                        <span class="fw-bold text-dark">{{ item.thematique.label }}</span>
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="badge bg-primary bg-opacity-10 text-primary fs-12 px-2 py-1">
-                                        <i class="ri-lightbulb-line me-1"></i> {{ mapping.thematique.label }}
-                                    </span>
+                                    {% if item.mapping %}
+                                        <span class="badge bg-success bg-opacity-10 text-success fs-12 px-2 py-1" id="status-badge-{{ item.thematique.id }}">
+                                            <i class="ri-check-line me-1"></i> Mappé
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-warning bg-opacity-10 text-warning fs-12 px-2 py-1" id="status-badge-{{ item.thematique.id }}">
+                                            <i class="ri-error-warning-line me-1"></i> Non Mappé
+                                        </span>
+                                    {% endif %}
                                 </td>
                                 <td>
-                                    <span class="badge bg-success bg-opacity-10 text-success fs-12 px-2 py-1">
-                                        <i class="ri-bank-card-line me-1"></i> {{ mapping.payment_category.name }}
-                                    </span>
+                                    <select class="form-select form-select-sm das-category-select" data-thematique-id="{{ item.thematique.id }}" style="min-width: 200px;">
+                                        <option value="">-- Sélectionner une catégorie --</option>
+                                        {% for pc in payment_categories %}
+                                            <option value="{{ pc.id }}" {% if item.mapping and item.mapping.payment_category.id == pc.id %}selected{% endif %}>{{ pc.name }}</option>
+                                        {% endfor %}
+                                    </select>
                                 </td>
                                 <td>
-                                    <span class="text-muted fs-13 fw-semibold">
-                                        <i class="ri-calendar-line me-1"></i> {{ mapping.created_at|date:"d M Y" }}
+                                    <span class="text-muted fs-13 fw-semibold" id="designation-text-{{ item.thematique.id }}">
+                                        {% if item.mapping %}{{ item.mapping.designation }}{% else %}-{% endif %}
                                     </span>
                                 </td>
                                 <td class="text-end pe-4">
-                                    <div class="d-flex justify-content-end gap-2">
-                                        <button class="btn btn-soft-info btn-sm btn-rounded" onclick="openDASModal('{{ mapping.id }}', '{{ mapping.designation|escapejs }}', '{{ mapping.thematique.id }}', '{{ mapping.payment_category.id }}')">
-                                            <i class="ri-pencil-line"></i>
-                                        </button>
-                                        <button class="btn btn-soft-danger btn-sm btn-rounded" onclick="deleteDAS('{{ mapping.id }}')">
+                                    {% if item.mapping %}
+                                        <button class="btn btn-soft-danger btn-sm btn-rounded" onclick="deleteDAS('{{ item.mapping.id }}', '{{ item.thematique.id }}')" id="btn-delete-{{ item.thematique.id }}">
                                             <i class="ri-delete-bin-line"></i>
                                         </button>
-                                    </div>
+                                    {% else %}
+                                        <button class="btn btn-soft-danger btn-sm btn-rounded d-none" onclick="" id="btn-delete-{{ item.thematique.id }}">
+                                            <i class="ri-delete-bin-line"></i>
+                                        </button>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% empty %}
@@ -161,17 +198,45 @@
                                     <div class="avatar-lg bg-light rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center">
                                         <i class="ri-node-tree fs-1 text-muted"></i>
                                     </div>
-                                    <h5 class="fw-bold">Aucun mapping DAS trouvé</h5>
-                                    <p class="text-muted mb-4">Associez vos thématiques à des catégories de paiement pour une meilleure gestion financière.</p>
-                                    <button class="btn btn-primary" onclick="openDASModal()">
-                                        <i class="ri-add-line me-1"></i> Créer votre premier mapping
-                                    </button>
+                                    <h5 class="fw-bold">Aucune thématique trouvée</h5>
+                                    <p class="text-muted mb-4">Créez des thématiques pour pouvoir les associer aux catégories financières.</p>
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+
+                {% if page_obj.has_other_pages %}
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div class="text-muted fs-13">
+                        Affichage de {{ page_obj.start_index }} à {{ page_obj.end_index }} sur {{ page_obj.paginator.count }} thématiques
+                    </div>
+                    <nav aria-label="Pagination">
+                        <ul class="pagination pagination-rounded mb-0">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&filter={{ filter_type }}"><i class="ri-arrow-left-s-line"></i></a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link"><i class="ri-arrow-left-s-line"></i></span></li>
+                            {% endif %}
+                            
+                            {% for i in page_obj.paginator.page_range %}
+                                {% if page_obj.number == i %}
+                                    <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                                {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ i }}&filter={{ filter_type }}">{{ i }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&filter={{ filter_type }}"><i class="ri-arrow-right-s-line"></i></a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link"><i class="ri-arrow-right-s-line"></i></span></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
             </div>
         </div>
       </div>
@@ -180,126 +245,77 @@
   </div>
 </div>
 
-<!-- DAS Modal -->
-<div class="modal fade" id="dasModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content glass-card border-0">
-      <div class="modal-header border-bottom-0 p-4">
-        <div class="d-flex align-items-center">
-          <div class="bg-primary bg-opacity-10 p-3 rounded-circle me-3" id="modalIconContainer">
-            <i class="ri-add-circle-line fs-2 text-primary" id="modalIcon"></i>
-          </div>
-          <div>
-            <h4 class="modal-title mb-0 text-dark fw-bold" id="dasModalLabel">Nouveau Mapping DAS</h4>
-            <p class="mb-0 text-muted small">Configurez l'association produit/catégorie</p>
-          </div>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body p-4 pt-0">
-        <form id="dasForm">
-          <input type="hidden" id="dasId">
-          <div class="mb-4">
-            <label class="form-label fw-bold text-muted small text-uppercase">Désignation du DAS</label>
-            <input type="text" class="form-control form-control-custom" id="dasDesignation" placeholder="Ex: Formation Executive Management">
-          </div>
-          <div class="mb-4">
-            <label class="form-label fw-bold text-muted small text-uppercase">Thématique (Produit / Service)</label>
-            <select class="form-select form-control-custom" id="dasThematique">
-              <option value="">Sélectionner une thématique...</option>
-              {% for t in thematiques %}
-                <option value="{{ t.id }}">{{ t.label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-bold text-muted small text-uppercase">Catégorie de Paiement</label>
-            <select class="form-select form-control-custom" id="dasCategory">
-              <option value="">Sélectionner une catégorie...</option>
-              {% for pc in payment_categories %}
-                <option value="{{ pc.id }}">{{ pc.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer border-top-0 p-4 pt-0">
-        <button type="button" class="btn btn-light btn-rounded px-4 fw-semibold" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-primary btn-rounded px-4 shadow-sm fw-bold d-flex align-items-center" onclick="saveDAS()">
-          <i class="ri-save-line me-2"></i> Enregistrer le mapping
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
 {% endblock content %}
 
 {% block extra_js %}
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
-    const dasModalEl = document.getElementById('dasModal');
-    const dasModal = new bootstrap.Modal(dasModalEl);
-
-    function openDASModal(id = '', designation = '', thematiqueId = '', categoryId = '') {
-        document.getElementById('dasId').value = id;
-        document.getElementById('dasDesignation').value = designation;
-        document.getElementById('dasThematique').value = thematiqueId;
-        document.getElementById('dasCategory').value = categoryId;
-        
-        const label = document.getElementById('dasModalLabel');
-        const icon = document.getElementById('modalIcon');
-        const iconContainer = document.getElementById('modalIconContainer');
-        
-        if (id) {
-            label.textContent = 'Modifier le Mapping DAS';
-            icon.className = 'ri-edit-line fs-2 text-info';
-            iconContainer.className = 'bg-info bg-opacity-10 p-3 rounded-pill me-3';
-        } else {
-            label.textContent = 'Nouveau Mapping DAS';
-            icon.className = 'ri-add-circle-line fs-2 text-primary';
-            iconContainer.className = 'bg-primary bg-opacity-10 p-3 rounded-pill me-3';
-        }
-        
-        dasModal.show();
-    }
-
-    function saveDAS() {
-        const id = document.getElementById('dasId').value;
-        const designation = document.getElementById('dasDesignation').value;
-        const thematiqueId = document.getElementById('dasThematique').value;
-        const categoryId = document.getElementById('dasCategory').value;
-
-        if (!designation || !thematiqueId || !categoryId) {
-            alertify.error("Veuillez remplir tous les champs.");
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('das_id', id);
-        formData.append('designation', designation);
-        formData.append('thematique_id', thematiqueId);
-        formData.append('category_id', categoryId);
-        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-
-        fetch("{% url 't_conseil:ApiSaveDAS' %}", {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.status === 'success') {
-                alertify.success(data.message);
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                alertify.error(data.message);
-            }
+    // Initialize select2 for category selection
+    $(document).ready(function() {
+        $('.das-category-select').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: '-- Sélectionner une catégorie --',
+            allowClear: true
         });
-    }
+        
+        // Handle inline saving when category is selected via Select2
+        $('.das-category-select').on('select2:select select2:unselect', function(e) {
+            const thematiqueId = this.dataset.thematiqueId;
+            const categoryId = $(this).val();
 
-    function deleteDAS(id) {
+            if (!categoryId) {
+                // Ignore if empty selection or clear
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('thematique_id', thematiqueId);
+            formData.append('category_id', categoryId);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            fetch("{% url 't_conseil:ApiSaveDAS' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alertify.success("Enregistré");
+                    
+                    // Update Status Badge
+                    const badge = document.getElementById(`status-badge-${thematiqueId}`);
+                    badge.className = 'badge bg-success bg-opacity-10 text-success fs-12 px-2 py-1';
+                    badge.innerHTML = '<i class="ri-check-line me-1"></i> Mappé';
+
+                    // Update Designation Text
+                    const desigText = document.getElementById(`designation-text-${thematiqueId}`);
+                    desigText.textContent = data.designation;
+
+                    // Update Delete Button
+                    const deleteBtn = document.getElementById(`btn-delete-${thematiqueId}`);
+                    deleteBtn.classList.remove('d-none');
+                    deleteBtn.setAttribute('onclick', `deleteDAS('${data.mapping_id}', '${thematiqueId}')`);
+                    
+                    // Update Row Status
+                    const row = document.getElementById(`row-${thematiqueId}`);
+                    if (row) row.dataset.status = 'mapped';
+                } else {
+                    alertify.error(data.message);
+                }
+            })
+            .catch(err => {
+                alertify.error("Erreur serveur");
+            });
+        });
+    });
+
+    function deleteDAS(id, thematiqueId) {
         alertify.confirm("Supprimer ce mapping ?", "Voulez-vous vraiment supprimer cet association DAS ? Cette action est irréversible.",
             function () {
                 const formData = new FormData();
@@ -317,7 +333,32 @@
                 .then(data => {
                     if (data.status === 'success') {
                         alertify.success(data.message);
-                        setTimeout(() => location.reload(), 1000);
+                        
+                        // Reset UI for this row
+                        const badge = document.getElementById(`status-badge-${thematiqueId}`);
+                        badge.className = 'badge bg-warning bg-opacity-10 text-warning fs-12 px-2 py-1';
+                        badge.innerHTML = '<i class="ri-error-warning-line me-1"></i> Non Mappé';
+
+                        const desigText = document.getElementById(`designation-text-${thematiqueId}`);
+                        desigText.textContent = '-';
+
+                        const select = $(`.das-category-select[data-thematique-id="${thematiqueId}"]`);
+                        if (select.length) {
+                            select.val(null).trigger('change.select2');
+                        }
+
+                        const deleteBtn = document.getElementById(`btn-delete-${thematiqueId}`);
+                        deleteBtn.classList.add('d-none');
+                        
+                        // Update Row Status
+                        const row = document.getElementById(`row-${thematiqueId}`);
+                        if (row) row.dataset.status = 'unmapped';
+                        
+                        // Trigger filter update if needed
+                        const activeFilter = document.querySelector('input[name="mappingFilter"]:checked').value;
+                        if (activeFilter === 'mapped') {
+                            row.style.display = 'none';
+                        }
                     } else {
                         alertify.error(data.message);
                     }

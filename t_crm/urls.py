@@ -60,7 +60,7 @@ from .f_views.remise import (
     ListeRemiseApplique, AipLoadRemise, ApiStoreApplicedReduction,
     ApiloadRemiseAppliquer, ApiLoadRemiseAppliquerDetails,
     ApiGetReductionDetails, ApiActivateRemiseAppliquer,
-    ApiLoadProspectParticulier
+    ApiLoadProspectParticulier, ApiDeleteRemiseAppliquer
 )
 from .f_views.counter import get_crm_counters, increment_crm_counter, get_activity_history
 from .f_views.logs import user_action_log_list, clear_logs
@@ -243,6 +243,7 @@ urlpatterns = [
     path('ApiGetReductionDetails', ApiGetReductionDetails, name="ApiGetReductionDetails"),
 
     path('ApiActivateRemiseAppliquer', ApiActivateRemiseAppliquer, name="ApiActivateRemiseAppliquer"),
+    path('ApiDeleteRemiseAppliquer', ApiDeleteRemiseAppliquer, name="ApiDeleteRemiseAppliquer"),
 
     path('ApiCreateVoeuxDouble', ApiCreateVoeuxDouble, name="ApiCreateVoeuxDouble"),
     

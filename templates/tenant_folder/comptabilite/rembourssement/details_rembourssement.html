@@ -207,9 +207,15 @@
                                 <div class="fs-5 fw-bold text-danger mt-1" id="detailMontantRembourse"></div>
                             </div>
                             <div class="mb-3">
-                                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.05em;">Total Payé</span>
+                                <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.05em;">Total encaissé</span>
                                 <div class="fs-6 fw-bold text-success mt-1" id="detailMontantPaye"></div>
                             </div>
+                            {% if total_attente > 0 %}
+                            <div class="mb-3">
+                                <span class="text-muted small fw-bold text-uppercase" title="En attente d'encaissement" style="font-size: 0.72rem; letter-spacing: 0.05em;"><i class="ri-time-line me-1"></i>En attente</span>
+                                <div class="fs-6 fw-bold text-warning mt-1" id="detailMontantAttente"></div>
+                            </div>
+                            {% endif %}
                             <div class="mb-3">
                                 <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.05em;">Méthode de remboursement</span>
                                 <div class="mt-1">
@@ -422,7 +428,7 @@
                                 <i class="ri-close-circle-line me-2"></i>Annuler la demande
                             </button>
                             <button type="button" class="btn btn-success btn-rounded px-4 py-2" id="btnShowRefundModal">
-                                <i class="ri-check-double-line me-2"></i>Déclencher la dépense
+                                <i class="ri-check-double-line me-2"></i>Traiter le remboursement
                             </button>
                             {% endif %}
                         </div>
@@ -522,8 +528,8 @@
 
 <!-- Modal Confirmation Remboursement -->
 <div class="modal fade" id="confirmationRemboursementModal" tabindex="-1" aria-labelledby="confirmationRemboursementModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content rounded-4 shadow-lg border-0 overflow-hidden">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content rounded-4 shadow-lg border-0 overflow-hidden">
             <!-- Header -->
             <div class="modal-header border-0 bg-success bg-opacity-10 px-4 py-3">
                 <div class="d-flex align-items-center">
@@ -532,7 +538,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title fw-bold text-success mb-0" id="confirmationRemboursementModalLabel">Confirmation de remboursement</h5>
-                        <p class="text-success text-opacity-75 small mb-0">Valider le remboursement et déclencher la dépense</p>
+                        <p class="text-success text-opacity-75 small mb-0">Valider et traiter le remboursement</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -601,7 +607,7 @@
                         </select>
                     </div>
                     <div class="col-md-6" id="categorySelectWrapper">
-                        <label for="category_select" class="form-label fw-semibold text-muted small text-uppercase">Catégorie de dépense</label>
+                        <label for="category_select" class="form-label fw-semibold text-muted small text-uppercase">Compte / Catégorie</label>
                         <select id="category_select" class="form-select form-select-lg fs-6 shadow-none border bg-light rounded-3">
                         </select>
                     </div>
@@ -643,7 +649,7 @@
                     Annuler
                 </button>
                 <button type="button" class="btn btn-success fw-bold rounded-pill px-4 py-2 shadow-sm d-flex align-items-center" id="confirmerRemboursementBtn">
-                    <i class="ri-check-double-line me-2"></i> Confirmer & Déclencher
+                    <i class="ri-check-double-line me-2"></i> Confirmer le remboursement
                 </button>
             </div>
         </div>
@@ -736,7 +742,7 @@
                 dataType:"JSON",
                 type: "GET",
                 success : function(data){
-                    var option="<option value=''>Veuillez sélectionner une catégorie</option>";
+                    var option="<option value=''>Veuillez sélectionner un compte</option>";
                     $.each(data, function(index, p){
                         option += "<option value='"+p.id+"'>"+p.name+"</option>";
                     });
@@ -749,7 +755,7 @@
                     
                     $('#category_select').select2({
                         dropdownParent: $('#confirmationRemboursementModal'),
-                        placeholder: "Rechercher une catégorie...",
+                        placeholder: "Rechercher un compte...",
                         width: '100%'
                     });
                 }
@@ -760,12 +766,42 @@
             var entite_select = $('#entite_select').val();
             var category_select = $('#category_select').val();
 
-            if (!entite_select) {
-                alertify.error("Veuillez sélectionner une entité");
-                return;
+            if (refundAmount > 0) {
+                if (!$('#entiteSelectWrapper').hasClass('d-none') && !entite_select) {
+                    alertify.error("Veuillez sélectionner une entité");
+                    return;
+                }
+                if (!category_select) {
+                    alertify.error("Veuillez sélectionner un compte / catégorie");
+                    return;
+                }
             }
-            if (!category_select) {
-                alertify.error("Veuillez sélectionner une catégorie de dépense");
+
+            var totalAllocated = 0;
+            allocations = {};
+            var hasError = false;
+            
+            $('.dispatch-input').each(function() {
+                var id = $(this).data('id');
+                var val = parseFloat($(this).val()) || 0;
+                var max = parseFloat($(this).data('max'));
+                
+                if (val > max) {
+                    alertify.error("Le montant alloué (" + val + ") dépasse le montant payé pour le paiement Réf. " + id);
+                    hasError = true;
+                    return false;
+                }
+                
+                if (val > 0) {
+                    allocations[id] = val;
+                }
+                totalAllocated += val;
+            });
+            
+            if (hasError) return;
+            
+            if (Math.abs(totalAllocated - refundAmount) > 0.01) {
+                alertify.error("La somme allouée (" + totalAllocated.toFixed(2) + " DA) doit être égale au montant à rembourser (" + refundAmount.toFixed(2) + " DA).");
                 return;
             }
 
@@ -786,7 +822,7 @@
                 },
                 success : function(response){
                     if(response.status === "success"){
-                        alertify.success("Dépense déclenchée avec succès !");
+                        alertify.success("Remboursement traité avec succès !");
                         setTimeout(function(){
                             location.reload();
                         }, 1500);
@@ -810,17 +846,21 @@
         }
 
         $('#detailMontantPaye').text(formatComptable('{{ total_paye|default:"0.00" }}')+" DA");
+        {% if total_attente > 0 %}
+        $('#detailMontantAttente').text(formatComptable('{{ total_attente|default:"0.00" }}')+" DA");
+        {% endif %}
         $('#detailMontantRembourse').text(formatComptable('{{ obj.allowed_amount|default:"0.00" }}')+" DA");
 
         var paiementsList = [
             {% for paiement in paiements %}
-                {% if not paiement.is_refund %}
+                {% if not paiement.is_refund and paiement.context != 'frais_i' and not paiement.is_frais_inscription and "inscription" not in paiement.paiement_label|lower %}
                 {
                     id: {{ paiement.id|default:0 }},
                     num: "{{ paiement.num|default:'' }}",
                     montant: parseFloat("{{ paiement.montant_paye|default:'0' }}".replace(',', '.')),
                     label: "{{ paiement.paiement_label|default:'' }}",
                     date: "{{ paiement.date_paiement|default:'' }}",
+                    mode: "{{ paiement.get_mode_paiement_display|default:'' }}",
                     entite_id: {{ paiement.entite.id|default:'null' }},
                     entite_nom: "{{ paiement.entite.designation|default:'' }}"
                 },
@@ -832,20 +872,31 @@
         var allocations = {};
 
         function calculateDispatch() {
-            var remaining = refundAmount;
-            allocations = {};
             var html = "";
+            var remaining = refundAmount;
+            var allocations = {};
             var entitiesInvolved = new Set();
             
-            // Dispatch LIFO (Derniers paiements en premier)
+            if (refundAmount <= 0) {
+                $('#dispatchCardContainer').hide();
+                $('#entiteSelectionContainer').hide();
+                $('#dispatchTableBody').html("<tr><td colspan='3' class='text-center text-muted py-2'>Aucun montant à répartir.</td></tr>");
+                return;
+            } else {
+                $('#dispatchCardContainer').show();
+                $('#entiteSelectionContainer').show();
+            }
+
+            // Dispatch LIFO (Derniers paiements en premier) used as default values
             var reversedPaiements = paiementsList.slice().reverse();
             
             reversedPaiements.forEach(function(p) {
-                if (remaining <= 0) return;
-                
-                var allocated = Math.min(remaining, p.montant);
+                var allocated = 0;
+                if (remaining > 0) {
+                    allocated = Math.min(remaining, p.montant);
+                    remaining -= allocated;
+                }
                 allocations[p.id] = allocated;
-                remaining -= allocated;
                 
                 if (p.entite_id) {
                     entitiesInvolved.add(p.entite_id);
@@ -856,10 +907,20 @@
                     entiteBadge = "<span class='badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 ms-2' style='font-size:0.65rem;'>" + p.entite_nom + "</span>";
                 }
                 
+                var modeBadge = "";
+                if (p.mode) {
+                    modeBadge = "<span class='badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 ms-2' style='font-size:0.65rem;'><i class='ri-wallet-line me-1'></i>" + p.mode + "</span>";
+                }
+                
                 html += "<tr>";
-                html += "<td class='ps-4'><div class='d-flex align-items-center'><div class='bg-light rounded p-2 me-2'><i class='ri-bill-line text-muted'></i></div><div><strong class='text-dark'>#" + p.num + "</strong>" + entiteBadge + "<br><small class='text-muted'>" + p.label + "</small></div></div></td>";
+                html += "<td class='ps-4'><div class='d-flex align-items-center'><div class='bg-light rounded p-2 me-2'><i class='ri-bill-line text-muted'></i></div><div><strong class='text-dark'>#" + p.num + "</strong>" + entiteBadge + modeBadge + "<br><small class='text-muted'>" + p.label + "</small></div></div></td>";
                 html += "<td><span class='badge bg-light border text-dark fw-medium px-2 py-1'>" + formatComptable(p.montant) + " DA</span></td>";
-                html += "<td class='pe-4 text-end'><span class='text-danger fw-bold fs-6'>" + formatComptable(allocated) + " DA</span></td>";
+                html += "<td class='pe-4 text-end'>";
+                html += "<div class='input-group input-group-sm mb-0 justify-content-end'>";
+                html += "<input type='number' class='form-control text-end fw-bold text-danger dispatch-input' style='max-width: 120px;' data-id='" + p.id + "' data-max='" + p.montant + "' value='" + allocated.toFixed(2) + "' min='0' step='0.01'>";
+                html += "<span class='input-group-text'>DA</span>";
+                html += "</div>";
+                html += "</td>";
                 html += "</tr>";
             });
             
@@ -868,6 +929,8 @@
             }
             
             $('#dispatchTableBody').html(html);
+
+            updateDispatchTotal();
 
             // Handle multi-entity UI
             if (entitiesInvolved.size > 1) {
@@ -890,6 +953,43 @@
                 }
             }
         }
+
+        function updateDispatchTotal() {
+            var totalAllocated = 0;
+            $('.dispatch-input').each(function() {
+                var val = parseFloat($(this).val()) || 0;
+                totalAllocated += val;
+            });
+            
+            var diff = refundAmount - totalAllocated;
+            var diffHtml = "";
+            if (Math.abs(diff) > 0.01 && diff > 0) {
+                diffHtml = "<div class='text-warning mt-2 small'><i class='ri-alert-line me-1'></i>Il reste " + formatComptable(diff) + " DA à allouer.</div>";
+            } else if (Math.abs(diff) > 0.01 && diff < 0) {
+                diffHtml = "<div class='text-danger mt-2 small'><i class='ri-error-warning-line me-1'></i>Vous avez dépassé le montant à rembourser de " + formatComptable(Math.abs(diff)) + " DA.</div>";
+            } else {
+                diffHtml = "<div class='text-success mt-2 small'><i class='ri-check-line me-1'></i>Le montant est parfaitement réparti.</div>";
+            }
+            
+            if ($('#dispatchSummary').length === 0) {
+                $('#dispatchTableBody').parent().parent().after("<div id='dispatchSummary' class='px-4 pb-3 pt-2 text-end bg-light rounded-bottom-4'></div>");
+            }
+            $('#dispatchSummary').html("<strong class='text-dark'>Total alloué : <span class='" + (Math.abs(diff) <= 0.01 ? "text-success" : "text-danger") + "'>" + formatComptable(totalAllocated) + " DA</span> / " + formatComptable(refundAmount) + " DA</strong>" + diffHtml);
+        }
+
+        $(document).on('input', '.dispatch-input', function() {
+            var max = parseFloat($(this).data('max'));
+            var val = parseFloat($(this).val()) || 0;
+            
+            if (val > max) {
+                $(this).val(max.toFixed(2));
+                alertify.warning("Le montant alloué ne peut pas dépasser le montant du paiement (" + formatComptable(max) + " DA).");
+            } else if (val < 0) {
+                $(this).val('0.00');
+            }
+            
+            updateDispatchTotal();
+        });
 
 
         $(document).on('click','#printDechargeBtn', function(){

@@ -715,14 +715,16 @@
                     <tbody>
           `;
 
-          // Add transactions for this date
-          $.each(transactions, function(i, transaction) {
+          // Add transactions for this date (from most recent to oldest)
+          var displayTransactions = transactions.slice().reverse();
+          $.each(displayTransactions, function(i, transaction) {
             var typeBadge = transaction.type === 'entree' ?
               '<span class="badge bg-primary">Encaissement</span>' :
               '<span class="badge bg-danger">Décaissement</span>';
+            var absMontant = Math.abs(parseFloat(transaction.montant) || 0);
             var montantText = transaction.type === 'entree' ?
-              '<span class="text-success fw-bold">+' + formatMoney(transaction.montant) + '</span>' :
-              '<span class="text-danger fw-bold">-' + formatMoney(transaction.montant) + '</span>';
+              '<span class="text-success fw-bold">+' + formatMoney(absMontant) + '</span>' :
+              '<span class="text-danger fw-bold">-' + formatMoney(absMontant) + '</span>';
 
             var refText = transaction.ref ? `<div class="small text-muted mt-1" style="font-size: 0.75rem;"><i class="ri-file-text-line me-1"></i>${transaction.ref}</div>` : '';
             
@@ -968,8 +970,9 @@
 
       // Add filtered data to the worksheet
       $.each(exportData, function(i, transaction) {
-        var debitVal = transaction.type === 'entree' ? parseFloat(transaction.montant) : null;
-        var creditVal = transaction.type === 'sortie' ? parseFloat(transaction.montant) : null;
+        var absMontant = Math.abs(parseFloat(transaction.montant) || 0);
+        var debitVal = transaction.type === 'entree' ? absMontant : null;
+        var creditVal = transaction.type === 'sortie' ? absMontant : null;
         var soldeVal = parseFloat(transaction.solde);
 
         ws_data.push([
@@ -1185,7 +1188,7 @@
     $('#detailRefInterne').text(t.ref || '-');
     $('#detailRefPaiement').text(t.reference || '-');
     
-    var m = parseFloat(t.montant);
+    var m = Math.abs(parseFloat(t.montant) || 0);
     var formattedM = isNaN(m) ? '0,00 DA' : m.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' DA';
 
     if(t.type === 'entree') {

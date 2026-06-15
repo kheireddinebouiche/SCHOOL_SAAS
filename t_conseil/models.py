@@ -129,6 +129,12 @@ class LignesDevis(models.Model):
     
 class Facture(models.Model):
     client = models.ForeignKey(Prospets, on_delete=models.CASCADE, help_text="Client facturé", null=True, blank=True)
+    
+    # Surcharge des coordonnées de facturation si le payeur est différent de l'étudiant
+    client_nom_override = models.CharField(max_length=255, null=True, blank=True, help_text="Nom du tiers payeur")
+    client_prenom_override = models.CharField(max_length=255, null=True, blank=True, help_text="Prénom du tiers payeur")
+    client_nin_override = models.CharField(max_length=255, null=True, blank=True, help_text="NIN du tiers payeur")
+    
     devis_source = models.ForeignKey(Devis, on_delete=models.SET_NULL, null=True, blank=True, related_name="facture")
     num_facture = models.CharField(max_length=50, unique=True, null=True, blank=True, help_text="Numéro de la facture")
     date_emission = models.DateField(null=True, blank=True)

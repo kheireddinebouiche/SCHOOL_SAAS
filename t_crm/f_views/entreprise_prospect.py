@@ -34,6 +34,9 @@ def ApiLoadEntrepriseProspectInfo(request):
         prospect['created_at'] = prospect['created_at'].strftime("%Y-%m-%d %H:%M") if prospect.get('created_at') else "-"
         prospect['statut_label'] = obj.get_statut_display()
         prospect['logo_entreprise_url'] = obj.logo_entreprise.url if obj.logo_entreprise and obj.logo_entreprise.name else None
+        
+        contacts = list(obj.contacts.values('id', 'nom', 'prenom', 'telephone', 'email', 'poste', 'is_primary').order_by('-is_primary', 'id'))
+        prospect['contacts'] = contacts
 
     return JsonResponse(prospect, safe=False)
 

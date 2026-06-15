@@ -66,8 +66,7 @@ class Roles(models.Model):
         verbose_name_plural="Roles"
 
     def __str__(self):
-        return self.label
-
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class Entreprise(models.Model):
    
     designation = models.CharField(max_length=255, null=True, blank=True)
@@ -107,8 +106,7 @@ class Entreprise(models.Model):
         verbose_name_plural = "Entreprises"
     
     def __str__(self):
-        return self.designation
-
+        return str(self.designation) if getattr(self, "designation", None) else "Sans désignation"
 class BankAccount(models.Model):
    
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, null=True, blank=True, related_name="comptes_entreprise")
@@ -128,8 +126,7 @@ class BankAccount(models.Model):
         verbose_name_plural="Labels"
 
     def __str__(self):
-        return self.bank_code
-
+        return str(self.bank_code) if getattr(self, "bank_code", None) else "Sans code"
 class GlobalConfiguration(models.Model):
     registration_validation_enabled = models.BooleanField(default=True, verbose_name=_("Validation des inscriptions active"))
     crm_notifications_enabled = models.BooleanField(default=True, verbose_name=_("Notifications CRM actives"))
@@ -267,8 +264,7 @@ class Fournisseur(models.Model):
     updated_at = models.DateField(auto_now=True)
     
     def __str__(self):
-        return self.designation
-
+        return str(self.designation) if getattr(self, "designation", None) else "Sans désignation"
 class Module(models.Model):
     MODULES = [
         ('crm',_('CRM')),
@@ -302,7 +298,7 @@ class Module(models.Model):
         ordering = ['name']
 
     def __str__(self):
-        return self.get_name_display()
+        return str(self.get_name_display()) if self.name else "Module sans nom"
     
 class Role(models.Model):
     ROLE_LEVEL = [

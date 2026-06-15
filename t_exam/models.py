@@ -26,8 +26,7 @@ class SessionExam(models.Model):
         verbose_name_plural = "Sessions d'examen"
 
     def __str__(self):
-        return self.label
-    
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class SessionExamLine(models.Model):
     session = models.ForeignKey(SessionExam, on_delete=models.CASCADE, null=True, blank=True, related_name="session_exam_lines")
     groupe = models.ForeignKey(Groupe, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="session_exam_groupe")
@@ -88,8 +87,7 @@ class NoteBloc(models.Model):
         ordering = ['ordre']
 
     def __str__(self):
-        return self.label
-
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class BuiltinTypeNote(models.Model):
 
     CALCUL_CHOICES = (
@@ -169,8 +167,7 @@ class BuiltinSousNote(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.label
-
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class Commissions(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     promo = models.ForeignKey(Promos, null=True, blank=True, on_delete=models.CASCADE)
@@ -188,8 +185,7 @@ class Commissions(models.Model):
     updated_at = models.DateField(auto_now=True)
 
     def __str__(self):
-        return self.label
-
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class CommisionResult(models.Model):
     commission = models.ForeignKey(Commissions, on_delete=models.CASCADE, null=True, blank=True)
     etudiants = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)

@@ -225,11 +225,11 @@
                                     <div class="row g-2">
                                         <div class="col-6">
                                             <label class="form-label fs-12 fw-bold text-muted text-uppercase mb-1">Date émission</label>
-                                            <div class="form-control form-control-premium bg-light text-center">{{ devis.date_emission|date:"d/m/Y" }}</div>
+                                            <input type="date" class="form-control form-control-premium bg-light text-center" id="dateEmission" value="{{ devis.date_emission|date:'Y-m-d' }}" {% if not can_edit %}disabled{% endif %}>
                                         </div>
                                         <div class="col-6">
                                             <label class="form-label fs-12 fw-bold text-muted text-uppercase mb-1">Date échéance</label>
-                                            <div class="form-control form-control-premium bg-light text-center text-danger">{{ devis.date_echeance|date:"d/m/Y" }}</div>
+                                            <input type="date" class="form-control form-control-premium bg-light text-center text-danger" id="dateEcheance" value="{{ devis.date_echeance|date:'Y-m-d' }}" {% if not can_edit %}disabled{% endif %}>
                                         </div>
                                     </div>
                                 </div>
@@ -544,7 +544,12 @@
         
         if(toggleTva) toggleTva.addEventListener('change', () => { updateTotals(); setDirty(true); });
         if(toggleRemise) toggleRemise.addEventListener('change', () => { updateTotals(); setDirty(true); });
-
+        
+        ['dateEmission', 'dateEcheance', 'devisEnterprise', 'conditionsCommerciales'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', () => setDirty(true));
+        });
+        
         const saveBtn = document.getElementById('saveBtn');
         if(saveBtn) {
             saveBtn.addEventListener('click', function() {
@@ -557,7 +562,9 @@
                     show_tva: document.getElementById('toggleTva').checked,
                     show_remise: document.getElementById('toggleRemise').checked,
                     conditions_commerciales: document.getElementById('conditionsCommerciales').value,
-                    entreprise_id: document.getElementById('devisEnterprise').value
+                    entreprise_id: document.getElementById('devisEnterprise').value,
+                    date_emission: document.getElementById('dateEmission').value,
+                    date_echeance: document.getElementById('dateEcheance').value
                 };
 
                 fetch("{% url 't_conseil:ApiSaveDevisItems' %}", {

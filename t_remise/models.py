@@ -23,7 +23,4 @@ class Remises(models.Model):
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
     def __str__(self):
-        return self.label
-    
-
-    
+        return str(self.label) if getattr(self, "label", None) else "Sans label"

@@ -1,0 +1,292 @@
+{% extends "tenant_folder/base.html" %}
+{% load static %}
+{% block title %} Détails de la Dépense {% endblock title %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-color: #f06548; /* Red/Orange for Expenses */
+        --primary-soft: #fef0ee;
+        --secondary-color: #405189;
+        --text-muted: #878a99;
+        --border-color: #e9ebec;
+        --card-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .page-content {
+        background-color: #f3f6f9;
+        min-height: 100vh;
+    }
+
+    .card-premium {
+        border: none;
+        box-shadow: var(--card-shadow);
+        border-radius: 16px;
+        background: #fff;
+        overflow: hidden;
+        transition: transform 0.3s ease;
+    }
+
+    .card-header-premium {
+        background: linear-gradient(135deg, #f06548 0%, #d64024 100%);
+        padding: 24px 32px;
+        border-bottom: none;
+    }
+
+    .section-title {
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+        margin-bottom: 24px;
+        position: relative;
+        padding-left: 15px;
+        border-left: 3px solid var(--primary-color);
+    }
+
+    .detail-label {
+        font-weight: 500;
+        color: #878a99;
+        margin-bottom: 4px;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .detail-value {
+        font-weight: 600;
+        color: #495057;
+        font-size: 15px;
+    }
+
+    .table-premium {
+        border-collapse: separate;
+        border-spacing: 0;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+    }
+
+    .table-premium thead th {
+        background-color: #f8f9fa;
+        color: #495057;
+        font-weight: 600;
+        border-bottom: 2px solid var(--border-color);
+        padding: 12px 16px;
+    }
+
+    .table-premium tbody td {
+        padding: 12px 16px;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .btn-action {
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(240, 101, 72, 0.2);
+    }
+
+    .breadcrumb-item.active {
+        color: var(--primary-color);
+        font-weight: 500;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+
+            <!-- Breadcrumb -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h4 class="mb-0 fw-bold text-dark">Détails de la Dépense</h4>
+                            <p class="text-muted mb-0 fs-13 mt-1">Consultation des informations complètes sur la dépense ou achat</p>
+                        </div>
+                        <div class="page-title-right">
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="javascript: void(0);">Comptabilité</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 't_tresorerie:PageDepenses' %}">Dépenses</a></li>
+                                <li class="breadcrumb-item active">Détails</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card card-premium">
+                        <!-- En-tête de la carte -->
+                        <div class="card-header-premium d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1 text-white opacity-100 fw-bold fs-18">
+                                    <i class="ri-file-text-line me-2 align-middle"></i> {{ depense.label|default:"Fiche Dépense" }}
+                                </h5>
+                                <p class="mb-0 text-white opacity-75 fs-13">Détails de l'enregistrement comptable</p>
+                            </div>
+                            <div>
+                                {% if depense.etat %}
+                                    <span class="badge bg-white text-success px-3 py-2 rounded-pill fw-bold fs-13 shadow-sm d-flex align-items-center">
+                                        <i class="ri-checkbox-circle-fill me-1"></i> Validée
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-white text-warning px-3 py-2 rounded-pill fw-bold fs-13 shadow-sm d-flex align-items-center">
+                                        <i class="ri-time-line me-1"></i> En attente
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="card-body p-4 p-lg-5">
+                            <!-- Section Informations Générales -->
+                            <div class="mb-5">
+                                <h6 class="section-title">Informations Générales</h6>
+                                <div class="row g-4">
+                                    <div class="col-md-3 col-sm-6">
+                                        <div class="detail-label">Bénéficiaire</div>
+                                        <div class="detail-value">
+                                            {% if depense.fournisseur %}
+                                                <i class="ri-store-2-line text-muted me-1"></i> {{ depense.fournisseur.designation }}
+                                            {% elif depense.client %}
+                                                <i class="ri-user-3-line text-muted me-1"></i> {{ depense.client.nom }} {{ depense.client.prenom }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-sm-6">
+                                        <div class="detail-label">Référence Document</div>
+                                        <div class="detail-value text-primary fw-bold">
+                                            <i class="ri-hashtag text-muted me-1"></i> {{ depense.reference_document|default:"-" }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-sm-6">
+                                        <div class="detail-label">Date d'Opération</div>
+                                        <div class="detail-value">
+                                            <i class="ri-calendar-line text-muted me-1"></i> {{ depense.date_depense|date:"d/m/Y"|default:"-" }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-sm-6">
+                                        <div class="detail-label">Pièce Justificative</div>
+                                        <div class="detail-value">
+                                            {% if depense.piece %}
+                                                <a href="{{ depense.piece.url }}" target="_blank" class="btn btn-sm btn-soft-primary d-inline-flex align-items-center px-3 rounded-pill">
+                                                    <i class="ri-eye-line me-1"></i> Consulter
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted fst-italic"><i class="ri-file-forbid-line me-1"></i> Aucune</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="detail-label">Description / Commentaires</div>
+                                        <div class="p-3 bg-light rounded text-dark fs-14 border" style="min-height: 60px;">
+                                            {{ depense.description|default:"Aucune description fournie." }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="border-dashed my-4">
+
+                            <!-- Section Lignes de la Dépense -->
+                            <div class="mb-5">
+                                <h6 class="section-title">Lignes de la Dépense</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-premium w-100">
+                                        <thead>
+                                            <tr>
+                                                <th>Désignation de l'article / service</th>
+                                                <th>Catégorie</th>
+                                                <th class="text-center" width="10%">Quantité</th>
+                                                <th class="text-end" width="15%">Prix Unitaire HT</th>
+                                                <th class="text-end" width="10%">TVA</th>
+                                                <th class="text-end" width="15%">Montant HT</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for ligne in lignes %}
+                                            <tr>
+                                                <td class="fw-medium text-dark">{{ ligne.designation }}</td>
+                                                <td>
+                                                    <span class="badge bg-primary bg-opacity-10 text-primary">
+                                                        {{ ligne.category.name|default:"Sans catégorie" }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">{{ ligne.quantite }}</td>
+                                                <td class="text-end">{{ ligne.prix_unitaire_ht }} DA</td>
+                                                <td class="text-end">{{ ligne.tva }}%</td>
+                                                <td class="text-end fw-bold text-dark">
+                                                    {% widthratio ligne.quantite 1 ligne.prix_unitaire_ht %} DA
+                                                </td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted py-4">
+                                                    <div class="d-flex flex-column align-items-center justify-content-center">
+                                                        <i class="ri-inbox-line fs-1 text-muted mb-2"></i>
+                                                        <span class="fw-medium">Aucune ligne enregistrée pour cette dépense.</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <hr class="border-dashed my-4">
+
+                            <!-- Section Totaux Financiers -->
+                            <div class="row justify-content-end">
+                                <div class="col-md-5 col-lg-4">
+                                    <div class="bg-light p-4 rounded-4 border">
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <span class="text-muted fw-medium">Total HT</span>
+                                            <span class="fw-bold text-dark">{{ depense.montant_ht|default:"0.00" }} DA</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <span class="text-muted fw-medium">Total TVA</span>
+                                            <span class="fw-bold text-dark">{{ depense.tva|default:"0.00" }} DA</span>
+                                        </div>
+                                        {% if depense.timbre > 0 %}
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <span class="text-muted fw-medium">Droit de Timbre</span>
+                                            <span class="fw-bold text-dark">{{ depense.timbre }} DA</span>
+                                        </div>
+                                        {% endif %}
+                                        <div class="border-top border-dashed my-3"></div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-dark fw-bold fs-16 text-uppercase">Net à Payer</span>
+                                            <span class="fw-bold text-success fs-3">{{ depense.montant_ttc|add:depense.timbre|default:"0.00" }} DA</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="d-flex justify-content-end gap-2 mt-5">
+                                <a href="{% url 't_tresorerie:PageDepenses' %}" class="btn btn-light btn-action text-dark border shadow-sm">
+                                    <i class="ri-arrow-left-line me-1 align-middle"></i> Retour à la liste
+                                </a>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

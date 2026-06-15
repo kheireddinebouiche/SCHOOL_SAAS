@@ -10,6 +10,8 @@ from .f_views.rembourssement import *
 from .f_views.depenses import *
 from .f_views.fournisseurs import *
 from .f_views.caisse import *
+from .f_views.suivi_cheques import *
+
 from .f_views.plan_comptable import *
 from .f_views import facturation
 from .f_views.produits import *
@@ -28,6 +30,12 @@ from t_conseil.views import ListeDesFactures, ListeDesDevis, ListeDesClients
 app_name="t_tresorerie"
 
 urlpatterns = [
+
+    # Suivi Cheques
+    path('caisse/suivi-cheques-emis/', submenu_access_required("tre", "banque")(PageSuiviChequesEmis), name="PageSuiviChequesEmis"),
+    path('caisse/api/suivi-cheques-emis/list/', ApiListChequesEmis, name="ApiListChequesEmis"),
+    path('caisse/api/suivi-cheques-emis/update/', ApiUpdateChequeStatut, name="ApiUpdateChequeStatut"),
+
 
     path('attentes-de-paiements/', submenu_access_required("tre", "tresorerie")(AttentesPaiements), name="attentes_de_paiements"),
     path('ApiListeDemandePaiement', ApiListeDemandePaiement, name="ApiListeDemandePaiement"),
@@ -157,6 +165,7 @@ urlpatterns = [
     path('depenses/liste/',submenu_access_required("tre", "depenses")(PageDepenses), name="PageDepenses"),
     path('ApiListeDepenses', ApiListeDepenses, name="ApiListeDepenses"),
     path('depenses/creation/', submenu_access_required("tre", "depenses")(PageNouvelleDepense), name="PageNouvelleDepense"),
+    path('depenses/details/<int:id>/', submenu_access_required("tre", "depenses")(PageDetailDepense), name="PageDetailDepense"),
 
     #### Gestion des fournisseurs
     path('fournisseurs/liste/',submenu_access_required("tre", "fournisseurs")(PageFournisseur), name="PageFournisseur"),
@@ -166,6 +175,9 @@ urlpatterns = [
     path('enregistrer_fournisseur', enregistrer_fournisseur, name="enregistrer_fournisseur"),
     path('UpdateFournisseur', UpdateFournisseur, name="UpdateFournisseur"),
     path('ApiLoadFournisseur', ApiLoadFournisseur, name="ApiLoadFournisseur"),
+    path('ApiCreerReglementFournisseur', ApiCreerReglementFournisseur, name="ApiCreerReglementFournisseur"),
+    path('ApiGetReglementsFournisseur', ApiGetReglementsFournisseur, name="ApiGetReglementsFournisseur"),
+    path('ApiUpdateChequeStatus', ApiUpdateChequeStatus, name="ApiUpdateChequeStatus"),
 
     #### Gestion des dÃ©penses
     path('parametres/type-depense/', submenu_access_required("tre", "parametres")(liste_types_depenses), name="liste_types_depenses"),
@@ -210,6 +222,7 @@ urlpatterns = [
     path('banque/situation-des-comptes/', submenu_access_required("tre", "banque")(PageSituationComptes), name="PageSituationComptes"),
 
     path('imputation-bancaire/', submenu_access_required("tre", "banque")(ImputationBancaire), name="ImputationBancaire"),
+    path('api/delete-imputation/', ApiDeleteImputationBancaire, name="ApiDeleteImputationBancaire"),
     path('ApiReturnUndonePaiament', ApiReturnUndonePaiament, name="ApiReturnUndonePaiament"),
     path('ApiImputeBankPaiment', ApiImputeBankPaiment, name="ApiImputeBankPaiment"),
 
@@ -235,6 +248,10 @@ urlpatterns = [
     path('ApiValidateFacture', facturation.ApiValidateFacture, name="ApiValidateFacture"),
     path('ApiGetDraftInvoiceDetails', facturation.ApiGetDraftInvoiceDetails, name="ApiGetDraftInvoiceDetails"),
     path('ApiUpdateDraftInvoice', ApiUpdateDraftInvoice, name="ApiUpdateDraftInvoice"),
+    path('facturation/modifier/<int:pk>/', submenu_access_required("tre", "factures")(facturation.PageModifierFacture), name="PageModifierFacture"),
+    path('ApiUpdateFactureLignes', facturation.ApiUpdateFactureLignes, name="ApiUpdateFactureLignes"),
+    path('ApiUpdateFactureClientOverride', facturation.ApiUpdateFactureClientOverride, name="ApiUpdateFactureClientOverride"),
+    path('print-facture/<str:pk>/', facturation.PrintFactureTresorerie, name="PrintFactureTresorerie"),
     path('ApiUpdateReferencePaiement', ApiUpdateReferencePaiement, name="ApiUpdateReferencePaiement"),
 
 
@@ -291,6 +308,7 @@ urlpatterns = [
     
     path('recouvrement/', submenu_access_required("tre", "banque")(PageRecouvrement), name='PageRecouvrement'),
     path('api/update-effective-date/', ApiUpdateEffectiveDate, name='ApiUpdateEffectiveDate'),
+    path('api/delete-recouvrement/', ApiDeleteRecouvrementPaiement, name='ApiDeleteRecouvrementPaiement'),
     path('api/list-recouvrement-paiements/', ApiListRecouvrementPaiements, name='ApiListRecouvrementPaiements'),
     path('api/recouvrement-stats/', ApiRecouvrementStats, name='ApiRecouvrementStats'),
     path('payment-types/', submenu_access_required("tre", "parametres")(payment_type_list), name='payment_type_list'),

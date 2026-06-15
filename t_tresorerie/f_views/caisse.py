@@ -11,7 +11,7 @@ from itertools import chain
 from datetime import datetime
 from django.db import models
 from django.db.models import F, Value, CharField, Q, Case, When, Sum, Max, OuterRef, Exists
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, Cast, Abs
 from django.db.models.functions import Concat
 from django.contrib.humanize.templatetags.humanize import intcomma
 import json
@@ -51,7 +51,7 @@ def PageBrouillardBanque(request):
     end_date = datetime(selected_year + 1, 7, 31).date()
 
     # --- Stats Imputation Bancaire ---
-    ops_imputation = OperationsBancaire.objects.filter(date_operation__gte=start_date, date_operation__lte=end_date)
+    ops_imputation = OperationsBancaire.objects.filter(date_operation__gte=start_date, date_operation__lte=end_date).exclude(paiement__is_refund=True)
     imputation_attente = ops_imputation.filter(is_rapproche=False).count()
     imputation_effectue = ops_imputation.filter(is_rapproche=True).count()
     imputation_total = ops_imputation.count()
@@ -103,13 +103,18 @@ def brouillard_caisse_json(request):
     end_date = datetime(year + 1, 7, 31).date()
 
     # ---- 1. Paiements (Entrées en espèce) ----
-    paiements = Paiements.objects.filter(mode_paiement='esp', date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
+    paiements = Paiements.objects.filter(mode_paiement='esp', date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).exclude(montant_paye__lt=0).values(
+        created_at_dt=F('created_at'),
         item_id=F('pk'),
         model_type=Value('paiement', output_field=CharField()),
         nom=F('paiement_label'),
         date=F('date_paiement'),
-        mouvement_montant=Coalesce(F('montant_paye'), Value(0, output_field=models.DecimalField())),
-        type=Value('entree', output_field=CharField()),
+        mouvement_montant=Abs(Coalesce(F('montant_paye'), Value(0, output_field=models.DecimalField()))),
+        type=Case(
+            When(montant_paye__lt=0, then=Value('sortie')),
+            default=Value('entree'),
+            output_field=CharField()
+        ),
         descri=Coalesce('paiement_label', Value('')),
         ref=F('num'),
         reference=F('reference_paiement'),
@@ -127,6 +132,7 @@ def brouillard_caisse_json(request):
     # ---- 1b. AutreProduit (Entrées en espèce) ----
     autres_produits = AutreProduit.objects.filter(mode_paiement='esp', date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
         'reference',
+        created_at_dt=F('date_operation'),
         item_id=F('pk'),
         model_type=Value('autre_produit', output_field=CharField()),
         nom=F('label'),
@@ -148,7 +154,8 @@ def brouillard_caisse_json(request):
     if ConseilPaiement:
         consulting_paiements = ConseilPaiement.objects.filter(mode_paiement='esp', date_paiement__gte=start_date, date_paiement__lte=end_date).exclude(date_paiement__isnull=True).values(
             'reference',
-            item_id=F('pk'),
+            created_at_dt=F('created_at'),
+        item_id=F('pk'),
             model_type=Value('conseil_paiement', output_field=CharField()),
             nom=Value('Paiement Facture', output_field=CharField()),
             date=F('date_paiement'),
@@ -165,8 +172,9 @@ def brouillard_caisse_json(request):
         )
 
     # ---- 2. Dépenses (Sorties en espèce) ----
-    depenses = Depenses.objects.filter(mode_paiement='esp', date_paiement__gte=start_date, date_paiement__lte=end_date).order_by('date_paiement').exclude(date_paiement__isnull=True).values(
+    depenses = Depenses.objects.filter(reglements__isnull=True, mode_paiement='esp', date_paiement__gte=start_date, date_paiement__lte=end_date).order_by('date_paiement').exclude(date_paiement__isnull=True).values(
         'reference',
+        created_at_dt=F('created_at'),
         item_id=F('pk'),
         model_type=Value('depense', output_field=CharField()),
         nom=F('label'),
@@ -187,6 +195,7 @@ def brouillard_caisse_json(request):
 
     # ---- 2b. Dépôts en Banque (Sorties de caisse) ----
     depots_banque = DepotBanque.objects.filter(date_depot__gte=start_date, date_depot__lte=end_date).values(
+        created_at_dt=F('created_at'),
         item_id=F('pk'),
         model_type=Value('depot_banque', output_field=CharField()),
         nom=Value('Dépôt en Banque', output_field=CharField()),
@@ -201,13 +210,35 @@ def brouillard_caisse_json(request):
         mapped_entite_id=F('entite__id')
     )
 
+    # ---- 2c. Remboursements (Sorties de caisse) ----
+    remboursements = Rembourssements.objects.filter(
+        mode_rembourssement='esp', is_appliced=True, updated_at__date__gte=start_date, updated_at__date__lte=end_date
+    ).values(
+        created_at_dt=F('created_at'),
+        item_id=F('pk'),
+        model_type=Value('remboursement', output_field=CharField()),
+        nom=Value('Remboursement', output_field=CharField()),
+        date=Cast('updated_at', output_field=models.DateField()),
+        mouvement_montant=Coalesce(F('allowed_amount'), Value(0, output_field=models.DecimalField())),
+        type=Value('sortie', output_field=CharField()),
+        descri=F('motif_rembourssement'),
+        ref=Value('', output_field=CharField()),
+        reference=Value('', output_field=CharField()),
+        order_to=Concat(
+            F('client__nom'), Value(' '), F('client__prenom'),
+            output_field=CharField()
+        ),
+        entite_name=F('entite__designation'),
+        mapped_entite_id=F('entite__id')
+    )
+
     # ---- 3. Fusion et tri chronologique ----
     mouvements = sorted(
-        chain(paiements, autres_produits, consulting_paiements, depenses, depots_banque),
+        chain(paiements, autres_produits, consulting_paiements, depenses, depots_banque, remboursements),
         key=lambda x: (
-            x['date'] if isinstance(x['date'], datetime) 
-            else datetime.combine(x['date'], datetime.min.time())
-        ) if x['date'] else datetime.min
+            x['date'].date() if isinstance(x['date'], datetime) else (x['date'] if x['date'] else datetime.date.min),
+            x.get('created_at_dt', datetime.min).replace(tzinfo=None) if isinstance(x.get('created_at_dt'), datetime) else (datetime.combine(x.get('created_at_dt'), datetime.min.time()) if x.get('created_at_dt') else datetime.min)
+        )
     )
 
     # ---- 4. Calcul du solde cumulatif ----
@@ -231,7 +262,7 @@ def brouillard_caisse_json(request):
         results.append({
             "item_id": mv.get('item_id'),
             "model_type": mv.get('model_type'),
-            "date": mv['date'],
+            "date": mv['date'].date() if isinstance(mv['date'], datetime) else mv['date'],
             "type": mv['type'],
             "nom": mv['nom'],
             "montant": montant,
@@ -285,13 +316,18 @@ def brouillard_banck_json(request):
     initial_amount = float(solde_initial_obj.montant) if solde_initial_obj else 0.0
 
     # ---- 1. Paiements (Entrées en banque) ----
-    paiements = Paiements.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).values(
+    paiements = Paiements.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).exclude(montant_paye__lt=0).exclude(Q(is_refund=True) & Q(lettrages__is_paid=False)).values(
+        created_at_dt=F('created_at'),
         item_id=F('pk'),
         model_type=Value('paiement', output_field=CharField()),
         nom=F('paiement_label'),
         date=F('date_paiement'),
-        mouvement_montant=Coalesce(F('montant_paye'), Value(0, output_field=models.DecimalField())),
-        type=Value('entree', output_field=CharField()),
+        mouvement_montant=Abs(Coalesce(F('montant_paye'), Value(0, output_field=models.DecimalField()))),
+        type=Case(
+            When(montant_paye__lt=0, then=Value('sortie')),
+            default=Value('entree'),
+            output_field=CharField()
+        ),
         descri=Coalesce('paiement_label', Value('')),
         ref=F('num'),
         order_to=Concat(
@@ -310,6 +346,7 @@ def brouillard_banck_json(request):
     # ---- 1b. AutreProduit (Entrées en banque) ----
     autres_produits = AutreProduit.objects.filter(mode_paiement__in=['che', 'vir'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).values(
         'reference',
+        created_at_dt=F('date_operation'),
         item_id=F('pk'),
         model_type=Value('autre_produit', output_field=CharField()),
         nom=F('label'),
@@ -332,7 +369,8 @@ def brouillard_banck_json(request):
     if ConseilPaiement:
         consulting_paiements = ConseilPaiement.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date, is_done=True).exclude(date_paiement__isnull=True).values(
             'reference',
-            item_id=F('pk'),
+            created_at_dt=F('created_at'),
+        item_id=F('pk'),
             model_type=Value('conseil_paiement', output_field=CharField()),
             nom=Value('Paiement Facture', output_field=CharField()),
             date=F('date_paiement'),
@@ -350,8 +388,9 @@ def brouillard_banck_json(request):
         )
 
     # ---- 2. Dépenses (Sorties en banque) ----
-    depenses = Depenses.objects.filter(mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date, etat=True).order_by('date_paiement').exclude(date_paiement__isnull=True).values(
+    depenses = Depenses.objects.filter(reglements__isnull=True, mode_paiement__in=['vir', 'che'], date_paiement__gte=start_date, date_paiement__lte=end_date, etat=True).order_by('date_paiement').exclude(date_paiement__isnull=True).exclude(Q(mode_paiement__in=['che', 'vir']) & ~Q(suivi_cheque__statut='decaisse') & Q(suivi_cheque__isnull=False)).values(
         'reference',
+        created_at_dt=F('created_at'),
         item_id=F('pk'),
         model_type=Value('depense', output_field=CharField()),
         nom=F('label'),
@@ -373,6 +412,7 @@ def brouillard_banck_json(request):
 
     # ---- 2b. Dépôts en Banque (Entrées) ----
     depots_banque = DepotBanque.objects.filter(date_depot__gte=start_date, date_depot__lte=end_date).values(
+        created_at_dt=F('created_at'),
         item_id=F('pk'),
         model_type=Value('depot_banque', output_field=CharField()),
         nom=Value('Dépôt en Banque', output_field=CharField()),
@@ -388,10 +428,36 @@ def brouillard_banck_json(request):
         reference=F('reference_bordereau')
     )
 
+    # ---- 2c. Remboursements (Sorties de banque) ----
+    remboursements = Rembourssements.objects.filter(
+        mode_rembourssement__in=['vir', 'che'], is_appliced=True, updated_at__date__gte=start_date, updated_at__date__lte=end_date, lettrages__isnull=False
+    ).exclude(Q(mode_rembourssement__in=['che', 'vir']) & ~Q(suivi_cheque__statut='decaisse') & Q(suivi_cheque__isnull=False)).values(
+        created_at_dt=F('created_at'),
+        item_id=F('pk'),
+        model_type=Value('remboursement', output_field=CharField()),
+        nom=Value('Remboursement', output_field=CharField()),
+        date=Cast('updated_at', output_field=models.DateField()),
+        mouvement_montant=Coalesce(F('allowed_amount'), Value(0, output_field=models.DecimalField())),
+        type=Value('sortie', output_field=CharField()),
+        descri=F('motif_rembourssement'),
+        ref=Value('', output_field=CharField()),
+        reference=Value('', output_field=CharField()),
+        order_to=Concat(
+            F('client__nom'), Value(' '), F('client__prenom'),
+            output_field=CharField()
+        ),
+        entite_name=F('entite__designation'),
+        mapped_entite_id=F('entite__id'),
+        mode=F('mode_rembourssement')
+    )
+
     # ---- 3. Fusion et tri chronologique ----
     mouvements = sorted(
-        chain(paiements, autres_produits, consulting_paiements, depenses, depots_banque),
-        key=lambda x: x['date'] or datetime.min
+        chain(paiements, autres_produits, consulting_paiements, depenses, depots_banque, remboursements),
+        key=lambda x: (
+            x['date'].date() if isinstance(x['date'], datetime) else (x['date'] if x['date'] else datetime.date.min),
+            x.get('created_at_dt', datetime.min).replace(tzinfo=None) if isinstance(x.get('created_at_dt'), datetime) else (datetime.combine(x.get('created_at_dt'), datetime.min.time()) if x.get('created_at_dt') else datetime.min)
+        )
     )
 
     # ---- 4. Calcul du solde cumulatif ----
@@ -439,7 +505,44 @@ def brouillard_banque(request):
 @login_required(login_url="institut_app:login")
 @module_permission_required('tre', 'approuv')
 def ImputationBancaire(request):
-    return render(request,'tenant_folder/comptabilite/caisse/imputation_bancaire.html')
+    can_delete = False
+    if request.user.is_superuser:
+        can_delete = True
+    else:
+        from institut_app.models import UserModuleRole
+        try:
+            umr = UserModuleRole.objects.get(user=request.user, module__name='tre')
+            can_delete = umr.has_permission('delete')
+        except UserModuleRole.DoesNotExist:
+            can_delete = False
+    return render(request, 'tenant_folder/comptabilite/caisse/imputation_bancaire.html', {'can_delete': can_delete})
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'delete')
+def ApiDeleteImputationBancaire(request):
+    if request.method == "POST":
+        op_id = request.POST.get('id')
+        try:
+            from t_tresorerie.models import OperationsBancaire
+            op = OperationsBancaire.objects.get(id=op_id)
+            
+            # Supprimer l'entité liée
+            if op.paiement:
+                op.paiement.delete()
+            if op.depense:
+                op.depense.delete()
+            if op.autre_produit:
+                op.autre_produit.delete()
+            if op.conseil_paiement:
+                op.conseil_paiement.delete()
+            if op.remboursement:
+                op.remboursement.delete()
+                
+            op.delete()
+            return JsonResponse({"status": "success", "message": "Opération bancaire et données liées supprimées avec succès"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 
 @login_required(login_url="institut_app:login")
@@ -485,6 +588,8 @@ def ApiReturnUndonePaiament(request):
                         'entite' : entite_name,
                         'date_creation' : i.paiement.created_at.strftime('%Y-%m-%d') if i.paiement.created_at else None,
                         'date_effective' : i.paiement.date_paiement.strftime('%Y-%m-%d') if i.paiement.date_paiement else None,
+                        'refunded_amount': float(sum(pr.montant for pr in i.paiement.remboursements.all())) if hasattr(i.paiement, 'remboursements') else 0,
+                        'is_refunded': True if i.paiement.is_refund or (hasattr(i.paiement, 'remboursements') and sum(pr.montant for pr in i.paiement.remboursements.all()) > 0) else False,
                     })
                 elif i.autre_produit:
                     client_name = "Anonyme"
@@ -540,6 +645,21 @@ def ApiReturnUndonePaiament(request):
                         'is_rapproche' : i.is_rapproche,
                         'date_creation' : i.depense.created_at.strftime('%Y-%m-%d') if i.depense.created_at else None,
                         'date_effective' : i.depense.date_paiement.strftime('%Y-%m-%d') if i.depense.date_paiement else None,
+                    })
+                elif i.remboursement:
+                    liste_depenses.append({
+                        'id' : i.id,
+                        'fournisseur' : f"{i.remboursement.client.nom} {i.remboursement.client.prenom or ''}".strip() if i.remboursement.client else "Client inconnu",
+                        'montant' : float(i.montant),
+                        'categorie' : "Remboursement",
+                        'date' : i.date_operation.strftime('%Y-%m-%d') if i.date_operation else None,
+                        'statut' : "Validé",
+                        'compte' : i.compte_bancaire.bank_name if i.compte_bancaire else None,
+                        'entite' : i.remboursement.entite.designation if i.remboursement.entite else "N/A",
+                        'mode_paiement' : i.remboursement.mode_rembourssement,
+                        'is_rapproche' : i.is_rapproche,
+                        'date_creation' : i.remboursement.created_at.strftime('%Y-%m-%d') if i.remboursement.created_at else None,
+                        'date_effective' : i.remboursement.updated_at.strftime('%Y-%m-%d') if i.remboursement.updated_at else None,
                     })
             except Exception as e:
                 print(f"Error mapping expense {i.id}: {e}")
@@ -710,7 +830,7 @@ def ApiDetailsPaiement(request):
 @module_permission_required('tre', 'view')
 def ApiListBankAccount(request):
     if request.method == "GET":
-        liste = BankAccount.objects.all().values('id','entreprise__designation','bank_name','bank_code')
+        liste = BankAccount.objects.all().values('id','entreprise__designation','bank_name','bank_code', 'bank_iban')
         return JsonResponse(list(liste), safe=False)
     else:
         return JsonResponse({"status": "error"})
@@ -718,7 +838,47 @@ def ApiListBankAccount(request):
 @login_required(login_url="institut_app:login")
 @module_permission_required('tre', 'view')
 def PageRecouvrement(request):
-    return render(request, 'tenant_folder/comptabilite/caisse/recouvrement_paiement.html')
+    can_delete = False
+    if request.user.is_superuser:
+        can_delete = True
+    else:
+        from institut_app.models import UserModuleRole
+        try:
+            umr = UserModuleRole.objects.get(user=request.user, module__name='tre')
+            can_delete = umr.has_permission('delete')
+        except UserModuleRole.DoesNotExist:
+            can_delete = False
+    return render(request, 'tenant_folder/comptabilite/caisse/recouvrement_paiement.html', {'can_delete': can_delete})
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'delete')
+def ApiDeleteRecouvrementPaiement(request):
+    if request.method == "POST":
+        item_id = request.POST.get('id')
+        p_type = request.POST.get('type')
+        try:
+            from t_tresorerie.models import OperationsBancaire, Paiements, AutreProduit
+            
+            if p_type == 'standard':
+                paiement = Paiements.objects.get(id=item_id)
+                OperationsBancaire.objects.filter(paiement=paiement).delete()
+                paiement.delete()
+            elif p_type == 'autre':
+                paiement = AutreProduit.objects.get(id=item_id)
+                OperationsBancaire.objects.filter(autre_produit=paiement).delete()
+                paiement.delete()
+            elif p_type == 'conseil':
+                from t_conseil.models import Paiement as ConseilPaiement
+                paiement = ConseilPaiement.objects.get(id=item_id)
+                OperationsBancaire.objects.filter(conseil_paiement=paiement).delete()
+                paiement.delete()
+            else:
+                return JsonResponse({"status": "error", "message": "Type de paiement invalide"})
+            
+            return JsonResponse({"status": "success", "message": "Paiement et imputation bancaire supprimés avec succès"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('tre', 'change')

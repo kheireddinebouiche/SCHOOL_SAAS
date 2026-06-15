@@ -406,8 +406,18 @@
                 $('#tableWrapper').show();
                 $('#emptyStateContainer').hide();
 
+                const canDelete = {{ can_delete|yesno:"true,false" }};
                 data.forEach(function(item) {
                     let badgeClass = item.mode_paiement.toLowerCase().includes('chèque') ? 'bg-soft-success text-success' : 'bg-soft-danger text-danger';
+                    
+                    let deleteBtnHTML = canDelete ? `
+                        <button class="btn btn-sm btn-ghost-danger rounded-pill px-3 ms-1 delete-paiement-btn shadow-sm" 
+                                data-id="${item.id}" 
+                                data-type="${item.type}"
+                                title="Supprimer ce paiement">
+                            <i class="ri-delete-bin-line"></i>
+                        </button>` : '';
+
                     let row = `
                         <tr>
                             <td><span class="fw-bold text-primary">${item.num || '-'}</span></td>
@@ -433,6 +443,7 @@
                                         data-date="${item.date_paiement || ''}">
                                     <i class="ri-checkbox-circle-line me-1"></i> Recouvrer
                                 </button>
+                                ${deleteBtnHTML}
                             </td>
                         </tr>
                     `;
@@ -449,6 +460,40 @@
                     const today = new Date().toISOString().split('T')[0];
                     $('#effectiveDate').val(date || today);
                     $('#recouvrementModal').modal('show');
+                });
+
+                $(document).off('click', '.delete-paiement-btn').on('click', '.delete-paiement-btn', function() {
+                    const id = $(this).data('id');
+                    const type = $(this).data('type');
+                    
+                    alertify.confirm("Confirmation de suppression", "Voulez-vous vraiment supprimer ce paiement et son imputation bancaire ? Cette action est irréversible.", 
+                        function(){
+                            $.ajax({
+                                url: "{% url 't_tresorerie:ApiDeleteRecouvrementPaiement' %}",
+                                type: 'POST',
+                                data: {
+                                    'id': id,
+                                    'type': type,
+                                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                                },
+                                success: function(response) {
+                                    if(response.status === 'success') {
+                                        alertify.success(response.message);
+                                        loadRecouvrementData();
+                                        loadStats();
+                                    } else {
+                                        alertify.error(response.message);
+                                    }
+                                },
+                                error: function() {
+                                    alertify.error("Une erreur s'est produite.");
+                                }
+                            });
+                        },
+                        function(){
+                            // User clicked cancel
+                        }
+                    );
                 });
             },
             error: function() {

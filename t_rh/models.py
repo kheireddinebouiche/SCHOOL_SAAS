@@ -155,8 +155,7 @@ class Services(models.Model):
         verbose_name_plural="Services"
 
     def __str__(self):
-        return self.label
-
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class Posts(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     service = models.ForeignKey(Services, null=True, blank=True, on_delete=models.SET_NULL)
@@ -167,8 +166,7 @@ class Posts(models.Model):
         verbose_name_plural="Posts"
 
     def __str__(self):
-        return self.label
-
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class TachesPoste(models.Model):
     poste = models.ForeignKey(Posts, on_delete=models.CASCADE, null=True)
     label = models.CharField(max_length=100, null=True)
@@ -181,8 +179,7 @@ class TachesPoste(models.Model):
         verbose_name_plural = "Taches"
     
     def __str__(self):
-        return self.label
-
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class Conges(models.Model):
     class TypeConge(models.TextChoices):
         ANNUEL = 'ANNUEL', 'Congé Annuel'
@@ -257,8 +254,7 @@ class TemplateFichePaie(models.Model):
         verbose_name_plural = "Templates fiche de paie"
 
     def __str__(self):
-        return self.label
-
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class CategoriesContrat(models.Model):
     
     label = models.CharField(max_length=100, null=True)
@@ -275,8 +271,7 @@ class CategoriesContrat(models.Model):
         verbose_name_plural="Catégories de contrat"
     
     def __str__(self):
-        return self.label
-
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class TypesContrat(models.Model):
     label = models.CharField(max_length=255, null=True)
     categorie = models.ForeignKey(CategoriesContrat, null=True, on_delete=models.SET_NULL)
@@ -290,8 +285,7 @@ class TypesContrat(models.Model):
         verbose_name_plural="Types de contrat"
 
     def __str__(self):
-        return self.label
-
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class Contrats(models.Model):
     employee = models.ForeignKey(Employees, on_delete=models.CASCADE, null=True, blank=True, related_name="contrats")
     type_contrat = models.ForeignKey(TypesContrat, on_delete=models.CASCADE, null=True, blank=True, related_name="contrats")
@@ -336,8 +330,7 @@ class ArticlesContratStandard(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
-        return self.titre
-    
+        return str(self.titre) if getattr(self, "titre", None) else "Sans titre"
 class ArticleContratSpecial(models.Model):
     contrat = models.ForeignKey(Contrats, on_delete=models.CASCADE, null=True, blank=True, related_name="articles_special")
 
@@ -352,4 +345,4 @@ class ArticleContratSpecial(models.Model):
         verbose_name_plural="Articles de contrat special"
 
     def __str__(self):
-        return self.label
+        return str(self.label) if getattr(self, "label", None) else "Sans label"

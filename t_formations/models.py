@@ -29,8 +29,7 @@ class Partenaires(models.Model):
         verbose_name_plural="Partenaires"
 
     def __str__(self):
-        return self.nom
-
+        return str(self.nom) if getattr(self, "nom", None) else "Sans nom"
 class Formation(models.Model):
     code = models.CharField(max_length=100, null=True, blank=True, unique=True)
     nom = models.CharField(max_length=255)
@@ -54,8 +53,7 @@ class Formation(models.Model):
         verbose_name_plural="Formations"
 
     def __str__(self):
-        return self.nom
-
+        return str(self.nom) if getattr(self, "nom", None) else "Sans nom"
 class DossierInscription(models.Model):
     formation = models.ForeignKey(Formation, on_delete=models.DO_NOTHING, null=True, blank=True)
     label = models.CharField(max_length=100, null=True, blank=True)
@@ -66,8 +64,7 @@ class DossierInscription(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.label
-
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class Specialites(models.Model):
     code = models.CharField(max_length=100, null=True, blank=True, unique =True)
     label = models.CharField(max_length=100, null=True, blank=True)
@@ -95,8 +92,7 @@ class Specialites(models.Model):
         verbose_name_plural="Spécialités"
 
     def __str__(self):
-        return self.label
-    
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class DoubleDiplomation(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     specialite1 = models.ForeignKey(Specialites, related_name="double_spec1", on_delete = models.DO_NOTHING, null=True, blank=True)
@@ -112,8 +108,7 @@ class DoubleDiplomation(models.Model):
     updated_at = models.DateField(auto_now=True)
 
     def __str__(self):
-        return self.label
-    
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class Modules(models.Model):
    
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)
@@ -149,8 +144,7 @@ class Modules(models.Model):
         unique_together = ('code_interne', 'specialite')
 
     def __str__(self):
-        return self.code
-    
+        return str(self.code) if getattr(self, "code", None) else "Sans code"
     # 🔹 Génération du code
     def generate_code(self):
         if not self.specialite:
@@ -194,8 +188,7 @@ class CorrepondanceModule(models.Model):
     updated_at = models.DateField(auto_now=True)
 
     def __str__(self):
-        return self.label
-
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class Formateurs(models.Model):
     nom = models.CharField(max_length=100, null=True, blank=True)
     prenom = models.CharField(max_length=100, null=True, blank=True)
@@ -277,8 +270,7 @@ class FraisInscription(models.Model):
         verbose_name_plural="Frais d'inscription"
 
     def __str__(self):
-        return self.label
-    
+        return str(self.label) if getattr(self, "label", None) else "Sans label"
 class ProgrammeFormation(models.Model):
     module = models.ForeignKey(Modules, on_delete=models.CASCADE, null=True, blank=True)
     specialite = models.ForeignKey(Specialites, on_delete=models.CASCADE, null=True, blank=True)

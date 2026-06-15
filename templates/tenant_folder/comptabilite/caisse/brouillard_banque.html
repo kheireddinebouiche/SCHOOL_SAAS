@@ -762,14 +762,16 @@
                     <tbody>
           `;
 
-          // Add transactions for this date
-          $.each(transactions, function(i, transaction) {
+          // Add transactions for this date (from most recent to oldest)
+          var displayTransactions = transactions.slice().reverse();
+          $.each(displayTransactions, function(i, transaction) {
             var typeBadge = transaction.type === 'entree' ?
               '<span class="badge bg-primary">Encaissement</span>' :
               '<span class="badge bg-danger">Décaissement</span>';
+            var absMontant = Math.abs(parseFloat(transaction.montant) || 0);
             var montantText = transaction.type === 'entree' ?
-              '<span class="text-success fw-bold">+' + formatMoney(transaction.montant) + '</span>' :
-              '<span class="text-danger fw-bold">-' + formatMoney(transaction.montant) + '</span>';
+              '<span class="text-success fw-bold">+' + formatMoney(absMontant) + '</span>' :
+              '<span class="text-danger fw-bold">-' + formatMoney(absMontant) + '</span>';
 
             var modeText = '';
             var modeClass = '';
@@ -1039,9 +1041,10 @@
       // Add filtered data to the worksheet
       $.each(exportData, function(i, transaction) {
         var typeLabel = transaction.type === 'entree' ? 'Encaissement' : 'Décaissement';
+        var absMontant = Math.abs(parseFloat(transaction.montant) || 0);
         var montantText = transaction.type === 'entree' ?
-          '+' + transaction.montant :
-          '-' + transaction.montant;
+          '+' + absMontant :
+          '-' + absMontant;
 
         var modeLabel = '';
         var modeVal = (transaction.mode || '').toLowerCase();
@@ -1199,9 +1202,10 @@
       if (exportData.length > 0) {
         $.each(exportData, function(index, transaction) {
           var typeLabel = transaction.type === 'entree' ? 'Encaissement' : 'Décaissement';
+          var absMontant = Math.abs(parseFloat(transaction.montant) || 0);
           var montantText = transaction.type === 'entree' ?
-            '+' + transaction.montant :
-            '-' + transaction.montant;
+            '+' + absMontant :
+            '-' + absMontant;
 
           var modeLabel = '';
           var modeVal = (transaction.mode || '').toLowerCase();
@@ -1274,7 +1278,7 @@
     $('#detailRefInterne').text(t.ref || '-');
     $('#detailRefPaiement').text(t.reference || '-');
     
-    var m = parseFloat(t.montant);
+    var m = Math.abs(parseFloat(t.montant) || 0);
     var formattedM = isNaN(m) ? '0,00 DA' : m.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' DA';
 
     if(t.type === 'entree') {

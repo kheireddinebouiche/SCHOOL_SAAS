@@ -317,8 +317,18 @@ class Prospets(models.Model):
 
         # Génération du slug si vide
         if not self.slug:
-            base = f"{self.nom}-{self.prenom}"
+            if self.nom or self.prenom:
+                base = f"{self.nom}-{self.prenom}"
+            elif self.entreprise:
+                base = f"{self.entreprise}"
+            else:
+                base = "prospect"
+            
             base_slug = slugify(base)
+            if not base_slug or base_slug == "none-none":
+                import uuid
+                base_slug = f"prospect-{str(uuid.uuid4())[:8]}"
+                
             slug = base_slug
             counter = 1
 
@@ -686,8 +696,21 @@ class ProspectBankAccount(models.Model):
 
     def __str__(self):
         return f"{self.bank_name} - {self.rib}"
-    
 
+class ContactEntreprise(models.Model):
+    prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, related_name='contacts')
+    nom = models.CharField(max_length=255, null=True, blank=True)
+    prenom = models.CharField(max_length=255, null=True, blank=True)
+    telephone = models.CharField(max_length=50, null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
+    poste = models.CharField(max_length=255, null=True, blank=True)
+    is_primary = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        verbose_name = "Contact Entreprise"
+        verbose_name_plural = "Contacts Entreprises"
 
-
+    def __str__(self):
+        return f"{self.nom} {self.prenom} - {self.prospect.entreprise}"

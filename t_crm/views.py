@@ -463,8 +463,12 @@ def InscriptionEntreprise(request):
 @module_permission_required('crm','view')
 @role_required('crm', ['Administrateur','Manager','Utilisateur','Superviseur'])
 def ListeDesProspects(request):
+    specialites = Specialites.objects.all()
+    double_specialites = DoubleDiplomation.objects.all()
     context = {
         'tenant' : request.tenant,
+        'specialites': specialites,
+        'double_specialites': double_specialites,
     }
     return render(request, 'tenant_folder/crm/liste-des-prospects.html', context)
 
@@ -477,7 +481,21 @@ def ApiLoadProspects(request):
 
     prospects = Prospets.objects.filter(context="acc", statut__in=["visiteur", "annuler"]).annotate(
         has_fiche_voeux=Exists(fiche_exists) | Exists(fiche_double_exists)
-    ).values(
+    )
+
+    specialite_id = request.GET.get('specialite')
+    if specialite_id:
+        if specialite_id.startswith('d_'):
+            s_id = specialite_id[2:]
+            prospects = prospects.filter(
+                prospect_fiche_voeux_double__specialite_id=s_id
+            ).distinct()
+        else:
+            prospects = prospects.filter(
+                prospect_fiche_voeux__specialite_id=specialite_id
+            ).distinct()
+
+    prospects = prospects.values(
         'slug','id', 'nin', 'nom', 'prenom', 'type_prospect','email','indic','telephone','canal',
         'created_at','etat','entreprise', 'motif_annulation', 'statut', 'has_fiche_voeux'
     ).order_by('-created_at')

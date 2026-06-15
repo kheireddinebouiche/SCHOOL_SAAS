@@ -4,13 +4,30 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'school.settings')
 django.setup()
 
-from django_tenants.utils import schema_context
-from t_conseil.models import LignesFacture
-from decimal import Decimal
+from t_tresorerie.models import OperationsBancaire, SuiviChequeSortant
 
-with schema_context('alger'):
-    lines = LignesFacture.objects.filter(prix_unitaire=0, montant_ht__gt=0)
-    for l in lines:
-        l.prix_unitaire = round(l.montant_ht / l.quantite / (Decimal('1') - (l.remise_percent/Decimal('100'))), 2)
-        l.save()
-    print(f'Updated {len(lines)} lines')
+ops = OperationsBancaire.objects.filter(operation_type='sortie')
+for op in ops:
+    is_cheque = False
+    if op.depense and op.depense.mode_paiement == 'che':
+        is_cheque = True
+    elif op.remboursement and op.remboursement.mode_rembourssement == 'che':
+        is_cheque = True
+    
+    if is_cheque:
+        statut = 'emis'
+        has_date_paiement = False
+        if op.depense and op.depense.date_paiement:
+            has_date_paiement = True
+        elif op.remboursement and op.remboursement.is_appliced:
+            has_date_paiement = True
+            
+        if has_date_paiement or op.is_rapproche:
+            statut = 'decaisse'
+            
+        obj, created = SuiviChequeSortant.objects.get_or_create(operation=op, defaults={'statut': statut})
+        if created and statut == 'decaisse':
+            obj.date_decaisse = op.date_operation
+            obj.save()
+
+print('Backfill complete.')

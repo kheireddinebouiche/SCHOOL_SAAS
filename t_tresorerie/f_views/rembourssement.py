@@ -63,7 +63,9 @@ def ApiLoadRemboursements(request):
             specialite = voeux.specialite.label if voeux and voeux.specialite else None
             formation = voeux.specialite.formation.nom if voeux and voeux.specialite and voeux.specialite.formation else None
 
-        paiements = Paiements.objects.filter(prospect=client.id, is_refund=False, context="frais_f").aggregate(total=Sum('montant_paye'))['total'] or 0
+        paiements_base = Paiements.objects.filter(prospect=client.id, is_refund=False, context="frais_f")
+        paiements = paiements_base.filter(Q(is_done=True) | Q(mode_paiement='esp')).aggregate(total=Sum('montant_paye'))['total'] or 0
+        paiements_attente = paiements_base.filter(is_done=False).exclude(mode_paiement='esp').aggregate(total=Sum('montant_paye'))['total'] or 0
         
         data.append({
             "client_id": client.id,
@@ -92,6 +94,7 @@ def ApiLoadRemboursements(request):
             'is_done' : r.is_done,
             'is_appliced' : r.is_appliced,
             'total_paye' : float(paiements) - float(r.allowed_amount if r.allowed_amount else 0),
+            'total_attente' : float(paiements_attente),
         })
 
     return JsonResponse(data, safe=False)
@@ -130,9 +133,11 @@ def DetailsRembourssement(request, pk):
             specialite_label = "Inconnue"
             promotion_label = "-"
 
-    total_paye = Paiements.objects.filter(prospect=obj.client, is_refund=False).aggregate(total=Sum('montant_paye'))['total'] or 0
-    paiements = Paiements.objects.filter(prospect=obj.client).order_by('due_paiements__date_echeance', 'id')
-    last_paiements = Paiements.objects.filter(prospect=obj.client, is_refund=False).last()
+    paiements_base = Paiements.objects.filter(prospect=obj.client, is_refund=False).exclude(Q(context='frais_i') | Q(is_frais_inscription=True))
+    total_paye = paiements_base.filter(Q(is_done=True) | Q(mode_paiement='esp')).aggregate(total=Sum('montant_paye'))['total'] or 0
+    total_attente = paiements_base.filter(is_done=False).exclude(mode_paiement='esp').aggregate(total=Sum('montant_paye'))['total'] or 0
+    paiements = Paiements.objects.filter(prospect=obj.client).exclude(Q(context='frais_i') | Q(is_frais_inscription=True)).order_by('due_paiements__date_echeance', 'id')
+    last_paiements = Paiements.objects.filter(prospect=obj.client, is_refund=False).exclude(Q(context='frais_i') | Q(is_frais_inscription=True)).last()
 
     groupe_line = GroupeLine.objects.filter(student=obj.client)
     has_factured_payments = paiements.filter(facture__isnull=False).exists()
@@ -144,6 +149,7 @@ def DetailsRembourssement(request, pk):
         'specialite_label': specialite_label,
         'promotion_label': promotion_label,
         'total_paye' : total_paye,
+        'total_attente' : total_attente,
         'paiements' : paiements,
         'entreprise' : entreprise,
         'last_payment' : last_paiements,
@@ -244,11 +250,15 @@ def ApiSearchProspectForRefund(request):
             due_paiements_qs = DuePaiements.objects.filter(client=prospect, is_annulated=False)
             total_due = due_paiements_qs.aggregate(total=Sum('montant_due'))['total'] or Decimal('0.0')
             
-            paiements_qs = Paiements.objects.filter(prospect=prospect, is_refund=False)
-            total_paye = paiements_qs.aggregate(total=Sum('montant_paye'))['total'] or Decimal('0.0')
+            paiements_qs_all = Paiements.objects.filter(prospect=prospect, is_refund=False).exclude(Q(context='frais_i') | Q(is_frais_inscription=True) | Q(paiement_label__icontains="inscription"))
+            paiements_qs_encaisse = paiements_qs_all.filter(Q(is_done=True) | Q(mode_paiement='esp'))
+            paiements_qs_attente = paiements_qs_all.filter(is_done=False).exclude(mode_paiement='esp')
+            
+            total_paye = paiements_qs_encaisse.aggregate(total=Sum('montant_paye'))['total'] or Decimal('0.0')
+            total_attente = paiements_qs_attente.aggregate(total=Sum('montant_paye'))['total'] or Decimal('0.0')
 
             # Invoice
-            has_invoice = paiements_qs.filter(facture__isnull=False).exists()
+            has_invoice = paiements_qs_all.filter(facture__isnull=False).exists()
             invoice_status = "Facture générée" if has_invoice else "Non facturé"
 
             data.append({
@@ -264,6 +274,7 @@ def ApiSearchProspectForRefund(request):
                 'groupe': groupe_label,
                 'total_due': float(total_due),
                 'total_paye': float(total_paye),
+                'total_attente': float(total_attente),
                 'invoice_status': invoice_status,
                 'has_invoice': has_invoice,
             })
