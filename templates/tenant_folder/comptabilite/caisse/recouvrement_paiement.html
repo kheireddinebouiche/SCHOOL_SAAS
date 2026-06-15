@@ -145,6 +145,24 @@
             </div>
             <!-- end page title -->
 
+            <!-- Type Tabs -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <ul class="nav nav-tabs nav-tabs-custom nav-success nav-justified" id="typeTab" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#cheques" role="tab" data-type="cheque">
+                                <i class="ri-wallet-3-line align-middle me-1"></i> Chèques
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#virements" role="tab" data-type="virement">
+                                <i class="ri-bank-card-line align-middle me-1"></i> Virements
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
             <!-- KPI Cards -->
             <div class="row mb-4">
                 <div class="col-md-3">
@@ -259,13 +277,73 @@
                                     <i class="ri-inbox-2-line"></i>
                                 </div>
                                 <h5 class="empty-state-title">Aucun paiement en attente</h5>
-                                <p class="empty-state-subtitle">
-                                    Il n'y a actuellement aucun paiement par chèque ou virement en attente de recouvrement.
+                                <p class="empty-state-subtitle" id="emptyStateMessage">
+                                    Il n'y a actuellement aucun paiement par chèque en attente de recouvrement.
                                     <br>Toutes les opérations ont été traitées avec succès.
                                 </p>
                                 <button class="btn btn-soft-primary rounded-pill px-4" id="emptyStateRefreshBtn">
                                     <i class="ri-refresh-line me-1"></i> Actualiser
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Historique -->
+            <div class="row mt-4">
+                <div class="col-lg-12">
+                    <div class="card glass-card border-0">
+                        <div class="card-header bg-transparent border-0 p-4">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="ri-history-line text-success me-2 fs-4"></i>
+                                    <h5 class="card-title mb-0 fw-bold">Historique des recouvrements</h5>
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="search-input-group" style="min-width: 280px;">
+                                        <i class="ri-search-2-line text-muted"></i>
+                                        <input type="text" class="form-control" id="tableHistorySearch" placeholder="Rechercher dans l'historique...">
+                                    </div>
+                                    <button type="button" class="btn btn-soft-success btn-rounded" id="refreshHistoryBtn">
+                                        <i class="ri-refresh-line"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Table History -->
+                            <div id="tableHistoryWrapper">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0" id="recouvrementHistoryTable">
+                                        <thead>
+                                            <tr>
+                                                <th>N° Paiement</th>
+                                                <th>Reçu le</th>
+                                                <th>Recouvré le</th>
+                                                <th>Client</th>
+                                                <th>Entité</th>
+                                                <th>Montant</th>
+                                                <th>Mode</th>
+                                                <th>Référence</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Data populated via AJAX -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Empty State History -->
+                            <div class="empty-state-container text-center py-5" id="emptyStateHistoryContainer" style="display: none;">
+                                <div class="empty-state-icon-wrapper">
+                                    <i class="ri-history-line"></i>
+                                </div>
+                                <h5 class="empty-state-title">Aucun historique</h5>
+                                <p class="empty-state-subtitle" id="emptyStateHistoryMessage">
+                                    Il n'y a actuellement aucun paiement par chèque dans l'historique.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -290,13 +368,13 @@
                             <i class="ri-bank-card-line"></i>
                         </div>
                     </div>
-                    <p class="text-muted">Veuillez indiquer la date effective à laquelle les fonds ont été reçus sur votre compte bancaire.</p>
+                    <p class="text-muted">Veuillez indiquer la date de recouvrement (date à laquelle les fonds ont été reçus sur votre compte bancaire).</p>
                 </div>
                 <form id="recouvrementForm">
                     <input type="hidden" id="paiementId" name="paiement_id">
                     <input type="hidden" id="paiementType" name="type">
                     <div class="form-group mb-0">
-                        <label for="effectiveDate" class="form-label fw-semibold">Date Effective de Paiement</label>
+                        <label for="effectiveDate" class="form-label fw-semibold">Date de recouvrement</label>
                         <input type="date" class="form-control form-control-lg border-2" id="effectiveDate" name="effective_date" required>
                     </div>
                 </form>
@@ -312,13 +390,32 @@
 
 {% block extra_js %}
 <script>
+    let currentType = 'cheque';
+
     $(document).ready(function() {
         loadRecouvrementData();
+        loadRecouvrementHistoryData();
         loadStats();
+
+        // Gestion des onglets type
+        $('#typeTab a').on('click', function (e) {
+            e.preventDefault();
+            currentType = $(this).data('type');
+            loadRecouvrementData();
+            loadRecouvrementHistoryData();
+        });
 
         $('#refreshBtn').click(function() {
             loadRecouvrementData();
             loadStats();
+        });
+
+        $('#emptyStateRefreshBtn').click(function() {
+            loadRecouvrementData();
+        });
+
+        $('#refreshHistoryBtn').click(function() {
+            loadRecouvrementHistoryData();
         });
 
         $('#tableSearch').on('keyup', function() {
@@ -328,7 +425,87 @@
             });
         });
 
-        $('#validateRecouvrementBtn').click(function() {
+        $('#tableHistorySearch').on('keyup', function() {
+            var value = $(this).val().toLowerCase();
+            $("#recouvrementHistoryTable tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+
+    function loadRecouvrementHistoryData() {
+        let tableBody = $('#recouvrementHistoryTable tbody');
+        tableBody.html('<tr><td colspan="8" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Chargement de l\'historique...</td></tr>');
+        $('#tableHistoryWrapper').show();
+        $('#emptyStateHistoryContainer').hide();
+
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiListHistoriqueRecouvrement' %}",
+            type: 'GET',
+            data: { type: currentType },
+            success: function(data) {
+                tableBody.empty();
+
+                if (data.length === 0) {
+                    $('#tableHistoryWrapper').hide();
+                    $('#emptyStateHistoryMessage').html(`Il n'y a actuellement aucun paiement par ${currentType === 'cheque' ? 'chèque' : 'virement'} dans l'historique.`);
+                    $('#emptyStateHistoryContainer').css('display', 'block');
+                    return;
+                }
+
+                $('#tableHistoryWrapper').show();
+                $('#emptyStateHistoryContainer').hide();
+
+                data.forEach(function(item) {
+                    let badgeClass = item.mode_paiement === 'Chèque' ? 'badge-soft-success' : 'badge-soft-info';
+
+                    let statusBadgeHTML = `<span class="badge ${badgeClass}">${item.mode_paiement}</span>`;
+                    
+                    if (item.is_refund) {
+                        statusBadgeHTML += ` <span class="badge badge-soft-warning ms-1"><i class="ri-refresh-line me-1"></i>Remboursé</span>`;
+                    }
+                    
+                    let row = `
+                        <tr>
+                            <td><span class="fw-bold text-primary">${item.num || '-'}</span></td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="ri-calendar-event-line text-muted me-2"></i>
+                                    <span>${item.date_paiement || '-'}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="ri-checkbox-circle-line text-success me-2"></i>
+                                    <span class="text-success fw-bold">${item.date_recouvrement || '-'}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-xs me-2">
+                                        <div class="avatar-title bg-soft-primary text-primary rounded-circle">
+                                            ${item.client.charAt(0)}
+                                        </div>
+                                    </div>
+                                    <span>${item.client}</span>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-soft-info">${item.entite}</span></td>
+                            <td><span class="fw-bold">${item.montant.toLocaleString('fr-FR', {minimumFractionDigits: 2})} DA</span></td>
+                            <td>${statusBadgeHTML}</td>
+                            <td><code class="text-dark">${item.reference}</code></td>
+                        </tr>
+                    `;
+                    tableBody.append(row);
+                });
+            },
+            error: function() {
+                tableBody.html(`<tr><td colspan="8" class="text-center text-danger py-4">Une erreur est survenue lors du chargement de l'historique.</td></tr>`);
+            }
+        });
+    }
+
+    // Modal submit logic
+    $('#validateRecouvrementBtn').click(function() {
             const id = $('#paiementId').val();
             const p_type = $('#paiementType').val();
             const date = $('#effectiveDate').val();
@@ -354,6 +531,7 @@
                         alertify.success(response.message);
                         $('#recouvrementModal').modal('hide');
                         loadRecouvrementData();
+                        loadRecouvrementHistoryData();
                         loadStats();
                     } else {
                         alertify.error(response.message);
@@ -383,7 +561,6 @@
     }
 
     function loadRecouvrementData() {
-        // Show a loading shimmer on the table
         let tableBody = $('#recouvrementTable tbody');
         tableBody.html('<tr><td colspan="8" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Chargement en cours...</td></tr>');
         $('#tableWrapper').show();
@@ -392,17 +569,17 @@
         $.ajax({
             url: "{% url 't_tresorerie:ApiListRecouvrementPaiements' %}",
             type: 'GET',
+            data: { type: currentType },
             success: function(data) {
                 tableBody.empty();
 
                 if (data.length === 0) {
-                    // Hide table, show premium empty state
                     $('#tableWrapper').hide();
+                    $('#emptyStateMessage').html(`Il n'y a actuellement aucun paiement par ${currentType === 'cheque' ? 'chèque' : 'virement'} en attente de recouvrement.<br>Toutes les opérations ont été traitées avec succès.`);
                     $('#emptyStateContainer').css('display', 'block');
                     return;
                 }
 
-                // Data exists: show table, hide empty state
                 $('#tableWrapper').show();
                 $('#emptyStateContainer').hide();
 
@@ -417,6 +594,32 @@
                                 title="Supprimer ce paiement">
                             <i class="ri-delete-bin-line"></i>
                         </button>` : '';
+
+                    let actionBtnHTML = '';
+                    let statusBadgeHTML = `<span class="badge ${badgeClass}">${item.mode_paiement}</span>`;
+                    
+                    if(item.is_refund) {
+                        statusBadgeHTML = `<span class="badge badge-soft-warning"><i class="ri-refresh-line me-1"></i>En remboursement</span>`;
+                        actionBtnHTML = `
+                            <button class="btn btn-sm btn-warning rounded-pill px-3 recouvrement-btn shadow-sm" 
+                                    data-id="${item.id}" 
+                                    data-type="${item.type}"
+                                    data-date="${item.date_paiement || ''}"
+                                    data-is-refund="true">
+                                <i class="ri-arrow-go-back-line me-1"></i> Remettre au payeur
+                            </button>
+                        `;
+                    } else {
+                        actionBtnHTML = `
+                            <button class="btn btn-sm btn-primary rounded-pill px-3 recouvrement-btn shadow-sm" 
+                                    data-id="${item.id}" 
+                                    data-type="${item.type}"
+                                    data-date="${item.date_paiement || ''}"
+                                    data-is-refund="false">
+                                <i class="ri-checkbox-circle-line me-1"></i> Recouvrer
+                            </button>
+                        `;
+                    }
 
                     let row = `
                         <tr>
@@ -434,15 +637,10 @@
                             </td>
                             <td><span class="badge badge-soft-info">${item.entite}</span></td>
                             <td><span class="fw-bold">${item.montant.toLocaleString('fr-FR', {minimumFractionDigits: 2})} DA</span></td>
-                            <td><span class="badge ${badgeClass}">${item.mode_paiement}</span></td>
+                            <td>${statusBadgeHTML}</td>
                             <td><code class="text-dark">${item.reference}</code></td>
                             <td class="text-center">
-                                <button class="btn btn-sm btn-primary rounded-pill px-3 recouvrement-btn shadow-sm" 
-                                        data-id="${item.id}" 
-                                        data-type="${item.type}"
-                                        data-date="${item.date_paiement || ''}">
-                                    <i class="ri-checkbox-circle-line me-1"></i> Recouvrer
-                                </button>
+                                ${actionBtnHTML}
                                 ${deleteBtnHTML}
                             </td>
                         </tr>
@@ -454,11 +652,25 @@
                     const id = $(this).data('id');
                     const type = $(this).data('type');
                     const date = $(this).data('date');
+                    const isRefund = $(this).data('is-refund');
                     
                     $('#paiementId').val(id);
                     $('#paiementType').val(type);
                     const today = new Date().toISOString().split('T')[0];
                     $('#effectiveDate').val(date || today);
+                    
+                    if(isRefund) {
+                        $('#recouvrementModalLabel').text("Remise au payeur");
+                        $('#recouvrementModal .text-muted').text("Veuillez indiquer la date à laquelle le chèque a été remis au payeur.");
+                        $('#validateRecouvrementBtn').text("Confirmer la remise");
+                        $('#effectiveDate').prev('label').text("Date de remise");
+                    } else {
+                        $('#recouvrementModalLabel').text("Valider le Recouvrement");
+                        $('#recouvrementModal .text-muted').text("Veuillez indiquer la date de recouvrement (date à laquelle les fonds ont été reçus sur votre compte bancaire).");
+                        $('#validateRecouvrementBtn').text("Confirmer le Recouvrement");
+                        $('#effectiveDate').prev('label').text("Date de recouvrement");
+                    }
+
                     $('#recouvrementModal').modal('show');
                 });
 

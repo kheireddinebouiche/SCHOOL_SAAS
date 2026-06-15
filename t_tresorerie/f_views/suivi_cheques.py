@@ -18,6 +18,7 @@ def PageSuiviChequesEmis(request):
 @module_permission_required('tre', 'view')
 def ApiListChequesEmis(request):
     statut = request.GET.get('statut', 'tous')
+    type_op = request.GET.get('type', 'cheque')
     
     # Base query for all sortie OperationsBancaire linked to a check
     # We rely on SuiviChequeSortant which is created automatically for check operations
@@ -32,25 +33,31 @@ def ApiListChequesEmis(request):
         reference = ''
         beneficiaire = 'Inconnu'
         entite_name = ''
+        mode = None
         
         if sc.depense:
+            mode = sc.depense.mode_paiement
             montant = sc.depense.montant_ttc or sc.depense.montant_ht
             reference = sc.depense.reference
             if sc.depense.fournisseur:
                 beneficiaire = sc.depense.fournisseur.designation
             elif sc.depense.client:
                 beneficiaire = f"{sc.depense.client.nom} {sc.depense.client.prenom}"
-            if sc.depense.entite:
                 entite_name = sc.depense.entite.designation
                 
         elif sc.remboursement:
+            mode = sc.remboursement.mode_rembourssement
             montant = sc.remboursement.allowed_amount
             reference = ''
             if sc.remboursement.client:
                 beneficiaire = f"{sc.remboursement.client.nom} {sc.remboursement.client.prenom}"
-            if sc.remboursement.entite:
                 entite_name = sc.remboursement.entite.designation
             
+        if type_op == 'cheque' and mode != 'che':
+            continue
+        elif type_op == 'virement' and mode != 'vir':
+            continue
+
         data.append({
             'id': sc.id,
             'statut': sc.statut,
@@ -84,7 +91,7 @@ def ApiUpdateChequeStatut(request):
                 sc.date_attente_signature = now
             elif nouveau_statut == 'remis':
                 sc.date_remis = now
-            elif nouveau_statut == 'decaisse':
+            elif nouveau_statut in ['decaisse', 'effectue']:
                 sc.date_decaisse = now
                 
             sc.save()

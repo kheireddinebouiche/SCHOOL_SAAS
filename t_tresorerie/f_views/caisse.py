@@ -465,6 +465,7 @@ def brouillard_banck_json(request):
     results = []
     for mv in mouvements:
         montant = float(mv['mouvement_montant'] or 0)
+        
         if mv['type'] == 'entree':
             solde += montant
         else:
@@ -896,23 +897,20 @@ def ApiUpdateEffectiveDate(request):
             
             if p_type == 'standard':
                 paiement = Paiements.objects.get(id=paiement_id)
-                paiement.date_paiement = effective_date
                 paiement.is_done = True
                 paiement.save()
-                OperationsBancaire.objects.filter(paiement=paiement).update(date_operation=effective_date)
+                OperationsBancaire.objects.filter(paiement=paiement).update(date_operation=effective_date, is_paid=True)
             elif p_type == 'autre':
                 paiement = AutreProduit.objects.get(id=paiement_id)
-                paiement.date_paiement = effective_date
                 paiement.is_done = True
                 paiement.save()
-                OperationsBancaire.objects.filter(autre_produit=paiement).update(date_operation=effective_date)
+                OperationsBancaire.objects.filter(autre_produit=paiement).update(date_operation=effective_date, is_paid=True)
             elif p_type == 'conseil':
                 from t_conseil.models import Paiement as ConseilPaiement
                 paiement = ConseilPaiement.objects.get(id=paiement_id)
-                paiement.date_paiement = effective_date
                 paiement.is_done = True
                 paiement.save()
-                OperationsBancaire.objects.filter(conseil_paiement=paiement).update(date_operation=effective_date)
+                OperationsBancaire.objects.filter(conseil_paiement=paiement).update(date_operation=effective_date, is_paid=True)
             else:
                 return JsonResponse({"status": "error", "message": "Type de paiement invalide"})
 
@@ -967,10 +965,12 @@ def ApiUpdateReferencePaiement(request):
 def ApiListRecouvrementPaiements(request):
     if request.method == "GET":
         data = []
+        payment_type = request.GET.get('type', 'cheque')
+        filter_mode = 'che' if payment_type == 'cheque' else 'vir'
         
         # 1. Standard Payments
         paiements = Paiements.objects.filter(
-            mode_paiement__in=['che', 'vir'],
+            mode_paiement=filter_mode,
             is_done=False
         ).select_related('prospect', 'due_paiements__entite')
 
@@ -997,11 +997,12 @@ def ApiListRecouvrementPaiements(request):
                 'reference': p.reference_paiement or '-',
                 'entite': entite_name,
                 'created_at': p.created_at.strftime('%Y-%m-%d') if p.created_at else None,
+                'is_refund': p.is_refund,
             })
 
         # 2. AutreProduit Payments
         autres = AutreProduit.objects.filter(
-            mode_paiement__in=['che', 'vir'],
+            mode_paiement=filter_mode,
             is_done=False
         ).select_related('client', 'entite')
         
@@ -1021,12 +1022,13 @@ def ApiListRecouvrementPaiements(request):
                 'reference': a.reference or '-',
                 'entite': a.entite.designation if a.entite else 'N/A',
                 'created_at': a.date_operation.strftime('%Y-%m-%d') if a.date_operation else None,
+                'is_refund': False,
             })
 
         # 3. Conseil Payments
         from t_conseil.models import Paiement as ConseilPaiement
         conseil_p = ConseilPaiement.objects.filter(
-            mode_paiement__in=['che', 'vir'],
+            mode_paiement=filter_mode,
             is_done=False
         ).select_related('facture__client', 'facture__entreprise')
 
@@ -1046,6 +1048,7 @@ def ApiListRecouvrementPaiements(request):
                 'reference': cp.reference or '-',
                 'entite': cp.facture.entreprise.designation if cp.facture and cp.facture.entreprise else 'N/A',
                 'created_at': cp.created_at.strftime('%Y-%m-%d') if cp.created_at else None,
+                'is_refund': False,
             })
         
         return JsonResponse(data, safe=False)
@@ -1420,3 +1423,95 @@ def api_delete_depot_banque(request, pk):
         return JsonResponse({"status": "success", "message": "Dépôt supprimé avec succès"})
     except DepotBanque.DoesNotExist:
         return JsonResponse({"status": "error", "message": "Dépôt non trouvé"}, status=404)
+@login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
+def ApiListHistoriqueRecouvrement(request):
+    if request.method == "GET":
+        data = []
+        payment_type = request.GET.get('type', 'cheque')
+        filter_mode = 'che' if payment_type == 'cheque' else 'vir'
+        
+        operations = OperationsBancaire.objects.filter(
+            operation_type='entree',
+            is_paid=True
+        ).select_related(
+            'paiement__prospect',
+            'autre_produit__client',
+            'conseil_paiement__facture__client',
+            'paiement__due_paiements__entite',
+            'autre_produit__entite',
+            'conseil_paiement__facture__entreprise'
+        ).order_by('-date_operation')[:200]
+
+        for op in operations:
+            item = None
+            if op.paiement and op.paiement.mode_paiement == filter_mode:
+                p = op.paiement
+                client_name = f"{p.prospect.nom or ''} {p.prospect.prenom or ''}".strip() if p.prospect else "Client inconnu"
+                
+                entite_name = "N/A"
+                if p.due_paiements:
+                    if p.due_paiements.entite:
+                        entite_name = p.due_paiements.entite.designation
+                    elif p.due_paiements.ref_echeancier and p.due_paiements.ref_echeancier.entite:
+                        entite_name = p.due_paiements.ref_echeancier.entite.designation
+                
+                item = {
+                    'id': op.id,
+                    'paiement_id': p.id,
+                    'type': 'standard',
+                    'num': p.num,
+                    'client': client_name,
+                    'montant': float(p.montant_paye) if p.montant_paye else 0,
+                    'mode_paiement': p.get_mode_paiement_display(),
+                    'date_paiement': p.date_paiement.strftime('%Y-%m-%d') if p.date_paiement else None,
+                    'date_recouvrement': op.date_operation.strftime('%Y-%m-%d') if op.date_operation else None,
+                    'reference': p.reference_paiement or '-',
+                    'entite': entite_name,
+                    'created_at': p.created_at.strftime('%Y-%m-%d') if p.created_at else None,
+                    'is_refund': p.is_refund,
+                }
+            elif op.autre_produit and op.autre_produit.mode_paiement == filter_mode:
+                a = op.autre_produit
+                client_name = f"{a.client.nom or ''} {a.client.prenom or ''}".strip() if a.client else "Client inconnu"
+                item = {
+                    'id': op.id,
+                    'paiement_id': a.id,
+                    'type': 'autre',
+                    'num': a.num or f"AUT-{a.id}",
+                    'client': client_name,
+                    'montant': float(a.montant_paye),
+                    'mode_paiement': a.get_mode_paiement_display(),
+                    'date_paiement': a.date_paiement.strftime('%Y-%m-%d') if a.date_paiement else None,
+                    'date_recouvrement': op.date_operation.strftime('%Y-%m-%d') if op.date_operation else None,
+                    'reference': a.reference or '-',
+                    'entite': a.entite.designation if a.entite else "N/A",
+                    'created_at': a.date_operation.strftime('%Y-%m-%d') if a.date_operation else None,
+                    'is_refund': False,
+                }
+            elif op.conseil_paiement and op.conseil_paiement.mode_paiement == filter_mode:
+                c = op.conseil_paiement
+                client_name = "Client inconnu"
+                if c.facture and c.facture.client:
+                    client_name = f"{c.facture.client.nom or ''} {c.facture.client.prenom or ''}".strip()
+                item = {
+                    'id': op.id,
+                    'paiement_id': c.id,
+                    'type': 'conseil',
+                    'num': c.num or f"INV-{c.id}",
+                    'client': client_name,
+                    'montant': float(c.montant_paye),
+                    'mode_paiement': c.get_mode_paiement_display(),
+                    'date_paiement': c.date_paiement.strftime('%Y-%m-%d') if c.date_paiement else None,
+                    'date_recouvrement': op.date_operation.strftime('%Y-%m-%d') if op.date_operation else None,
+                    'reference': c.reference or '-',
+                    'entite': c.facture.entreprise.designation if c.facture and c.facture.entreprise else "N/A",
+                    'created_at': c.created_at.strftime('%Y-%m-%d') if c.created_at else None,
+                    'is_refund': False,
+                }
+                
+            if item:
+                data.append(item)
+                
+        return JsonResponse(data, safe=False)
+    return JsonResponse({"status": "error", "message": "Méthode non autorisée"})

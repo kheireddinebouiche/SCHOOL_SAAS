@@ -898,7 +898,9 @@ class SuiviChequeSortant(models.Model):
         ('emis', 'Emis'),
         ('attente_signature', 'En attente de signature'),
         ('remis', 'Remis au client/fournisseur'),
-        ('decaisse', 'Décaissé')
+        ('decaisse', 'Décaissé'),
+        ('en_attente', 'En attente'),
+        ('effectue', 'Virement effectué')
     ], default='emis')
     date_emis = models.DateTimeField(auto_now_add=True)
     date_attente_signature = models.DateTimeField(null=True, blank=True)
@@ -921,32 +923,32 @@ from django.dispatch import receiver
 @receiver(post_save, sender=Depenses)
 def create_suivi_cheque_depense(sender, instance, created, **kwargs):
     if instance.mode_paiement in ['che', 'vir']:
-        statut = 'emis'
+        statut = 'emis' if instance.mode_paiement == 'che' else 'en_attente'
         has_date_paiement = bool(instance.date_paiement)
         
         # Check if reconciled
         is_rapproche = instance.lettrages.filter(is_rapproche=True).exists()
             
         if has_date_paiement or is_rapproche:
-            statut = 'decaisse'
+            statut = 'decaisse' if instance.mode_paiement == 'che' else 'effectue'
             
         obj, c = SuiviChequeSortant.objects.get_or_create(depense=instance, defaults={'statut': statut})
-        if c and statut == 'decaisse':
+        if c and statut in ['decaisse', 'effectue']:
             obj.date_decaisse = instance.date_paiement or instance.created_at
             obj.save()
 
 @receiver(post_save, sender='t_tresorerie.Rembourssements')
 def create_suivi_cheque_remboursement(sender, instance, created, **kwargs):
     if instance.mode_rembourssement in ['che', 'vir']:
-        statut = 'emis'
+        statut = 'emis' if instance.mode_rembourssement == 'che' else 'en_attente'
         
         # Check if reconciled
         is_rapproche = instance.lettrages.filter(is_rapproche=True).exists()
             
         if is_rapproche:
-            statut = 'decaisse'
+            statut = 'decaisse' if instance.mode_rembourssement == 'che' else 'effectue'
             
         obj, c = SuiviChequeSortant.objects.get_or_create(remboursement=instance, defaults={'statut': statut})
-        if c and statut == 'decaisse':
+        if c and statut in ['decaisse', 'effectue']:
             obj.date_decaisse = instance.created_at
             obj.save()

@@ -310,6 +310,7 @@ urlpatterns = [
     path('api/update-effective-date/', ApiUpdateEffectiveDate, name='ApiUpdateEffectiveDate'),
     path('api/delete-recouvrement/', ApiDeleteRecouvrementPaiement, name='ApiDeleteRecouvrementPaiement'),
     path('api/list-recouvrement-paiements/', ApiListRecouvrementPaiements, name='ApiListRecouvrementPaiements'),
+    path('api/list-historique-recouvrement/', ApiListHistoriqueRecouvrement, name='ApiListHistoriqueRecouvrement'),
     path('api/recouvrement-stats/', ApiRecouvrementStats, name='ApiRecouvrementStats'),
     path('payment-types/', submenu_access_required("tre", "parametres")(payment_type_list), name='payment_type_list'),
 

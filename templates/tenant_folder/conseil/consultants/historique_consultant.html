@@ -1,0 +1,158 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock title %}
+
+{% block content %}
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1.25rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+    .table-premium { border-collapse: separate; border-spacing: 0 0.5rem; }
+    .table-premium thead th { background: #f8fafc; border: none; color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.025em; padding: 1.25rem 1.5rem; }
+    .table-premium tbody tr { background: white; transition: all 0.2s ease; }
+    .table-premium tbody tr:hover { background: #f1f5f9; transform: scale(1.002); }
+    .table-premium tbody td { border: none; padding: 1.25rem 1.5rem; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; }
+    .table-premium tbody td:first-child { border-left: 1px solid #f1f5f9; border-top-left-radius: 1rem; border-bottom-left-radius: 1rem; }
+    .table-premium tbody td:last-child { border-right: 1px solid #f1f5f9; border-top-right-radius: 1rem; border-bottom-right-radius: 1rem; }
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid py-4">
+      
+      <!-- Back button and Header -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="glass-card p-4 d-sm-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <a href="{% url 't_conseil:ListeConsultants' %}" class="btn btn-light rounded-circle p-2 me-3 shadow-sm d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                <i class="bx bx-arrow-back fs-4"></i>
+              </a>
+              <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3 d-flex align-items-center justify-content-center">
+                <i class="bx bx-history text-success fs-3"></i>
+              </div>
+              <div>
+                <h4 class="mb-1 fw-bold">Historique : {{ consultant.prenom }} {{ consultant.nom }}</h4>
+                <p class="text-muted mb-0">Vue détaillée des thématiques affectées et des plannings réalisés</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="row g-4">
+        <!-- Thématiques Affectées -->
+        <div class="col-xl-5 col-lg-12">
+          <div class="card glass-card border-0 h-100">
+            <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0">
+              <h5 class="fw-bold text-primary mb-0"><i class="bx bx-book-open me-2"></i>Thématiques Affectées</h5>
+            </div>
+            <div class="card-body p-4">
+              <div class="table-responsive">
+                <table class="table table-premium align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Thématique</th>
+                      <th>Groupe</th>
+                      <th>Période</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for affectation in consultant.thematiques_history %}
+                    <tr>
+                      <td><span class="fw-medium text-dark">{{ affectation.thematique.label }}</span></td>
+                      <td><span class="badge bg-primary bg-opacity-10 text-primary">{{ affectation.groupe.nom|default:"-" }}</span></td>
+                      <td>
+                        <div class="text-muted small">
+                          {% if affectation.date_debut %}{{ affectation.date_debut|date:"d M Y" }}{% else %}-{% endif %} au<br>
+                          {% if affectation.date_fin %}{{ affectation.date_fin|date:"d M Y" }}{% else %}-{% endif %}
+                        </div>
+                      </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="3" class="text-center py-5">
+                        <div class="avatar-sm mx-auto mb-3">
+                          <div class="avatar-title bg-light text-muted rounded-circle fs-3">
+                            <i class="bx bx-book"></i>
+                          </div>
+                        </div>
+                        <h6 class="text-muted fw-medium">Aucune thématique affectée</h6>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Plannings Effectués -->
+        <div class="col-xl-7 col-lg-12">
+          <div class="card glass-card border-0 h-100">
+            <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0">
+              <h5 class="fw-bold text-success mb-0"><i class="bx bx-calendar-check me-2"></i>Plannings Effectués</h5>
+            </div>
+            <div class="card-body p-4">
+              <div class="table-responsive">
+                <table class="table table-premium align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Thématique</th>
+                      <th>Groupe</th>
+                      <th>Horaires</th>
+                      <th>Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for plan in consultant.plannings_history %}
+                    <tr>
+                      <td>
+                        <div class="fw-medium text-dark">{{ plan.date|date:"d M Y" }}</div>
+                      </td>
+                      <td>{{ plan.thematique.label }}</td>
+                      <td><span class="badge bg-primary bg-opacity-10 text-primary">{{ plan.groupe.nom|default:"-" }}</span></td>
+                      <td>
+                        <span class="text-muted small"><i class="bx bx-time me-1"></i>{{ plan.heure_debut|time:"H:i" }} - {{ plan.heure_fin|time:"H:i" }}</span>
+                      </td>
+                      <td>
+                        {% if plan.realisee %}
+                          <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25"><i class="bx bx-check me-1"></i>Réalisée</span>
+                        {% else %}
+                          <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25"><i class="bx bx-time me-1"></i>Planifiée</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="5" class="text-center py-5">
+                        <div class="avatar-sm mx-auto mb-3">
+                          <div class="avatar-title bg-light text-muted rounded-circle fs-3">
+                            <i class="bx bx-calendar-x"></i>
+                          </div>
+                        </div>
+                        <h6 class="text-muted fw-medium">Aucun planning trouvé</h6>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}

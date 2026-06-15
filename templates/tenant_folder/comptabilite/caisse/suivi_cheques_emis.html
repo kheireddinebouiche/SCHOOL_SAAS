@@ -120,12 +120,30 @@
             </div>
             <!-- end page title -->
 
+            <!-- Filtres type (Chèque / Virement) -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <ul class="nav nav-tabs nav-tabs-custom nav-success nav-justified" id="typeTab" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#cheques" role="tab" data-type="cheque">
+                                <i class="ri-wallet-3-line align-middle me-1"></i> Chèques
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#virements" role="tab" data-type="virement">
+                                <i class="ri-bank-card-line align-middle me-1"></i> Virements
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
             <!-- Filtres rapides -->
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card glass-card border-0">
                         <div class="card-body p-2 p-md-3">
-                            <ul class="nav nav-pills" id="chequesTab" role="tablist">
+                            <ul class="nav nav-pills" id="chequesTabFilters" role="tablist">
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link active px-4 rounded-pill" data-bs-toggle="pill" data-statut="tous" type="button" role="tab">Tous</button>
                                 </li>
@@ -140,6 +158,17 @@
                                 </li>
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link px-4 rounded-pill" data-bs-toggle="pill" data-statut="decaisse" type="button" role="tab">Décaissé</button>
+                                </li>
+                            </ul>
+                            <ul class="nav nav-pills d-none" id="virementsTabFilters" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active px-4 rounded-pill" data-bs-toggle="pill" data-statut="tous" type="button" role="tab">Tous</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link px-4 rounded-pill" data-bs-toggle="pill" data-statut="en_attente" type="button" role="tab">En attente</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link px-4 rounded-pill" data-bs-toggle="pill" data-statut="effectue" type="button" role="tab">Virement effectué</button>
                                 </li>
                             </ul>
                         </div>
@@ -226,10 +255,7 @@
                     <div class="form-group mb-0">
                         <label class="form-label fw-semibold">Nouvel état</label>
                         <select class="form-select form-control-lg border-2" id="newStatut" name="statut" required>
-                            <option value="emis">Émis</option>
-                            <option value="attente_signature">En attente de signature</option>
-                            <option value="remis">Remis au bénéficiaire</option>
-                            <option value="decaisse">Décaissé</option>
+                            <!-- Rempli en JS selon currentType -->
                         </select>
                     </div>
                 </form>
@@ -247,6 +273,7 @@
 {% block extra_js %}
 <script>
     let currentStatut = 'tous';
+    let currentType = 'cheque';
 
     function loadCheques() {
         let tableBody = $('#chequesTableBody');
@@ -257,7 +284,7 @@
         $.ajax({
             url: "{% url 't_tresorerie:ApiListChequesEmis' %}",
             type: "GET",
-            data: { statut: currentStatut },
+            data: { statut: currentStatut, type: currentType },
             success: function(data) {
                 if(data.length === 0) {
                     $('#tableWrapper').hide();
@@ -269,17 +296,23 @@
                     let html = '';
                     data.forEach(item => {
                         let badgeClass = 'badge-soft-primary';
-                        if(item.statut === 'emis') badgeClass = 'bg-soft-info text-info';
+                        if(item.statut === 'emis' || item.statut === 'en_attente') badgeClass = 'bg-soft-info text-info';
                         if(item.statut === 'attente_signature') badgeClass = 'bg-soft-warning text-warning';
                         if(item.statut === 'remis') badgeClass = 'bg-soft-primary text-primary';
-                        if(item.statut === 'decaisse') badgeClass = 'bg-soft-success text-success';
+                        if(item.statut === 'decaisse' || item.statut === 'effectue') badgeClass = 'bg-soft-success text-success';
                         
                         let formatMoney = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'DZD' }).format(item.montant).replace('DZD', 'DA');
                         
-                        let history = `<small class="text-muted d-block"><i class="ri-calendar-event-line me-1"></i> Émis: ${item.date_emis || '-'}</small>`;
-                        if(item.date_attente) history += `<small class="text-muted d-block"><i class="ri-calendar-event-line me-1"></i> Signature: ${item.date_attente}</small>`;
-                        if(item.date_remis) history += `<small class="text-muted d-block"><i class="ri-calendar-event-line me-1"></i> Remis: ${item.date_remis}</small>`;
-                        if(item.date_decaisse) history += `<small class="text-muted d-block"><i class="ri-calendar-event-line me-1"></i> Décaissé: ${item.date_decaisse}</small>`;
+                        let history = '';
+                        if (currentType === 'cheque') {
+                            history += `<small class="text-muted d-block"><i class="ri-calendar-event-line me-1"></i> Émis: ${item.date_emis || '-'}</small>`;
+                            if(item.date_attente) history += `<small class="text-muted d-block"><i class="ri-calendar-event-line me-1"></i> Signature: ${item.date_attente}</small>`;
+                            if(item.date_remis) history += `<small class="text-muted d-block"><i class="ri-calendar-event-line me-1"></i> Remis: ${item.date_remis}</small>`;
+                            if(item.date_decaisse) history += `<small class="text-muted d-block"><i class="ri-calendar-event-line me-1"></i> Décaissé: ${item.date_decaisse}</small>`;
+                        } else {
+                            history += `<small class="text-muted d-block"><i class="ri-calendar-event-line me-1"></i> En attente: ${item.date_emis || '-'}</small>`;
+                            if(item.date_decaisse) history += `<small class="text-muted d-block"><i class="ri-calendar-event-line me-1"></i> Effectué: ${item.date_decaisse}</small>`;
+                        }
                         
                         let beneficiaireInitials = (item.beneficiaire && item.beneficiaire.length >= 2) ? item.beneficiaire.substring(0, 2).toUpperCase() : 'IN';
                         
@@ -330,9 +363,30 @@
             loadCheques();
         });
 
-        // Gestion des onglets
-        $('#chequesTab button').on('click', function (e) {
+        // Gestion des onglets de filtres (chèques ET virements)
+        $('.nav-pills button[data-bs-toggle="pill"]').on('click', function (e) {
             currentStatut = $(this).data('statut');
+            loadCheques();
+        });
+
+        // Gestion des onglets type
+        $('#typeTab a').on('click', function (e) {
+            e.preventDefault();
+            currentType = $(this).data('type');
+            
+            // Réinitialiser le statut à tous quand on change de type
+            currentStatut = 'tous';
+            
+            if (currentType === 'cheque') {
+                $('#virementsTabFilters').addClass('d-none');
+                $('#chequesTabFilters').removeClass('d-none');
+                $('#chequesTabFilters button[data-statut="tous"]').tab('show');
+            } else {
+                $('#chequesTabFilters').addClass('d-none');
+                $('#virementsTabFilters').removeClass('d-none');
+                $('#virementsTabFilters button[data-statut="tous"]').tab('show');
+            }
+            
             loadCheques();
         });
 
@@ -342,7 +396,24 @@
             const statut = $(this).data('statut');
             
             $('#chequeId').val(id);
+            
+            let selectHtml = '';
+            if (currentType === 'cheque') {
+                selectHtml = `
+                    <option value="emis">Émis</option>
+                    <option value="attente_signature">En attente de signature</option>
+                    <option value="remis">Remis au bénéficiaire</option>
+                    <option value="decaisse">Décaissé</option>
+                `;
+            } else {
+                selectHtml = `
+                    <option value="en_attente">En attente</option>
+                    <option value="effectue">Virement effectué</option>
+                `;
+            }
+            $('#newStatut').html(selectHtml);
             $('#newStatut').val(statut);
+            
             $('#changeStatutModal').modal('show');
         });
 

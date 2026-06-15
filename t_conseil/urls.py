@@ -11,6 +11,7 @@ urlpatterns = [
 
   path('liste-des-thematiques/',ListeThematique, name="ListeThematique"),
   path('consultants/', ListeConsultants, name="ListeConsultants"),
+  path('consultants/<int:consultant_id>/historique/', HistoriqueConsultant, name="HistoriqueConsultant"),
 
   path('nouveau-devis/', AddNewDevis, name="AddNewDevis"),
   path('configuration-devis/<str:pk>/', configure_devis , name="configure-devis"),

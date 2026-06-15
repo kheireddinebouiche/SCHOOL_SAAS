@@ -796,9 +796,9 @@ def ApiSaveRefundOperation(request):
                             # génère automatiquement une "sortie" (OperationsBancaire) de même montant,
                             # ce qui viendra équilibrer l' "entrée" en attente de recouvrement (511).
                             if float(p_amount) >= float(op_bancaire.montant):
-                                op_bancaire.justification = (op_bancaire.justification or '') + f" (Annulé par remboursement {obj_refund.id})"
+                                op_bancaire.justification = (op_bancaire.justification or '') + f" (Annulé par remboursement {obj_refund.id} : Retourné au payeur)"
                                 op_bancaire.save()
-                                p.is_done = True
+                                # On garde is_done=False pour que l'utilisateur puisse valider la remise au payeur dans Recouvrement
                                 p.is_refund = True
                                 p.save()
                                 is_cashed = False
@@ -806,6 +806,10 @@ def ApiSaveRefundOperation(request):
                                 op_bancaire.montant = float(op_bancaire.montant) - float(p_amount)
                                 op_bancaire.save()
                                 is_cashed = False
+                    
+                    # Toujours marquer le paiement original comme étant remboursé
+                    p.is_refund = True
+                    p.save()
 
                     # Génération de la quittance d'annulation (montant négatif)
                     Paiements.objects.create(
@@ -920,13 +924,15 @@ def ApiSaveRefundOperation(request):
             DuePaiements.objects.filter(client_id=prospect.id, type="frais_f").update(is_annulated=True)
             ClientPaiementsRequest.objects.filter(client_id=prospect.id).update(etat='annulation_approuver')
             
-            # Supprimer les opérations bancaires non encaissées (paiement en attente de recouvrement)
+            # Ne pas supprimer les opérations bancaires non encaissées (paiement en attente de recouvrement)
             uncashed_payments = Paiements.objects.filter(prospect=prospect, is_done=False, is_refund=False)
             for up in uncashed_payments:
-                OperationsBancaire.objects.filter(paiement=up, is_paid=False).delete()
-                up.is_done = True
+                for op in OperationsBancaire.objects.filter(paiement=up, is_paid=False):
+                    op.justification = (op.justification or '') + " (Annulé : Retourné au payeur suite à l'annulation d'inscription)"
+                    op.save()
+                # On garde is_done=False pour la remise manuelle au payeur
                 up.is_refund = True
-                up.observation = (up.observation or "") + " (Annulé suite à l'annulation d'inscription)"
+                up.observation = (up.observation or "") + " (Annulé suite à l'annulation d'inscription : Retourné au payeur)"
                 up.save()
             
             # Archiver les demandes de dérogation en attente
@@ -936,6 +942,18 @@ def ApiSaveRefundOperation(request):
                 derog.statut = 'rejetee'
                 derog.observation = "Archivée automatiquement suite à l'annulation de l'inscription."
                 derog.save()
+
+        elif float(amount) == 0:
+            # Si le remboursement est de 0 DA et qu'on n'annule pas l'inscription, 
+            # c'est probablement pour retourner des chèques non encaissés.
+            uncashed_payments = Paiements.objects.filter(prospect=prospect, is_done=False, is_refund=False)
+            for up in uncashed_payments:
+                for op in OperationsBancaire.objects.filter(paiement=up, is_paid=False):
+                    op.justification = (op.justification or '') + f" (Annulé par remboursement {obj_refund.id} : Retourné au payeur)"
+                    op.save()
+                up.is_refund = True
+                up.observation = (up.observation or "") + f" (Annulé par remboursement {obj_refund.id} : Retourné au payeur)"
+                up.save()
 
         # Mettre à jour l'observation du prospect et supprimer la fiche de voeux
         if prospect.is_double:
