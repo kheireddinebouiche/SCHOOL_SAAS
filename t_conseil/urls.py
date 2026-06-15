@@ -20,6 +20,7 @@ urlpatterns = [
 
   path('ApiSaveThematique' , ApiSaveThematique, name="ApiSaveThematique"),
 
+  path('api/thematiques/create/', ApiCreateThematique, name="ApiCreateThematique"),
   path('ApiLoadThematique' , ApiLoadThematique, name="ApiLoadThematique"),
 
   path('ApiLoadThematiqueDetails', ApiLoadThematiqueDetails, name="ApiLoadThematiqueDetails"),

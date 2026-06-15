@@ -29,6 +29,35 @@ def ListeThematique(request):
 
 @login_required(login_url='institut_app:login')
 @module_permission_required('con', 'view')
+def ApiCreateThematique(request):
+    import json
+    import decimal
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            label = data.get('label')
+            description = data.get('description', '')
+            prix = data.get('prix', 0)
+            tva = data.get('tva', 19.00)
+            
+            try:
+                prix = decimal.Decimal(str(prix))
+                tva = decimal.Decimal(str(tva))
+            except:
+                prix = 0
+                tva = 19.00
+                
+            thematique = Thematiques.objects.create(
+                label=label,
+                description=description,
+                prix=prix,
+                default_tva=tva
+            )
+            return JsonResponse({'status': 'success', 'id': thematique.id, 'label': thematique.label, 'prix': str(thematique.prix), 'tva': str(thematique.default_tva)})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
 def ApiLoadThematique(request):
     thematique = Thematiques.objects.filter(etat  = "active").values('id', 'label', 'description', 'prix', 'created_at', 'billing_type', 'default_tva', 'categorie')
     return JsonResponse(list(thematique), safe=False)
@@ -67,6 +96,9 @@ def ApiSaveThematique(request):
 
 @login_required(login_url='institut_app:login')
 @module_permission_required('con', 'view')
+
+
+
 def ApiLoadThematiqueDetails(request):
     id_thematique = request.GET.get('id_thematique')
     obj = Thematiques.objects.filter(id = id_thematique)
@@ -761,6 +793,7 @@ def ApiStartTransformationDevisToFacture(request):
             description=ligne.description,
             long_description=ligne.long_description,
             quantite=ligne.quantite,
+            unite=ligne.unite,
             prix_unitaire=up,
             montant_ht=ligne.montant,
             remise_percent=ligne.remise_percent,
@@ -874,6 +907,7 @@ def ApiSaveDevisItems(request):
                 description = item.get('description')
                 long_description = item.get('long_description', '')
                 quantite = item.get('quantity')
+                unite = item.get('unit', 'participant')
                 price = item.get('unitPrice')
                 remise = item.get('remise_percent', 0)
                 tva_l = item.get('tva_percent', 19.00)
@@ -915,6 +949,7 @@ def ApiSaveDevisItems(request):
                     description=description,
                     long_description=long_description,
                     quantite=qty,
+                    unite=unite,
                     prix_unitaire=unit_price,
                     montant=montant_ligne,
                     remise_percent=remise_percent,
@@ -2298,6 +2333,7 @@ def ApiSaveFactureItems(request):
             description = item.get('description', '')
             long_description = item.get('long_description', '')
             qty = float(item.get('quantity', 0))
+            unite = item.get('unit', 'participant')
             unit_price = float(item.get('unitPrice', 0))
             remise_percent = float(item.get('remise_percent', 0))
             tva_percent = float(item.get('tva_percent', 0))
@@ -2318,6 +2354,7 @@ def ApiSaveFactureItems(request):
                 description=description,
                 long_description=long_description,
                 quantite=qty,
+                unite=unite,
                 prix_unitaire=unit_price,
                 montant_ht=montant_ht,
                 remise_percent=remise_percent,

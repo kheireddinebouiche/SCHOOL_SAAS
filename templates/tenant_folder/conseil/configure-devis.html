@@ -252,8 +252,9 @@
                                 <table class="table table-premium mb-0">
                                     <thead>
                                         <tr>
-                                        <th style="width: 35%;">Service / Designation</th>
+                                        <th style="width: 25%;">Service / Designation</th>
                                         <th style="width: 10%;" class="text-center">Quantité</th>
+                                        <th style="width: 10%;" class="text-center">Unité</th>
                                         <th style="width: 15%;" class="text-end">Prix Unitaire HT</th>
                                         <th style="width: 10%;" class="text-center col-remise">Remise (%)</th>
                                         <th style="width: 10%;" class="text-center col-tva">TVA</th>
@@ -277,6 +278,14 @@
                                         </td>
                                         <td>
                                             <input type="number" class="form-control form-control-premium text-center" id="newQty" value="1" min="1">
+                                        </td>
+                                        <td>
+                                            <select class="form-select form-select-premium text-center" id="newUnit">
+                                                <option value="jour">Jour</option>
+                                                <option value="groupe">Groupe</option>
+                                                <option value="participant" selected>Participant</option>
+                                                <option value="heure">Heure</option>
+                                            </select>
                                         </td>
                                         <td>
                                             <input type="number" class="form-control form-control-premium text-end" id="newPrice" value="0.00" step="0.01">
@@ -510,6 +519,7 @@
             description: "{{ l.description|escapejs }}",
             long_description: "{{ l.long_description|default:''|escapejs }}",
             quantity: parseMoney("{{ l.quantite|floatformat:2 }}"),
+            unit: "{{ l.unite|default:'participant' }}",
             unitPrice: parseMoney("{{ l.prix_unitaire|floatformat:2 }}"),
             remise_percent: parseMoney("{{ l.remise_percent|floatformat:2 }}"),
             tva_percent: parseMoney("{{ l.tva_percent|floatformat:2 }}") || 0,
@@ -667,6 +677,7 @@
                 const d = newDesignation.value.trim();
                 const longDesc = newLongDescription.value.trim();
                 const q = parseFloat(newQty.value);
+                const u = document.getElementById('newUnit').value;
                 const p = parseFloat(newPrice.value);
                 const r = (parseFloat(newRemise.value) || 0);
                 const tva = parseFloat(newTva ? newTva.value : 0) || 0;
@@ -675,36 +686,88 @@
                 if(!d && !tId) return alertify.error("Saisie invalide: Veuillez sélectionner une thématique ou entrer une désignation.");
                 if(q <= 0 || p < 0) return alertify.error("Saisie invalide: Quantité ou prix unitaire incorrect.");
 
-                const baseAt = q * p;
-                const discountedAt = baseAt * (1 - r/100);
+                const finalizeAddItem = (finalTId, finalD) => {
+                    const baseAt = q * p;
+                    const discountedAt = baseAt * (1 - r/100);
 
-                const itemData = {
-                    id: editingIndex > -1 ? items[editingIndex].id : Date.now(),
-                    thematique_id: tId,
-                    specialite_id: null,
-                    description: d || getTLab(tId),
-                    long_description: longDesc,
-                    quantity: q,
-                    unitPrice: p,
-                    remise_percent: r,
-                    tva_percent: tva,
-                    total: discountedAt
+                    const itemData = {
+                        id: editingIndex > -1 ? items[editingIndex].id : Date.now(),
+                        thematique_id: finalTId,
+                        specialite_id: null,
+                        description: finalD,
+                        long_description: longDesc,
+                        quantity: q,
+                        unit: u,
+                        unitPrice: p,
+                        remise_percent: r,
+                        tva_percent: tva,
+                        total: discountedAt
+                    };
+
+                    if(editingIndex > -1) {
+                        items[editingIndex] = itemData;
+                        editingIndex = -1;
+                        addItemBtn.innerHTML = '<i class="ri-add-line fs-18"></i>';
+                        addItemBtn.classList.remove('btn-warning');
+                        addItemBtn.classList.add('btn-primary');
+                    } else {
+                        items.push(itemData);
+                    }
+
+                    setDirty(true);
+                    renderItems();
+                    $(newThematique).val(null).trigger('change');
+                    newDesignation.value=""; newLongDescription.value=""; newPrice.value="0.00"; newQty.value="1"; document.getElementById('newUnit').value="participant"; newRemise.value="0"; newRowTotal.textContent="0.00";
                 };
 
-                if(editingIndex > -1) {
-                    items[editingIndex] = itemData;
-                    editingIndex = -1;
-                    addItemBtn.innerHTML = '<i class="ri-add-line fs-18"></i>';
-                    addItemBtn.classList.remove('btn-warning');
-                    addItemBtn.classList.add('btn-primary');
+                if (!tId && d) {
+                    alertify.confirm("Nouvelle thématique", "Voulez-vous enregistrer cette désignation comme une nouvelle thématique pour vos prochains devis ?",
+                        function() {
+                            fetch("{% url 't_conseil:ApiCreateThematique' %}", {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': '{{ csrf_token }}',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: JSON.stringify({
+                                    label: d,
+                                    description: longDesc,
+                                    prix: p,
+                                    tva: tva,
+                                    unite: u
+                                })
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.status === 'success') {
+                                    alertify.success("Thématique enregistrée avec succès.");
+                                    const opt = new Option(data.label, data.id);
+                                    opt.dataset.price = data.prix;
+                                    opt.dataset.tva = data.tva;
+                                    newThematique.add(opt);
+                                    thematiques.push({id: data.id, label: data.label, prix: data.prix, default_tva: data.tva});
+                                    finalizeAddItem(data.id, data.label);
+                                } else {
+                                    alertify.error(data.message);
+                                    finalizeAddItem(null, d);
+                                }
+                            })
+                            .catch(err => {
+                                alertify.error("Erreur lors de la création de la thématique.");
+                                finalizeAddItem(null, d);
+                            });
+                        },
+                        function() {
+                            finalizeAddItem(null, d);
+                        }
+                    ).set('labels', {ok:'Oui, l\'enregistrer', cancel:'Non, juste pour ce devis'});
                 } else {
-                    items.push(itemData);
+                    finalizeAddItem(tId, d || (typeof getTLab === 'function' ? getTLab(tId) : ''));
                 }
-
-                setDirty(true);
-                renderItems();
-                $(newThematique).val(null).trigger('change');
-                newDesignation.value=""; newLongDescription.value=""; newPrice.value="0.00"; newQty.value="1"; newRemise.value="0"; newRowTotal.textContent="0.00";
+                
+                // Early return to prevent the old setDirty execution at the bottom
+                return;
             });
         }
         
@@ -719,6 +782,7 @@
             newDesignation.value = it.description;
             newLongDescription.value = it.long_description || "";
             newQty.value = it.quantity;
+            document.getElementById('newUnit').value = it.unit || "participant";
             newPrice.value = it.unitPrice.toFixed(2);
             newRemise.value = it.remise_percent;
             if(newTva) newTva.value = it.tva_percent.toFixed(6);
@@ -755,6 +819,9 @@
                     <td class="text-center">
                         <span class="badge bg-light text-dark border px-2 py-1 fs-12 fw-bold shadow-sm">${it.quantity}</span>
                     </td>
+                    <td class="text-center">
+                        <span class="badge bg-light text-secondary border px-2 py-1 fs-12 shadow-sm text-capitalize">${it.unit}</span>
+                    </td>
                     <td class="text-end fw-medium text-muted">${it.unitPrice.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}</td>
                     <td class="text-center col-remise">
                         ${it.remise_percent > 0 ? `<span class="badge bg-danger bg-opacity-10 text-danger px-2 py-1 fs-11"><i class="ri-arrow-down-line align-bottom"></i> ${it.remise_percent}%</span>` : '<span class="text-muted">-</span>'}
@@ -789,7 +856,7 @@
                 addItemBtn.classList.remove('btn-warning');
                 addItemBtn.classList.add('btn-primary');
                 $(newThematique).val(null).trigger('change');
-                newDesignation.value=""; newLongDescription.value=""; newPrice.value="0.00"; newQty.value="1"; newRemise.value="0"; newRowTotal.textContent="0.00";
+                newDesignation.value=""; newLongDescription.value=""; newPrice.value="0.00"; newQty.value="1"; document.getElementById('newUnit').value="participant"; newRemise.value="0"; newRowTotal.textContent="0.00";
             } else if (editingIndex > idx) {
                 editingIndex--; // Shift index if deleting item above
             }
