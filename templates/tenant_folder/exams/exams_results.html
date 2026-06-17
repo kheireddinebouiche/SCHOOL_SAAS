@@ -119,6 +119,61 @@
         height: 32px;
         padding: 0;
     }
+    .collapse-icon {
+        transition: transform 0.3s ease;
+    }
+    .collapsed .collapse-icon {
+        transform: rotate(-90deg);
+    }
+
+    /* Modern Table Rows */
+    .custom-table {
+        border-collapse: separate !important;
+        border-spacing: 0 10px !important;
+    }
+    .custom-table thead th {
+        background: transparent;
+        color: #64748b;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        padding-bottom: 0.5rem;
+        border: none !important;
+    }
+    .custom-table tbody tr {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background-color: #ffffff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        border-radius: 12px;
+    }
+    .custom-table tbody tr:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.1);
+    }
+    .custom-table tbody td {
+        padding: 1.25rem 1rem;
+        border-top: 1px solid #f1f5f9 !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+        vertical-align: middle;
+    }
+    .custom-table tbody td:first-child {
+        border-left: 1px solid #f1f5f9 !important;
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+        padding-left: 1.5rem;
+    }
+    .custom-table tbody td:last-child {
+        border-right: 1px solid #f1f5f9 !important;
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+        padding-right: 1.5rem;
+    }
+    .btn-soft-primary { background-color: rgba(59, 125, 221, 0.1); color: #3b7ddd; border: none; }
+    .btn-soft-primary:hover { background-color: #3b7ddd; color: #fff; }
+    .btn-soft-danger { background-color: rgba(220, 53, 69, 0.1); color: #dc3545; border: none; }
+    .btn-soft-danger:hover { background-color: #dc3545; color: #fff; }
+    .btn-soft-secondary { background-color: rgba(108, 117, 125, 0.1); color: #6c757d; border: none; }
 </style>
 
 
@@ -368,98 +423,150 @@
     }
 
     function renderTable(data) {
-      let row = "";
-      if (data.length > 0) {
+      var html = '';
+      
+      if (data && data.length > 0) {
+        // Group data by groupe and semestre
+        const groupedData = {};
+        
         $.each(data, function(index, pv) {
-          // Safety check for pv and its nested properties
-          if (!pv || !pv.exam_planification) return true; // continue to next iteration
+          if (!pv || !pv.exam_planification) return true;
+          
+          const groupeObj = pv.exam_planification.exam_line && pv.exam_planification.exam_line.groupe ? pv.exam_planification.exam_line.groupe : null;
+          const groupeNom = groupeObj && groupeObj.nom ? groupeObj.nom : 'Autre Groupe';
+          const semestre = pv.exam_planification.exam_line && pv.exam_planification.exam_line.semestre ? 'Semestre ' + pv.exam_planification.exam_line.semestre : 'Autre Semestre';
+          
+          if (!groupedData[groupeNom]) {
+              groupedData[groupeNom] = {
+                  nom: groupeNom,
+                  specialite: groupeObj && groupeObj.specialite ? groupeObj.specialite : '',
+                  formation: groupeObj && groupeObj.formation ? groupeObj.formation : '',
+                  version: groupeObj && groupeObj.version ? groupeObj.version : '',
+                  semestres: {}
+              };
+          }
+          if (!groupedData[groupeNom].semestres[semestre]) {
+              groupedData[groupeNom].semestres[semestre] = [];
+          }
+          groupedData[groupeNom].semestres[semestre].push(pv);
+        });
 
-          // Extract values with fallbacks
-          const moduleLabel = pv.exam_planification.module ? pv.exam_planification.module.label : 'N/A';
-          const moduleId = pv.exam_planification.module ? pv.exam_planification.module.id : '';
-          const groupeNom = pv.exam_planification.exam_line && pv.exam_planification.exam_line.groupe ?
-                           pv.exam_planification.exam_line.groupe.nom : 'N/A';
-          const planId = pv.exam_planification.id;
-          const date = pv.exam_planification.date;
-          const heureDebut = pv.exam_planification.heure_debut;
-          const heureFin = pv.exam_planification.heure_fin;
-          const salleNom = pv.exam_planification.salle ? pv.exam_planification.salle.nom : 'Non spécifié';
-          const typeExamen = pv.exam_planification.type_examen;
+        // Generate HTML from grouped data
+        Object.keys(groupedData).sort().forEach(function(groupKey, gIndex) {
+          const groupInfo = groupedData[groupKey];
+          let extraInfo = '';
+          if (groupInfo.specialite || groupInfo.formation) {
+              let details = [];
+              if (groupInfo.formation) details.push(groupInfo.formation);
+              if (groupInfo.specialite) {
+                  let specText = groupInfo.specialite;
+                  if (groupInfo.version) specText += ' (v. ' + groupInfo.version + ')';
+                  details.push(specText);
+              }
+              extraInfo = '<span class="ms-3 badge bg-secondary bg-opacity-10 text-secondary fw-normal" style="font-size: 0.85rem;"><i class="ri-book-read-line me-1"></i>' + details.join(' - ') + '</span>';
+          }
 
-          const lockIcon = pv.est_valide ? 'ri-lock-fill text-danger' : 'ri-lock-unlock-line text-success';
-          const lockText = pv.est_valide ? 'Verrouillé' : 'Modifiable';
+          html += '<div class="groupe-section mb-4 bg-white p-4 rounded-4 shadow-sm border border-light">';
+          html += '  <div class="pb-2 border-bottom d-flex justify-content-between align-items-center" style="border-color: #e2e8f0 !important; cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#collapseGroup' + gIndex + '" aria-expanded="true">';
+          html += '    <div class="d-flex align-items-center">';
+          html += '      <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3"><i class="ri-group-line text-primary fs-5"></i></div>';
+          html += '      <h4 class="mb-0 fw-bold fs-5 text-dark">' + groupInfo.nom + '</h4>' + extraInfo;
+          html += '    </div>';
+          html += '    <i class="ri-arrow-down-s-line fs-4 text-muted collapse-icon"></i>';
+          html += '  </div>';
+          
+          html += '  <div id="collapseGroup' + gIndex + '" class="collapse show mt-4">';
+          
+          Object.keys(groupInfo.semestres).sort().forEach(function(semestre) {
+            html += '  <div class="semestre-section ms-md-4 mb-4">';
+            html += '    <h5 class="mb-4 text-dark fw-bold d-flex align-items-center opacity-75 fs-6"><i class="ri-calendar-event-line text-secondary me-2 fs-5"></i>' + semestre + '</h5>';
+            html += '    <div class="table-responsive px-1">';
+            html += '      <table class="table table-borderless custom-table align-middle w-100">';
+            html += '        <thead>';
+            html += '          <tr>';
+            html += '            <th style="width:30%">Module</th>';
+            html += '            <th style="width:15%">Date & Heure</th>';
+            html += '            <th style="width:15%">Salle</th>';
+            html += '            <th style="width:20%">Statut</th>';
+            html += '            <th style="width:20%" class="text-end">Actions</th>';
+            html += '          </tr>';
+            html += '        </thead>';
+            html += '        <tbody>';
+            
+            groupInfo.semestres[semestre].forEach(function(pv) {
+              const moduleLabel = pv.exam_planification.module ? pv.exam_planification.module.label : 'N/A';
+              const planId = pv.exam_planification.id;
+              const date = pv.exam_planification.date;
+              const heureDebut = pv.exam_planification.heure_debut;
+              const heureFin = pv.exam_planification.heure_fin;
+              const salleNom = pv.exam_planification.salle ? pv.exam_planification.salle.nom : 'Non spécifié';
+              const typeExamen = pv.exam_planification.type_examen;
 
-          row += '<div class="col-xl-4 col-md-6 col-sm-12 mb-4">';
-          row += '    <div class="glass-card h-100 p-0">';
-          row += '        <div class="p-4">';
-          row += '            <div class="d-flex justify-content-between align-items-start mb-3">';
-          row += '                <div class="d-flex align-items-center overflow-hidden">';
-          row += '                    <div class="avatar-sm bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width:36px; height:36px; min-width:36px;">';
-          row += '                        <i class="ri-file-text-line fs-16"></i>';
-          row += '                    </div>';
-          row += '                    <div class="overflow-hidden">';
-          row += '                        <h6 class="mb-0 fw-bold text-dark text-truncate" style="max-width: 200px;" title="'+moduleLabel+'"><a href="/examens/generate-pv/'+planId+'" class="text-dark">'+moduleLabel+'</a></h6>';
-          row += '                        <span class="text-muted small text-truncate d-block"><i class="ri-information-line me-1"></i>'+groupeNom+'</span>';
-          row += '                    </div>';
-          row += '                </div>';
-          row += '                <div class="dropdown">';
-          row += '                    <button class="btn btn-ghost-secondary btn-icon btn-sm rounded-circle" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
-          row += '                        <i class="ri-more-2-fill fs-5"></i>';
-          row += '                    </button>';
-          row += '                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">';
-          row += '                        <li><a href="/examens/generate-pv/'+planId+'" class="dropdown-item d-flex align-items-center px-3 py-2"><i class="ri-eye-line text-primary me-2"></i> Consulter</a></li>';
-          row += '                        <li><a href="/examens/generate-pv/'+planId+'" class="dropdown-item d-flex align-items-center px-3 py-2"><i class="ri-edit-line text-warning me-2"></i> Modifier</a></li>';
-          row += '                        <li><hr class="dropdown-divider my-1"></li>';
-          row += '                        <li><button data-id="'+(pv.id || '')+'" data-planification-id="'+planId+'" id="btnDeletePv" class="dropdown-item d-flex align-items-center px-3 py-2 text-danger"><i class="ri-delete-bin-line me-2"></i> Supprimer</button></li>';
-          row += '                    </ul>';
-          row += '                </div>';
-          row += '            </div>';
-          row += '            <div class="row g-2 mb-3">';
-          row += '                <div class="col-6">';
-          row += '                    <div class="p-2 bg-light bg-opacity-50 rounded-3 text-center">';
-          row += '                        <span class="d-block text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.65rem;">Date</span>';
-          row += '                        <span class="fw-bold text-dark small">'+formatDate(date)+'</span>';
-          row += '                    </div>';
-          row += '                </div>';
-          row += '                <div class="col-6">';
-          row += '                    <div class="p-2 bg-light bg-opacity-50 rounded-3 text-center">';
-          row += '                        <span class="d-block text-muted small text-uppercase fw-bold mb-1" style="font-size: 0.65rem;">Horaire</span>';
-          row += '                        <span class="fw-bold text-primary small">'+heureDebut+' - '+heureFin+'</span>';
-          row += '                    </div>';
-          row += '                </div>';
-          row += '            </div>';
-          row += '            <div class="space-y-2">';
-          row += '                <div class="d-flex justify-content-between align-items-center mb-2">';
-          row += '                    <span class="text-muted small">Salle</span>';
-          row += '                    <span class="badge badge-soft-info"><i class="ri-home-line me-1"></i>'+salleNom+'</span>';
-          row += '                </div>';
-          row += '                <div class="d-flex justify-content-between align-items-center mb-2">';
-          row += '                    <span class="text-muted small">Type d\'examen</span>';
-          row += '                    <span class="badge badge-soft-primary"><i class="ri-file-text-line me-1"></i>'+typeExamen+'</span>';
-          row += '                </div>';
-          row += '                <div class="d-flex justify-content-between align-items-center">';
-          row += '                    <span class="text-muted small">Statut</span>';
-          row += '                    <span class="badge '+getStatusClass(pv)+'"><i class="ri-checkbox-circle-fill me-1"></i>'+getStatusText(pv)+'</span>';
-          row += '                </div>';
-          row += '            </div>';
-          row += '        </div>';
-          row += '        <div class="bg-light bg-opacity-50 p-3 d-flex align-items-center justify-content-between border-top border-white border-opacity-20">';
-          row += '            <div class="d-flex align-items-center">';
-          row += '                <i class="'+lockIcon+' me-2" style="font-size: 14px;"></i>';
-          row += '                <span class="text-muted small">'+lockText+'</span>';
-          row += '            </div>';
-          row += '            <div>';
-          row += '                <a href="/examens/generate-pv/'+planId+'" class="btn btn-outline-primary btn-sm rounded-pill px-3">Gérer le PV</a>';
-          row += '            </div>';
-          row += '        </div>';
-          row += '    </div>';
-          row += '</div>';
+              const lockIcon = pv.est_valide ? 'ri-lock-fill text-danger' : 'ri-lock-unlock-line text-success';
+              const lockText = pv.est_valide ? 'Verrouillé' : 'Modifiable';
+
+              html += '          <tr>';
+              html += '            <td>';
+              html += '              <div class="d-flex align-items-center">';
+              html += '                <div class="avatar-sm bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width:36px; height:36px; min-width:36px;">';
+              html += '                  <i class="ri-file-text-line fs-5"></i>';
+              html += '                </div>';
+              html += '                <div>';
+              if (pv.est_valide) {
+                  html += '                  <h6 class="mb-0 fw-bold text-dark text-truncate" style="max-width: 250px;" title="'+moduleLabel+'"><a href="javascript:void(0)" onclick="openPvOffcanvas('+planId+')" class="text-dark text-decoration-none hover:text-primary">'+moduleLabel+'</a></h6>';
+              } else {
+                  html += '                  <h6 class="mb-0 fw-bold text-dark text-truncate" style="max-width: 250px;" title="'+moduleLabel+'">'+moduleLabel+'</h6>';
+              }
+              html += '                  <span class="text-muted small"><i class="ri-settings-4-line me-1"></i>'+typeExamen+'</span>';
+              html += '                </div>';
+              html += '              </div>';
+              html += '            </td>';
+              
+              html += '            <td>';
+              html += '              <div class="d-flex flex-column">';
+              html += '                <span class="fw-bold text-dark" style="font-size: 0.85rem;">'+formatDate(date)+'</span>';
+              html += '                <span class="text-primary small">'+heureDebut+' - '+heureFin+'</span>';
+              html += '              </div>';
+              html += '            </td>';
+              
+              html += '            <td>';
+              html += '              <span class="badge bg-info bg-opacity-10 text-info px-2 py-1"><i class="ri-home-line me-1"></i>'+salleNom+'</span>';
+              html += '            </td>';
+              
+              html += '            <td>';
+              html += '              <div class="d-flex align-items-center gap-2">';
+              html += '                <span class="badge '+getStatusClass(pv)+' px-2 py-1"><i class="ri-checkbox-circle-fill me-1"></i>'+getStatusText(pv)+'</span>';
+              html += '                <span class="text-muted small" title="'+lockText+'"><i class="'+lockIcon+' fs-6"></i></span>';
+              html += '              </div>';
+              html += '            </td>';
+              
+              html += '            <td class="text-end">';
+              html += '              <div class="d-flex justify-content-end gap-2">';
+              if (pv.est_valide) {
+                  html += '                <button type="button" onclick="openPvOffcanvas('+planId+')" class="btn btn-sm btn-soft-primary btn-icon rounded-circle" title="Consulter"><i class="ri-eye-line fs-5"></i></button>';
+              } else {
+                  html += '                <button type="button" class="btn btn-sm btn-soft-secondary btn-icon rounded-circle opacity-50" disabled title="PV non validé"><i class="ri-eye-off-line fs-5"></i></button>';
+              }
+              html += '                <button type="button" data-id="'+(pv.id || '')+'" data-planification-id="'+planId+'" id="btnDeletePv" class="btn btn-sm btn-soft-danger btn-icon rounded-circle" title="Supprimer"><i class="ri-delete-bin-line fs-5"></i></button>';
+              html += '              </div>';
+              html += '            </td>';
+              html += '          </tr>';
+            });
+            
+            html += '        </tbody>';
+            html += '      </table>';
+            html += '    </div>';
+            html += '  </div>'; // End semestre-section
+          });
+          
+          html += '  </div>'; // End collapse
+          html += '</div>'; // End groupe-section
         });
       } else {
-        row = '<div class="col-12"><div class="text-center py-5"><i class="ri-file-text-line display-4 text-muted"></i><h5 class="mt-3 text-muted">Aucun PV disponible</h5><p class="text-muted">Aucun PV d\'examen trouvé avec les critères sélectionnés</p></div></div>';
+        html = '<div class="col-12"><div class="text-center py-5 bg-white rounded-4 shadow-sm border border-light"><i class="ri-file-text-line display-4 text-muted opacity-50"></i><h5 class="mt-3 text-dark fw-bold">Aucun PV disponible</h5><p class="text-muted">Aucun PV d\'examen trouvé avec les critères sélectionnés</p></div></div>';
       }
 
-      $('#listItem').html(row);
+      $('#listItem').html(html);
     }
 
     function formatDate(dateString) {
@@ -686,6 +793,48 @@
         }
       });
     });
+
+    // Offcanvas logic
+    window.openPvOffcanvas = function(planId) {
+        var offcanvas = new bootstrap.Offcanvas(document.getElementById('pvOffcanvas'));
+        var iframe = document.getElementById('pvOffcanvasIframe');
+        var loader = document.getElementById('pvOffcanvasLoader');
+        
+        iframe.style.display = 'none';
+        loader.style.display = 'flex';
+        iframe.src = '/examens/generate-pv/' + planId + '/';
+        
+        iframe.onload = function() {
+            loader.style.display = 'none';
+            iframe.style.display = 'block';
+        };
+        
+        offcanvas.show();
+    };
   });
 </script>
+
+<!-- Offcanvas for PV Management -->
+<div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="pvOffcanvas" aria-labelledby="pvOffcanvasLabel" style="width: 100vw; max-width: 100vw; border-left: none;">
+  <div class="offcanvas-header border-bottom bg-light">
+    <div class="d-flex align-items-center">
+      <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px;">
+        <i class="ri-file-text-line text-primary fs-5"></i>
+      </div>
+      <div>
+        <h5 class="offcanvas-title mb-0 fw-bold text-dark" id="pvOffcanvasLabel">Détails du PV d'examen</h5>
+      </div>
+    </div>
+    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body p-0 position-relative bg-light">
+    <div class="position-absolute top-50 start-50 translate-middle flex-column align-items-center justify-content-center" id="pvOffcanvasLoader" style="display: none !important; z-index: 10;">
+      <div class="spinner-border text-primary mb-2" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Chargement...</span>
+      </div>
+      <span class="text-muted fw-semibold">Chargement du PV...</span>
+    </div>
+    <iframe id="pvOffcanvasIframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+  </div>
+</div>
 {% endblock content %}

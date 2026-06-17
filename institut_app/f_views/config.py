@@ -37,6 +37,27 @@ def api_update_global_settings(request):
         
         config = GlobalConfiguration.get_solo()
         
+        if '__' in setting_name:
+            field_name, key_name = setting_name.split('__', 1)
+            if hasattr(config, field_name):
+                field = config._meta.get_field(field_name)
+                if isinstance(field, models.JSONField):
+                    current_val = getattr(config, field_name) or {}
+                    current_val[key_name] = str(setting_value).lower() == 'true'
+                    setattr(config, field_name, current_val)
+                    config.save()
+                    
+                    from t_crm.models import UserActionLog
+                    UserActionLog.objects.create(
+                        user=request.user,
+                        action_type='UPDATE',
+                        target_model='GlobalConfiguration',
+                        target_id=str(config.id),
+                        details=f"Mise à jour du paramètre global {field_name}[{key_name}] = {current_val[key_name]}",
+                        ip_address=request.META.get('REMOTE_ADDR')
+                    )
+                    return JsonResponse({'status': 'success', 'message': 'Paramètre mis à jour avec succès.'})
+
         if hasattr(config, setting_name):
             # Get the field type to handle conversion
             field = config._meta.get_field(setting_name)
@@ -45,7 +66,7 @@ def api_update_global_settings(request):
                 val = str(setting_value).lower() == 'true'
             elif isinstance(field, (models.IntegerField, models.PositiveIntegerField)):
                 try:
-                    val = int(setting_value)
+                    val = int(setting_value) if setting_value else 0
                 except (ValueError, TypeError):
                     return JsonResponse({'status': 'error', 'message': 'Valeur numérique invalide.'}, status=400)
             elif isinstance(field, models.ManyToManyField):
@@ -67,6 +88,12 @@ def api_update_global_settings(request):
                     return JsonResponse({'status': 'success', 'message': 'Paramètre mis à jour avec succès.'})
                 except Exception as e:
                     return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+            elif isinstance(field, models.JSONField):
+                import json
+                try:
+                    val = json.loads(setting_value)
+                except Exception:
+                    val = setting_value
             else:
                 val = setting_value
                 

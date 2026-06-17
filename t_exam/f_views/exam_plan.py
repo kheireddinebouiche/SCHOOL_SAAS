@@ -14,6 +14,7 @@ from django.utils import timezone
 
 
 from django.db.models import Q
+from t_crm.models import UserActionLog
 
 def check_exam_overlap(salle_id, date, heure_debut, heure_fin, exclude_id=None):
     """
@@ -199,11 +200,21 @@ def PreviewPV(request, pk):
     obj = ExamPlanification.objects.get(id = pk)
     groupe  = SessionExamLine.objects.get(id = obj.exam_line.id)
 
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='OTHER',
+        target_model='PvExamen',
+        target_id=str(pk),
+        details=f"Consultation du PV de l'examen: {obj.module.label if obj.module else ''} - {groupe.groupe.nom if groupe.groupe else ''}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+
     modeleBuiltin = ModelBuilltins.objects.get(formation = groupe.groupe.specialite.formation)
     students = GroupeLine.objects.filter(groupe_id = groupe.groupe.id)
 
     context = {
         'pk' : pk,
+        'exam_plan': obj,
         'groupe' : groupe,
         'modele' : modeleBuiltin,
         'students' : students,
@@ -233,6 +244,16 @@ def validate_exam(request):
             exam_plan.statut = "nabouti"
 
         exam_plan.save()
+
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='ExamPlanification',
+            target_id=str(exam_plan_id),
+            details=f"Validation/Décision sur l'examen {exam_plan_id}: {decision}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
         return JsonResponse({"status": "success","message": "Valider avec succès"})
     else:
         return JsonResponse({"status": "error","message": "Méthode non autorisée"})
@@ -243,42 +264,20 @@ def GeneratePv(request, pk):
     obj = ExamPlanification.objects.get(id=pk)
     groupe = SessionExamLine.objects.get(id=obj.exam_line.id)
 
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='OTHER',
+        target_model='PvExamen',
+        target_id=str(pk),
+        details=f"Génération/Consultation des notes pour l'examen: {obj.module.label if obj.module else ''} - {groupe.groupe.nom if groupe.groupe else ''}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+
     modeleBuiltin = ModelBuilltins.objects.get(formation=groupe.groupe.specialite.formation)
     students = GroupeLine.objects.filter(groupe_id=groupe.groupe.id)
 
-    # Get or create the PvExamen record
-    pv_examen, created = PvExamen.objects.get_or_create(exam_planification=obj)
-
-    # If this is the first time creating the PV, create the ExamTypeNote records based on BuiltinTypeNote
-    if created:
-        for builtin_type_note in modeleBuiltin.types_notes.all().order_by('ordre'):
-            exam_type_note = ExamTypeNote.objects.create(
-                pv=pv_examen,
-                code=builtin_type_note.code,
-                libelle=builtin_type_note.libelle,
-                max_note=builtin_type_note.max_note,
-                has_sous_notes=builtin_type_note.has_sous_notes,
-                nb_sous_notes=builtin_type_note.nb_sous_notes,
-                ordre=builtin_type_note.ordre,
-                coefficient=builtin_type_note.coefficient
-            )
-
-            # Create ExamNote records for each student for this type of note
-            for student_line in students:
-                exam_note = ExamNote.objects.create(
-                    pv=pv_examen,
-                    etudiant=student_line.student,
-                    type_note=exam_type_note,
-                    valeur=None
-                )
-
-                # If this type note has sous-notes, create them
-                if builtin_type_note.has_sous_notes and builtin_type_note.nb_sous_notes > 0:
-                    for builtin_sous_note in builtin_type_note.sous_notes.all().order_by('ordre'):
-                        ExamSousNote.objects.create(
-                            note=exam_note,
-                            valeur=0.0  # Use 0.0 instead of None to avoid NOT NULL constraint
-                        )
+    # Get the PvExamen record if it exists
+    pv_examen = PvExamen.objects.filter(exam_planification=obj).first()
 
     # Get the builtin model to match the IDs used in the template
     modele_builtins = ModelBuilltins.objects.get(formation=groupe.groupe.specialite.formation)
@@ -300,11 +299,12 @@ def GeneratePv(request, pk):
 
     # Create a mapping between builtin type note IDs and exam type note objects
     builtin_to_exam_mapping = {}
-    for exam_type_note in pv_examen.exam_types_notes.all():
-        # Find the corresponding builtin type note by code
-        builtin_type_note = modele_builtins.types_notes.filter(code=exam_type_note.code).first()
-        if builtin_type_note:
-            builtin_to_exam_mapping[builtin_type_note.id] = exam_type_note
+    if pv_examen:
+        for exam_type_note in pv_examen.exam_types_notes.all():
+            # Find the corresponding builtin type note by code
+            builtin_type_note = modele_builtins.types_notes.filter(code=exam_type_note.code).first()
+            if builtin_type_note:
+                builtin_to_exam_mapping[builtin_type_note.id] = exam_type_note
 
     # Debug: Print the mapping and data structure
     print("DEBUG - Builtin to Exam mapping:", {builtin_id: exam_note.id for builtin_id, exam_note in builtin_to_exam_mapping.items()})
@@ -347,6 +347,7 @@ def GeneratePv(request, pk):
 
     context = {
         'pk': pk,
+        'exam_plan': obj,
         'groupe': groupe,
         'modele': modeleBuiltin,
         'filtered_types_notes': filtered_types_notes,  # Pass the filtered types
@@ -379,7 +380,17 @@ def delete_pv(request):
                     return JsonResponse({"status": "error", "message": "Impossible de supprimer un PV validé"})
 
                 # Delete the PV and all related data
+                pv_id = pv_examen.id
                 pv_examen.delete()
+
+                UserActionLog.objects.create(
+                    user=request.user,
+                    action_type='DELETE',
+                    target_model='PvExamen',
+                    target_id=str(pv_id),
+                    details=f"Suppression du PV de l'examen {exam_plan_id}",
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
 
                 return JsonResponse({"status": "success", "message": "PV supprimé avec succès"})
             else:
@@ -610,6 +621,15 @@ def validate_pv_exam(request):
             pv_examen.date_validation = timezone.now()
             pv_examen.save()
 
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='PvExamen',
+                target_id=str(pv_examen.id),
+                details=f"Validation du PV de l'examen {exam_plan.module.label if exam_plan.module else ''}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+
             # Check if we should propose a makeup exam
             has_rattrapage = False
             makeup_plan_id = None
@@ -663,6 +683,8 @@ def ApiListPvExamen(request):
             exam_planifications = ExamPlanification.objects.select_related(
                 'exam_line',
                 'exam_line__groupe',
+                'exam_line__groupe__specialite',
+                'exam_line__groupe__specialite__formation',
                 'module',
                 'salle'
             ).filter(
@@ -673,6 +695,8 @@ def ApiListPvExamen(request):
             exam_planifications = ExamPlanification.objects.select_related(
                 'exam_line',
                 'exam_line__groupe',
+                'exam_line__groupe__specialite',
+                'exam_line__groupe__specialite__formation',
                 'module',
                 'salle'
             ).filter(
@@ -683,6 +707,8 @@ def ApiListPvExamen(request):
             exam_planifications = ExamPlanification.objects.select_related(
                 'exam_line',
                 'exam_line__groupe',
+                'exam_line__groupe__specialite',
+                'exam_line__groupe__specialite__formation',
                 'module',
                 'salle'
             ).all()
@@ -711,8 +737,11 @@ def ApiListPvExamen(request):
                     'exam_line': {
                         'id': plan.exam_line.id,
                         'groupe': {
-                            'id': plan.exam_line.groupe.id,
-                            'nom': plan.exam_line.groupe.nom,
+                            'id': plan.exam_line.groupe.id if plan.exam_line and plan.exam_line.groupe else None,
+                            'nom': plan.exam_line.groupe.nom if plan.exam_line and plan.exam_line.groupe else '',
+                            'specialite': plan.exam_line.groupe.specialite.label if plan.exam_line and plan.exam_line.groupe and plan.exam_line.groupe.specialite else '',
+                            'formation': plan.exam_line.groupe.specialite.formation.nom if plan.exam_line and plan.exam_line.groupe and plan.exam_line.groupe.specialite and hasattr(plan.exam_line.groupe.specialite, 'formation') and plan.exam_line.groupe.specialite.formation else '',
+                            'version': plan.exam_line.groupe.specialite.version if plan.exam_line and plan.exam_line.groupe and plan.exam_line.groupe.specialite and hasattr(plan.exam_line.groupe.specialite, 'version') else '',
                         },
                         'semestre': plan.exam_line.semestre,
                     },
@@ -773,7 +802,17 @@ def ApiDeletePvExamen(request):
             exam_plan = ExamPlanification.objects.get(id=exam_planification_id)
 
             # Supprimer le PV
+            pv_id = pv.id
             pv.delete()
+
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='PvExamen',
+                target_id=str(pv_id),
+                details=f"Suppression du PV {pv_id}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             # Mettre à jour le statut passed à False
             exam_plan.passed = False
@@ -810,6 +849,13 @@ def exams_results(request):
     """
     Vue pour afficher la liste des PVs d'examens
     """
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='OTHER',
+        target_model='PvExamen',
+        details="Consultation de la liste des PVs d'examens",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
     return render(request, 'tenant_folder/exams/exams_results.html')
 
 @login_required(login_url="institut_app:login")
@@ -841,6 +887,15 @@ def ApiDeleteExamPlanification(request):
 
             # Supprimer la planification d'examen
             exam_plan.delete()
+
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='ExamPlanification',
+                target_id=str(exam_planification_id),
+                details=f"Suppression de la planification d'examen {exam_planification_id}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({
                 "status": "success",
@@ -1223,6 +1278,15 @@ def SaveExamResults(request, pk):
                     'student_id': None,
                     'error': f"Backend recalculation failed: {str(e)}"
                 })
+
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='PvExamen',
+                target_id=str(pv_examen.id),
+                details=f"Sauvegarde/Modification des notes pour l'examen: {exam_plan.module.label if exam_plan.module else ''}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({
                 "status": "success",

@@ -224,9 +224,20 @@ def DetailsPrinscrit(request, pk):
         ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
     )
 
+    import json
     if preinscrit.is_double:
+        required_fields = config.crm_required_fields_double or {}
+        context['required_fields_json'] = json.dumps(required_fields)
         return render(request, 'tenant_folder/crm/preinscrits/details_preinscript_double.html', context)
     
+    required_fields = config.crm_required_fields_national or {}
+    fiche = preinscrit.prospect_fiche_voeux.first()
+    if fiche and getattr(fiche, 'specialite', None):
+        if getattr(fiche.specialite, 'formation', None) and getattr(fiche.specialite.formation, 'partenaire', None):
+            if fiche.specialite.formation.partenaire.type_partenaire == 'etranger':
+                required_fields = config.crm_required_fields_etranger or {}
+
+    context['required_fields_json'] = json.dumps(required_fields)
     return render(request, 'tenant_folder/crm/preinscrits/details-preinscrit.html', context)
 
 @login_required(login_url='institut_app:login')

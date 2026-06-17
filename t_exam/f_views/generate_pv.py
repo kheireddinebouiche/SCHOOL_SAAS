@@ -13,6 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 
 # ReportLab imports for high-fidelity vector PDF generation
+from t_crm.models import UserActionLog
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -28,6 +29,15 @@ from t_formations.models import Formateurs
 def GeneratePvModal(request, pk):
     obj = ExamPlanification.objects.get(id=pk)
     groupe = SessionExamLine.objects.get(id=obj.exam_line.id)
+
+    UserActionLog.objects.create(
+        user=request.user,
+        action_type='OTHER',
+        target_model='PvExamen',
+        target_id=str(pk),
+        details=f"Ouverture/Consultation du PV (Génération) pour l'examen: {obj.module.label if obj.module else ''} - {groupe.groupe.nom if groupe.groupe else ''}",
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
 
     modeleBuiltin = ModelBuilltins.objects.get(formation=groupe.groupe.specialite.formation)
 

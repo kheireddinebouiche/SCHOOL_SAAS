@@ -203,20 +203,20 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                             add_real(poste.id, net_montant, p.date_paiement)
 
             # Autre Produits
-            autres = AutreProduit.objects.filter(date_paiement__gte=campaign.date_debut, date_paiement__lte=campaign.date_fin, payment_type__isnull=False).prefetch_related('lettrages', 'payment_type')
+            autres = AutreProduit.objects.filter(date_paiement__gte=campaign.date_debut, date_paiement__lte=campaign.date_fin, payment_category__isnull=False).prefetch_related('lettrages', 'payment_category')
             for ap in autres:
                 if ap.mode_paiement in ['che', 'vir'] and not ap.lettrages.exists(): continue
                 with schema_context('public'):
-                    global_pt = GlobalPaymentType.objects.filter(name=ap.payment_type.name).prefetch_related('payment_categories').first()
-                    if global_pt:
-                        cats = global_pt.payment_categories.all()
-                        if cats:
-                            # Use the first category found that matches a budget poste
-                            for g_cat in cats:
-                                poste = PostesBudgetaire.objects.filter(payment_categories=g_cat).first()
-                                if poste: 
-                                    add_real(poste.id, ap.montant_paiement, ap.date_paiement)
-                                    break 
+                    g_cat = None
+                    if ap.payment_category.global_id:
+                        g_cat = GlobalPaymentCategory.objects.filter(id=ap.payment_category.global_id).first()
+                    if not g_cat:
+                        g_cat = GlobalPaymentCategory.objects.filter(name=ap.payment_category.name).first()
+                        
+                    if g_cat:
+                        poste = PostesBudgetaire.objects.filter(payment_categories=g_cat).first()
+                        if poste: 
+                            add_real(poste.id, ap.montant_paiement, ap.date_paiement)
 
             # Depenses
             depenses = Depenses.objects.filter(date_paiement__gte=campaign.date_debut, date_paiement__lte=campaign.date_fin, lignes__category__isnull=False).distinct().prefetch_related('lignes__category')

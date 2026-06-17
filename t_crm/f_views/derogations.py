@@ -47,9 +47,9 @@ def liste_derogations(request):
 
     # Apply sorting
     if sort_order == 'old':
-        queryset = queryset.order_by('date_de_demande')
+        queryset = queryset.order_by('created_at')
     else:
-        queryset = queryset.order_by('-date_de_demande')
+        queryset = queryset.order_by('-created_at')
 
     # Stats (full dataset for stats regardless of pagination)
     all_qs = Derogations.objects.all()

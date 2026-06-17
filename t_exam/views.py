@@ -133,7 +133,10 @@ def ApiGetSessionDetails(request):
     session_id = request.GET.get("id")
     
     session = SessionExam.objects.filter(id=session_id).values('label','code','date_debut','date_fin','date_fin','created_at')
-    session_lines = SessionExamLine.objects.filter(session_id=session_id).values('id', 'groupe__nom','groupe__id','semestre','date_debut','date_fin','status')
+    session_lines = SessionExamLine.objects.filter(session_id=session_id).values(
+        'id', 'groupe__nom','groupe__id','semestre','date_debut','date_fin','status',
+        'groupe__specialite__label', 'groupe__specialite__formation__nom'
+    )
 
     data = {
         'session': list(session),  
