@@ -687,3 +687,11 @@ efundModal\ lors d'une demande de remboursement pour qu'elle se ferme correcteme
 - Ajout d'un filtre de complétude (informations incomplètes / dossiers incomplets) dans la liste des préinscrits (	_crm/f_views/prinscrits.py et liste-des-preinscrits.html).
 
 - Réorganisation de la disposition des filtres dans /crm/liste-des-preinscrits/ pour un alignement sur deux lignes distinctes.
+
+- Ajout de l'affichage du nombre de résultats trouvés dans la barre de recherche des préinscrits (liste-des-preinscrits.html).
+
+- Agrandissement de la barre de recherche dans /crm/liste-des-preinscrits/ pour occuper toute la largeur disponible (liste-des-preinscrits.html).
+
+- Réduction de la hauteur des cartes KPI et déplacement des compteurs à droite de l'icône dans /crm/liste-des-preinscrits/ (liste-des-preinscrits.html).
+
+- Reproduction des mêmes améliorations esthétiques dans /crm/liste-des-prospects/ (réduction de la hauteur des cartes KPI avec chiffres alignés à droite de l'icône, agrandissement de la barre de recherche sur toute la largeur avec affichage du nombre de résultats trouvés).
