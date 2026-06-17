@@ -96,6 +96,7 @@ def ApiLoadPrinscrits(request):
     search_term = request.GET.get('search', '').strip().lower() if request.GET.get('search') else ''
     client_type = request.GET.get('client_type')
     specialite_id = request.GET.get('specialite')
+    completion_filter = request.GET.get('completion')
     sort_order = request.GET.get('sort', 'nom_asc')
     page_number = request.GET.get('page', 1)
     page_size = 10
@@ -139,6 +140,12 @@ def ApiLoadPrinscrits(request):
             qs = qs.filter(Q(entreprise__isnull=True) | Q(entreprise=''))
         elif client_type == 'entreprise':
             qs = qs.exclude(Q(entreprise__isnull=True) | Q(entreprise=''))
+
+    # Completion filter
+    if completion_filter == 'info_incomplete':
+        qs = qs.filter(profile_completed=False)
+    elif completion_filter == 'doc_incomplet':
+        qs = qs.filter(has_completed_doc=False)
 
     # Specialite filter
     if specialite_id:

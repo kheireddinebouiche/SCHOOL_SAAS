@@ -726,15 +726,21 @@
                     
                     <!-- Other Filters -->
                     <div class="col-lg-7 col-xl-8">
-                        <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-3">
-                            <select id="filter-promo" class="form-select modern-select py-2 px-3" style="max-width: 220px;">
+                        <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
+                            <select id="filter-promo" class="form-select modern-select py-2 px-3" style="max-width: 170px;">
                                 <option value="">Toutes les promos</option>
                                 {% for promo in promos %}
                                     <option value="{{ promo.id }}">{{ promo.label }} ({{ promo.begin_year }}/{{ promo.end_year }})</option>
                                 {% endfor %}
                             </select>
 
-                            <select id="filter-specialite" class="form-select modern-select py-2 px-3" style="max-width: 250px;">
+                            <select id="filter-completion" class="form-select modern-select py-2 px-3" style="max-width: 190px;" title="Filtrer par complétude">
+                                <option value="">Toutes les complétudes</option>
+                                <option value="info_incomplete">Informations Incomplètes</option>
+                                <option value="doc_incomplet">Dossier Incomplet</option>
+                            </select>
+
+                            <select id="filter-specialite" class="form-select modern-select py-2 px-3" style="max-width: 190px;">
                                 <option value="">Toutes les spécialités</option>
                                 <optgroup label="Spécialités Standards">
                                 {% for spec in specialites %}
@@ -748,9 +754,9 @@
                                 </optgroup>
                             </select>
 
-                            <input type="month" id="month-filter" class="form-control modern-input py-2 px-3" style="max-width: 180px;" title="Filtrer par mois">
+                            <input type="month" id="month-filter" class="form-control modern-input py-2 px-3" style="max-width: 150px;" title="Filtrer par mois">
 
-                            <select id="sort-order" class="form-select modern-select py-2 px-3" style="max-width: 220px;" title="Trier par">
+                            <select id="sort-order" class="form-select modern-select py-2 px-3" style="max-width: 170px;" title="Trier par">
                                 <option value="nom_asc">Trier par : Nom (A-Z)</option>
                                 <option value="nom_desc">Trier par : Nom (Z-A)</option>
                                 <option value="date_desc">Trier par : Date (Récent)</option>
@@ -1362,6 +1368,7 @@
         var searchTerm = $('#table-filter').val().trim();
         var clientType = $('#filter-prospect').val();
         var sortOrder = $('#sort-order').val() || 'nom_asc';
+        var completionFilter = $('#filter-completion').val();
 
         $.ajax({
           url : '{% url "t_crm:ApiLoadPrinscrits" %}',
@@ -1375,6 +1382,7 @@
               'search': searchTerm,
               'client_type': clientType,
               'sort': sortOrder,
+              'completion': completionFilter,
               'page': currentPage
           },
           beforeSend: function() {
@@ -1712,6 +1720,11 @@
         loadProspects(true);
     });
 
+    // Handle completion filter change
+    $(document).on('change', '#filter-completion', function() {
+        loadProspects(true);
+    });
+
     // Handle status checkboxes change
     $(document).on('change', '.status-checkbox', function() {
         loadProspects(true);
@@ -1742,6 +1755,7 @@
         $('#filter-prospect').val('');
         $('#filter-promo').val('');
         $('#filter-specialite').val('').trigger('change.select2');
+        $('#filter-completion').val('');
         $('#month-filter').val('');
         $('#sort-order').val('nom_asc');
         $('.status-checkbox').prop('checked', true);

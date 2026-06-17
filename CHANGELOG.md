@@ -683,3 +683,7 @@ efundModal\ lors d'une demande de remboursement pour qu'elle se ferme correcteme
 - exams_results.html : Rduction de la taille de police du nom de groupe et ajout d'un badge indiquant la formation, la spcialit et sa version  ct du titre du groupe.
 - exam_plan.py : Ajout de la spcialit, de la formation et de la version dans les donnes JSON renvoyes par l'API ApiListPvExamen pour le regroupement.
 - exam_plan.py et generate_pv.py : Ajout de la traabilit des actions utilisateurs (consultation, modification, validation, suppression des PVs d'examens et des planifications d'examens) dans la table UserActionLog pour un meilleur suivi pdagogique.
+
+- Ajout d'un filtre de complétude (informations incomplètes / dossiers incomplets) dans la liste des préinscrits (	_crm/f_views/prinscrits.py et liste-des-preinscrits.html).
+
+- Réorganisation de la disposition des filtres dans /crm/liste-des-preinscrits/ pour un alignement sur deux lignes distinctes.
