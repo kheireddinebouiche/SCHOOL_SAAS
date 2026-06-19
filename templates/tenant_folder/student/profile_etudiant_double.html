@@ -587,7 +587,7 @@
                                 
                                 <!-- Détails de Paiements Tab -->
                                 <div class="tab-pane fade" id="paiements" role="tabpanel" aria-labelledby="paiements-tab">
-                                    <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-4 w-100">
                                         <div class="d-flex align-items-center">
                                             <div class="modal-icon bg-warning bg-opacity-10 rounded-3 p-3 me-3">
                                                 <i class="ri-bank-card-line text-warning fs-4"></i>
@@ -597,6 +597,13 @@
                                                 <p class="text-muted small mb-0">Historique et détails des paiements</p>
                                             </div>
                                         </div>
+                                        {% if not has_active_refund %}
+                                        <div>
+                                            <button class="btn btn-danger btn-sm text-white fw-medium shadow-none py-2 px-3" data-bs-toggle="modal" data-bs-target="#refundModal">
+                                                <i class="ri-refund-line me-1"></i> Demander Remboursement
+                                            </button>
+                                        </div>
+                                        {% endif %}
                                     </div>
                                     <div class="row g-4 mb-4">
                                         <div class="col-lg-4">
@@ -1115,6 +1122,31 @@
 </div>
 <!-- end main content-->
  
+<!-- Refund Request Modal -->
+<div class="modal fade" id="refundModal" tabindex="-1" aria-labelledby="refundModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-light border-bottom-0">
+                <h5 class="modal-title text-danger fw-bold" id="refundModalLabel"><i class="ri-refund-line me-1"></i> Demander un remboursement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="refundRequestForm">
+                    <input type="hidden" id="refund_client_id" value="{{ etudiant.id }}">
+                    <div class="mb-3">
+                        <label for="refund_reason" class="form-label fw-semibold">Motif de remboursement <span class="text-danger">*</span></label>
+                        <textarea class="form-control bg-light border-0" id="refund_reason" rows="4" placeholder="Veuillez préciser la raison de la demande..." required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-top-0 bg-light">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="submitRefundBtn">Soumettre la demande</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal for editing student information -->
 <div class="modal fade" id="editStudentModal" tabindex="-1" aria-labelledby="editStudentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -4261,6 +4293,74 @@
             });
 
         });
+
+        // Refund Request Submission
+        $('#submitRefundBtn').click(function() {
+            var reason = $('#refund_reason').val();
+            var clientId = $('#refund_client_id').val();
+
+            if (!reason.trim()) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Attention',
+                    text: 'Le motif de remboursement est obligatoire.',
+                    confirmButtonColor: '#3085d6'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Êtes-vous sûr ?',
+                text: "Une demande de remboursement sera créée et devra être traitée par la trésorerie.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Oui, soumettre',
+                cancelButtonText: 'Annuler'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "{% url 't_tresorerie:ApiRequestRefundPaiement' %}",
+                        type: 'POST',
+                        data: {
+                            'client_id': clientId,
+                            'reason': reason,
+                            'csrfmiddlewaretoken': '{{ csrf_token }}'
+                        },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                $('#refundModal').modal('hide');
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Succès',
+                                    text: 'La demande de remboursement a été enregistrée.',
+                                    confirmButtonColor: '#3085d6'
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Erreur',
+                                    text: response.message || 'Une erreur est survenue lors de la demande.',
+                                    confirmButtonColor: '#3085d6'
+                                });
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Erreur',
+                                text: 'Erreur de communication avec le serveur.',
+                                confirmButtonColor: '#3085d6'
+                            });
+                        }
+                    });
+                }
+            });
+        });
+
     });
 
     

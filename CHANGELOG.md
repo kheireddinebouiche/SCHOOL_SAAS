@@ -763,3 +763,5 @@ ame 'remise' is not defined lors de la modification de l'échéancier dans l'inter
 - Correction : Le numero de quittance genere pour les nouveaux autres paiements respecte desormais la configuration definie dans la page Parametres de Facturation (onglet Numerotation quittance de l'entite). 
 - UI/UX : Ajout des initiales du client (avatar colore) dans la colonne client de la page des attentes de paiements (attentes-de-paiements). 
 - UI/UX : Ajout des initiales du client (avatar colore) dans la colonne client de la page liste des paiements (liste-des-paiements). Correction des colonnes du filtre de recherche de la page. 
+- Scolarite : Ajout de la fonctionnalite de demande de remboursement dans le profil etudiant (profile_etudiant.html et profile_etudiant_double.html) avec verification pour empecher les demandes multiples si une demande est deja en cours. 
+- Scolarite : Deplacement du bouton de demande de remboursement vers l'onglet Paiements dans profile_etudiant.html et profile_etudiant_double.html 

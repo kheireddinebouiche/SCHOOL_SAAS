@@ -133,6 +133,8 @@ def StudentDetails(request, pk):
         except:
             logo_partenaire = None
 
+        has_active_refund = Rembourssements.objects.filter(client=student, is_done=False).exclude(etat='anl').exists()
+
         context = {
             'pk': pk,
             'etudiant': student,
@@ -166,6 +168,7 @@ def StudentDetails(request, pk):
             'rachat_due_paiement': rachat_due_paiement,
             'autre_paiements': autre_paiements,
             'historique_absence': attendance_summary.values(),
+            'has_active_refund': has_active_refund,
         }
         return render(request, 'tenant_folder/student/profile_etudiant.html', context)
 
@@ -184,6 +187,8 @@ def StudentDetails(request, pk):
         montant_total = DuePaiements.objects.filter(client = student, type='frais_f').aggregate(total=Sum('montant_due'))['total'] or 0
         specialite = FicheVoeuxDouble.objects.filter(prospect = student, is_confirmed=True).first()
 
+        has_active_refund = Rembourssements.objects.filter(client=student, is_done=False).exclude(etat='anl').exists()
+
         context = {
             'pk' : pk,
             'etudiant' : student,
@@ -198,6 +203,7 @@ def StudentDetails(request, pk):
             'total_a_paye' : montant_total,
             'remises' : remises,
             'specialite_double' : specialite.specialite.label if student.is_double else None,
+            'has_active_refund': has_active_refund,
         }
         return render(request, 'tenant_folder/student/profile_etudiant_double.html',context)
 
