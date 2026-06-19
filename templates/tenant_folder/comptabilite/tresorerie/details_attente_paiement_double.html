@@ -3707,6 +3707,7 @@
                             <tr>
                                 <th class="text-muted fw-semibold py-3 ps-4">Tranche</th>
                                 <th class="text-muted fw-semibold py-3">Taux</th>
+                                <th class="text-muted fw-semibold py-3">Date</th>
                                 <th class="text-muted fw-semibold py-3 text-end pe-4">Montant de la tranche</th>
                             </tr>
                         </thead>
@@ -3916,7 +3917,7 @@
                     $('#motif').text(data.user_data.motif);
 
                     const createdAt = new Date(data.user_data.created_at);
-                    const date_frais_inscription = createdAt.toISOString().split('T')[0];
+                    const date_frais_inscription = data.voeux.date_frais_inscription || createdAt.toISOString().split('T')[0];
 
 
                     prix_specialite = data.specialite_data_price;
@@ -3967,7 +3968,7 @@
                         $('#availableEcheanciersCard').show();
                         let availableHtml = "";
                         $.each(data.available_echeanciers, function(index, item) {
-                            const isCurrent = item.id === data.id_echeancier;
+                            const isCurrent = data.has_saved_echeancier && item.id === data.id_echeancier;
                             availableHtml += `
                                 <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center ${isCurrent ? 'bg-light border-start border-primary border-4' : ''}">
                                     <div class="flex-grow-1">
@@ -3979,9 +3980,14 @@
                                     </div>
                                     <div class="ms-3">
                                         ${!isCurrent && !data.has_due_paiement ? `
-                                            <button class="btn btn-premium-action btn-premium-primary apply-echeancier-btn" data-id="${item.id}" data-name="${item.model__label}" data-frais="${data.voeux.frais_inscription}" title="Appliquer ce modèle">
-                                                <i class="ri-refresh-line"></i>
-                                            </button>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-outline-info btn-sm view-echeancier-btn" data-id="${item.id}" data-name="${item.model__label}" data-frais="${data.voeux.frais_inscription}" data-date-frais="${data.date_frais_inscription}" title="Voir les détails">
+                                                    <i class="ri-eye-line"></i> Détails
+                                                </button>
+                                                <button class="btn btn-primary btn-sm apply-echeancier-btn" data-id="${item.id}" data-name="${item.model__label}" data-frais="${data.voeux.frais_inscription}" data-date-frais="${data.date_frais_inscription}" title="Appliquer ce modèle">
+                                                    <i class="ri-check-line"></i> Appliquer
+                                                </button>
+                                            </div>
                                         ` : isCurrent ? `
                                             <span class="badge bg-primary rounded-pill p-1"><i class="ri-check-line fs-5"></i></span>
                                         ` : `
@@ -3999,20 +4005,51 @@
                     // Charger les échéanciers
                     var echeancierHtml = "";
                     
-                    // Ajouter les frais d'inscription comme première ligne si > 0
-                    if (data.voeux.frais_inscription > 0) {
-                        let entite_id_frais = data.special_echeancier_frais_inscription_entite_id;
-                        let entite_nom_frais = data.special_echeancier_frais_inscription_entite_nom;
+                    if (!data.has_saved_echeancier) {
+                        echeancierHtml = '<tr><td colspan="5" class="text-center py-4 text-warning"><i class="ri-alert-line fs-1 mb-2 d-block"></i><h5 class="mb-0">Échéancier en attente de sélection</h5><p class="text-muted small">Veuillez sélectionner et appliquer un modèle d\'échéancier depuis la liste ci-dessus.</p></td></tr>';
+                    } else {
+                        // Ajouter les frais d'inscription comme première ligne si > 0
+                        if (data.voeux.frais_inscription > 0) {
+                            let entite_id_frais = data.special_echeancier_frais_inscription_entite_id;
+                            let entite_nom_frais = data.special_echeancier_frais_inscription_entite_nom;
 
-                        echeancierHtml += '<tr data-entite-id="' + (entite_id_frais || '') + '">';
-                        echeancierHtml += '<td><span class="badge bg-info">Frais d\'inscription</span></td>';
-                        echeancierHtml += '<td>'+date_frais_inscription+'</td>';
-                        echeancierHtml += '<td><span class="fw-bold">' + formatComptable(data.voeux.frais_inscription) + ' DA</span></td>';
-                        echeancierHtml += '<td>' + (entite_nom_frais || '') + '</td>';
-                        if (data.remise && data.remise.remise_approuver && data.remise.remise_appliquer) {
-                             echeancierHtml += '<td class="prix-final-cell"><span class="fw-bold text-success">' + formatComptable(data.voeux.frais_inscription) + ' DA</span></td>';
+                            echeancierHtml += '<tr data-entite-id="' + (entite_id_frais || '') + '">';
+                            echeancierHtml += '<td><span class="badge bg-info">Frais d\'inscription</span></td>';
+                            echeancierHtml += '<td>'+date_frais_inscription+'</td>';
+                            echeancierHtml += '<td><span class="fw-bold">' + formatComptable(data.voeux.frais_inscription) + ' DA</span></td>';
+                            echeancierHtml += '<td>' + (entite_nom_frais || '') + '</td>';
+                            if (data.remise && data.remise.remise_approuver && data.remise.remise_appliquer) {
+                                 echeancierHtml += '<td class="prix-final-cell"><span class="fw-bold text-success">' + formatComptable(data.voeux.frais_inscription) + ' DA</span></td>';
+                            }
+                            echeancierHtml += '</tr>';
                         }
-                        echeancierHtml += '</tr>';
+                        
+                        // Ajouter les autres échéances
+                        $.each(data.echeancier, function(index, echeance){ 
+                            var label = "Tranche " + (index + 1);
+                            
+                            echeancierHtml += '<tr data-entite-id="' + (echeance.entite_id || '') + '">';
+                            echeancierHtml += '<td><span class="badge bg-primary">' + label + '</span></td>';
+                            echeancierHtml += '<td>' + (echeance.date_echeancier ? echeance.date_echeancier : '') + '</td>';
+                            echeancierHtml += '<td><span class="fw-bold">' + formatComptable(echeance.montant_tranche) + ' DA</span></td>';
+                            echeancierHtml += "<td>"+(echeance.entite_nom || '')+"</td>";
+
+                            if(hasReduction && reductionApprouved) {
+                                var montantReduction = parseFloat(echeance.montant_tranche);
+                                if (data.remise.is_value) {
+                                    // Apply proportional reduction for fixed amount
+                                    var ratio = (prixFormation - data.remise.valeur) / prixFormation;
+                                    montantReduction = montantReduction * ratio;
+                                } else {
+                                    // Apply percentage reduction
+                                    montantReduction = montantReduction - (montantReduction * (data.remise.valeur / 100));
+                                }
+                                montantReduction = Math.round(montantReduction);
+                                var displayStyle = (reductionApprouved && reductionAppliced) ? 'table-cell' : 'none';
+                                echeancierHtml += '<td class="prix-final-cell" style="display: ' + displayStyle + ';"><span class="fw-bold text-success">' + formatComptable(montantReduction) + ' DA</span></td>';
+                            }
+                            echeancierHtml += '</tr>';
+                        });
                     }
                     
                     if(data.remise){
@@ -4147,32 +4184,7 @@
                         document.getElementById('btnNewPaiementModal').disabled = true;
                     }
                     
-                    // Ajouter les autres échéances
-                    $.each(data.echeancier, function(index, echeance){ 
-                        var label = "Tranche " + (index + 1);
-                        
-                        echeancierHtml += '<tr data-entite-id="' + (echeance.entite_id || '') + '">';
-                        echeancierHtml += '<td><span class="badge bg-primary">' + label + '</span></td>';
-                        echeancierHtml += '<td>' + (echeance.date_echeancier ? echeance.date_echeancier : '') + '</td>';
-                        echeancierHtml += '<td><span class="fw-bold">' + formatComptable(echeance.montant_tranche) + ' DA</span></td>';
-                        echeancierHtml += "<td>"+(echeance.entite_nom || '')+"</td>";
-
-                        if(hasReduction && reductionApprouved) {
-                            var montantReduction = parseFloat(echeance.montant_tranche);
-                            if (data.remise.is_value) {
-                                // Apply proportional reduction for fixed amount
-                                var ratio = (prixFormation - data.remise.valeur) / prixFormation;
-                                montantReduction = montantReduction * ratio;
-                            } else {
-                                // Apply percentage reduction
-                                montantReduction = montantReduction - (montantReduction * (data.remise.valeur / 100));
-                            }
-                            montantReduction = Math.round(montantReduction);
-                            var displayStyle = (reductionApprouved && reductionAppliced) ? 'table-cell' : 'none';
-                            echeancierHtml += '<td class="prix-final-cell" style="display: ' + displayStyle + ';"><span class="fw-bold text-success">' + formatComptable(montantReduction) + ' DA</span></td>';
-                        }
-                        echeancierHtml += '</tr>';
-                    });
+                    $('#echeancierTable').html(echeancierHtml);
 
 
                     if(data.has_paiement){
@@ -4359,11 +4371,12 @@
         $(document).on('click', '.apply-echeancier-btn', function() {
             const echeancier_id = $(this).data('id');
             const modelName = $(this).data('name');
-            const fraisInscription = $(this).data('frais');
+            const fraisInscription = parseFloat($(this).data('frais') || 0);
+            const dateFrais = $(this).data('date-frais');
+            const btn = $(this);
+            const originalHtml = btn.html();
 
-            $('#modalEcheancierModelName').text(modelName);
-            $('#modalEcheancierFraisInscription').text(formatComptable(fraisInscription) + " DA");
-            $('#confirmApplyEcheancierBtn').data('id', echeancier_id);
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status"></span>');
 
             // Charger les détails du modèle pour prévisualisation
             $.ajax({
@@ -4371,22 +4384,119 @@
                 type: 'GET',
                 data: { 'id': echeancier_id },
                 success: function(response) {
-                    if (response.status === 'success') {
+                    btn.prop('disabled', false).html(originalHtml);
+                    
+                    if (response && response.status === 'success') {
+                        let actualFrais = parseFloat(response.data.frais_inscription || fraisInscription);
+                        let actualDateFrais = response.data.date_frais_inscription || dateFrais || '-';
+
+                        $('#modalEcheancierModelName').text(modelName);
+                        $('#modalEcheancierFraisInscription').text(formatComptable(actualFrais) + " DA");
+                        
                         let linesHtml = "";
-                        $.each(response.data.tranches, function(idx, tranche) {
+                        if (actualFrais > 0) {
                             linesHtml += `
                                 <tr>
-                                    <td class="ps-4 py-3 fw-medium">${tranche.value}</td>
-                                    <td class="py-3 text-muted">${tranche.taux}%</td>
-                                    <td class="text-end pe-4 py-3 fw-bold text-dark">${formatComptable(tranche.montant_tranche)} DA</td>
+                                    <td class="ps-4 fw-medium text-dark"><span class="badge bg-info">Frais d'inscription</span></td>
+                                    <td><span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">-</span></td>
+                                    <td class="text-muted fw-medium">${actualDateFrais}</td>
+                                    <td class="text-end pe-4 fw-bold text-success">${formatComptable(actualFrais)} DA</td>
                                 </tr>
                             `;
-                        });
+                        }
+
+                        if (response.data.tranches && response.data.tranches.length > 0) {
+                            response.data.tranches.forEach(function(line) {
+                                linesHtml += `
+                                    <tr>
+                                        <td class="ps-4 fw-medium text-dark">${line.value}</td>
+                                        <td><span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">${line.taux}%</span></td>
+                                        <td class="text-muted fw-medium">${line.date_echeancier || '-'}</td>
+                                        <td class="text-end pe-4 fw-bold text-success">${formatComptable(line.montant_tranche)} DA</td>
+                                    </tr>
+                                `;
+                            });
+                        } else if (actualFrais === 0) {
+                            linesHtml = '<tr><td colspan="4" class="text-center text-muted py-4">Aucune tranche définie</td></tr>';
+                        }
+                        
                         $('#modalEcheancierModelLines').html(linesHtml);
+                        $('#confirmApplyEcheancierBtn').data('id', echeancier_id).show();
                         $('#applyEcheancierModelModal').modal('show');
                     } else {
-                        alertify.error("Erreur lors du chargement des détails du modèle");
+                        alertify.error(response ? response.message : "Erreur lors du chargement des détails du modèle");
                     }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html(originalHtml);
+                    alertify.error("Erreur lors du chargement des détails du modèle");
+                }
+            });
+        });
+
+        // --- Prévisualiser un modèle d'échéancier ---
+        $(document).on('click', '.view-echeancier-btn', function() {
+            const echeancier_id = $(this).data('id');
+            const modelName = $(this).data('name');
+            const fraisInscription = parseFloat($(this).data('frais') || 0);
+            const dateFrais = $(this).data('date-frais');
+            const btn = $(this);
+            const originalHtml = btn.html();
+
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status"></span>');
+
+            // Charger les détails du modèle pour prévisualisation
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiLoadEcheancierDetails' %}",
+                type: 'GET',
+                data: { 'id': echeancier_id },
+                success: function(response) {
+                    btn.prop('disabled', false).html(originalHtml);
+                    
+                    if (response && response.status === 'success') {
+                        let actualFrais = parseFloat(response.data.frais_inscription || fraisInscription);
+                        let actualDateFrais = response.data.date_frais_inscription || dateFrais || '-';
+
+                        $('#modalEcheancierModelName').text(modelName);
+                        $('#modalEcheancierFraisInscription').text(formatComptable(actualFrais) + " DA");
+                        
+                        let linesHtml = "";
+                        if (actualFrais > 0) {
+                            linesHtml += `
+                                <tr>
+                                    <td class="ps-4 fw-medium text-dark"><span class="badge bg-info">Frais d'inscription</span></td>
+                                    <td><span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">-</span></td>
+                                    <td class="text-muted fw-medium">${actualDateFrais}</td>
+                                    <td class="text-end pe-4 fw-bold text-success">${formatComptable(actualFrais)} DA</td>
+                                </tr>
+                            `;
+                        }
+
+                        if (response.data.tranches && response.data.tranches.length > 0) {
+                            response.data.tranches.forEach(function(line) {
+                                linesHtml += `
+                                    <tr>
+                                        <td class="ps-4 fw-medium text-dark">${line.value}</td>
+                                        <td><span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">${line.taux}%</span></td>
+                                        <td class="text-muted fw-medium">${line.date_echeancier || '-'}</td>
+                                        <td class="text-end pe-4 fw-bold text-success">${formatComptable(line.montant_tranche)} DA</td>
+                                    </tr>
+                                `;
+                            });
+                        } else if (actualFrais === 0) {
+                            linesHtml = '<tr><td colspan="4" class="text-center text-muted py-4">Aucune tranche définie</td></tr>';
+                        }
+                        
+                        $('#modalEcheancierModelLines').html(linesHtml);
+                        $('#confirmApplyEcheancierBtn').hide();
+                        $('#applyEcheancierModelModal').modal('show');
+                    } else {
+                        alertify.error(response ? response.message : "Erreur lors du chargement des détails du modèle");
+                    }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html(originalHtml);
+                    alertify.error("Erreur lors de la requête.");
                 }
             });
         });
@@ -6253,6 +6363,7 @@
             // Charger les échéances dans le dropdown
             var echeancesOptions = '<option value="">Sélectionnez une échéance</option>';
 
+            var optionsArray = [];
             // Parcourir les lignes du tableau des échéances dues
             $('#ListePaiementRequestLine tr').each(function() {
                 var id_due_paiement = $(this).data('id');
@@ -6263,12 +6374,28 @@
 
                 // Vérifier que la ligne n'est pas vide
                 if (label && raw_restant !== undefined) {
-                    var optionText = label + " - " + restant;
-                    if (date) {
-                        optionText += " - Échéance: " + date;
-                    }
-                    echeancesOptions += '<option data-id_due_paiement="'+ id_due_paiement +'" value="' + label + '" data-montant="' + raw_restant + '" data-entite="' + $(this).data('entite') + '">' + optionText + '</option>';
+                    optionsArray.push({
+                        id_due_paiement: parseInt(id_due_paiement) || 0,
+                        raw_restant: raw_restant,
+                        label: label,
+                        date: date,
+                        restant: restant,
+                        entite: $(this).data('entite')
+                    });
                 }
+            });
+            
+            // Trier par ordre (ID) pour respecter l'ordre chronologique des tranches
+            optionsArray.sort(function(a, b) {
+                return a.id_due_paiement - b.id_due_paiement;
+            });
+            
+            optionsArray.forEach(function(opt) {
+                var optionText = opt.label + " - " + opt.restant;
+                if (opt.date) {
+                    optionText += " - Échéance: " + opt.date;
+                }
+                echeancesOptions += '<option data-id_due_paiement="'+ opt.id_due_paiement +'" value="' + opt.label + '" data-montant="' + opt.raw_restant + '" data-entite="' + opt.entite + '">' + optionText + '</option>';
             });
 
             $('#echeancierSelection').html(echeancesOptions);

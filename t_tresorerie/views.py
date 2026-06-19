@@ -551,6 +551,7 @@ def ApiGetDetailsDemandePaiement(request):
             'promo' : voeux.promo.code,
             'prix_formation' : voeux.specialite.prix,
             'frais_inscription' : frais_inscription,
+            'date_frais_inscription': echeancierId.date_frais_inscription.strftime("%Y-%m-%d") if echeancierId and echeancierId.date_frais_inscription else None,
             'logo_header' : voeux.specialite.formation.entite_legal.entete_logo.url,
             'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url,
         }
@@ -576,6 +577,7 @@ def ApiGetDetailsDemandePaiement(request):
             'id_echeancier_special' : obj_echeacncier_speial.id if obj_echeacncier_speial else None,
             'id_echeancier' : echeancierId.id,
             'available_echeanciers': list(available_echeanciers),
+            'has_saved_echeancier': obj.ref_echeancier is not None,
             'special_echeancier_line' : list(special_echeancier_data),
             'echeancier_special_state_approuvel' : echeancier_state_approuvel,
             "has_due_paiement" : has_due_paiement,
@@ -888,6 +890,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
             'promo' : resolved_promo.code if resolved_promo else "N/A",
             'prix_formation' : (resolved_spec_double.prix_spec1 or 0) + (resolved_spec_double.prix_spec2 or 0) if resolved_spec_double else 0,
             'frais_inscription' : frais_inscription,
+            'date_frais_inscription': echeancierId.date_frais_inscription.strftime("%Y-%m-%d") if echeancierId and echeancierId.date_frais_inscription else None,
             'logo_header' : echeancierId.entite.entete_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.entete_logo else None,
             'logo_footer' : echeancierId.entite.pied_page_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.pied_page_logo else None,
         }
@@ -925,6 +928,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
             "total_paiement" : total_paiement if has_paiement else 0,
             'id_echeancier' : echeancierId.id,
             'available_echeanciers': list(available_echeanciers),
+            'has_saved_echeancier': obj.ref_echeancier is not None,
             "has_invoice": done_paiements.filter(is_refund=False, facture__isnull=False).exists() if has_paiement else False,
             "refund_data" : refund_data,
             "has_pending_refund" : has_pending_refund,

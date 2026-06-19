@@ -330,10 +330,10 @@ def ApiLoadPreinscrisPerosnalInfos(request):
             promo_label = "N/A"
             if lp.is_double:
                 fvd = FicheVoeuxDouble.objects.filter(prospect=lp).first()
-                if fvd: promo_label = fvd.promo.get_session_display() + "-" + fvd.promo.begin_year + "/" + fvd.promo.end_year
+                if fvd: promo_label = fvd.promo.code
             else:
                 fdv = FicheDeVoeux.objects.filter(prospect=lp).first()
-                if fdv: promo_label = fdv.promo.get_session_display() + "-" + fdv.promo.begin_year + "/" + fdv.promo.end_year
+                if fdv: promo_label = fdv.promo.code
 
             history_list.append({
                 'id': lp.id,
@@ -372,7 +372,7 @@ def ApiLoadPreinscritDoubleVoeux(request):
                 'formation_2' : fiche.specialite.specialite2.formation.nom,
                 'specialite2_label': fiche.specialite.specialite2.label,
 
-                'promo' : fiche.promo.get_session_display()+'-'+fiche.promo.begin_year+'/'+fiche.promo.end_year,
+                'promo' : fiche.promo.code,
                 'created_at' : fiche.created_at,
                 'updated_at' : fiche.updated_at
                 

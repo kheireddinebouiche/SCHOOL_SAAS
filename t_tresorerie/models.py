@@ -252,6 +252,7 @@ class EcheancierPaiement(models.Model):
     specialite = models.ForeignKey(Specialites, null=True, blank=True, on_delete=models.CASCADE)
     
     frais_inscription = models.DecimalField(decimal_places=2, max_digits=200, null=True, blank=True)
+    date_frais_inscription = models.DateField(null=True, blank=True)
 
     formation_double = models.ForeignKey(DoubleDiplomation, on_delete=models.CASCADE, null=True, blank=True)
 
@@ -492,17 +493,39 @@ class AutreProduit(models.Model):
             mois = date_p.strftime("%m")
             annee = date_p.strftime("%y")
 
-            pattern = f"/AP/{entite_nom}/{wilaya}/{annexe}/{mois}/{annee}"
-            last = AutreProduit.objects.filter(num__endswith=pattern)\
-                                    .aggregate(max_num=Max("num"))["max_num"]
+            format_str = getattr(self.entite, 'quittance_format', None) or "N°{seq}/ST/{entite}/{wilaya}/{annexe}/{mois}/{annee}"
+            seq_length = getattr(self.entite, 'quittance_sequence_length', 6) or 6
+
+            format_str = format_str.replace('{entite}', entite_str).replace('{wilaya}', wilaya).replace('{annexe}', annexe).replace('{mois}', mois).replace('{annee}', annee)
+
+            if "{seq}" in format_str:
+                parts = format_str.split("{seq}")
+                prefix_part = parts[0]
+                suffix_part = parts[1] if len(parts) > 1 else ""
+            else:
+                prefix_part = format_str
+                suffix_part = ""
+
+            qs = AutreProduit.objects.filter(num__startswith=prefix_part)
+            if suffix_part:
+                qs = qs.filter(num__endswith=suffix_part)
+            last = qs.aggregate(max_num=Max("num"))["max_num"]
 
             if last:
-                last_seq = int(last.split("/")[0].replace("NÂ°", ""))
-                seq = str(last_seq + 1).zfill(6)
+                # Remove prefix and suffix to get sequence
+                seq_str = last[len(prefix_part):-len(suffix_part)] if len(suffix_part) > 0 else last[len(prefix_part):]
+                try:
+                    last_seq = int(seq_str)
+                    seq = str(last_seq + 1).zfill(seq_length)
+                except ValueError:
+                    seq = str(1).zfill(seq_length)
             else:
-                seq = "000001"
+                seq = str(1).zfill(seq_length)
 
-            self.num = f"NÂ°{seq}/AP/{entite_nom}/{wilaya}/{annexe}/{mois}/{annee}"
+            if "{seq}" in format_str:
+                self.num = format_str.replace("{seq}", seq)
+            else:
+                self.num = f"{format_str}{seq}"
 
         super().save(*args, **kwargs)
 

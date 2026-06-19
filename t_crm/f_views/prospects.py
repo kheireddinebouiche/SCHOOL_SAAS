@@ -125,7 +125,8 @@ def ApiLoadFicheVoeuxProspect(request):
             'specialite_label': f"{fiche.specialite.label} ({fiche.specialite.version})" if fiche.specialite.version else fiche.specialite.label,
             'specialite_id' : fiche.specialite.id,
             'specialite_id_formation': fiche.specialite.formation.id,
-            'promo' : fiche.promo.get_session_display()+'-'+fiche.promo.begin_year+'/'+fiche.promo.end_year,
+            'promo' : fiche.promo.code,
+            'promo_label' : fiche.promo.label,
             'created_at' : format(fiche.created_at,"Y-m-d H:i"),
             'updated_at' : format(fiche.updated_at,"Y-m-d H:i"),
             
@@ -151,7 +152,8 @@ def ApiLoadFicheVoeuxDoubleProspect(request):
                 'specialite2_code': fiche.specialite.specialite2.code,
                 'specialite2_label': f"{fiche.specialite.specialite2.label} ({fiche.specialite.specialite2.version})" if fiche.specialite.specialite2.version else fiche.specialite.specialite2.label,
                 'specialite2_version': fiche.specialite.specialite2.version,
-                'promo' : fiche.promo.get_session_display()+'-'+fiche.promo.begin_year+'/'+fiche.promo.end_year,
+                'promo' : fiche.promo.code,
+                'promo_label' : fiche.promo.label,
                 'created_at' : fiche.created_at,
                 'updated_at' : fiche.updated_at
                 

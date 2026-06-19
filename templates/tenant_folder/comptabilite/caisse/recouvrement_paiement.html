@@ -391,6 +391,23 @@
 {% block extra_js %}
 <script>
     let currentType = 'cheque';
+    
+    function getAvatarClasses(name) {
+        if (!name) return { bg: 'bg-primary', text: 'text-white' };
+        const colors = [
+            { bg: 'bg-primary', text: 'text-white' },
+            { bg: 'bg-success', text: 'text-white' },
+            { bg: 'bg-info', text: 'text-white' },
+            { bg: 'bg-warning', text: 'text-white' },
+            { bg: 'bg-danger', text: 'text-white' },
+            { bg: 'bg-secondary', text: 'text-white' }
+        ];
+        let sum = 0;
+        for (let i = 0; i < name.length; i++) {
+            sum += name.charCodeAt(i);
+        }
+        return colors[sum % colors.length];
+    }
 
     $(document).ready(function() {
         loadRecouvrementData();
@@ -456,7 +473,14 @@
                 $('#emptyStateHistoryContainer').hide();
 
                 data.forEach(function(item) {
-                    let badgeClass = item.mode_paiement === 'Chèque' ? 'badge-soft-success' : 'badge-soft-info';
+                    var decodeStr = function(str) {
+                        if (!str) return str;
+                        return str.replace(/Ã¨/g, 'è').replace(/Ã©/g, 'é').replace(/Â°/g, '°').replace(/Ã/g, 'à');
+                    };
+                    item.num = decodeStr(item.num);
+                    item.mode_paiement = decodeStr(item.mode_paiement);
+
+                    let badgeClass = (item.mode_paiement && item.mode_paiement.toLowerCase().includes('chèque')) ? 'badge-soft-success' : 'badge-soft-info';
 
                     let statusBadgeHTML = `<span class="badge ${badgeClass}">${item.mode_paiement}</span>`;
                     
@@ -482,8 +506,8 @@
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-xs me-2">
-                                        <div class="avatar-title bg-soft-primary text-primary rounded-circle">
-                                            ${item.client.charAt(0)}
+                                        <div class="avatar-title ${getAvatarClasses(item.client).bg} ${getAvatarClasses(item.client).text} rounded-circle">
+                                            ${item.client.charAt(0).toUpperCase()}
                                         </div>
                                     </div>
                                     <span>${item.client}</span>
@@ -585,7 +609,14 @@
 
                 const canDelete = {{ can_delete|yesno:"true,false" }};
                 data.forEach(function(item) {
-                    let badgeClass = item.mode_paiement.toLowerCase().includes('chèque') ? 'bg-soft-success text-success' : 'bg-soft-danger text-danger';
+                    var decodeStr = function(str) {
+                        if (!str) return str;
+                        return str.replace(/Ã¨/g, 'è').replace(/Ã©/g, 'é').replace(/Â°/g, '°').replace(/Ã/g, 'à');
+                    };
+                    item.num = decodeStr(item.num);
+                    item.mode_paiement = decodeStr(item.mode_paiement);
+
+                    let badgeClass = (item.mode_paiement && item.mode_paiement.toLowerCase().includes('chèque')) ? 'bg-soft-success text-success' : 'bg-soft-danger text-danger';
                     
                     let deleteBtnHTML = canDelete ? `
                         <button class="btn btn-sm btn-ghost-danger rounded-pill px-3 ms-1 delete-paiement-btn shadow-sm" 
@@ -628,7 +659,7 @@
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="flex-shrink-0 avatar-xs me-2">
-                                        <div class="avatar-title bg-soft-info text-info rounded-circle font-size-12">
+                                        <div class="avatar-title ${getAvatarClasses(item.client).bg} ${getAvatarClasses(item.client).text} rounded-circle font-size-12">
                                             ${item.client.charAt(0).toUpperCase()}
                                         </div>
                                     </div>

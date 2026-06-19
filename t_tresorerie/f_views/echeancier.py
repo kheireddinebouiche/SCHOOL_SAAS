@@ -57,12 +57,36 @@ def ApiLoadEcheancierDetails(request):
         if not ids_raw:
              return JsonResponse({"status" : "error", "message" : "Informations manquantes"})
              
-        # Pick the first ID if it's a comma-separated list
-        id = str(ids_raw).split(',')[0]
-        echeancier = EcheancierPaiement.objects.get(id=id)
+        # Pick all IDs to aggregate specialties
+        ids = str(ids_raw).split(',')
+        echeanciers = EcheancierPaiement.objects.filter(id__in=ids)
+        echeancier = echeanciers.first()
         
-        # Récupérer les tranches associées
-        tranches = EcheancierPaiementLine.objects.filter(echeancier=echeancier).values(
+        if not echeancier:
+            return JsonResponse({"status" : "error", "message" : "Échéancier introuvable"})
+            
+        # Build composite formation label using all specialties
+        f_nom = echeancier.formation.nom if echeancier.formation else ""
+        specs = []
+        for e in echeanciers:
+            if e.specialite and e.specialite.label not in specs:
+                specs.append(e.specialite.label)
+            elif e.formation_double:
+                s1 = e.formation_double.specialite1.label if e.formation_double.specialite1 else ""
+                s2 = e.formation_double.specialite2.label if e.formation_double.specialite2 else ""
+                s_lbl = f"{s1} / {s2}"
+                if s_lbl not in specs: specs.append(s_lbl)
+                
+        if f_nom:
+            if specs:
+                composite_formation_label = f"{f_nom} ({', '.join(specs)})"
+            else:
+                composite_formation_label = f_nom
+        else:
+            composite_formation_label = ", ".join(specs) if specs else ""
+        
+        # Récupérer les tranches associées au premier (identiques pour le groupe)
+        tranches = EcheancierPaiementLine.objects.filter(echeancier=echeancier).order_by('id').values(
             'id', 'taux', 'value', 'date_echeancier','montant_tranche', 'entite_id'
         )
         
@@ -101,7 +125,9 @@ def ApiLoadEcheancierDetails(request):
         data = {
             'id': echeancier.id,
             'model_label': echeancier.model.label,
-            'formation_label': echeancier.specialite.label if echeancier.specialite else (echeancier.formation.nom if echeancier.formation else (f"{echeancier.formation_double.specialite1.label} / {echeancier.formation_double.specialite2.label}" if echeancier.formation_double else "")),
+            'formation_label': composite_formation_label,
+            'formation_nom': f_nom,
+            'specialties': specs,
             'is_active': echeancier.is_active,
             'type_model' : "Double Diplomation" if echeancier.model.is_double_diplomation else "Modèle Standard",
             'created_at': echeancier.created_at,
@@ -109,6 +135,8 @@ def ApiLoadEcheancierDetails(request):
             'entite' : echeancier.entite.id if echeancier.entite else None,
             'entite_label' : echeancier.entite.designation if echeancier.entite else None,
             'frais_inscription' : str(echeancier.frais_inscription) if echeancier.frais_inscription else "0.00",
+            'date_frais_inscription': echeancier.date_frais_inscription.strftime("%Y-%m-%d") if echeancier.date_frais_inscription else "",
+            'has_frais_inscription': echeancier.model.has_frais_inscription,
             'remise': str(remise_val),
             'type_remise': type_remise,
             'majoration': str(majoration_val),
@@ -137,6 +165,8 @@ def ApiSaveEcheancier(request):
             tranches_data = request.POST.get('tranches')
             is_double_diplomation = request.POST.get('is_double_diplomation', 'false') == 'true'
             frais_inscription = request.POST.get('frais_inscription')
+            date_frais_inscription = request.POST.get('date_frais_inscription')
+            if date_frais_inscription == '': date_frais_inscription = None
             remise = request.POST.get('remise', 0)
             type_remise = request.POST.get('type_remise', 'fixe')
             majoration = request.POST.get('majoration', 0)
@@ -209,6 +239,7 @@ def ApiSaveEcheancier(request):
                         specialite=spec_obj,
                         is_active=True,
                         frais_inscription=frais_inscription,
+                        date_frais_inscription=date_frais_inscription,
                         remise=remise,
                         type_remise=type_remise,
                         majoration=majoration,
@@ -280,6 +311,7 @@ def ApiSaveEcheancier(request):
                 formation_double=double_obj,
                 is_active=True,
                 frais_inscription=frais_inscription,
+                date_frais_inscription=date_frais_inscription,
                 remise=remise,
                 type_remise=type_remise,
                 majoration=majoration,
@@ -591,7 +623,6 @@ def ApiDeleteEcheancier(request):
         return JsonResponse({"status" : "error"})
 
 @login_required(login_url="institut_app:login")
-@transaction.atomic
 @module_permission_required('tre', 'delete')
 def ApiBulkDeleteEcheanciers(request):
     if request.method == "POST":
@@ -603,10 +634,13 @@ def ApiBulkDeleteEcheanciers(request):
             # Filter out default schedules and delete the rest
             deleted_count = 0
             for eid in ids:
-                obj = EcheancierPaiement.objects.filter(id=eid).first()
-                if obj and not obj.is_default:
-                    obj.delete()
-                    deleted_count += 1
+                try:
+                    obj = EcheancierPaiement.objects.filter(id=eid).first()
+                    if obj and not obj.is_default:
+                        obj.delete()
+                        deleted_count += 1
+                except Exception as e:
+                    continue
             
             return JsonResponse({"status": "success", "message": f"{deleted_count} échéanciers supprimés avec succès"})
         except Exception as e:
@@ -695,6 +729,9 @@ def ApiUpdateEcheancier(request):
             is_active_val = request.POST.get('is_active') == '1'
             entite_id = request.POST.get('entite')
             frais_inscription = request.POST.get('frais_inscription')
+            date_frais_inscription = request.POST.get('date_frais_inscription')
+            if date_frais_inscription == '': date_frais_inscription = None
+            entite_id = request.POST.get('entite')
             remise = request.POST.get('remise')
             type_remise = request.POST.get('type_remise')
             majoration = request.POST.get('majoration')
@@ -713,6 +750,11 @@ def ApiUpdateEcheancier(request):
                     echeancier.entite_id = entite_id
                 if frais_inscription:
                     echeancier.frais_inscription = frais_inscription
+                
+                # date_frais_inscription maybe empty or updated
+                if 'date_frais_inscription' in request.POST:
+                    echeancier.date_frais_inscription = date_frais_inscription
+
                 if remise is not None:
                     echeancier.remise = remise
                     echeancier.has_remise = float(remise or 0) > 0
@@ -734,19 +776,12 @@ def ApiUpdateEcheancier(request):
                 actual_majoration = (tarif * maj_val / 100) if echeancier.type_majoration == 'pourcentage' else maj_val
                 net_total = tarif - actual_discount + actual_majoration
                 
-                # Update tranches
-                for update in tranche_updates:
-                    # Update by ID if possible, otherwise by label
-                    tranche_id = update.get('id')
-                    if tranche_id:
-                        tranche_obj = EcheancierPaiementLine.objects.filter(id=tranche_id, echeancier=echeancier).first()
-                    else:
-                        tranche_obj = EcheancierPaiementLine.objects.filter(
-                            echeancier=echeancier, 
-                            value=update.get('old_value', update.get('value'))
-                        ).first()
+                # Update tranches by matching order
+                tranches_list = list(EcheancierPaiementLine.objects.filter(echeancier=echeancier).order_by('id'))
+                for idx, update in enumerate(tranche_updates):
+                    if idx < len(tranches_list):
+                        tranche_obj = tranches_list[idx]
                         
-                    if tranche_obj:
                         tranche_obj.value = update.get('value')
                         if update.get('date'):
                             tranche_obj.date_echeancier = update.get('date')

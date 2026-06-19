@@ -273,7 +273,6 @@
                                         <th class="border-0">Description</th>
                                         <th class="border-0">Référence</th>
                                         <th class="border-0">Montant</th>
-                                        <th class="border-0">Type</th>
                                         <th class="border-0">Mode</th>
                                         <th class="border-0">Date Création</th>
                                         <th class="border-0">Date Effective</th>
@@ -430,30 +429,35 @@
                 var row = "";
                 $.each(data, function(index, p){
                     
-                    var modeBadge = '<span class="badge bg-secondary">' + (p.mode_paiement || '-') + '</span>';
-                    if (p.mode_paiement === 'Espèce') modeBadge = '<span class="badge bg-success">Espèce</span>';
-                    else if (p.mode_paiement === 'Chèque') modeBadge = '<span class="badge bg-info">Chèque</span>';
-                    else if (p.mode_paiement === 'Virement Bancaire') modeBadge = '<span class="badge bg-primary">Virement</span>';
+                    var modeVal = p.mode_paiement || '-';
+                    // Fix double-encoded characters
+                    var decodeStr = function(str) {
+                        if (!str) return str;
+                        return str.replace(/Ã¨/g, 'è').replace(/Ã©/g, 'é').replace(/Â°/g, '°').replace(/Ã/g, 'à');
+                    };
+                    
+                    modeVal = decodeStr(modeVal);
+                    var pNum = decodeStr(p.num);
+                    var pDesc = decodeStr(p.description);
+
+                    var modeBadge = '<span class="badge bg-secondary">' + modeVal + '</span>';
+                    if (modeVal.includes('Espèce') || modeVal.includes('Esp') || modeVal.includes('esp')) modeBadge = '<span class="badge bg-success">Espèce</span>';
+                    else if (modeVal.includes('Chèque') || modeVal.includes('Ch') || modeVal.includes('che')) modeBadge = '<span class="badge bg-info">Chèque</span>';
+                    else if (modeVal.includes('Virement')) modeBadge = '<span class="badge bg-primary">Virement</span>';
 
                     row += "<tr data-contextkey='"+p.context_key+"'>";
                     row += "<td class='ps-4'><div class='fw-medium'>"+p.prospect_nom+' '+p.prospect_prenom+"</div></td>";
-                    row += "<td>"+p.description+"</td>";
-                    row += "<td><span class='badge bg-light text-dark'>#"+p.num+"</span></td>";
+                    row += "<td><div class='mb-1'>"+pDesc+"</div><span class='badge bg-soft-info text-info' data-contextkey='"+p.context_key+"'>"+p.context+"</span></td>";
+                    row += "<td><span class='badge bg-light text-dark'>#"+pNum+"</span></td>";
                     row += "<td><span class='fw-bold text-primary'>"+formatMoney(p.montant_paye)+" DA</span></td>";
-                    row += "<td data-contextkey='"+p.context_key+"'><span class='badge bg-soft-info text-info'>"+p.context+"</span></td>";
                     row += "<td>"+modeBadge+"</td>";
                     row += "<td><span class='text-muted small'>"+p.date_operation+"</span></td>";
                     row += "<td><strong>"+p.date_paiement+"</strong></td>";
                     row += "<td class='text-center pe-4'>";
-                    row += "<div class='dropdown d-inline-block'>";
-                    row += "<button class='btn btn-soft-secondary btn-sm dropdown shadow-none' type='button' data-bs-toggle='dropdown' data-bs-boundary='viewport' aria-expanded='false'>";
-                    row += "<i class='ri-more-2-fill'></i>";
-                    row += "</button>";
-                    row += "<ul class='dropdown-menu dropdown-menu-end border-0 shadow-sm'>";
-                    row += "<li><a class='dropdown-item details-item-btn d-flex align-items-center' href='#' data-id='"+p.id+"'><i class='ri-eye-line text-primary me-2'></i> Détails</a></li>";
-                    row += "<li><a class='dropdown-item edit-item-btn d-flex align-items-center' href='#' data-id='"+p.id+"'><i class='ri-pencil-line text-warning me-2'></i> Modifier</a></li>";
-                    row += "<li><a class='dropdown-item remove-item-btn d-flex align-items-center text-danger' href='#' data-id='"+p.id+"'><i class='ri-delete-bin-line me-2'></i> Supprimer</a></li>";
-                    row += "</ul>";
+                    row += "<div class='d-flex justify-content-center gap-2'>";
+                    row += "<button class='btn btn-sm btn-soft-primary details-item-btn' data-id='"+p.id+"' title='Détails'><i class='ri-eye-line'></i></button>";
+                    row += "<button class='btn btn-sm btn-soft-warning edit-item-btn' data-id='"+p.id+"' title='Modifier'><i class='ri-pencil-line'></i></button>";
+                    row += "<button class='btn btn-sm btn-soft-danger remove-item-btn' data-id='"+p.id+"' title='Supprimer'><i class='ri-delete-bin-line'></i></button>";
                     row += "</div>";
                     row += "</td>";
                     row += "</tr>"

@@ -57,7 +57,7 @@ def StudentDetails(request, pk):
             
             rachat_due_paiement = DuePaiements.objects.filter(client=student, type='rach')
             # Fix: Model AutreProduit does not have 'compte' field
-            autre_paiements = AutreProduit.objects.filter(client=student).select_related('payment_type')
+            autre_paiements = AutreProduit.objects.filter(client=student).select_related('payment_category')
 
         # Handle Specialite and Formation (FicheDeVoeux is only for standard students)
         specialite_simple = FicheDeVoeux.objects.filter(prospect=student, is_confirmed=True).first()
