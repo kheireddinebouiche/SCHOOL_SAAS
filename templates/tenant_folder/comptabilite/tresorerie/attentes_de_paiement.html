@@ -355,10 +355,38 @@
         var allPaymentData = [];
         var currentSearchTerm = '';
  
+        function getAvatarClasses(name) {
+            if (!name) return { bg: 'bg-primary', text: 'text-white' };
+            const colors = [
+                { bg: 'bg-primary', text: 'text-white' },
+                { bg: 'bg-success', text: 'text-white' },
+                { bg: 'bg-info', text: 'text-white' },
+                { bg: 'bg-warning', text: 'text-white' },
+                { bg: 'bg-danger', text: 'text-white' },
+                { bg: 'bg-secondary', text: 'text-white' }
+            ];
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return colors[Math.abs(hash) % colors.length];
+        }
+
         function createRow(p) {
             var row = [];
             // Client Name & Alerts
-            var clientName = '<div class="ps-3"><span class="fw-semibold text-dark"><a href="/comptabilite/tresorerie/details-paiement-request/'+p.id+'">'+p.nom+" "+p.prenom+'</a></span>';
+            const fullName = (p.nom || '') + " " + (p.prenom || '').trim();
+            const initialName = p.nom ? p.nom : "?";
+            const initials = initialName.charAt(0).toUpperCase();
+            const avatarStyle = getAvatarClasses(initialName);
+            
+            let avatarHtml = '<div class="avatar-sm flex-shrink-0 me-3">' +
+                                '<div class="avatar-title ' + avatarStyle.bg + ' ' + avatarStyle.text + ' rounded-circle fs-6">' +
+                                    initials +
+                                '</div>' +
+                             '</div>';
+
+            var clientName = '<div class="d-flex align-items-center">' + avatarHtml + '<div><span class="fw-semibold text-dark"><a href="/comptabilite/tresorerie/details-paiement-request/'+p.id+'">'+fullName+'</a></span>';
             var remboursementIcon = p.has_rembourssement ? '<span class="badge badge-soft-warning ms-2" title="Remboursement en attente"><i class="ri-refund-line"></i></span>' : '';
             
             var alertes = '';
@@ -374,7 +402,7 @@
                 alertes += '<span class="badge badge-soft-success ms-1" title="Remise traitée">Remise traitée</span>';
             }
 
-            row.push(clientName + remboursementIcon + alertes + '</div>');
+            row.push(clientName + remboursementIcon + alertes + '</div></div>');
             
             // Formation / Spécialité
             var formationSpec = '<div class="d-flex flex-column">' +

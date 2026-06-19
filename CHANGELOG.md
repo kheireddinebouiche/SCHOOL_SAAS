@@ -761,3 +761,5 @@ ame 'remise' is not defined lors de la modification de l'échéancier dans l'inter
 
 - Correction de l'affichage des avatars des clients dans les tableaux de la page de recouvrement. Les badges ont désormais une couleur de fond dynamique avec un texte blanc pour garantir que les initiales soient toujours bien lisibles.
 - Correction : Le numero de quittance genere pour les nouveaux autres paiements respecte desormais la configuration definie dans la page Parametres de Facturation (onglet Numerotation quittance de l'entite). 
+- UI/UX : Ajout des initiales du client (avatar colore) dans la colonne client de la page des attentes de paiements (attentes-de-paiements). 
+- UI/UX : Ajout des initiales du client (avatar colore) dans la colonne client de la page liste des paiements (liste-des-paiements). Correction des colonnes du filtre de recherche de la page. 
