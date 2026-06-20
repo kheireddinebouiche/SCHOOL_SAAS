@@ -86,4 +86,53 @@ def ApiUpdatePaymentType(request):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
+@login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
+def PrintTicketCaisse(request, paiement_id):
+    from django.shortcuts import get_object_or_404
+    from datetime import datetime
+    from institut_app.models import Entreprise
+    paiement = get_object_or_404(Paiements, id=paiement_id)
     
+    formation_name = ""
+    specialite_name = ""
+    
+    if paiement.due_paiements and paiement.due_paiements.ref_echeancier:
+        ech = paiement.due_paiements.ref_echeancier
+        if getattr(ech, 'formation', None):
+            formation_name = getattr(ech.formation, 'nom', getattr(ech.formation, 'label', ''))
+        elif getattr(ech, 'formation_double', None):
+            formation_name = getattr(ech.formation_double, 'label', getattr(ech.formation_double, 'nom', ''))
+            
+        if getattr(ech, 'specialite', None):
+            specialite_name = getattr(ech.specialite, 'label', getattr(ech.specialite, 'nom', ''))
+    elif getattr(paiement, 'promo', None):
+        if getattr(paiement.promo, 'formation', None):
+            formation_name = getattr(paiement.promo.formation, 'nom', getattr(paiement.promo.formation, 'label', ''))
+        if getattr(paiement.promo, 'specialite', None):
+            specialite_name = getattr(paiement.promo.specialite, 'label', getattr(paiement.promo.specialite, 'nom', ''))
+
+    if paiement.prospect:
+        from t_tresorerie.models import ClientPaiementsRequest
+        req = ClientPaiementsRequest.objects.filter(client=paiement.prospect).order_by('-created_at').first()
+        if req:
+            if not formation_name and getattr(req, 'formation', None):
+                formation_name = getattr(req.formation, 'nom', getattr(req.formation, 'label', ''))
+            if not specialite_name and getattr(req, 'specialite', None):
+                specialite_name = getattr(req.specialite, 'label', getattr(req.specialite, 'nom', ''))
+                
+        if not specialite_name:
+            from t_crm.models import FicheDeVoeux
+            voeu = FicheDeVoeux.objects.filter(prospect=paiement.prospect).order_by('-created_at').first()
+            if voeu and getattr(voeu, 'specialite', None):
+                specialite_name = getattr(voeu.specialite, 'label', getattr(voeu.specialite, 'nom', ''))
+
+    context = {
+        'tenant': request.tenant,
+        'paiement': paiement,
+        'entreprise': paiement.entite if paiement.entite else Entreprise.objects.first(),
+        'formation_name': formation_name,
+        'specialite_name': specialite_name,
+        'now': datetime.now()
+    }
+    return render(request, 'tenant_folder/comptabilite/tresorerie/ticket_caisse_80mm.html', context)

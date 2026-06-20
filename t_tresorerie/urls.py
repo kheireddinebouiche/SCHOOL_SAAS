@@ -129,6 +129,7 @@ urlpatterns = [
 
     path('liste-des-paiements/', submenu_access_required("tre", "tresorerie")(ListeDesPaiements), name="ListeDesPaiements"),
     path('ApiListePaiements', ApiListePaiements, name="ApiListePaiements"),
+    path('api/print-ticket-caisse/<int:paiement_id>/', PrintTicketCaisse, name='PrintTicketCaisse'),
 
     path('ApiGetLunchedSpec', ApiGetLunchedSpec, name="ApiGetLunchedSpec"),
 

@@ -1,0 +1,151 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Ticket de Caisse - {{ paiement.num }}</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            color: #000;
+            background-color: #fff;
+            margin: 0;
+            padding: 0;
+            width: 80mm;
+        }
+        .ticket {
+            width: 100%;
+            padding: 5mm;
+            box-sizing: border-box;
+        }
+        .center {
+            text-align: center;
+        }
+        .right {
+            text-align: right;
+        }
+        .left {
+            text-align: left;
+        }
+        .bold {
+            font-weight: bold;
+        }
+        .line {
+            border-top: 1px dashed #000;
+            margin: 5px 0;
+        }
+        .logo {
+            max-width: 40mm;
+            max-height: 15mm;
+            margin-bottom: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            margin-bottom: 10px;
+        }
+        td, th {
+            padding: 2px 0;
+        }
+        th {
+            text-align: left;
+            border-bottom: 1px solid #000;
+        }
+        .total-row td {
+            font-weight: bold;
+            font-size: 14px;
+            padding-top: 5px;
+        }
+        .footer {
+            margin-top: 10px;
+            font-size: 10px;
+            text-align: center;
+        }
+        @media print {
+            body {
+                width: 80mm;
+            }
+            @page {
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body onload="window.print();">
+    <div class="ticket">
+        <div class="center">
+            {% if entreprise.entete_logo %}
+                <img src="{{ entreprise.entete_logo.url }}" class="logo" alt="Logo">
+            {% endif %}
+            <div class="bold" style="font-size: 14px;">{{ entreprise.designation|upper }}</div>
+            <div>{{ entreprise.adresse }}</div>
+            {% if entreprise.nif %}<div>NIF: {{ entreprise.nif }}</div>{% endif %}
+            {% if entreprise.rc %}<div>RC: {{ entreprise.rc }}</div>{% endif %}
+            <div class="line"></div>
+            <div class="bold" style="font-size: 16px;">RECU DE PAIEMENT</div>
+            <div>N°: {{ paiement.num }}</div>
+            <div>Date: {{ paiement.date_paiement|date:"d/m/Y" }}</div>
+            <div class="line"></div>
+        </div>
+        
+        <div class="left" style="margin-bottom: 10px;">
+            <div><span class="bold">Client:</span> {{ paiement.prospect.nom }} {{ paiement.prospect.prenom }}</div>
+            {% if paiement.prospect.telephone %}
+            <div><span class="bold">Tél:</span> {{ paiement.prospect.telephone }}</div>
+            {% endif %}
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 60%;">Désignation</th>
+                    <th style="width: 40%; text-align: right;">Montant</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        {{ paiement.paiement_label }}
+                        {% if formation_name or specialite_name %}
+                        <div style="font-size: 10px; color: #555;">
+                            {% if formation_name %}{{ formation_name }}{% endif %}
+                            {% if formation_name and specialite_name %} - {% endif %}
+                            {% if specialite_name %}{{ specialite_name }}{% endif %}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td class="right">{{ paiement.montant_paye|floatformat:"2g" }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="line"></div>
+
+        <table>
+            <tr class="total-row">
+                <td>TOTAL PAYE:</td>
+                <td class="right">{{ paiement.montant_paye|floatformat:"2g" }} DA</td>
+            </tr>
+            <tr>
+                <td>Mode:</td>
+                <td class="right">{{ paiement.get_mode_paiement_display }}</td>
+            </tr>
+            {% if paiement.reference_paiement %}
+            <tr>
+                <td>Réf:</td>
+                <td class="right">{{ paiement.reference_paiement }}</td>
+            </tr>
+            {% endif %}
+        </table>
+
+        <div class="line"></div>
+        
+        <div class="footer">
+            <div>Merci de votre confiance !</div>
+            <div>Imprimé le {{ now|date:"d/m/Y à H:i" }}</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -793,6 +793,13 @@ class ParametreFinancier(models.Model):
         help_text="Liste ordonnÃ©e de tranches progressives avec min, max, taux et statut d'exonÃ©ration au format JSON."
     )
 
+    # Ticket de caisse
+    activer_ticket_caisse = models.BooleanField(
+        default=False,
+        verbose_name="Activer l'impression du ticket de caisse (80mm)",
+        help_text="Activer l'option pour imprimer les reçus de paiement au format ticket de caisse thermique 80mm."
+    )
+
     # Email Templates
     relance_echeancier_sujet = models.CharField(
         max_length=255,

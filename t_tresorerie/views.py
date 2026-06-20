@@ -114,10 +114,12 @@ def PageDetailsDemandePaiement(request, pk):
         details=f"Consultation des détails de la demande de paiement pour l'étudiant {obj.client.nom} {obj.client.prenom}.",
         ip_address=request.META.get('REMOTE_ADDR')
     )
+    params = ParametreFinancier.get_instance()
     context = {
         'tenant' : request.tenant,
         'pk' : pk,
-        'payment_types': PaymentType.objects.all()
+        'payment_types': PaymentType.objects.all(),
+        'activer_ticket_caisse': params.activer_ticket_caisse
     }
 
     if obj.client.is_double:
@@ -1488,6 +1490,7 @@ def ApiGetParametreFinancier(request):
     return JsonResponse({
         'bloquer_date_paiement': params.bloquer_date_paiement,
         'activer_timbre': params.activer_timbre,
+        'activer_ticket_caisse': params.activer_ticket_caisse,
         'taux_timbre': str(params.taux_timbre),
         'timbre_min': str(params.timbre_min),
         'timbre_max': str(params.timbre_max),
@@ -1516,6 +1519,10 @@ def ApiUpdateParametreFinancier(request):
         activer_timbre = request.POST.get('activer_timbre')
         if activer_timbre is not None:
             params.activer_timbre = activer_timbre.lower() in ('true', '1', 'on')
+            
+        activer_ticket_caisse = request.POST.get('activer_ticket_caisse')
+        if activer_ticket_caisse is not None:
+            params.activer_ticket_caisse = activer_ticket_caisse.lower() in ('true', '1', 'on')
             
         taux = request.POST.get('taux_timbre')
         if taux is not None:

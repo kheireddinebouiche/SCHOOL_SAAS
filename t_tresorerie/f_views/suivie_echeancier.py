@@ -117,18 +117,22 @@ def ApiStats(request):
 @login_required(login_url="institut_app:login")
 @module_permission_required('tre', 'view')
 def DetailsEcheancierClient(request, pk):
+    params = ParametreFinancier.get_instance()
     context = {
         'pk': pk,
-        'payment_types': PaymentType.objects.all()
+        'payment_types': PaymentType.objects.all(),
+        'activer_ticket_caisse': params.activer_ticket_caisse
     }
     return render(request, 'tenant_folder/comptabilite/echeancier/details-suivie-echeancier.html', context)
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('tre', 'view')
 def DetailsEcheancierClientDouble(request, pk):
+    params = ParametreFinancier.get_instance()
     context = {
         'pk' : pk,
-        'payment_types': PaymentType.objects.all()
+        'payment_types': PaymentType.objects.all(),
+        'activer_ticket_caisse': params.activer_ticket_caisse
     }
     return render(request,'tenant_folder/comptabilite/echeancier/details-suivie-echeancier-double.html', context)
 
