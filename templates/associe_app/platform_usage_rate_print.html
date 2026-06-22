@@ -49,14 +49,18 @@
         .status-danger { color: #dc3545; }
         
         @media print {
+            @page {
+                size: landscape;
+                margin: 5mm;
+            }
             .no-print { display: none !important; }
-            body { font-size: 12pt; }
+            body { font-size: 11pt; }
         }
     </style>
 </head>
 <body>
 
-    <div class="container mt-4">
+    <div class="container-fluid px-2 mt-4">
         <div class="text-end mb-4 no-print">
             <button onclick="window.print()" class="btn btn-primary">🖨️ Lancer l'impression</button>
             <button onclick="window.close()" class="btn btn-secondary">Fermer</button>
@@ -74,10 +78,11 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 25%">Utilisateur</th>
-                        <th style="width: 20%">Total Actions</th>
-                        <th style="width: 35%">Taux d'utilisation (Actions/Jour)</th>
-                        <th style="width: 20%">Statut</th>
+                        <th style="width: 20%">Utilisateur</th>
+                        <th style="width: 10%">Total Actions</th>
+                        <th style="width: 10%">Connexions</th>
+                        <th style="width: 45%">Historique Connexions</th>
+                        <th style="width: 15%">Taux (Actions/Jour)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -88,16 +93,23 @@
                             <small class="text-muted">{{ user.first_name }} {{ user.last_name }}</small>
                         </td>
                         <td>{{ user.total_actions }}</td>
-                        <td>{{ user.rate }} / jour</td>
+                        <td>{{ user.login_count }}</td>
                         <td>
-                            <span class="status-badge status-{{ user.color }}">
-                                {{ user.status }}
-                            </span>
+                            {% if user.login_dates %}
+                                <div style="font-size: 11px; line-height: 1.6;">
+                                {% for date in user.login_dates %}
+                                    <span class="d-inline-block border rounded px-1 mb-1 bg-light text-dark" style="margin-right: 2px;">{{ date|date:"d/m/Y" }}</span>
+                                {% endfor %}
+                                </div>
+                            {% else %}
+                                Jamais
+                            {% endif %}
                         </td>
+                        <td>{{ user.rate }} / jour</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" class="text-center text-muted">Aucune action enregistrée.</td>
+                        <td colspan="5" class="text-center text-muted">Aucune action enregistrée.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

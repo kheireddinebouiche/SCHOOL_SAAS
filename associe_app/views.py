@@ -1067,7 +1067,9 @@ def delete_tenant_payment_type(request, tenant_id, payment_type_id):
 
 @login_required(login_url='login')
 def crm_statistics(request):
+    from t_crm.models import DocumentsDemandeInscription
     tenants = Institut.objects.filter(is_visible=True).exclude(schema_name='public').order_by('nom')
+    is_print = request.GET.get('print') == 'true'
     institutes_stats = []
     
     # Prospect Status List
@@ -1086,14 +1088,16 @@ def crm_statistics(request):
                 all_prospects = Prospets.objects.all()
                 prospects_count = all_prospects.count()
                 
+                tenant_status_counts = {s: all_prospects.filter(statut=s).count() for s in statuses}
+                docs_count = DocumentsDemandeInscription.objects.all().count()
+                
                 opportunities = Opportunite.objects.filter(is_active=True)
                 opportunities_count = opportunities.count()
                 budget_sum = float(opportunities.aggregate(total=Sum('budget'))['total'] or 0)
 
                 # Status breakdown for global summation
                 for s in statuses:
-                    count = all_prospects.filter(statut=s).count()
-                    global_stats['status_counts'][s] += count
+                    global_stats['status_counts'][s] += tenant_status_counts[s]
 
                 # Promo Breakdown
                 promo_stats = []
@@ -1114,6 +1118,8 @@ def crm_statistics(request):
                     'id': tenant.id,
                     'name': tenant.nom,
                     'prospects_count': prospects_count,
+                    'status_counts': tenant_status_counts,
+                    'docs_count': docs_count,
                     'opportunities_count': opportunities_count,
                     'budget_sum': budget_sum,
                     'promo_stats': promo_stats
@@ -1129,8 +1135,13 @@ def crm_statistics(request):
         'tenants': tenants, # For the selector
         'institutes_stats': institutes_stats,
         'global_stats': global_stats,
+        'statuses': statuses,
         'title': 'Statistiques CRM Globales'
     }
+    
+    if is_print:
+        return render(request, 'associe_app/crm_statistics_print.html', context)
+        
     return render(request, 'associe_app/crm_statistics.html', context)
 
 @login_required(login_url='login')
@@ -2402,7 +2413,7 @@ def platform_usage_rate(request):
     from t_crm.models import UserActionLog
     from django_tenants.utils import schema_context
     from django.utils import timezone
-    from django.db.models import Count
+    from django.db.models import Count, Q, Max
 
     tenants = Institut.objects.filter(is_visible=True).exclude(schema_name='public').order_by('nom')
     all_tenants = tenants # For the modal selection
@@ -2429,7 +2440,19 @@ def platform_usage_rate(request):
 
                 user_actions = UserActionLog.objects.values(
                     'user__username', 'user__first_name', 'user__last_name'
-                ).annotate(total_actions=Count('id')).order_by('-total_actions')
+                ).annotate(
+                    total_actions=Count('id'),
+                    login_count=Count('id', filter=Q(action_type='LOGIN')),
+                    last_login=Max('created_at', filter=Q(action_type='LOGIN'))
+                ).order_by('-total_actions')
+
+                login_logs = UserActionLog.objects.filter(action_type='LOGIN').values('user__username', 'created_at').order_by('-created_at')
+                user_login_dates = {}
+                for log in login_logs:
+                    uname = log['user__username'] if log['user__username'] else 'Système'
+                    if uname not in user_login_dates:
+                        user_login_dates[uname] = []
+                    user_login_dates[uname].append(log['created_at'])
 
                 users_data = []
                 for ua in user_actions:
@@ -2455,6 +2478,9 @@ def platform_usage_rate(request):
                         'first_name': ua['user__first_name'],
                         'last_name': ua['user__last_name'],
                         'total_actions': total,
+                        'login_count': ua['login_count'],
+                        'last_login': ua['last_login'],
+                        'login_dates': user_login_dates.get(username, []),
                         'rate': rate,
                         'status': status,
                         'color': color
