@@ -786,3 +786,5 @@ ame 'remise' is not defined lors de la modification de l'�ch�ancier dans l'inter
 - Amélioration visuelle (Premium Design) de la pagination DataTables dans attentes_de_paiement.html avec des coins arrondis, ombres et effets de survol harmonisés.
 
 - Ajout d'une colonne 'Cursus' (Standard ou Double Diplomation) dans le tableau des attentes de paiements (attentes_de_paiement.html).
+
+- Fix: stabilisation de l'ordre d'affichage de la liste des échéanciers configurés en forçant un tri .order_by('-id') afin d'éviter qu'un échéancier ne remonte en tête de liste après une modification (comportement par défaut de PostgreSQL après un UPDATE).

@@ -466,7 +466,7 @@ def ListeEcheanciersConfigures(request):
 @module_permission_required('tre', 'change')
 def ApiLoadEcheanciersConfigures(request):
     try:
-        echeanciers = EcheancierPaiement.objects.all().values(
+        echeanciers = EcheancierPaiement.objects.all().order_by('-id').values(
             'id', 'model__label', 'formation__nom', 'formation__prix_formation', 'specialite__label', 'specialite__prix', 'specialite__prix_double_diplomation', 'is_active', 'is_archived', 'created_at','is_default','formation_double__label','formation_double__prix','formation_double__prix_spec1','formation_double__prix_spec2','model__is_double_diplomation', 'frais_inscription', 'remise', 'type_remise', 'majoration', 'type_majoration', 'tarif_formation',
             'model__promo_id', 'model__promo__label', 'formation_double__specialite1__label', 'formation_double__specialite2__label'
         )
