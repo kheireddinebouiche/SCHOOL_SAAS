@@ -165,6 +165,7 @@ def ApiSaveEcheancier(request):
             tranches_data = request.POST.get('tranches')
             is_double_diplomation = request.POST.get('is_double_diplomation', 'false') == 'true'
             frais_inscription = request.POST.get('frais_inscription')
+            if frais_inscription == '': frais_inscription = None
             date_frais_inscription = request.POST.get('date_frais_inscription')
             if date_frais_inscription == '': date_frais_inscription = None
             remise = request.POST.get('remise', 0)
@@ -729,6 +730,7 @@ def ApiUpdateEcheancier(request):
             is_active_val = request.POST.get('is_active') == '1'
             entite_id = request.POST.get('entite')
             frais_inscription = request.POST.get('frais_inscription')
+            if frais_inscription == '': frais_inscription = None
             date_frais_inscription = request.POST.get('date_frais_inscription')
             if date_frais_inscription == '': date_frais_inscription = None
             entite_id = request.POST.get('entite')
@@ -748,12 +750,15 @@ def ApiUpdateEcheancier(request):
                 echeancier.is_active = is_active_val
                 if entite_id and entite_id != "0":
                     echeancier.entite_id = entite_id
-                if frais_inscription:
+                if frais_inscription is not None:
                     echeancier.frais_inscription = frais_inscription
+                elif 'frais_inscription' in request.POST:
+                    echeancier.frais_inscription = None
                 
-                # date_frais_inscription maybe empty or updated
-                if 'date_frais_inscription' in request.POST:
+                if date_frais_inscription:
                     echeancier.date_frais_inscription = date_frais_inscription
+                elif 'date_frais_inscription' in request.POST:
+                    echeancier.date_frais_inscription = None
 
                 if remise is not None:
                     echeancier.remise = remise

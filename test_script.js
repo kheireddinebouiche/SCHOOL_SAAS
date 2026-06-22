@@ -114,7 +114,8 @@
             syncSelectedIds('.select-autre-produit');
         });
 
-\n        $('#cancelSelection').on('click', function() {
+
+        $('#cancelSelection').on('click', function() {
             $('.select-due-paiement, .select-paiement, #selectAllDuePaiements, #selectAllPaiements').prop('checked', false);
             selectedIds = [];
             updateBulkBar();
@@ -476,6 +477,58 @@
                 .catch(error => {
                     console.error('Error:', error);
                     Swal.fire('Erreur', 'Erreur de connexion', 'error');
+                });
+            }
+        });
+    }
+
+
+    // Workflow: Reset Tresorerie
+    function confirmResetTresorerie() {
+        Swal.fire({
+            title: 'Réinitialiser la Trésorerie ?',
+            text: "Cette action va purger DÉFINITIVEMENT toutes les factures, opérations bancaires, dépenses, dépôts, et remboursements de cet institut. Tapez 'CONFIRMER' pour valider.",
+            input: 'text',
+            icon: 'error',
+            showCancelButton: true,
+            confirmButtonText: 'Réinitialiser',
+            cancelButtonText: 'Annuler',
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            customClass: {
+                popup: 'rounded-4',
+                confirmButton: 'btn btn-danger rounded-pill px-4',
+                cancelButton: 'btn btn-light rounded-pill px-4 ms-2'
+            },
+            buttonsStyling: false,
+            preConfirm: (inputValue) => {
+                if (inputValue !== 'CONFIRMER') {
+                    Swal.showValidationMessage("Veuillez taper 'CONFIRMER' pour valider.");
+                    return false;
+                }
+                return true;
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({title: 'Purge en cours...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+                fetch(`"DJANGO"`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '"DJANGO"'
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        Swal.fire('Succès', data.message, 'success').then(() => location.reload());
+                    } else {
+                        Swal.fire('Erreur', data.message, 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.fire('Erreur', 'Erreur de connexion serveur.', 'error');
                 });
             }
         });

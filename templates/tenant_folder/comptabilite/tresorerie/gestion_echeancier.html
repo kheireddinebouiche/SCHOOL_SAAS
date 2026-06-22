@@ -154,6 +154,16 @@
                   <tbody id="listeItem" class="border-top-0"></tbody>
                 </table>
               </div>
+              
+              <!-- Pagination -->
+              <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="text-muted small" id="paginationInfo">
+                  Affichage de 0 à 0 sur 0 entrées
+                </div>
+                <ul class="pagination pagination-sm mb-0" id="paginationControls">
+                </ul>
+              </div>
+
             </div>
           </div>
         </div>
@@ -510,6 +520,90 @@
 $(document).ready(function () {
     let stateModel = false;
     let is_double  = false;
+    
+    let globalEcheanciersData = [];
+    let currentPage = 1;
+    const recordsPerPage = 10;
+
+    window.displayEcheanciersPage = function(page) {
+        let totalRecords = globalEcheanciersData.length;
+        let totalPages = Math.ceil(totalRecords / recordsPerPage);
+        
+        if (page < 1) page = 1;
+        if (page > totalPages && totalPages > 0) page = totalPages;
+        currentPage = page;
+
+        let startIndex = (page - 1) * recordsPerPage;
+        let endIndex = Math.min(startIndex + recordsPerPage, totalRecords);
+        let paginatedData = globalEcheanciersData.slice(startIndex, endIndex);
+
+        var row = "";
+        if(paginatedData.length > 0) {
+            $.each(paginatedData, function(index, item){
+                var statusBadge = item.is_active ? 
+                  '<span class="badge bg-success-subtle text-success px-2 py-1"><i class="ri-checkbox-circle-line me-1"></i>Actif</span>' : 
+                  '<span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="ri-close-circle-line me-1"></i>Inactif</span>';
+                
+                // Format the date
+                var createdDate = new Date(item.created_at);
+                var formattedDate = createdDate.toLocaleDateString('fr-FR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric'
+                });
+                  
+                var doubleMention = item.is_double_diplomation ? 
+                  '<span class="badge bg-info-subtle text-info ms-2 px-2 py-1" style="font-size: 0.7rem;"><i class="ri-links-line me-1"></i>Double Diplomation</span>' : '';
+                  
+                row += '<tr class="align-middle">';
+                row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1 fw-medium'>" + item.label + doubleMention + "</div></div></td>";
+                row += "<td>" + item.promo_session_label + " - "+item.promo__begin_year+" / "+item.promo__end_year+"</td>";
+                row += "<td>" + item.nombre_tranche + "</td>";
+                row += "<td>" + statusBadge + "</td>";
+                row += "<td>" + formattedDate + "</td>";
+                row += '<td class="text-end">';
+                row += '<div class="d-flex justify-content-end gap-2">';
+                row += '<button class="btn btn-soft-info btn-sm btn-detail-echeancier" data-id="'+item.id+'" title="Voir détails">';
+                row += '<i class="ri-eye-line"></i>';
+                row += '</button>';
+                row += '<button class="btn btn-soft-primary btn-sm btn-edit-echeancier" data-id="'+item.id+'" title="Modifier">';
+                row += '<i class="ri-edit-line"></i>';
+                row += '</button>';
+                row += '<button class="btn btn-soft-danger btn-sm btn-delete-echeancier" data-id="'+item.id+'" title="Supprimer">';
+                row += '<i class="ri-delete-bin-line"></i>';
+                row += '</button>';
+                row += '</div>';
+                row += '</td>';
+                row += '</tr>';
+            });
+        } else {
+            row += '<tr><td colspan="6" class="text-center py-4">';
+            row += '<div class="d-flex flex-column align-items-center">';
+            row += '<i class="ri-calendar-line ri-2x text-muted mb-2"></i>';
+            row += '<p class="text-muted mb-0">Aucun modèle d\'échéancier créé pour le moment</p>';
+            row += '<p class="text-muted small mb-0">Créez un modèle d\'échéancier pour le voir apparaître ici</p>';
+            row += '</div>';
+            row += '</td></tr>';
+        }
+
+        $('#listeItem').html(row);
+
+        if(totalRecords === 0) {
+            $('#paginationInfo').text('Affichage de 0 à 0 sur 0 entrées');
+        } else {
+            $('#paginationInfo').text(`Affichage de ${startIndex + 1} à ${endIndex} sur ${totalRecords} entrées`);
+        }
+
+        let controls = '';
+        if (totalPages > 1) {
+            controls += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link" href="#" onclick="displayEcheanciersPage(${currentPage - 1}); return false;">Précédent</a></li>`;
+            for (let i = 1; i <= totalPages; i++) {
+                controls += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link" href="#" onclick="displayEcheanciersPage(${i}); return false;">${i}</a></li>`;
+            }
+            controls += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="displayEcheanciersPage(${currentPage + 1}); return false;">Suivant</a></li>`;
+        }
+        $('#paginationControls').html(controls);
+    }
 
     function loadPromo(){
         $.ajax({
@@ -542,56 +636,8 @@ $(document).ready(function () {
           'promo_id': promo_id
         },
         success: function(data){
-          var row = "";
-          if(data.length > 0) {
-            $.each(data, function(index, item){
-              var statusBadge = item.is_active ? 
-                '<span class="badge bg-success-subtle text-success px-2 py-1"><i class="ri-checkbox-circle-line me-1"></i>Actif</span>' : 
-                '<span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="ri-close-circle-line me-1"></i>Inactif</span>';
-              
-              // Format the date
-              var createdDate = new Date(item.created_at);
-              var formattedDate = createdDate.toLocaleDateString('fr-FR', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-              });
-                
-              var doubleMention = item.is_double_diplomation ? 
-                '<span class="badge bg-info-subtle text-info ms-2 px-2 py-1" style="font-size: 0.7rem;"><i class="ri-links-line me-1"></i>Double Diplomation</span>' : '';
-                
-              row += '<tr class="align-middle">';
-              row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1 fw-medium'>" + item.label + doubleMention + "</div></div></td>";
-              row += "<td>" + item.promo_session_label + " - "+item.promo__begin_year+" / "+item.promo__end_year+"</td>";
-              row += "<td>" + item.nombre_tranche + "</td>";
-              row += "<td>" + statusBadge + "</td>";
-              row += "<td>" + formattedDate + "</td>";
-              row += '<td class="text-end">';
-              row += '<div class="d-flex justify-content-end gap-2">';
-              row += '<button class="btn btn-soft-info btn-sm btn-detail-echeancier" data-id="'+item.id+'" title="Voir détails">';
-              row += '<i class="ri-eye-line"></i>';
-              row += '</button>';
-              row += '<button class="btn btn-soft-primary btn-sm btn-edit-echeancier" data-id="'+item.id+'" title="Modifier">';
-              row += '<i class="ri-edit-line"></i>';
-              row += '</button>';
-              row += '<button class="btn btn-soft-danger btn-sm btn-delete-echeancier" data-id="'+item.id+'" title="Supprimer">';
-              row += '<i class="ri-delete-bin-line"></i>';
-              row += '</button>';
-              row += '</div>';
-              row += '</td>';
-              row += '</tr>';
-            });
-          } else {
-            row += '<tr><td colspan="6" class="text-center py-4">';
-            row += '<div class="d-flex flex-column align-items-center">';
-            row += '<i class="ri-calendar-line ri-2x text-muted mb-2"></i>';
-            row += '<p class="text-muted mb-0">Aucun modèle d\'échéancier créé pour le moment</p>';
-            row += '<p class="text-muted small mb-0">Créez un modèle d\'échéancier pour le voir apparaître ici</p>';
-            row += '</div>';
-            row += '</td></tr>';
-          }
-
-          $('#listeItem').html(row);
+          globalEcheanciersData = data;
+          displayEcheanciersPage(1);
         },
         error: function(xhr, status, error) {
           console.log("Error loading modèles d'échéanciers: " + error);

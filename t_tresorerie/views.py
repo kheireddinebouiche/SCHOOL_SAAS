@@ -329,7 +329,10 @@ def ApiGetDetailsDemandePaiement(request):
                 if not echeancierId:
                     return JsonResponse({'status': 'error', 'error_type': 'missing_echeancier', 'message': "Échéancier non trouvé pour cette spécialité et promo."}, status=200)
     
-        frais_inscription = echeancierId.frais_inscription
+        if echeancierId and echeancierId.model and not echeancierId.model.has_frais_inscription:
+            frais_inscription = None
+        else:
+            frais_inscription = echeancierId.frais_inscription if echeancierId else None
     
         special_echeancier_data = []
         has_special_echeancier = False
@@ -680,7 +683,10 @@ def ApiGetDetailsDemandePaiementDouble(request):
             }, status=200)
 
         echeancier = echeancierId
-        frais_inscription = echeancier.frais_inscription if echeancier else 0
+        if echeancier and echeancier.model and not echeancier.model.has_frais_inscription:
+            frais_inscription = None
+        else:
+            frais_inscription = echeancier.frais_inscription if echeancier else 0
 
         due_paiement = DuePaiements.objects.filter(client=obj.client).filter(Q(is_done=False) | Q(montant_restant__gt=0))
 
