@@ -103,6 +103,7 @@ urlpatterns = [
     path('ApiStoreEcheancierSpecial', ApiStoreEcheancierSpecial, name="ApiStoreEcheancierSpecial"),
 
     path('ApiApplyRemiseToPaiement', ApiApplyRemiseToPaiement, name="ApiApplyRemiseToPaiement"),
+    path('ApiCancelRemiseToPaiement', ApiCancelRemiseToPaiement, name="ApiCancelRemiseToPaiement"),
     path('ApiStoreClientPaiement', ApiStoreClientPaiement, name="ApiStoreClientPaiement"),
     
     path('ApiDeletePaiement', ApiDeletePaiement, name="ApiDeletePaiement"),

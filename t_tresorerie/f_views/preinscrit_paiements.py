@@ -243,6 +243,8 @@ def ApiApplyRemiseToPaiement(request):
                     voeux = FicheVoeuxDouble.objects.filter(prospect=prospect, is_confirmed=True).last()
                     if voeux and voeux.specialite:
                         prix_formation = Decimal(voeux.specialite.prix_spec1 or 0) + Decimal(voeux.specialite.prix_spec2 or 0)
+                        if prix_formation == Decimal('0'):
+                            prix_formation = Decimal(voeux.specialite.prix or 0)
                     else:
                         prix_formation = Decimal('0.00')
                 else:
@@ -581,6 +583,10 @@ def ApiCancelDuePaiements(request):
                 # Delete generated due payments
                 deleted_count, _ = DuePaiements.objects.filter(client=client).delete()
                 
+                # Réinitialiser la sélection de l'échéancier
+                obj.ref_echeancier = None
+                obj.save()
+                
                 # Log the cancellation of due payments
                 UserActionLog.objects.create(
                     user=request.user,
@@ -599,6 +605,63 @@ def ApiCancelDuePaiements(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': "Méthode non autorisée."}, status=405)
+
+def ApiCancelRemiseToPaiement(request):
+    if request.method == "POST":
+        remiseId = request.POST.get('remiseId')
+
+        remise_obj = RemiseAppliquer.objects.get(id=remiseId)
+        remise_obj.is_applicated = False
+        remise_obj.save()
+
+        # Mettre à jour les paiements dus (DuePaiements) s'ils existent déjà (restaurer le montant original)
+        remise_line = RemiseAppliquerLine.objects.filter(remise_appliquer=remise_obj).last()
+        if remise_line and remise_line.prospect:
+            prospect = remise_line.prospect
+            due_paiements = DuePaiements.objects.filter(client=prospect)
+            
+            if due_paiements.exists():
+                if prospect.is_double:
+                    voeux = FicheVoeuxDouble.objects.filter(prospect=prospect, is_confirmed=True).last()
+                    if voeux and voeux.specialite:
+                        prix_formation = Decimal(voeux.specialite.prix_spec1 or 0) + Decimal(voeux.specialite.prix_spec2 or 0)
+                        if prix_formation == Decimal('0'):
+                            prix_formation = Decimal(voeux.specialite.prix or 0)
+                    else:
+                        prix_formation = Decimal('0.00')
+                else:
+                    voeux = FicheDeVoeux.objects.filter(prospect=prospect, is_confirmed=True).last()
+                    if voeux and voeux.specialite:
+                        prix_formation = Decimal(voeux.specialite.prix or 0)
+                    else:
+                        prix_formation = Decimal('0.00')
+                
+                if prix_formation > 0:
+                    remise = remise_obj.remise
+                    for due in due_paiements:
+                        if 'inscription' not in due.label.lower():
+                            montant_due = Decimal(due.montant_due)
+                            if remise.is_value:
+                                ratio = (prix_formation - Decimal(remise.montant or 0)) / prix_formation
+                                old_due = montant_due / ratio if ratio > 0 else montant_due
+                            else:
+                                taux = Decimal(remise.taux or 0)
+                                divisor = (1 - (taux / Decimal('100')))
+                                old_due = montant_due / divisor if divisor > 0 else montant_due
+                            
+                            old_due = round(old_due)
+                            montant_paye = montant_due - Decimal(due.montant_restant)
+                            new_restant = Decimal(old_due) - montant_paye
+                            
+                            due.montant_due = old_due
+                            due.montant_restant = new_restant if new_restant > 0 else Decimal('0.00')
+                            if new_restant > 0:
+                                due.is_done = False
+                            due.save()
+
+        return JsonResponse({"status": "success"})
+    else:
+        return JsonResponse({"status": "error"})
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('tre', 'view')

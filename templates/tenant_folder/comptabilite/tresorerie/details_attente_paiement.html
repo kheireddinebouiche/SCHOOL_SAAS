@@ -1263,6 +1263,9 @@
                                             </div>
                                         </div>
                                         <div class="d-flex" style="gap: 8px !important; margin-top: 0.5rem; margin-bottom: 0.5rem;">
+                                            <button id="cancelReductionBtn" class="btn btn-danger" style="display: none; width: 40px; height: 40px; border-radius: 12px; display: none; align-items: center; justify-content: center; padding: 0;" title="Annuler la réduction">
+                                                <i class="ri-close-circle-line fs-5"></i>
+                                            </button>
                                             <button type="button" class="btn btn-premium-action btn-premium-info" data-bs-toggle="modal" data-bs-target="#aideEcheancierModal" title="Aide">
                                                 <i class="ri-question-line"></i>
                                             </button>
@@ -3914,14 +3917,17 @@
             let appliedRedu = document.getElementById('reductionSuccessNotification');
             
             if (reductionApprouved && reductionAppliced){
-                appliedRedu.style.setProperty("display", "flex", "important");
-
+                if(appliedRedu) appliedRedu.style.setProperty("display", "flex", "important");
+                if(notif) notif.style.setProperty("display", "none", "important");
             }else if (hasReduction && !reductionApprouved) {
-                 notif.style.setProperty("display", "flex", "important");  
+                if(notif) notif.style.setProperty("display", "flex", "important");  
+                if(appliedRedu) appliedRedu.style.setProperty("display", "none", "important");
             }else if (hasReduction && !reductionAppliced) {
-                notif.style.setProperty("display", "flex", "important");
+                if(notif) notif.style.setProperty("display", "flex", "important");
+                if(appliedRedu) appliedRedu.style.setProperty("display", "none", "important");
             }else{
-                 notif.style.setProperty("display", "none", "important");
+                if(notif) notif.style.setProperty("display", "none", "important");
+                if(appliedRedu) appliedRedu.style.setProperty("display", "none", "important");
             }
 
            
@@ -4041,7 +4047,14 @@
                                                 </button>
                                             </div>
                                         ` : isCurrent ? `
-                                            <span class="badge bg-primary rounded-pill p-1"><i class="ri-check-line fs-5"></i></span>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-primary rounded-pill p-1"><i class="ri-check-line fs-5"></i></span>
+                                                ${!data.has_paiement ? `
+                                                <button class="btn btn-outline-danger btn-sm reset-echeancier-btn" title="Réinitialiser l'échéancier">
+                                                    <i class="ri-refresh-line"></i>
+                                                </button>
+                                                ` : ''}
+                                            </div>
                                         ` : `
                                             <span class="text-muted small italic">Déjà confirmé</span>
                                         `}
@@ -4052,6 +4065,17 @@
                         $('#availableEcheanciersList').html(availableHtml);
                     } else {
                         $('#availableEcheanciersCard').hide();
+                    }
+
+                    // Mettre à jour l'état de la réduction avant de générer l'échéancier
+                    if (data.remise) {
+                        hasReduction = true;
+                        reductionApprouved = data.remise.remise_approuver;
+                        reductionAppliced = data.remise.remise_appliquer;
+                    } else {
+                        hasReduction = false;
+                        reductionApprouved = false;
+                        reductionAppliced = false;
                     }
 
                     // Charger le tableau d'échéancier
@@ -4155,10 +4179,32 @@
                         reductionApprouved = data.remise.remise_approuver;
                         reductionAppliced = data.remise.remise_appliquer;
                         remise_est_confirmer = data.remise.remise_appliquer;
+
+                        if(!data.remise.remise_approuver){
+                            $('#applyReductionBtn').prop('disabled', true);
+                            $('#applyReductionBtn').show();
+                            $('#cancelReductionBtn').attr('style', 'display: none !important;');
+                            document.getElementById('notifApprobReduc').style.setProperty('display', 'flex', 'important');
+                            document.getElementById('notifAlertReduc').style.setProperty('display', 'none', 'important');
+                        }else if (!data.remise.remise_appliquer){
+                            $('#applyReductionBtn').prop('disabled', false);
+                            $('#applyReductionBtn').show();
+                            $('#cancelReductionBtn').attr('style', 'display: none !important;');
+                            document.getElementById('notifApprobReduc').style.setProperty('display', 'none', 'important');
+                            document.getElementById('notifAlertReduc').style.setProperty('display', 'flex', 'important');
+                        }else{
+                            $('#applyReductionBtn').hide();
+                            $('#cancelReductionBtn').data('id', data.remise.id_applied_reduction);
+                            $('#cancelReductionBtn').attr('style', 'display: flex !important; width: 40px; height: 40px; border-radius: 12px; align-items: center; justify-content: center; padding: 0;');
+                            document.getElementById('notifApprobReduc').style.setProperty('display', 'none', 'important');
+                            document.getElementById('notifAlertReduc').style.setProperty('display', 'none', 'important');
+                        }
                         
                         if (reductionApprouved && reductionAppliced) {
                             $('#prixFinalHeader').show();
                             $('#_montant_formation').val(prixFormationReduction);
+                        } else {
+                            $('#prixFinalHeader').hide();
                         }
                         HideReducNotif();
                     }
@@ -6217,6 +6263,40 @@
                 }
             });
         });
+
+        $(document).on('click', "#cancelReductionBtn", function(){
+            var btn = $(this);
+            btn.prop('disabled', true);
+            var originalText = btn.html();
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Annulation en cours...
+            `);
+            var remiseId = $(this).data('id');
+                      
+            $.ajax({
+                url: "{% url 't_tresorerie:ApiCancelRemiseToPaiement' %}",
+                type: 'POST',
+                dataType : "JSON",
+                data : {
+                    'remiseId' : remiseId,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                },
+                success : function(response){
+                    if(response.status === "success"){
+                        alertify.success("La remise a été annulée avec succès");
+                        $('#reductionDetailsModal').modal('hide');
+                        loadDatas();
+                    }else{
+                        alertify.error("Une erreur s'est produite lors du traitement de la requete.");
+                    }
+                },
+                complete: function() {
+                    btn.prop('disabled', false);
+                    btn.html(originalText);
+                }
+            });
+        });
         
         // Gestion de la modale de nouveau paiement
         $('#nouveauPaiementModal').on('show.bs.modal', function () {
@@ -7296,7 +7376,7 @@
         });
 
         // Annuler les montants dus
-        $(document).on('click', '#btnAnnulerDueAmounts', function(){
+        $(document).on('click', '#btnAnnulerDueAmounts, .reset-echeancier-btn', function(){
             $('#modalAnnulerDueAmounts').modal('show');
         });
 
