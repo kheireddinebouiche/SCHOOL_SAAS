@@ -4041,6 +4041,15 @@
                             echeancierHtml += '</tr>';
                         }
                         
+                        let totalTranchesApplicables = 0;
+                        $.each(data.echeancier, function(index, echeance){
+                            if (echeance.value && echeance.value.toLowerCase().indexOf("inscription") === -1) {
+                                totalTranchesApplicables += parseFloat(echeance.montant_tranche);
+                            } else if (!echeance.value) {
+                                totalTranchesApplicables += parseFloat(echeance.montant_tranche);
+                            }
+                        });
+
                         // Ajouter les autres échéances
                         $.each(data.echeancier, function(index, echeance){ 
                             var label = "Tranche " + (index + 1);
@@ -4055,7 +4064,7 @@
                                 var montantReduction = parseFloat(echeance.montant_tranche);
                                 if (data.remise.is_value) {
                                     // Apply proportional reduction for fixed amount
-                                    var ratio = (prixFormation - data.remise.valeur) / prixFormation;
+                                    var ratio = totalTranchesApplicables > 0 ? (totalTranchesApplicables - data.remise.valeur) / totalTranchesApplicables : 1;
                                     montantReduction = montantReduction * ratio;
                                 } else {
                                     // Apply percentage reduction

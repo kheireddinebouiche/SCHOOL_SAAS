@@ -4094,6 +4094,14 @@
                             }
                             echeancierHtml += '</tr>';
                         }
+                        let totalTranchesApplicables = 0;
+                        $.each(data.echeancier, function(index, echeance){
+                            if (echeance.value && echeance.value.toLowerCase().indexOf("inscription") === -1) {
+                                totalTranchesApplicables += parseFloat(echeance.montant_tranche);
+                            } else if (!echeance.value) {
+                                totalTranchesApplicables += parseFloat(echeance.montant_tranche);
+                            }
+                        });
                         
                         $.each(data.echeancier, function(index, echeance){
                             echeancierHtml += '<tr data-entite-id="' + (echeance.entite_id || '') + '">';
@@ -4104,9 +4112,9 @@
                             
                             if (data.remise && data.remise.remise_approuver && data.remise.remise_appliquer) {
                                 var montantFinal = parseFloat(echeance.montant_tranche);
-                                if (echeance.value.toLowerCase().indexOf("inscription") === -1) {
+                                if (echeance.value && echeance.value.toLowerCase().indexOf("inscription") === -1 || !echeance.value) {
                                     if (data.remise.is_value) {
-                                        var ratio = (prixFormation - data.remise.valeur) / prixFormation;
+                                        var ratio = totalTranchesApplicables > 0 ? (totalTranchesApplicables - data.remise.valeur) / totalTranchesApplicables : 1;
                                         montantFinal = montantFinal * ratio;
                                     } else {
                                         montantFinal = montantFinal - (montantFinal * parseFloat(data.remise.valeur) / 100);
