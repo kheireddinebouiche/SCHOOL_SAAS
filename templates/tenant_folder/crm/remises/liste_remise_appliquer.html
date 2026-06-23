@@ -260,6 +260,15 @@
                             <tbody id="listeItem"></tbody>
                         </table>
                     </div>
+                    
+                    <!-- Pagination -->
+                    <div class="card-footer bg-transparent border-0 d-flex flex-column flex-sm-row justify-content-between align-items-center p-4">
+                        <div class="text-muted small mb-3 mb-sm-0" id="paginationInfo">Affichage de 0 à 0 sur 0 éléments</div>
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0 shadow-sm" id="paginationControls">
+                            </ul>
+                        </nav>
+                    </div>
                 </div>
             </div>
         </div>
@@ -725,8 +734,10 @@
           // The API should return prospect information with each discount
           // If it doesn't, additional API calls would be needed to fetch prospect data
           // For this implementation, we'll assume the API will return the necessary data
-          originalData = data; // Store original data for filtering
-          renderData(data);
+          originalData = data.liste || []; // Store original data for filtering
+          currentFilteredData = originalData;
+          currentPage = 1;
+          renderData();
         },
         error: function(xhr, status, error) {
           console.log("Error loading applied discounts: " + error);
@@ -745,31 +756,41 @@
     
     // Store original data for filtering
     let originalData = [];
+    let currentFilteredData = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
 
     // Function to render data to the table
-    function renderData(data) {
-      var data = data.liste;
+    function renderData() {
+      var data = currentFilteredData;
       var row = "";
       
-      // Calculate statistics
+      // Calculate statistics over filtered data
       let totalDiscounts = data.length;
       let nonApprovedDiscounts = 0;
       let nonAppliedDiscounts = 0;
       let approvedDiscounts = 0;
       
+      $.each(data, function(index, item){
+        if (!item.is_approuved) nonApprovedDiscounts++;
+        else approvedDiscounts++;
+        if (!item.is_applicated) nonAppliedDiscounts++;
+      });
+      
+      // Update stats based on filtered data
+      updateStats(totalDiscounts, nonApprovedDiscounts, nonAppliedDiscounts, approvedDiscounts);
+      
       if(data.length > 0) {
-        $.each(data, function(index, item){
-          // Count statistics
-          if (!item.is_approuved) {
-            nonApprovedDiscounts++;
-          } else {
-            approvedDiscounts++;
-          }
-          
-          if (!item.is_applicated) {
-            nonAppliedDiscounts++;
-          }
-          
+        
+        // Pagination logic
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, data.length);
+        const paginatedData = data.slice(startIndex, endIndex);
+        
+        $('#paginationInfo').text(`Affichage de ${startIndex + 1} à ${endIndex} sur ${data.length} éléments`);
+        renderPaginationControls(data.length);
+        
+        $.each(paginatedData, function(index, item){
           var statusBadge = item.is_approuved ? 
             '<span class="badge badge-soft-success px-2 py-1"><i class="ri-checkbox-circle-line me-1"></i>Approuvée</span>' : 
             '<span class="badge badge-soft-warning px-2 py-1"><i class="ri-time-line me-1"></i>En attente</span>';
@@ -778,13 +799,9 @@
             '<span class="badge badge-soft-success px-2 py-1"><i class="ri-checkbox-circle-line me-1"></i>Appliquée</span>' : 
             '<span class="badge badge-soft-warning px-2 py-1"><i class="ri-time-line me-1"></i>En attente</span>';
           
-          
-          // Format the date
           var createdDate = new Date(item.created_at);
           var formattedDate = createdDate.toLocaleDateString('fr-FR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
+            day: '2-digit', month: '2-digit', year: 'numeric'
           });
             
           var valeurDisplay = "";
@@ -798,12 +815,8 @@
           row += "<td><div class='d-flex align-items-center'><div class='flex-grow-1 fw-medium'>" + item.label + "</div></div></td>";
           row += "<td>" + valeurDisplay + "</td>";
           
-          
-          if (item.prospects) {
-
+          if (item.prospects && item.prospects.length > 0) {
             row += "<td>";
-            
-            
             for (let i = 0; i < Math.min(item.prospects.length, 2); i++) {
               const prospect = item.prospects[i];
               row += "<small class='badge bg-light text-dark me-1'>" + prospect.prospect__nom + ' ' + prospect.prospect__prenom + "</small>";
@@ -811,13 +824,9 @@
             if (item.prospects.length > 2) {
               row += "<small class='text-muted ms-1'>+" + (item.prospects.length - 2) + " autres</small>";
             }
-
             row += "</td>";
-
           } else {
-
             row += "<td><small class='text-muted'>Aucun prospect associé</small></td>";
-
           }
           
           row += "<td>" + statusBadge + "</td>";
@@ -826,44 +835,78 @@
           row += '<td class="text-center pe-4">';
           row += '<div class="d-flex justify-content-center gap-2">';
           row += '<button class="btn btn-sm btn-soft-info btn-detail-discount d-inline-flex align-items-center justify-content-center" data-id="'+item.id+'" title="Voir détails" alt="Voir détails" style="width: 32px; height: 32px; border-radius: 8px;">';
-          row += '<i class="ri-eye-line"></i>';
-          row += '</button>';
+          row += '<i class="ri-eye-line"></i></button>';
 
-          // Show activate button only for non-activated discounts
           if (!item.is_approuved) {
             row += '<button class="btn btn-sm btn-soft-success btn-activate-discount d-inline-flex align-items-center justify-content-center" data-id="'+item.id+'" data-label="'+item.label+'" title="Approuver la réduction" alt="Approuver la réduction" style="width: 32px; height: 32px; border-radius: 8px; margin-left: 0.5rem;">';
-            row += '<i class="ri-check-double-line"></i>';
-            row += '</button>';
+            row += '<i class="ri-check-double-line"></i></button>';
           }
 
           if (canDeleteRemise) {
             row += '<button class="btn btn-sm btn-soft-danger btn-delete-discount d-inline-flex align-items-center justify-content-center" data-id="'+item.id+'" data-label="'+item.label+'" title="Supprimer la réduction" alt="Supprimer la réduction" style="width: 32px; height: 32px; border-radius: 8px; margin-left: 0.5rem;">';
-            row += '<i class="ri-delete-bin-line"></i>';
-            row += '</button>';
+            row += '<i class="ri-delete-bin-line"></i></button>';
           }
-          row += '</div>';
-          row += '</td>';
-          row += '</tr>';
+          row += '</div></td></tr>';
         });
       } else {
+        $('#paginationInfo').text(`Affichage de 0 à 0 sur 0 éléments`);
+        $('#paginationControls').empty();
         row += '<tr>';
         row += '  <td colspan="7" class="text-center py-5">';
-        row += '    <div class="animate-up py-4">';
-        row += '      <div class="section-icon-box bg-light text-muted mx-auto mb-4" style="width: 70px; height: 70px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">';
-        row += '        <i class="ri-percent-line"></i>';
+        row += '    <div class="d-flex flex-column align-items-center">';
+        row += '      <div class="bg-light rounded-circle p-3 mb-3 d-inline-flex">';
+        row += '        <i class="ri-inbox-line text-muted" style="font-size: 2rem;"></i>';
         row += '      </div>';
-        row += '      <h4 class="fw-bold text-dark mb-2">Aucune réduction trouvée</h4>';
-        row += '      <p class="text-muted mb-0 mx-auto" style="max-width: 350px;">Il n\'y a actuellement aucune réduction appliquée à afficher.</p>';
+        row += '      <h5 class="text-muted mb-1">Aucune réduction trouvée</h5>';
+        row += '      <p class="text-muted small mb-0">Il n\'y a aucune réduction correspondant à vos critères.</p>';
         row += '    </div>';
         row += '  </td>';
         row += '</tr>';
       }
-
-      $('#listeItem').html(row);
       
-      // Update statistics
-      updateStats(totalDiscounts, nonApprovedDiscounts, nonAppliedDiscounts, approvedDiscounts);
+      $('#listeItem').html(row);
     }
+    
+    function renderPaginationControls(totalItems) {
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        let paginationHtml = '';
+        
+        if (totalPages <= 1) {
+            $('#paginationControls').html('');
+            return;
+        }
+        
+        paginationHtml += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" data-page="${currentPage - 1}"><i class="ri-arrow-left-s-line"></i></a>
+        </li>`;
+        
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHtml += `<li class="page-item ${currentPage === i ? 'active' : ''}">
+                <a class="page-link" href="#" data-page="${i}">${i}</a>
+            </li>`;
+        }
+        
+        paginationHtml += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" data-page="${currentPage + 1}"><i class="ri-arrow-right-s-line"></i></a>
+        </li>`;
+        
+        $('#paginationControls').html(paginationHtml);
+    }
+
+    $(document).on('click', '.page-link', function(e) {
+        e.preventDefault();
+        const page = $(this).data('page');
+        if (page && page !== currentPage) {
+            currentPage = page;
+            renderData();
+        }
+    });
       
     loadAppliedDiscounts();
 
@@ -1309,16 +1352,20 @@
       });
     });
     
-    // Client-side search functionality
-    $(document).on('input', '#table-filter', function() {
-      var searchTerm = $(this).val().trim().toLowerCase();
+    // Client-side search and filter functionality
+    $(document).on('input', '#table-filter', applyFilters);
+    $(document).on('change', '#filter-status', applyFilters);
+    $(document).on('change', '#date_filter', applyFilters);
+    
+    function applyFilters() {
+      var searchTerm = $('#table-filter').val().trim().toLowerCase();
+      var filterStatus = $('#filter-status').val();
+      var sortDate = $('#date_filter').val();
       
-      if (searchTerm === '') {
-        // If search is empty, show all original data
-        renderData(originalData);
-      } else {
-        // Filter the original data based on search term
-        var filteredData = originalData.filter(function(item) {
+      var filteredData = originalData;
+      
+      if (searchTerm !== '') {
+        filteredData = filteredData.filter(function(item) {
           return (
             item.label.toLowerCase().includes(searchTerm) ||
             (item.created_at && new Date(item.created_at).toLocaleDateString('fr-FR').toLowerCase().includes(searchTerm)) ||
@@ -1326,65 +1373,37 @@
             (item.is_applicated ? 'appliquer' : 'en attente').toLowerCase().includes(searchTerm)
           );
         });
-        
-        renderData(filteredData);
       }
-    });
-    
-    // Client-side filter by status
-    $(document).on('change', '#filter-status', function() {
-      var filterValue = $(this).val();
       
-      if (filterValue === '') {
-        // Show all original data
-        renderData(originalData);
-      } else {
-        // Filter based on status
-        var filteredData = originalData.filter(function(item) {
-          switch(filterValue) {
-            case 'approved':
-              return item.is_approuved === true;
-            case 'pending_approval':
-              return item.is_approuved === false;
-            case 'applied':
-              return item.is_applicated === true;
-            case 'pending_application':
-              return item.is_applicated === false;
-            default:
-              return true;
+      if (filterStatus !== '') {
+        filteredData = filteredData.filter(function(item) {
+          switch(filterStatus) {
+            case 'approved': return item.is_approuved === true;
+            case 'pending_approval': return item.is_approuved === false;
+            case 'applied': return item.is_applicated === true;
+            case 'pending_application': return item.is_applicated === false;
+            default: return true;
           }
         });
-        
-        renderData(filteredData);
       }
-    });
-    
-    // Client-side filter by date
-    $(document).on('change', '#date_filter', function() {
-      var sortValue = $(this).val();
       
-      if (sortValue === '') {
-        // Show all original data
-        renderData(originalData);
-      } else {
-        // Sort the data based on date
-        var sortedData = [...originalData]; // Create a copy to avoid modifying original
-        
-        if (sortValue === '-created_at') {
-          // Sort by date - recent first
-          sortedData.sort(function(a, b) {
+      if (sortDate !== '') {
+        filteredData = [...filteredData];
+        if (sortDate === '-created_at') {
+          filteredData.sort(function(a, b) {
             return new Date(b.created_at) - new Date(a.created_at);
           });
-        } else if (sortValue === 'created_at') {
-          // Sort by date - old first
-          sortedData.sort(function(a, b) {
+        } else if (sortDate === 'created_at') {
+          filteredData.sort(function(a, b) {
             return new Date(a.created_at) - new Date(b.created_at);
           });
         }
-        
-        renderData(sortedData);
       }
-    });
+      
+      currentFilteredData = filteredData;
+      currentPage = 1;
+      renderData();
+    }
 
 
 });

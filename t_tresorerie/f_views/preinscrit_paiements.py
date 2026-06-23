@@ -17,13 +17,19 @@ from django.db.models import Max
 def clean_montant(val_str):
     if not val_str:
         return Decimal('0.00')
-    val_str = str(val_str).replace(' DA', '').replace('DA', '').strip()
-    val_str = val_str.replace('.', '')
-    val_str = val_str.replace(',', '.')
-    val_str = val_str.replace(' ', '')
+    import re
+    val_str = str(val_str).replace(',', '.')
+    val_str = re.sub(r'[^\d\.]', '', val_str)
+    parts = val_str.split('.')
+    if len(parts) > 2:
+        val_str = ''.join(parts[:-1]) + '.' + parts[-1]
+    
     try:
+        if not val_str:
+            return Decimal('0.00')
         return Decimal(val_str)
-    except:
+    except Exception as e:
+        print(f"clean_montant error. Original: '{str(val_str)}', Error: {e}")
         return Decimal('0.00')
 
 @login_required(login_url="institut_app:login")

@@ -219,6 +219,19 @@
                   <tbody id="listeItem" class="border-top-0"></tbody>
                 </table>
               </div>
+              
+              <!-- Pagination Controls -->
+              <div class="card-footer bg-transparent border-0 p-3 d-flex align-items-center justify-content-between">
+                <div class="text-muted small" id="paginationInfo">
+                  Affichage de 0 à 0 sur 0 éléments
+                </div>
+                <nav aria-label="Page navigation">
+                  <ul class="pagination pagination-rounded mb-0 gap-2" id="paginationControls">
+                    <!-- Pagination will be dynamically inserted here -->
+                  </ul>
+                </nav>
+              </div>
+              
             </div>
           </div>
         </div>
@@ -609,6 +622,12 @@
 
 <script>
     $(document).ready(function(){
+        // Global variables for pagination and filtering
+        let originalData = [];
+        let currentFilteredData = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+
         // Fonction pour charger les remises
         function loadRemises(){
             $.ajax({
@@ -616,69 +635,15 @@
                 dataType: "JSON",
                 type: "GET",
                 success: function(data){
-                    var row = "";
-                    if(data.length > 0){
-                        $.each(data, function(index, item){
-
-                            var statusBagde = item.is_enabled ? "Activée" : "Désactivée";
-                            var statusSpan = item.is_enabled ? "badge-soft-success" : "badge-soft-danger" ;
-                            
-                            var valeurDisplay = "";
-                            if(item.is_value) {
-                                valeurDisplay = "<span class='fw-bold text-dark'>" + parseFloat(item.montant).toLocaleString() + " DA</span>";
-                            } else {
-                                valeurDisplay = "<span class='fw-bold text-dark'>" + item.taux + "%</span>";
-                            }
-
-                            row += "<tr class='align-middle'>";
-                            row += "<td class='ps-4'><span class='fw-semibold'>" + item.label + "</span></td>";
-                            row += "<td>" + valeurDisplay + "</td>";
-                            row += "<td><span class='text-muted'>" + item.created_at.split("T")[0] + "</span></td>";
-                            row += "<td><span class='badge "+statusSpan+" '>"+statusBagde+"</span></td>";
-                            row += "<td class='text-center pe-4'>";
-                            row += "<div class='dropdown d-inline-block'>";
-                            row += "<button class='btn btn-edit-premium dropdown shadow-none' type='button' data-bs-toggle='dropdown' aria-expanded='false'>";
-                            row += "<i class='ri-more-2-fill'></i>";
-                            row += "</button>";
-                            row += "<ul class='dropdown-menu dropdown-menu-end border-0 shadow-lg'>";
-                            row += "<li><button class='dropdown-item d-flex align-items-center px-3 py-2 edit-remise' data-description='"+item.description+"' data-justificatif='"+item.has_to_justify+"' data-id='" + item.id + "' data-label='" + item.label + "' data-taux='" + item.taux + "' data-active='" + item.is_enabled + "' data-is-value='" + item.is_value + "' data-montant='" + item.montant + "'>";
-                            row += "<i class='ri-edit-line text-primary me-2'></i>Modifier";
-                            row += "</button></li>";
-                            row += "<li><hr class='dropdown-divider my-1'></li>";
-                            row += "<li><button class='dropdown-item d-flex align-items-center px-3 py-2 text-danger delete-remise' data-id='" + item.id + "'>";
-                            row += "<i class='ri-delete-bin-line me-2'></i>Supprimer";
-                            row += "</button></li>";
-                            row += "<li>";
-                            if(item.is_enabled){
-                              row += "<button class='dropdown-item d-flex align-items-center px-3 py-2 deactivate-remise' data-id=" + item.id + " data-active='" + item.is_enabled + "'><i class='ri-close-line text-warning me-2'></i>Désactiver</button>";  
-                            }else{
-                              row += "<button class='dropdown-item d-flex align-items-center px-3 py-2 activate-remise' data-id=" + item.id + " data-active='" + item.is_enabled + "'><i class='ri-check-line text-success me-2'></i>Activer</button>";
-                            }
-                            row += "</li>";
-                            row += "</ul>";
-                            row += "</div>";
-                            row += "</td>";
-                            row += "</tr>";
-                        });
-                    }else{
-                        row = "<tr><td colspan='5' class='text-center text-muted'><div class='d-flex flex-column align-items-center justify-content-center py-5'>"+
-                                   '<div class="avatar-sm mb-4">'+
-                                        '<div class="avatar-title bg-light text-muted rounded-circle fs-1">'+
-                                            '<i class="ri-wallet-line"></i>'+
-                                        '</div>'+
-                                    '</div>'+
-                                    '<h5 class="mb-2">Aucune remise trouvée</h5>'+
-                                    '<p class="text-muted mb-0">Il n\'y a aucune remise enregistrée pour le moment</p>'+
-                                '</div></td></tr>';
-                    }
-                   
-                    $('#listeItem').html(row);
+                    originalData = data;
+                    currentFilteredData = data;
+                    currentPage = 1;
                     
                     // Update KPIs
                     updateKPIs(data);
                     
-                    // Re-apply search filter after data reload
-                    applySearchFilter();
+                    // Apply filters (which will call renderData)
+                    applyFilters();
                 },
                 error: function(xhr, status, error) {
                     console.error("Erreur lors du chargement des remises:", error);
@@ -960,36 +925,145 @@
             });
         });
 
+        function renderData() {
+            var data = currentFilteredData;
+            var row = "";
+            
+            if(data.length > 0) {
+                // Pagination logic
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = Math.min(startIndex + itemsPerPage, data.length);
+                const paginatedData = data.slice(startIndex, endIndex);
+                
+                $('#paginationInfo').text(`Affichage de ${startIndex + 1} à ${endIndex} sur ${data.length} éléments`);
+                renderPaginationControls(data.length);
+                
+                $.each(paginatedData, function(index, item){
+                    var statusBagde = item.is_enabled ? "Activée" : "Désactivée";
+                    var statusSpan = item.is_enabled ? "badge-soft-success" : "badge-soft-danger" ;
+                    
+                    var valeurDisplay = "";
+                    if(item.is_value) {
+                        valeurDisplay = "<span class='fw-bold text-dark'>" + parseFloat(item.montant).toLocaleString() + " DA</span>";
+                    } else {
+                        valeurDisplay = "<span class='fw-bold text-dark'>" + item.taux + "%</span>";
+                    }
+
+                    row += "<tr class='align-middle'>";
+                    row += "<td class='ps-4'><span class='fw-semibold'>" + item.label + "</span></td>";
+                    row += "<td>" + valeurDisplay + "</td>";
+                    row += "<td><span class='text-muted'>" + item.created_at.split("T")[0] + "</span></td>";
+                    row += "<td><span class='badge "+statusSpan+" '>"+statusBagde+"</span></td>";
+                    row += "<td class='text-center pe-4'>";
+                    row += "<div class='dropdown d-inline-block'>";
+                    row += "<button class='btn btn-edit-premium dropdown shadow-none' type='button' data-bs-toggle='dropdown' aria-expanded='false'>";
+                    row += "<i class='ri-more-2-fill'></i>";
+                    row += "</button>";
+                    row += "<ul class='dropdown-menu dropdown-menu-end border-0 shadow-lg'>";
+                    row += "<li><button class='dropdown-item d-flex align-items-center px-3 py-2 edit-remise' data-description='"+item.description+"' data-justificatif='"+item.has_to_justify+"' data-id='" + item.id + "' data-label='" + item.label + "' data-taux='" + item.taux + "' data-active='" + item.is_enabled + "' data-is-value='" + item.is_value + "' data-montant='" + item.montant + "'>";
+                    row += "<i class='ri-edit-line text-primary me-2'></i>Modifier";
+                    row += "</button></li>";
+                    row += "<li><hr class='dropdown-divider my-1'></li>";
+                    row += "<li><button class='dropdown-item d-flex align-items-center px-3 py-2 text-danger delete-remise' data-id='" + item.id + "'>";
+                    row += "<i class='ri-delete-bin-line me-2'></i>Supprimer";
+                    row += "</button></li>";
+                    row += "<li>";
+                    if(item.is_enabled){
+                      row += "<button class='dropdown-item d-flex align-items-center px-3 py-2 deactivate-remise' data-id=" + item.id + " data-active='" + item.is_enabled + "'><i class='ri-close-line text-warning me-2'></i>Désactiver</button>";  
+                    }else{
+                      row += "<button class='dropdown-item d-flex align-items-center px-3 py-2 activate-remise' data-id=" + item.id + " data-active='" + item.is_enabled + "'><i class='ri-check-line text-success me-2'></i>Activer</button>";
+                    }
+                    row += "</li>";
+                    row += "</ul>";
+                    row += "</div>";
+                    row += "</td>";
+                    row += "</tr>";
+                });
+            } else {
+                $('#paginationInfo').text(`Affichage de 0 à 0 sur 0 éléments`);
+                $('#paginationControls').empty();
+                row = "<tr><td colspan='5' class='text-center text-muted'><div class='d-flex flex-column align-items-center justify-content-center py-5'>"+
+                           '<div class="avatar-sm mb-4">'+
+                                '<div class="avatar-title bg-light text-muted rounded-circle fs-1">'+
+                                    '<i class="ri-wallet-line"></i>'+
+                                '</div>'+
+                            '</div>'+
+                            '<h5 class="mb-2">Aucune remise trouvée</h5>'+
+                            '<p class="text-muted mb-0">Il n\'y a aucune remise enregistrée pour le moment</p>'+
+                        '</div></td></tr>';
+            }
+           
+            $('#listeItem').html(row);
+        }
+
+        function renderPaginationControls(totalItems) {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            let paginationHtml = '';
+            
+            if (totalPages <= 1) {
+                $('#paginationControls').html('');
+                return;
+            }
+            
+            paginationHtml += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${currentPage - 1}"><i class="ri-arrow-left-s-line"></i></a>
+            </li>`;
+            
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            if (endPage - startPage < 4) {
+                startPage = Math.max(1, endPage - 4);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHtml += `<li class="page-item ${currentPage === i ? 'active' : ''}">
+                    <a class="page-link" href="#" data-page="${i}">${i}</a>
+                </li>`;
+            }
+            
+            paginationHtml += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${currentPage + 1}"><i class="ri-arrow-right-s-line"></i></a>
+            </li>`;
+            
+            $('#paginationControls').html(paginationHtml);
+        }
+
+        $(document).on('click', '.page-link', function(e) {
+            e.preventDefault();
+            const page = $(this).data('page');
+            if (page && page !== currentPage) {
+                currentPage = page;
+                renderData();
+            }
+        });
+
         // Function to apply all filters
         function applyFilters() {
             var searchValue = $('#table-filter').val().toLowerCase();
             var statusValue = $('#status-filter').val();
             
-            $('#listeItem tr').each(function() {
-                var $row = $(this);
-                var textMatch = true;
-                var statusMatch = true;
-                
-                // Check search text match
-                if (searchValue) {
-                    textMatch = $row.text().toLowerCase().indexOf(searchValue) > -1;
-                }
-                
-                // Check status match
-                if (statusValue) {
-                    var hasActiveClass = $row.find('td:eq(3) span').hasClass('bg-success'); // Active has bg-success
-                    var hasInactiveClass = $row.find('td:eq(3) span').hasClass('bg-danger'); // Inactive has bg-danger
-                    
+            var filteredData = originalData;
+            
+            if (searchValue) {
+                filteredData = filteredData.filter(function(item) {
+                    return item.label.toLowerCase().includes(searchValue);
+                });
+            }
+            
+            if (statusValue) {
+                filteredData = filteredData.filter(function(item) {
                     if (statusValue === 'active') {
-                        statusMatch = hasActiveClass;
+                        return item.is_enabled === true;
                     } else if (statusValue === 'inactive') {
-                        statusMatch = hasInactiveClass;
+                        return item.is_enabled === false;
                     }
-                }
-                
-                // Toggle visibility based on both filters
-                $row.toggle(textMatch && statusMatch);
-            });
+                    return true;
+                });
+            }
+            
+            currentFilteredData = filteredData;
+            currentPage = 1;
+            renderData();
         }
         
         // Re-apply filters after data reload
