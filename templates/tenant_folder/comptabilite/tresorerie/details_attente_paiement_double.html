@@ -2216,13 +2216,21 @@
                                         <td class="text-muted">Montant de la réduction</td>
                                         <td id="reductionAmount">-</td>
                                     </tr>
-                                    <tr>
+                                    <tr id="rowInitialPrice">
                                         <td class="text-muted">Prix initial</td>
                                         <td id="initialPrice">-</td>
                                     </tr>
-                                    <tr>
+                                    <tr id="rowFinalPrice">
                                         <td class="text-muted">Prix après réduction</td>
                                         <td id="finalPrice">-</td>
+                                    </tr>
+                                    <tr id="rowEcheancierPrice" style="display: none;">
+                                        <td class="text-muted">Montant de l'échéancier</td>
+                                        <td id="echeancierPrice">-</td>
+                                    </tr>
+                                    <tr id="rowEcheancierFinalPrice" style="display: none;">
+                                        <td class="text-muted">Montant de l'échéancier après réduction</td>
+                                        <td id="echeancierFinalPrice">-</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -3696,6 +3704,10 @@
                         <span class="text-muted small text-uppercase fw-semibold letter-spacing-1">Nom du modèle</span>
                         <h6 class="fw-bold text-dark mb-0 fs-5 mt-1" id="modalEcheancierModelName">Chargement...</h6>
                     </div>
+                    <div class="text-center" id="modalEcheancierAjustementContainer" style="display:none;">
+                        <span class="text-muted small text-uppercase fw-semibold letter-spacing-1" id="modalEcheancierAjustementLabel">Ajustement</span>
+                        <h6 class="fw-bold mb-0 fs-5 mt-1" id="modalEcheancierAjustementAmount">0</h6>
+                    </div>
                     <div class="text-end">
                         <span class="text-muted small text-uppercase fw-semibold letter-spacing-1">Frais d'inscription</span>
                         <h6 class="fw-bold text-info mb-0 fs-5 mt-1" id="modalEcheancierFraisInscription">0,00 DA</h6>
@@ -3829,6 +3841,8 @@
         var paymentsExists = false;
         let prix_specialite= [];
         let annee_academique = null;
+        let has_due_paiement = false;
+        let has_saved_echeancier = false;
 
     
 
@@ -3935,6 +3949,8 @@
                     // $('#_semestre_groupe').val(data.groupe_data.groupe_semestre);
 
                     annee_academique = data.annee_academique;
+                    has_due_paiement = data.has_due_paiement;
+                    has_saved_echeancier = data.has_saved_echeancier;
 
                     // Informations du client pour la modale
                     $('#clientFullName').text(data.user_data.demandeur_nom+" "+data.user_data.demandeur_prenom);
@@ -4058,19 +4074,58 @@
                        
                         hasReduction = true;
                         
-                        if (data.remise.is_value) {
-                            // Fixed amount discount
-                            prixFormationReduction = parseFloat(prixFormation - data.remise.valeur);
-                            $('#reductionAmount').text(formatComptable(data.remise.valeur) + " DA");
+                        let isEcheancierApplied = data.has_saved_echeancier || data.has_due_paiement;
+                        
+                        if (isEcheancierApplied) {
+                            let prixEcheancier = 0;
+                            if (data.frais_inscription) {
+                                prixEcheancier += parseFloat(data.frais_inscription);
+                            }
+                            if (data.echeancier && data.echeancier.length > 0) {
+                                $.each(data.echeancier, function(idx, ech) {
+                                    prixEcheancier += parseFloat(ech.montant_tranche);
+                                });
+                            }
+                            
+                            let echeancierReduction = 0;
+                            if (data.remise.is_value) {
+                                echeancierReduction = parseFloat(prixEcheancier - data.remise.valeur);
+                                $('#reductionAmount').text(formatComptable(data.remise.valeur) + " DA");
+                            } else {
+                                echeancierReduction = parseFloat(prixEcheancier - (prixEcheancier * (data.remise.valeur / 100)));
+                                $('#reductionAmount').text(data.remise.valeur + " %");
+                            }
+                            
+                            $('#rowInitialPrice').hide();
+                            $('#rowFinalPrice').hide();
+                            $('#rowEcheancierPrice').show();
+                            $('#rowEcheancierFinalPrice').show();
+                            
+                            $('#echeancierPrice').text(formatComptable(prixEcheancier));
+                            $('#echeancierFinalPrice').text(formatComptable(echeancierReduction));
+                            
+                            prixFormationReduction = echeancierReduction;
                         } else {
-                            // Percentage discount
-                            prixFormationReduction = parseFloat(prixFormation - (prixFormation * (data.remise.valeur / 100)));
-                            $('#reductionAmount').text(data.remise.valeur + " %");
+                            if (data.remise.is_value) {
+                                // Fixed amount discount
+                                prixFormationReduction = parseFloat(prixFormation - data.remise.valeur);
+                                $('#reductionAmount').text(formatComptable(data.remise.valeur) + " DA");
+                            } else {
+                                // Percentage discount
+                                prixFormationReduction = parseFloat(prixFormation - (prixFormation * (data.remise.valeur / 100)));
+                                $('#reductionAmount').text(data.remise.valeur + " %");
+                            }
+                            
+                            $('#rowInitialPrice').hide();
+                            $('#rowFinalPrice').hide();
+                            $('#rowEcheancierPrice').hide();
+                            $('#rowEcheancierFinalPrice').hide();
+                            
+                            $('#initialPrice').text(formatComptable(prixFormation));
+                            $('#finalPrice').text(formatComptable(prixFormationReduction));
                         }
-
+                        
                         $('#reductionType').text(data.remise.type_remise);
-                        $('#initialPrice').text(formatComptable(prixFormation));
-                        $('#finalPrice').text(formatComptable(prixFormationReduction));
                         
                         reductionApprouved = data.remise.remise_approuver;
                         reductionAppliced = data.remise.remise_appliquer;
@@ -6322,6 +6377,10 @@
 
 
         $(document).on('click', "#applyReductionBtn", function(){
+            if (!has_due_paiement && !has_saved_echeancier) {
+                alertify.error("Veuillez d'abord appliquer l'échéancier avant de soumettre la remise.");
+                return false;
+            }
             var btn = $(this); // référence du bouton
             btn.prop('disabled', true); // désactive le bouton
 

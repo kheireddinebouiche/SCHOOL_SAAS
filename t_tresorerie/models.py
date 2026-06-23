@@ -496,7 +496,7 @@ class AutreProduit(models.Model):
             format_str = getattr(self.entite, 'quittance_format', None) or "N°{seq}/ST/{entite}/{wilaya}/{annexe}/{mois}/{annee}"
             seq_length = getattr(self.entite, 'quittance_sequence_length', 6) or 6
 
-            format_str = format_str.replace('{entite}', entite_str).replace('{wilaya}', wilaya).replace('{annexe}', annexe).replace('{mois}', mois).replace('{annee}', annee)
+            format_str = format_str.replace('{entite}', entite_nom).replace('{wilaya}', wilaya).replace('{annexe}', annexe).replace('{mois}', mois).replace('{annee}', annee)
 
             if "{seq}" in format_str:
                 parts = format_str.split("{seq}")
