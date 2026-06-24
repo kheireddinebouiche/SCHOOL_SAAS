@@ -35,37 +35,38 @@ def clean_montant(val_str):
 @login_required(login_url="institut_app:login")
 @module_permission_required('tre', 'view')
 def ApiGetPaiementRequestDetails(request):
-    id_client = request.GET.get('id_client')
-    id_echeancier = request.GET.get('id_echeancier')
-    obj_client = Prospets.objects.get(id= id_client)
+    if request.method == "POST":
+        id_client = request.POST.get('id_client')
+        id_echeancier = request.POST.get('id_echeancier')
+        obj_client = Prospets.objects.get(id= id_client)
 
-    # Récuperer la promo de l etudiant
-    obj_promo  = FicheDeVoeux.objects.get(prospect_id = id_client, is_confirmed=True)
-    obj_promo.promo.code
-    
-    # Récupérer les données de l'échéancier depuis la requête
-    echeancier_data = request.GET.get('echeancier_data')
-    
-    if echeancier_data:
-        # Parser les données de l'échéancier
-        echeancier_list = json.loads(echeancier_data)
-        echeancier_list = sorted(echeancier_list, key=lambda x: x['date_echeance'])
-        # Calculer les totaux
-        total_initial = sum(clean_montant(e['montant']) for e in echeancier_list)
-        total_final = sum(clean_montant(e['montant_final']) for e in echeancier_list)
+        # Récuperer la promo de l etudiant
+        obj_promo  = FicheDeVoeux.objects.get(prospect_id = id_client, is_confirmed=True)
+        obj_promo.promo.code
         
-        # Préparer les données de réponse
-        data = {
-            'client': {
-                'id': id_client,
-            },
-            'echeancier': echeancier_list,
-            'total_initial': str(total_initial),
-            'total_final': str(total_final),
-            'reduction': request.GET.get('reduction', '0') + '%' if request.GET.get('has_reduction') else '0%',
-            "promo_id" : obj_promo.promo.id
+        # Récupérer les données de l'échéancier depuis la requête
+        echeancier_data = request.POST.get('echeancier_data')
+        
+        if echeancier_data:
+            # Parser les données de l'échéancier
+            echeancier_list = json.loads(echeancier_data)
+            echeancier_list = sorted(echeancier_list, key=lambda x: x['date_echeance'])
+            # Calculer les totaux
+            total_initial = sum(clean_montant(e['montant']) for e in echeancier_list)
+            total_final = sum(clean_montant(e['montant_final']) for e in echeancier_list)
             
-        }
+            # Préparer les données de réponse
+            data = {
+                'client': {
+                    'id': id_client,
+                },
+                'echeancier': echeancier_list,
+                'total_initial': str(total_initial),
+                'total_final': str(total_final),
+                'reduction': request.POST.get('reduction', '0') + '%' if request.POST.get('has_reduction') else '0%',
+                "promo_id" : obj_promo.promo.id
+                
+            }
         ### Boucle pour enregistrer les paiements
         for i in echeancier_list:
             cleaned_montant = clean_montant(i['montant_final'])
@@ -84,15 +85,14 @@ def ApiGetPaiementRequestDetails(request):
         return JsonResponse({"status":"success"})
     
     else:
-        
-        return JsonResponse({'error': 'Aucune donnée d\'échéancier fournie'}, status=400)
-    
+        return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
 @login_required(login_url="institut_app:login")
 @module_permission_required('tre', 'view')
 def ApiGetPaiementRequestDetailsDouble(request):
-    if request.method == "GET":
-        id_client = request.GET.get('id_client')
-        id_echeancier = request.GET.get('id_echeancier')
+    if request.method == "POST":
+        id_client = request.POST.get('id_client')
+        id_echeancier = request.POST.get('id_echeancier')
         obj_client = Prospets.objects.get(id= id_client)
 
         # Récuperer la promo de l etudiant
@@ -100,7 +100,7 @@ def ApiGetPaiementRequestDetailsDouble(request):
         obj_promo.promo.code
         
         # Récupérer les données de l'échéancier depuis la requête
-        echeancier_data = request.GET.get('echeancier_data')
+        echeancier_data = request.POST.get('echeancier_data')
         
         if echeancier_data:
             # Parser les données de l'échéancier
@@ -118,7 +118,7 @@ def ApiGetPaiementRequestDetailsDouble(request):
                 'echeancier': echeancier_list,
                 'total_initial': str(total_initial),
                 'total_final': str(total_final),
-                'reduction': request.GET.get('reduction', '0') + '%' if request.GET.get('has_reduction') else '0%',
+                'reduction': request.POST.get('reduction', '0') + '%' if request.POST.get('has_reduction') else '0%',
                 "promo_id" : obj_promo.promo.id
                 
             }
