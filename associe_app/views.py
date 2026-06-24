@@ -2404,6 +2404,38 @@ def crm_user_logs(request):
         'filter_user': filter_user,
         'filter_action': filter_action,
     }
+
+    if request.GET.get('export_excel') == '1':
+        import openpyxl
+        from django.http import HttpResponse
+        
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "CRM Logs"
+        
+        headers = ['Institut', 'Utilisateur', 'Action', 'Cible', 'Détails', 'Date']
+        ws.append(headers)
+        
+        for col_num, cell in enumerate(ws[1], 1):
+            cell.font = openpyxl.styles.Font(bold=True)
+            
+        for tenant_log in institutes_logs:
+            tenant_name = tenant_log['name']
+            for log in tenant_log['logs']:
+                ws.append([
+                    tenant_name,
+                    log['user'],
+                    log['action'],
+                    log['target_model'],
+                    log['details'],
+                    log['date'].strftime('%Y-%m-%d %H:%M:%S') if log['date'] else ''
+                ])
+                
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="crm_user_logs.xlsx"'
+        wb.save(response)
+        return response
+
     return render(request, 'associe_app/crm_user_logs.html', context)
 
 
