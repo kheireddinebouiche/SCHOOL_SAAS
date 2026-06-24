@@ -2405,6 +2405,33 @@ def crm_user_logs(request):
         'filter_action': filter_action,
     }
 
+    if request.GET.get('export_csv') == '1':
+        import csv
+        import io
+        from django.http import HttpResponse
+        
+        output = io.StringIO()
+        writer = csv.writer(output, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(['Institut', 'Utilisateur', 'Action', 'Cible', 'Détails', 'Date'])
+        
+        for tenant_log in institutes_logs:
+            tenant_name = tenant_log['name']
+            for log in tenant_log['logs']:
+                writer.writerow([
+                    tenant_name,
+                    log['user'],
+                    log['action'],
+                    log['target_model'],
+                    str(log['details']).replace('\n', ' ').replace('\r', '') if log['details'] else '',
+                    log['date'].strftime('%Y-%m-%d %H:%M:%S') if log['date'] else ''
+                ])
+                
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = 'attachment; filename="crm_user_logs.csv"'
+        response.write('\ufeff'.encode('utf8'))  # BOM pour Excel
+        response.write(output.getvalue())
+        return response
+
     if request.GET.get('export_excel') == '1':
         import openpyxl
         from django.http import HttpResponse
