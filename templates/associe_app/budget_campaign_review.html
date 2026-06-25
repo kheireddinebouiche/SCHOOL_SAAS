@@ -313,13 +313,13 @@
 
             <!-- Stats Bar -->
             {% if is_visible_to_admin %}
-            <div class="row g-4 mb-5 row-cols-1 row-cols-md-5">
+            <div class="row g-4 mb-5 row-cols-1 row-cols-md-4">
                 <div class="col">
                     <div class="stat-card h-100">
                         <div class="stat-icon primary">
                             <i class="ri-funds-line"></i>
                         </div>
-                        <p class="text-muted mb-1 fs-12 text-uppercase fw-bold ls-1">Objectif Alloué</p>
+                        <p class="text-muted mb-1 fs-12 text-uppercase fw-bold ls-1">Objectif</p>
                         <h3 class="fw-bold mb-0 text-dark">{{ budget_line.montant|format_comptable }}</h3>
                     </div>
                 </div>
@@ -352,21 +352,6 @@
                         </h3>
                     </div>
                 </div>
-                <div class="col">
-                    <div class="stat-card h-100">
-                        <div class="d-flex justify-content-between align-items-end mb-3">
-                            <div>
-                                <p class="text-muted mb-1 fs-12 text-uppercase fw-bold ls-1">Progression</p>
-                                <h3 class="fw-bold mb-0 text-dark">{{ percent_dispatched|floatformat:1 }}%</h3>
-                            </div>
-                            <i class="ri-pie-chart-2-line fs-24 text-teal"></i>
-                        </div>
-                        <div class="progress mb-2" style="height: 8px; border-radius: 4px;">
-                            <div class="progress-bar bg-primary-teal" role="progressbar" style="width: {{ percent_dispatched|default:0 }}%;"></div>
-                        </div>
-                        <p class="text-muted fs-11 mb-0" style="font-size: 0.75rem;"><i class="ri-information-line align-middle me-1"></i>Basée sur les dépenses</p>
-                    </div>
-                </div>
             </div>
             {% else %}
             <div class="row mb-5">
@@ -387,14 +372,16 @@
 
             <!-- Navigation Tabs -->
             <ul class="nav nav-pills nav-custom mb-4" id="budgetTabs" role="tablist">
+                {% if not campaign.is_active %}
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active d-flex align-items-center gap-2" id="dispatch-tab" data-bs-toggle="pill" data-bs-target="#dispatch-content" type="button" role="tab">
                         Répartition & Prévisions
                     </button>
                 </li>
+                {% endif %}
                 {% if budget_line.statut == 'validated' %}
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link d-flex align-items-center gap-2" id="realization-tab" data-bs-toggle="pill" data-bs-target="#realization-content" type="button" role="tab">
+                    <button class="nav-link {% if campaign.is_active %}active{% endif %} d-flex align-items-center gap-2" id="realization-tab" data-bs-toggle="pill" data-bs-target="#realization-content" type="button" role="tab">
                         Suivi des Réalisations
                     </button>
                 </li>
@@ -403,6 +390,7 @@
 
             <div class="tab-content" id="budgetTabsContent">
                 <!-- Tab 1: Dispatch -->
+                {% if not campaign.is_active %}
                 <div class="tab-pane fade show active" id="dispatch-content" role="tabpanel">
                     {% if is_visible_to_admin %}
                     <form method="POST" action="">
@@ -543,10 +531,11 @@
             </form>
             {% endif %}
                 </div>
+                {% endif %}
 
                 {% if budget_line.statut == 'validated' %}
                 <!-- Tab 2: Realization Matrix -->
-                <div class="tab-pane fade" id="realization-content" role="tabpanel">
+                <div class="tab-pane fade {% if campaign.is_active %}show active{% endif %}" id="realization-content" role="tabpanel">
                     <div class="matrix-card">
                         <div class="card-header bg-white border-bottom py-4 px-4">
                             <div class="d-flex align-items-center gap-3">
