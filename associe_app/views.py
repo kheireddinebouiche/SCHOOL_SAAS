@@ -345,9 +345,12 @@ def index(request):
         current_prorata_r = global_budget_r + unallocated_recette
         current_prorata_d = global_budget_d
         
+        taux_realisation_global = (current_realized_r / current_prorata_r * 100) if current_prorata_r > 0 else 0
+        taux_consommation_global = (current_realized_d / current_prorata_d * 100) if current_prorata_d > 0 else 0
+        
         # Also update trimester details for 'Full' view
         for t_r in trimestre_details_recette:
-            t_r['prorata_budget'] = t_r['full_budget'] + (unallocated_recette / 4)
+            t_r['prorata_budget'] = t_r['full_budget'] + Decimal(str(unallocated_recette / 4))
             t_r['taux'] = (t_r['realise'] / t_r['prorata_budget'] * 100) if t_r['prorata_budget'] > 0 else 0
             t_r['ecart'] = t_r['realise'] - t_r['prorata_budget']
             

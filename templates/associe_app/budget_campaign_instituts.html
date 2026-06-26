@@ -24,7 +24,7 @@
     .dashboard-header {
         background: var(--primary-gradient) !important;
         border-radius: 1.5rem !important;
-        padding: 2.5rem !important;
+        padding: 1.5rem 2rem !important;
         margin-bottom: 2rem !important;
         color: white;
         position: relative;
@@ -232,7 +232,7 @@
                                         <li class="breadcrumb-item"><a href="#" class="text-white-50">Campagnes</a></li>
                                         <li class="breadcrumb-item active text-white" aria-current="page">Configuration</li>
                                     </ol>
-                                    <h2 class="mb-0 text-white display-6 fw-bold">{{ campaign.name }}</h2>
+                                    <h2 class="mb-0 text-white fs-3 fw-bold">{{ campaign.name }}</h2>
                                 </nav>
                             </div>
                             <p class="mt-3 text-white-50 fw-medium mb-0">
@@ -273,100 +273,78 @@
             {% endif %}
 
             <!-- List of Instituts -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="matrix-card">
-                        <form id="mainBudgetForm" method="POST">
-                            {% csrf_token %}
-                            <div class="table-responsive">
-                                <table class="table matrix-table mb-0 align-middle">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 60px;" class="ps-4 text-center">#</th>
-                                            <th>Institut / Entité</th>
-                                            <th class="text-center">Statut</th>
-                                            <th class="text-end pe-4">Objectif Global (DA)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for item in instituts_data %}
-                                        <tr>
-                                            <td class="ps-4 text-center">
-                                                <span class="text-muted fw-bold">{{ forloop.counter }}</span>
-                                            </td>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="inst-avatar me-3">
-                                                        {{ item.institut.nom|slice:":1"|upper }}
-                                                    </div>
-                                                    <div>
-                                                        <div class="fw-bold text-dark mb-0 fs-15">{{ item.institut.nom }}</div>
-                                                        <div class="text-muted small text-uppercase ls-1" style="font-size: 10px;">{{ item.institut.schema_name }}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td class="text-center">
-                                                {% if item.statut == 'draft' %}
-                                                    <span class="status-badge badge-soft-warning">Brouillon</span>
-                                                {% elif item.statut == 'submitted' %}
-                                                    <span class="status-badge badge-soft-cyan">À Valider</span>
-                                                {% elif item.statut == 'validated' %}
-                                                    <span class="status-badge badge-soft-success">Validé</span>
-                                                {% elif item.statut == 'rejected' %}
-                                                    <span class="status-badge badge-soft-danger">Rejeté</span>
-                                                {% else %}
-                                                    <span class="status-badge badge-soft-light text-muted">Non défini</span>
-                                                {% endif %}
-                                            </td>
-                                            <td class="pe-4">
-                                                <div class="d-flex align-items-center justify-content-end gap-3">
-                                                    {% if item.pending_extension_id %}
-                                                    <a href="{% url 'associe_app:review_extension' item.pending_extension_id %}" class="btn btn-sm btn-soft-warning rounded-pill px-3 fw-bold" title="Voir la demande de rallonge">
-                                                        <i class="ri-exchange-dollar-line me-1"></i> Rallonge
-                                                    </a>
-                                                    {% endif %}
-                                                    
-                                                    {% if item.statut != 'none' %}
-                                                    <a href="{% url 'associe_app:budget_campaign_review' campaign.slug item.institut.id %}" class="btn btn-sm btn-soft-primary rounded-pill px-3 fw-bold">
-                                                        <i class="ri-eye-line me-1"></i> Détails
-                                                    </a>
-                                                    {% endif %}
-                                                    <div class="budget-input-group m-0" style="width: 180px;">
-                                                        <input type="text" 
-                                                               class="form-control text-end budget-input" 
-                                                               name="budget_{{ item.institut.id }}"
-                                                               placeholder="0,00"
-                                                               value="{{ item.montant|format_comptable }}">
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        {% empty %}
-                                        <tr>
-                                            <td colspan="4" class="text-center py-5">
-                                                <div class="py-5">
-                                                    <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop" colors="primary:#225787,secondary:#1b466c" style="width:80px;height:80px"></lord-icon>
-                                                    <h4 class="mt-4 fw-bold">Aucun institut trouvé</h4>
-                                                    <p class="text-muted">Vérifiez la configuration de vos tenants.</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+            <form id="mainBudgetForm" method="POST">
+                {% csrf_token %}
+                <div class="row g-4">
+                    {% for item in instituts_data %}
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card border-0 shadow-sm h-100 rounded-4" style="transition: transform 0.2s; cursor: default;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+                            <div class="card-body p-4 d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="inst-avatar me-3">
+                                            {{ item.institut.nom|slice:":1"|upper }}
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold text-dark mb-0 fs-15">{{ item.institut.nom }}</h5>
+                                            <span class="text-muted small text-uppercase ls-1" style="font-size: 10px;">{{ item.institut.schema_name }}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        {% if item.statut == 'draft' %}
+                                            <span class="status-badge badge-soft-warning">Brouillon</span>
+                                        {% elif item.statut == 'submitted' %}
+                                            <span class="status-badge badge-soft-cyan">À Valider</span>
+                                        {% elif item.statut == 'validated' %}
+                                            <span class="status-badge badge-soft-success">Validé</span>
+                                        {% elif item.statut == 'rejected' %}
+                                            <span class="status-badge badge-soft-danger">Rejeté</span>
+                                        {% else %}
+                                            <span class="status-badge badge-soft-light text-muted" style="background: #f1f5f9;">Non défini</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-auto pt-3 border-top">
+                                    <label class="form-label text-muted fs-12 text-uppercase fw-bold ls-1 mb-2">Objectif Global (DA)</label>
+                                    <input type="text" class="form-control budget-input fs-16" name="budget_{{ item.institut.id }}" placeholder="0,00" value="{{ item.montant|format_comptable }}">
+                                </div>
+
+                                <div class="d-flex align-items-center justify-content-between mt-3 gap-2">
+                                    {% if item.pending_extension_id %}
+                                    <a href="{% url 'associe_app:review_extension' item.pending_extension_id %}" class="btn btn-sm btn-soft-warning rounded-pill px-3 fw-bold flex-grow-1 text-center" title="Voir la demande de rallonge">
+                                        <i class="ri-exchange-dollar-line me-1"></i> Rallonge
+                                    </a>
+                                    {% endif %}
+                                    
+                                    {% if item.statut != 'none' %}
+                                    <a href="{% url 'associe_app:budget_campaign_review' campaign.slug item.institut.id %}" class="btn btn-sm btn-soft-primary rounded-pill px-3 fw-bold flex-grow-1 text-center" style="background: rgba(34, 87, 135, 0.1); color: var(--primary-teal);">
+                                        <i class="ri-eye-line me-1"></i> Détails
+                                    </a>
+                                    {% endif %}
+                                </div>
                             </div>
-                            
-                            {% if instituts_data %}
-                            <div class="p-4 bg-light bg-opacity-50 border-top text-center">
-                                <button type="submit" class="btn btn-primary-teal btn-lg px-5 py-3 rounded-3 shadow-lg fw-bold">
-                                    <i class="ri-save-3-line me-2"></i> Enregistrer les objectifs
-                                </button>
-                            </div>
-                            {% endif %}
-                        </form>
-                    </div> <!-- matrix-card -->
-                </div> <!-- col-12 -->
-            </div> <!-- row -->
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12 text-center py-5 bg-white rounded-4 shadow-sm border-0">
+                        <div class="py-5">
+                            <lord-icon src="https://cdn.lordicon.com/msoeawqm.json" trigger="loop" colors="primary:#225787,secondary:#1b466c" style="width:80px;height:80px"></lord-icon>
+                            <h4 class="mt-4 fw-bold">Aucun institut trouvé</h4>
+                            <p class="text-muted">Vérifiez la configuration de vos tenants.</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if instituts_data %}
+                <div class="mt-4 pt-3 text-center">
+                    <button type="submit" class="btn btn-primary-teal btn-lg px-5 py-3 rounded-3 shadow-lg fw-bold" style="background: var(--primary-teal); color: white; border: none;">
+                        <i class="ri-save-3-line me-2"></i> Enregistrer les objectifs
+                    </button>
+                </div>
+                {% endif %}
+            </form>
         </div> <!-- container-fluid -->
 
 <!-- Start Campaign Modal -->
