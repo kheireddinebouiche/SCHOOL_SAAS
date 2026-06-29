@@ -465,10 +465,12 @@ def InscriptionEntreprise(request):
 def ListeDesProspects(request):
     specialites = Specialites.objects.all()
     double_specialites = DoubleDiplomation.objects.all()
+    promos = Promos.objects.filter(etat='active')
     context = {
         'tenant' : request.tenant,
         'specialites': specialites,
         'double_specialites': double_specialites,
+        'promos': promos,
     }
     return render(request, 'tenant_folder/crm/liste-des-prospects.html', context)
 
@@ -494,6 +496,13 @@ def ApiLoadProspects(request):
             prospects = prospects.filter(
                 prospect_fiche_voeux__specialite_id=specialite_id
             ).distinct()
+
+    promotion_id = request.GET.get('promotion')
+    if promotion_id:
+        prospects = prospects.filter(
+            Q(prospect_fiche_voeux__promo_id=promotion_id) | 
+            Q(prospect_fiche_voeux_double__promo_id=promotion_id)
+        ).distinct()
 
     prospects = prospects.values(
         'slug','id', 'nin', 'nom', 'prenom', 'type_prospect','email','indic','telephone','canal',

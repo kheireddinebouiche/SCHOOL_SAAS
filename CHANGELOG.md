@@ -1,6 +1,9 @@
 # ÃƒÂ°Ã…Â¸Ã¢â‚¬â€?Ã¢â‚¬Å“ÃƒÂ¯Ã‚Â¸Ã¯Â¿Â½ Journal des Mises ÃƒÆ’Ã‚Â  Jour (Changelog)
 
 ## [Unreleased]
+- **CRM / Liste des prospects** : Alignement complet de la disposition de la barre de recherche et des filtres sur le modèle de "Liste des préinscrits" (barre de recherche et actions en haut, filtres modernes alignés à droite en dessous).
+- **CRM / Liste des prospects** : Remplacement du sélecteur de tri par date par une plage de dates (Date de début, Date de fin) pour filtrer les prospects créés dans un intervalle précis.
+- **CRM / Liste des prospects** : Ajout d'un filtre par promotion (code et label) pour affiner la liste des prospects.
 - **SaaS Admin / Campagne Budgétaire** : Correction du filtre "Cible Finale (Annuel)" dans le tableau de bord global, qui ne mettait pas à jour les taux de réalisation et consommation globaux.
 - **Configuration / Statistiques CRM** : Remplacement du tableau "Analyse par Institut" par un affichage plus moderne sous forme de grille de cartes (cards) détaillant les prospects, opportunités et le pipeline généré.
 - **Toutes les applications** : Réduction globale des tailles, marges (margins) et espacements internes (paddings) sur tous les tableaux de bord (dashboards), bannières et cartes de statistiques afin d'optimiser l'espace d'affichage de toutes les pages du SaaS.
