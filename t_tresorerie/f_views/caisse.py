@@ -583,6 +583,7 @@ def ApiReturnUndonePaiament(request):
                         'mode_paiement' : i.paiement.mode_paiement,
                         'label_mode_paiement' : i.paiement.get_mode_paiement_display(),
                         'paiement_id' : i.paiement.id,
+                        'paiement_num' : i.paiement.num,
                         'paiement_ref' : i.paiement.reference_paiement,
                         'client' : client_name,
                         'client_id' : i.paiement.prospect.id if i.paiement.prospect else None,

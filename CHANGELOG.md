@@ -1,6 +1,7 @@
 # ÃƒÂ°Ã…Â¸Ã¢â‚¬â€?Ã¢â‚¬Å“ÃƒÂ¯Ã‚Â¸Ã¯Â¿Â½ Journal des Mises ÃƒÆ’Ã‚Â  Jour (Changelog)
 
 ## [Unreleased]
+- **Trésorerie / Imputation Bancaire** : Affichage de la référence du paiement sous le mode de paiement et du numéro de paiement (ID) sous le nom du client dans le tableau des encaissements.
 - **Trésorerie / Imputation Bancaire** : Correction et intégration des filtres de recherche textuelle globale (client, entité, compte) et de sélection par mode de paiement.
 - **Trésorerie / Imputation Bancaire** : Ajout d'une pagination côté client pour les tableaux des onglets "Encaissement" et "Décaissement", limitant l'affichage à 10 éléments par page et améliorant les performances d'affichage.
 - **CRM / Liste des prospects** : Alignement complet de la disposition de la barre de recherche et des filtres sur le modèle de "Liste des préinscrits" (barre de recherche et actions en haut, filtres modernes alignés à droite en dessous).
