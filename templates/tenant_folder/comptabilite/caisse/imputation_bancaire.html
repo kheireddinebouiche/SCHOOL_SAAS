@@ -320,6 +320,11 @@
                       </tbody>
                     </table>
                   </div>
+                  <!-- Pagination controls Encaissement -->
+                  <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div class="text-muted" id="encaissement-pagination-info">Affichage 0 à 0 sur 0 paiements</div>
+                    <ul class="pagination pagination-sm mb-0" id="encaissement-pagination"></ul>
+                  </div>
                 </div>
                 
                 <!-- Décaissement Tab -->
@@ -404,6 +409,11 @@
                         <!-- Les dépenses seront chargées ici dynamiquement -->
                       </tbody>
                     </table>
+                  </div>
+                  <!-- Pagination controls Décaissement -->
+                  <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div class="text-muted" id="decaissement-pagination-info">Affichage 0 à 0 sur 0 dépenses</div>
+                    <ul class="pagination pagination-sm mb-0" id="decaissement-pagination"></ul>
                   </div>
                 </div>
               </div>
@@ -1188,7 +1198,7 @@
         }
 
         // Event listeners for Encaissement filters
-        $('#encaissement-date-start, #encaissement-date-end, #encaissement-month, #encaissement-year').on('change', function() {
+        $('#encaissement-date-start, #encaissement-date-end, #encaissement-month, #encaissement-year, #mode-paiement-encaissement').on('change', function() {
              // Use cached data if available
              if (allPaiementsData.length > 0) {
                   applyEncaissementFilters();
@@ -1197,11 +1207,19 @@
              }
         });
         
+        $('#encaissement-filter').on('keyup', function() {
+             if (allPaiementsData.length > 0) {
+                  applyEncaissementFilters();
+             }
+        });
+        
         $('#encaissement-reset-filters').on('click', function() {
             $('#encaissement-date-start').val('');
             $('#encaissement-date-end').val('');
             $('#encaissement-month').val('');
             $('#encaissement-year').val('');
+            $('#mode-paiement-encaissement').val('0');
+            $('#encaissement-filter').val('');
              if (allPaiementsData.length > 0) {
                   applyEncaissementFilters();
              } else {
@@ -1210,7 +1228,7 @@
         });
 
         // Event listeners for Décaissement filters
-        $('#decaissement-date-start, #decaissement-date-end, #decaissement-month, #decaissement-year').on('change', function() {
+        $('#decaissement-date-start, #decaissement-date-end, #decaissement-month, #decaissement-year, #mode-paiement-decaissement').on('change', function() {
              if (allPaiementsData.length > 0 || allDecaissementsData.length > 0) {
                   applyEncaissementFilters();
              } else {
@@ -1219,11 +1237,19 @@
              }
         });
 
+        $('#decaissement-filter').on('keyup', function() {
+             if (allPaiementsData.length > 0 || allDecaissementsData.length > 0) {
+                  applyEncaissementFilters();
+             }
+        });
+
         $('#decaissement-reset-filters').on('click', function() {
             $('#decaissement-date-start').val('');
             $('#decaissement-date-end').val('');
             $('#decaissement-month').val('');
             $('#decaissement-year').val('');
+            $('#mode-paiement-decaissement').val('0');
+            $('#decaissement-filter').val('');
              if (allPaiementsData.length > 0 || allDecaissementsData.length > 0) {
                   applyEncaissementFilters();
              } else {
@@ -1310,15 +1336,114 @@
 
         }
 
-        function applyEncaissementFilters() {
+        function renderEncaissementPagination() {
+            const totalPages = Math.ceil(filteredPaiementsData.length / itemsPerPageEncaissement);
+            let paginationHtml = '';
+            
+            if (totalPages > 1) {
+                paginationHtml += `<li class="page-item ${currentPageEncaissement === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePageEncaissement(${currentPageEncaissement - 1}); return false;">Précédent</a>
+                </li>`;
+                
+                for (let i = 1; i <= totalPages; i++) {
+                    paginationHtml += `<li class="page-item ${currentPageEncaissement === i ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changePageEncaissement(${i}); return false;">${i}</a>
+                    </li>`;
+                }
+                
+                paginationHtml += `<li class="page-item ${currentPageEncaissement === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePageEncaissement(${currentPageEncaissement + 1}); return false;">Suivant</a>
+                </li>`;
+            }
+            
+            $('#encaissement-pagination').html(paginationHtml);
+            
+            const startItem = filteredPaiementsData.length === 0 ? 0 : (currentPageEncaissement - 1) * itemsPerPageEncaissement + 1;
+            const endItem = Math.min(currentPageEncaissement * itemsPerPageEncaissement, filteredPaiementsData.length);
+            $('#encaissement-pagination-info').text(`Affichage ${startItem} à ${endItem} sur ${filteredPaiementsData.length} encaissements`);
+        }
+
+        window.changePageEncaissement = function(page) {
+            const totalPages = Math.ceil(filteredPaiementsData.length / itemsPerPageEncaissement);
+            if (page >= 1 && page <= totalPages) {
+                currentPageEncaissement = page;
+                renderEncaissementTable();
+            }
+        };
+
+        function renderEncaissementTable() {
             var row = "";
+            var matchCount = filteredPaiementsData.length;
+            
+            if (matchCount === 0) {
+                row = '<tr><td colspan="10" class="text-center py-5"><div class="text-muted"><i class="ri-search-2-line fs-1 d-block mb-2"></i>Aucun encaissement trouvé pour cette période</div></td></tr>';
+            } else {
+                const startIndex = (currentPageEncaissement - 1) * itemsPerPageEncaissement;
+                const endIndex = Math.min(startIndex + itemsPerPageEncaissement, matchCount);
+                const pageData = filteredPaiementsData.slice(startIndex, endIndex);
+
+                $.each(pageData, function(index, item){
+                    try {
+                        row += "<tr>";
+                          row += "<td>";
+                          row += "<a href='#' id='detailsClientBtn' title='Consulter les détails du client' data-id="+item.client_id+"><h6 class='mb-0'>"+item.client+"</a></h6>";
+                          row += "</td>";
+                          row += "<td>"+item.entite+"</td>";
+                          row += "<td><span class='fw-medium text-success'>+ "+formatCurrency(item.montant)+"</span></td>";
+                          row += "<td><span class='badge bg-info'>"+item.label_mode_paiement+"</span></td>";
+                          row += "<td>"+(item.date_creation || '-')+"</td>";
+                          row += "<td>"+(item.date_effective || '-')+"</td>";
+                          var refund_info = "-";
+                          if (item.is_refunded) {
+                              refund_info = "<span class='badge bg-danger-subtle text-danger' title='Montant remboursé: "+formatCurrency(item.refunded_amount)+"'>Oui ("+formatCurrency(item.refunded_amount)+")</span>";
+                          }
+                          row += "<td>"+refund_info+"</td>";
+                          row += "<td>"+(item.is_rapproche ? '<span class="badge bg-success">Associé</span>' : '<span class="badge bg-warning">Non Associé</span>')+"</td>";
+                          row += "<td>"+(item.compte || 'N/A')+"</td>";
+                          row += "<td class='text-center'>";
+                          row += "<div class='hstack gap-2 justify-content-center'>";
+                          row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' id='detailsPaiementBtn' title='Voir les détails' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-eye-line text-primary'></i></button>";
+                          if (!item.is_rapproche) {
+                              row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' id='rapprochementBtn' title='Rapprochement' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-exchange-line text-info'></i></button>";
+                          }
+                          row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' title='Modifier' data-bs-toggle='modal' data-bs-target='#modifierEncaissementModal' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-pencil-line text-warning'></i></button>";
+                          if (canDelete) {
+                              row += "<button class='btn btn-sm btn-light rounded-circle shadow-none delete-imputation-btn' title='Supprimer' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-delete-bin-line text-danger'></i></button>";
+                          }
+                          row += "</div>";
+                          row += "</td>";
+                        row += "</tr>";
+                    } catch (err) {
+                        console.error("Error rendering item", err, item);
+                    }
+                });
+            }
+
+            $('#listePaiements').html(row);
+            renderEncaissementPagination();
+        }
+
+        function applyEncaissementFilters() {
             var totalEncaissements = 0;
-            var matchCount = 0;
             var filterId = currentEncaissementFilter || 0;
             // Get filter name from map if ID is set
             var filterName = filterId != 0 ? entiteMap[filterId] : null;
+            
+            var searchText = ($('#encaissement-filter').val() || "").toLowerCase();
+
+            filteredPaiementsData = [];
 
             $.each(allPaiementsData, function(index, item){
+                // Filter by text search
+                if (searchText) {
+                    var clientMatch = (item.client && item.client.toLowerCase().includes(searchText));
+                    var entiteMatch = (item.entite && item.entite.toLowerCase().includes(searchText));
+                    var labelMatch = (item.label_mode_paiement && item.label_mode_paiement.toLowerCase().includes(searchText));
+                    var compteMatch = (item.compte && item.compte.toLowerCase().includes(searchText));
+                    if (!clientMatch && !entiteMatch && !labelMatch && !compteMatch) {
+                        return true;
+                    }
+                }
                 // Filter by entity
                 if (filterName && item.entite !== filterName) {
                     return true;
@@ -1334,55 +1459,20 @@
                 if (selectedMode && selectedMode != "0" && item.mode_paiement !== selectedMode) {
                     return true;
                 }
-                matchCount++;
                 
-                try {
-                    row += "<tr>";
-                      row += "<td>";
-                      row += "<a href='#' id='detailsClientBtn' title='Consulter les détails du client' data-id="+item.client_id+"><h6 class='mb-0'>"+item.client+"</a></h6>";
-                      row += "</td>";
-                      row += "<td>"+item.entite+"</td>";
-                      row += "<td><span class='fw-medium text-success'>+ "+formatCurrency(item.montant)+"</span></td>";
-                      row += "<td><span class='badge bg-info'>"+item.label_mode_paiement+"</span></td>";
-                      row += "<td>"+(item.date_creation || '-')+"</td>";
-                      row += "<td>"+(item.date_effective || '-')+"</td>";
-                      var refund_info = "-";
-                      if (item.is_refunded) {
-                          refund_info = "<span class='badge bg-danger-subtle text-danger' title='Montant remboursé: "+formatCurrency(item.refunded_amount)+"'>Oui ("+formatCurrency(item.refunded_amount)+")</span>";
-                      }
-                      row += "<td>"+refund_info+"</td>";
-                      row += "<td>"+(item.is_rapproche ? '<span class="badge bg-success">Associé</span>' : '<span class="badge bg-warning">Non Associé</span>')+"</td>";
-                      row += "<td>"+(item.compte || 'N/A')+"</td>";
-                      row += "<td class='text-center'>";
-                      row += "<div class='hstack gap-2 justify-content-center'>";
-                      row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' id='detailsPaiementBtn' title='Voir les détails' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-eye-line text-primary'></i></button>";
-                      if (!item.is_rapproche) {
-                          row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' id='rapprochementBtn' title='Rapprochement' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-exchange-line text-info'></i></button>";
-                      }
-                      row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' title='Modifier' data-bs-toggle='modal' data-bs-target='#modifierEncaissementModal' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-pencil-line text-warning'></i></button>";
-                      if (canDelete) {
-                          row += "<button class='btn btn-sm btn-light rounded-circle shadow-none delete-imputation-btn' title='Supprimer' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-delete-bin-line text-danger'></i></button>";
-                      }
-                      row += "</div>";
-                      row += "</td>";
-                    row += "</tr>";
-
-                    // Add to total encaissements
-                    totalEncaissements += parseFloat(item.montant);
-                } catch (err) {
-                    console.error("Error rendering item index " + index, err, item);
-                }
+                // Add to filtered data
+                filteredPaiementsData.push(item);
+                // Add to total encaissements
+                totalEncaissements += parseFloat(item.montant);
             });
 
-            if (matchCount === 0) {
-                row = '<tr><td colspan="10" class="text-center py-5"><div class="text-muted"><i class="ri-search-2-line fs-1 d-block mb-2"></i>Aucun encaissement trouvé pour cette période</div></td></tr>';
-            }
+            currentPageEncaissement = 1;
+            renderEncaissementTable();
 
-            $('#listePaiements').html(row);
             $('#totalEncaissements').text(formatCurrency(totalEncaissements));
 
             // Refresh decaissements too to update totals
-            applyDecaissementFilters(totalEncaissements, matchCount);
+            applyDecaissementFilters(totalEncaissements, filteredPaiementsData.length);
         }
 
         // Fonction pour filtrer les paiements par entité juridique (CLIENT SIDE)
@@ -1392,16 +1482,113 @@
             applyEncaissementFilters();
         }
 
+        function renderDecaissementPagination() {
+            const totalPages = Math.ceil(filteredDecaissementsData.length / itemsPerPageDecaissement);
+            let paginationHtml = '';
+            
+            if (totalPages > 1) {
+                paginationHtml += `<li class="page-item ${currentPageDecaissement === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePageDecaissement(${currentPageDecaissement - 1}); return false;">Précédent</a>
+                </li>`;
+                
+                for (let i = 1; i <= totalPages; i++) {
+                    paginationHtml += `<li class="page-item ${currentPageDecaissement === i ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changePageDecaissement(${i}); return false;">${i}</a>
+                    </li>`;
+                }
+                
+                paginationHtml += `<li class="page-item ${currentPageDecaissement === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePageDecaissement(${currentPageDecaissement + 1}); return false;">Suivant</a>
+                </li>`;
+            }
+            
+            $('#decaissement-pagination').html(paginationHtml);
+            
+            const startItem = filteredDecaissementsData.length === 0 ? 0 : (currentPageDecaissement - 1) * itemsPerPageDecaissement + 1;
+            const endItem = Math.min(currentPageDecaissement * itemsPerPageDecaissement, filteredDecaissementsData.length);
+            $('#decaissement-pagination-info').text(`Affichage ${startItem} à ${endItem} sur ${filteredDecaissementsData.length} dépenses`);
+        }
+
+        window.changePageDecaissement = function(page) {
+            const totalPages = Math.ceil(filteredDecaissementsData.length / itemsPerPageDecaissement);
+            if (page >= 1 && page <= totalPages) {
+                currentPageDecaissement = page;
+                renderDecaissementTable();
+            }
+        };
+
+        function renderDecaissementTable() {
+            var row = "";
+            var matchCount = filteredDecaissementsData.length;
+
+            if (matchCount === 0) {
+                 row = '<tr><td colspan="8" class="text-center py-5"><div class="text-muted"><i class="ri-search-2-line fs-1 d-block mb-2"></i>Aucune dépense trouvée pour cette période</div></td></tr>';
+            } else {
+                const startIndex = (currentPageDecaissement - 1) * itemsPerPageDecaissement;
+                const endIndex = Math.min(startIndex + itemsPerPageDecaissement, matchCount);
+                const pageData = filteredDecaissementsData.slice(startIndex, endIndex);
+
+                $.each(pageData, function(index, item){
+                     row += "<tr>";
+                       row += "<td>";
+                       row += "<div class='d-flex align-items-center'>";
+                       row += "<div class='flex-shrink-0 avatar-xs rounded-circle bg-light'>";
+                       row += "<div class='avatar-title rounded-circle text-body'>"+(item.fournisseur ? item.fournisseur.substring(0,2).toUpperCase() : '??')+"</div>";
+                       row += "</div>";
+                       row += "<div class='ms-2'>";
+                       row += "<h6 class='mb-0'>"+item.fournisseur+"</h6>";
+                       row += "<p class='text-muted mb-0'>Fournisseur</p>";
+                       row += "</div>";
+                       row += "</div>";
+                       row += "</td>";
+                       row += "<td><span class='fw-medium text-danger'>- "+formatCurrency(item.montant)+"</span></td>";
+                       row += "<td><span class='badge bg-warning'>"+item.categorie+"</span></td>";
+                       row += "<td>"+(item.date_creation || '-')+"</td>";
+                       row += "<td>"+(item.date_effective || '-')+"</td>";
+                       row += "<td>"+(item.is_rapproche ? '<span class="badge bg-success">Associé</span>' : '<span class="badge bg-warning">Non Associé</span>')+"</td>";
+                       row += "<td>"+(item.compte || 'N/A')+"</td>";
+                       row += "<td class='text-center'>";
+                       row += "<div class='hstack gap-2 justify-content-center'>";
+                       row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' id='detailsDecaissementBtn' title='Voir les détails' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-eye-line text-primary'></i></button>";
+                       if (!item.is_rapproche) {
+                           row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' id='rapprochementBtn' title='Rapprochement' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-exchange-line text-info'></i></button>";
+                       }
+                       row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' title='Modifier' data-bs-toggle='modal' data-bs-target='#modifierDecaissementModal' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-pencil-line text-warning'></i></button>";
+                       if (canDelete) {
+                           row += "<button class='btn btn-sm btn-light rounded-circle shadow-none delete-imputation-btn' title='Supprimer' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-delete-bin-line text-danger'></i></button>";
+                       }
+                       row += "</div>";
+                       row += "</td>";
+                     row += "</tr>";
+                });
+            }
+            
+            $('#listeDepenses').html(row);
+            renderDecaissementPagination();
+        }
+
         function applyDecaissementFilters(totalEncaissements = 0, paiementsCount = 0) {
-             var row = "";
              var totalDecaissements = 0;
-             var matchCount = 0;
              var filterId = currentDecaissementFilter || 0;
              
              // Get filter name
              var filterName = filterId != 0 ? entiteMap[filterId] : null;
+             
+             var searchText = ($('#decaissement-filter').val() || "").toLowerCase();
+
+             filteredDecaissementsData = [];
 
              $.each(allDecaissementsData, function(index, item){
+                 // Filter by text search
+                 if (searchText) {
+                     var fournisseurMatch = (item.fournisseur && item.fournisseur.toLowerCase().includes(searchText));
+                     var entiteMatch = (item.entite && item.entite.toLowerCase().includes(searchText));
+                     var compteMatch = (item.compte && item.compte.toLowerCase().includes(searchText));
+                     var categorieMatch = (item.categorie && item.categorie.toLowerCase().includes(searchText));
+                     if (!fournisseurMatch && !entiteMatch && !compteMatch && !categorieMatch) {
+                         return true;
+                     }
+                 }
                  // Filter by entity
                  if (filterName && item.entite && item.entite !== filterName) {
                      return true;
@@ -1418,49 +1605,14 @@
                      return true;
                  }
                  
-                 matchCount++;
-
-                 row += "<tr>";
-                   row += "<td>";
-                   row += "<div class='d-flex align-items-center'>";
-                   row += "<div class='flex-shrink-0 avatar-xs rounded-circle bg-light'>";
-                   row += "<div class='avatar-title rounded-circle text-body'>"+(item.fournisseur ? item.fournisseur.substring(0,2).toUpperCase() : '??')+"</div>";
-                   row += "</div>";
-                   row += "<div class='ms-2'>";
-                   row += "<h6 class='mb-0'>"+item.fournisseur+"</h6>";
-                   row += "<p class='text-muted mb-0'>Fournisseur</p>";
-                   row += "</div>";
-                   row += "</div>";
-                   row += "</td>";
-                   row += "<td><span class='fw-medium text-danger'>- "+formatCurrency(item.montant)+"</span></td>";
-                   row += "<td><span class='badge bg-warning'>"+item.categorie+"</span></td>";
-                   row += "<td>"+(item.date_creation || '-')+"</td>";
-                   row += "<td>"+(item.date_effective || '-')+"</td>";
-                   row += "<td>"+(item.is_rapproche ? '<span class="badge bg-success">Associé</span>' : '<span class="badge bg-warning">Non Associé</span>')+"</td>";
-                   row += "<td>"+(item.compte || 'N/A')+"</td>";
-                   row += "<td class='text-center'>";
-                   row += "<div class='hstack gap-2 justify-content-center'>";
-                   row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' id='detailsDecaissementBtn' title='Voir les détails' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-eye-line text-primary'></i></button>";
-                   if (!item.is_rapproche) {
-                       row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' id='rapprochementBtn' title='Rapprochement' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-exchange-line text-info'></i></button>";
-                   }
-                   row += "<button class='btn btn-sm btn-light rounded-circle shadow-none' title='Modifier' data-bs-toggle='modal' data-bs-target='#modifierDecaissementModal' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-pencil-line text-warning'></i></button>";
-                   if (canDelete) {
-                       row += "<button class='btn btn-sm btn-light rounded-circle shadow-none delete-imputation-btn' title='Supprimer' data-id='"+item.id+"' style='width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;'><i class='ri-delete-bin-line text-danger'></i></button>";
-                   }
-                   row += "</div>";
-                   row += "</td>";
-                 row += "</tr>";
-
+                 filteredDecaissementsData.push(item);
                  // Add to total decaissements
                  totalDecaissements += parseFloat(item.montant);
              });
 
-            if (matchCount === 0) {
-                 row = '<tr><td colspan="8" class="text-center py-5"><div class="text-muted"><i class="ri-search-2-line fs-1 d-block mb-2"></i>Aucune dépense trouvée pour cette période</div></td></tr>';
-            }
-            
-            $('#listeDepenses').html(row);
+            currentPageDecaissement = 1;
+            renderDecaissementTable();
+
             $('#totalDecaissements').text(formatCurrency(totalDecaissements));
 
             // Stats update
@@ -1470,7 +1622,7 @@
             soldeElement.removeClass('text-success text-danger');
             if (solde >= 0) soldeElement.addClass('text-success'); else soldeElement.addClass('text-danger');
 
-            $('#transactionsCount').text(matchCount + paiementsCount);
+            $('#transactionsCount').text(filteredDecaissementsData.length + paiementsCount);
         }
 
         // Fonction pour filtrer les dépenses par entité juridique (CLIENT SIDE)
@@ -1552,6 +1704,15 @@
         var currentDecaissementFilter = null;
         var allPaiementsData = [];
         var allDecaissementsData = [];
+        
+        let currentPageEncaissement = 1;
+        const itemsPerPageEncaissement = 10;
+        let filteredPaiementsData = [];
+
+        let currentPageDecaissement = 1;
+        const itemsPerPageDecaissement = 10;
+        let filteredDecaissementsData = [];
+        
         var entiteMap = {};
         const canDelete = {{ can_delete|yesno:"true,false" }};
 
