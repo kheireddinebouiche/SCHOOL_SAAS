@@ -1360,7 +1360,16 @@ def ApiValidatePreinscrit(request):
                 })
             specialite = fiche_voeux.specialite
             promo = fiche_voeux.promo
-            ClientPaiementsRequest.objects.create(client=preinscrit, promo=promo, specialite_double=specialite, motif="frais_f")
+            paiement_request = ClientPaiementsRequest.objects.create(client=preinscrit, promo=promo, specialite_double=specialite, motif="frais_f")
+            
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='ClientPaiementsRequest',
+                target_id=str(paiement_request.id),
+                details=f"Génération d'une demande de paiement (frais d'inscription) pour {preinscrit.nom} {preinscrit.prenom}",
+                ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+            )
         else:
             fiche_voeux = FicheDeVoeux.objects.filter(prospect=preinscrit, is_confirmed=True).first()
             if not fiche_voeux:
@@ -1370,11 +1379,30 @@ def ApiValidatePreinscrit(request):
                 })
             specialite = fiche_voeux.specialite
             promo = fiche_voeux.promo
-            ClientPaiementsRequest.objects.create(client=preinscrit, promo=promo, specialite=specialite, motif="frais_f")
+            paiement_request = ClientPaiementsRequest.objects.create(client=preinscrit, promo=promo, specialite=specialite, motif="frais_f")
+
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='ClientPaiementsRequest',
+                target_id=str(paiement_request.id),
+                details=f"Génération d'une demande de paiement (frais d'inscription) pour {preinscrit.nom} {preinscrit.prenom}",
+                ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+            )
 
         preinscrit.statut = "instance"
         preinscrit.instance_date = now()
         preinscrit.save()
+        
+        # Log de l'action de validation
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Prospets',
+            target_id=str(preinscrit.id),
+            details=f"Validation de la préinscription pour {preinscrit.nom} {preinscrit.prenom}",
+            ip_address=request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '')).split(',')[0].strip()
+        )
 
         # Envoi de notification au module Trésorerie
         message = _("Une nouvelle demande de paiement a été créée pour {} {}").format(preinscrit.nom, preinscrit.prenom)
