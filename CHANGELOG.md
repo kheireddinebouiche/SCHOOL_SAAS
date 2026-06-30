@@ -877,3 +877,9 @@ A j o u t   v é r i f i c a t i o n   é c h é a n c i e r   a p p l i q u é 
 - Modification de associe_app/budget_campaign_review.html pour forcer l'affichage de l'onglet 'RÃ©partition & PrÃ©visions' (et son contenu) lorsque le statut de la ligne budgÃ©taire est 'submitted' (en attente), mÃªme si la campagne est dÃ©jÃ  active.
 - Ajout de l'affichage du code de la promotion dans le champ promotion/session de la modal createVoeuxDoubleModal dans la page details prospect standard.
 - Ajout du badge Standard a cote du titre de la page de details d'un prospect (version standard).
+
+
+## 2026-06-30
+- [Trésorerie] Echéanciers configurés : Ajout du calcul inversé (mise à jour du pourcentage lors de la modification du montant de la tranche).
+- [Trésorerie] Echéanciers configurés : Ajout d'un système de vérification visuelle (footer) validant la répartition manuelle (total part et montant) et bloquant la sauvegarde en cas d'incohérence.
+- [Trésorerie] Echéanciers configurés : Modification du backend (ApiUpdateEcheancier) pour utiliser l'ID explicite des tranches lors des mises à jour, évitant ainsi toute duplication ou écrasement lié à l'ordre.

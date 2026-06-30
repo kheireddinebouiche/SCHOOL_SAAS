@@ -781,11 +781,13 @@ def ApiUpdateEcheancier(request):
                 actual_majoration = (tarif * maj_val / 100) if echeancier.type_majoration == 'pourcentage' else maj_val
                 net_total = tarif - actual_discount + actual_majoration
                 
-                # Update tranches by matching order
-                tranches_list = list(EcheancierPaiementLine.objects.filter(echeancier=echeancier).order_by('id'))
-                for idx, update in enumerate(tranche_updates):
-                    if idx < len(tranches_list):
-                        tranche_obj = tranches_list[idx]
+                # Update tranches by matching ID to prevent duplication or mismatch
+                for update in tranche_updates:
+                    t_id = update.get('id')
+                    if t_id:
+                        tranche_obj = EcheancierPaiementLine.objects.filter(id=t_id, echeancier=echeancier).first()
+                        if not tranche_obj:
+                            continue
                         
                         tranche_obj.value = update.get('value')
                         if update.get('date'):

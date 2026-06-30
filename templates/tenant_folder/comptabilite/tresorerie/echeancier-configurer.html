@@ -821,6 +821,32 @@
                 </tbody>
               </table>
             </div>
+            
+            <!-- Verification Footer -->
+            <div class="mt-3 p-3 rounded-3 shadow-sm d-flex justify-content-between align-items-center" id="verifDistributionContainer" style="background-color: #f8fafc; border: 1px solid #e2e8f0; transition: all 0.3s ease;">
+              <div class="d-flex align-items-center">
+                <div class="icon-circle me-3" id="verifDistributionIcon" style="width: 36px; height: 36px; background-color: rgba(16, 185, 129, 0.1); transition: all 0.3s ease;">
+                  <i class="ri-check-line text-success fs-5"></i>
+                </div>
+                <div>
+                  <h6 class="mb-0 fw-bold" id="verifDistributionTitle" style="color: #10b981; transition: all 0.3s ease;">Répartition Valide</h6>
+                  <p class="mb-0 small text-muted" id="verifDistributionText">Le total correspond au net à payer.</p>
+                </div>
+              </div>
+              <div class="text-end">
+                <div class="d-flex gap-4">
+                  <div>
+                    <span class="text-secondary small fw-bold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.65rem;">Total Part</span>
+                    <h5 class="mb-0 fw-bold" id="verifTotalTaux" style="transition: all 0.3s ease;">0%</h5>
+                  </div>
+                  <div>
+                    <span class="text-secondary small fw-bold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.65rem;">Total Montant</span>
+                    <h5 class="mb-0 fw-bold" id="verifTotalMontant" style="transition: all 0.3s ease;">0 DA</h5>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </form>
       </div>
@@ -1568,6 +1594,8 @@ $(document).ready(function () {
                             checkEditTrancheWeekend($(this));
                         });
                         
+                        checkDistributionValidation();
+                        
                         // Show the modal
                         $('#editEcheancierModal').modal('show');
                     } else {
@@ -1603,6 +1631,58 @@ $(document).ready(function () {
             $warningContainer.html(`<i class="ri-error-warning-line"></i> ${dayName}`).removeClass('d-none');
         } else {
             $warningContainer.addClass('d-none');
+        }
+    }
+    
+    function checkDistributionValidation() {
+        var totalTaux = 0;
+        var totalMontant = 0;
+        
+        $('#editTranchesList .tranche-row').each(function() {
+            var taux = parseFloat($(this).find('.tranche-taux').val()) || 0;
+            var montant = parseFloat($(this).find('.tranche-montant').val()) || 0;
+            totalTaux += taux;
+            totalMontant += montant;
+        });
+
+        var isTauxValid = Math.abs(100 - totalTaux) < 0.05;
+        
+        var tarifBase = parseFloat($('#editSummaryTarif').attr('data-raw-tarif')) || 0;
+        var remise = parseFloat($('#editEcheancierRemise').val()) || 0;
+        var typeRemise = $('#editEcheancierTypeRemise').val();
+        var majoration = parseFloat($('#editEcheancierMajoration').val()) || 0;
+        var typeMajoration = $('#editEcheancierTypeMajoration').val();
+        
+        var actualRemiseTotal = (typeRemise === 'pourcentage') ? (tarifBase * remise / 100) : remise;
+        var actualMajorationTotal = (typeMajoration === 'pourcentage') ? (tarifBase * majoration / 100) : majoration;
+        var netTotal = Math.max(0, tarifBase - actualRemiseTotal + actualMajorationTotal);
+        
+        var isMontantValid = Math.abs(netTotal - totalMontant) < 1.0;
+        var isValid = isTauxValid || isMontantValid;
+        
+        $('#verifTotalTaux').text(totalTaux.toFixed(2) + '%');
+        $('#verifTotalMontant').text(totalMontant.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' DA');
+        
+        if (isValid) {
+            $('#verifDistributionContainer').css('border-color', '#10b981').css('background-color', 'rgba(16, 185, 129, 0.05)');
+            $('#verifDistributionIcon').css('background-color', 'rgba(16, 185, 129, 0.1)').html('<i class="ri-check-line text-success fs-5"></i>');
+            $('#verifDistributionTitle').css('color', '#10b981').text('Répartition Valide');
+            $('#verifDistributionText').text('Le total correspond au net à payer.');
+            $('#verifTotalTaux, #verifTotalMontant').removeClass('text-danger').addClass('text-success');
+            $('#saveEcheancierChanges').prop('disabled', false);
+        } else {
+            $('#verifDistributionContainer').css('border-color', '#ef4444').css('background-color', 'rgba(239, 68, 68, 0.05)');
+            $('#verifDistributionIcon').css('background-color', 'rgba(239, 68, 68, 0.1)').html('<i class="ri-error-warning-line text-danger fs-5"></i>');
+            $('#verifDistributionTitle').css('color', '#ef4444').text('Répartition Invalide');
+            
+            if (totalMontant < netTotal) {
+                $('#verifDistributionText').text('Le total est inférieur au net à payer (' + netTotal.toLocaleString() + ' DA).');
+            } else {
+                $('#verifDistributionText').text('Le total dépasse le net à payer (' + netTotal.toLocaleString() + ' DA).');
+            }
+            
+            $('#verifTotalTaux, #verifTotalMontant').removeClass('text-success').addClass('text-danger');
+            $('#saveEcheancierChanges').prop('disabled', true);
         }
     }
     
@@ -1651,6 +1731,61 @@ $(document).ready(function () {
         var basePriceNet = Math.max(0, basePrice - actualDiscount + actualMaj);
         var nouveauMontant = (basePriceNet * taux) / 100;
         $row.find('.tranche-montant').val(nouveauMontant.toFixed(2));
+        
+        checkDistributionValidation();
+    });
+    
+    // Auto-recalculate percentage when amount changes
+    $(document).on('input', '.tranche-montant', function() {
+        var $row = $(this).closest('.tranche-row');
+        
+        var isDouble = $('#editEcheancierModal').data('is-double');
+        var prixSpec1 = parseFloat($('#editEcheancierModal').data('prix-spec1')) || 0;
+        var prixSpec2 = parseFloat($('#editEcheancierModal').data('prix-spec2')) || 0;
+        var labelSpec1 = $('#editEcheancierModal').data('spec1-label') || '';
+        var labelSpec2 = $('#editEcheancierModal').data('spec2-label') || '';
+
+        var tarifBase = parseFloat($('#editSummaryTarif').attr('data-raw-tarif')) || 0;
+        var remise = parseFloat($('#editEcheancierRemise').val()) || 0;
+        var typeRemise = $('#editEcheancierTypeRemise').val();
+        var majoration = parseFloat($('#editEcheancierMajoration').val()) || 0;
+        var typeMajoration = $('#editEcheancierTypeMajoration').val();
+        
+        var actualRemiseTotal = (typeRemise === 'pourcentage') ? (tarifBase * remise / 100) : remise;
+        var actualMajorationTotal = (typeMajoration === 'pourcentage') ? (tarifBase * majoration / 100) : majoration;
+        
+        var libelle = $row.find('.tranche-libelle').val() || "";
+        var montant = parseFloat($(this).val()) || 0;
+        
+        var basePrice = tarifBase;
+        var actualDiscount = actualRemiseTotal;
+        var actualMaj = actualMajorationTotal;
+        
+        if (isDouble) {
+            if (labelSpec1 && libelle.indexOf(labelSpec1) !== -1) {
+                basePrice = prixSpec1;
+                actualDiscount = (typeRemise === 'pourcentage') ? (basePrice * remise / 100) : (remise / 2);
+                actualMaj = (typeMajoration === 'pourcentage') ? (basePrice * majoration / 100) : (majoration / 2);
+            } else if (labelSpec2 && libelle.indexOf(labelSpec2) !== -1) {
+                basePrice = prixSpec2;
+                actualDiscount = (typeRemise === 'pourcentage') ? (basePrice * remise / 100) : (remise / 2);
+                actualMaj = (typeMajoration === 'pourcentage') ? (basePrice * majoration / 100) : (majoration / 2);
+            } else {
+                basePrice = prixSpec1 + prixSpec2;
+                actualDiscount = (typeRemise === 'pourcentage') ? (basePrice * remise / 100) : remise;
+                actualMaj = (typeMajoration === 'pourcentage') ? (basePrice * majoration / 100) : majoration;
+            }
+        }
+        
+        var basePriceNet = Math.max(0, basePrice - actualDiscount + actualMaj);
+        if (basePriceNet > 0) {
+            var nouveauTaux = (montant / basePriceNet) * 100;
+            $row.find('.tranche-taux').val(nouveauTaux.toFixed(2));
+        } else {
+            $row.find('.tranche-taux').val((0).toFixed(2));
+        }
+        
+        checkDistributionValidation();
     });
     
     // Recalculate amounts visually in the modal
@@ -1704,6 +1839,8 @@ $(document).ready(function () {
             var nouveauMontant = (basePriceNet * taux) / 100;
             $(this).find('.tranche-montant').val(nouveauMontant.toFixed(2));
         });
+        
+        checkDistributionValidation();
         
         alertify.success("Montants recalculés selon la nouvelle remise/majoration");
     });
