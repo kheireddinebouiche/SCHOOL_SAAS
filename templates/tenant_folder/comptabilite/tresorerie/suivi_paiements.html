@@ -212,6 +212,24 @@
                                     </tbody>
                                 </table>
                             </div>
+                            
+                            <!-- Pagination Controls -->
+                            <div class="d-flex flex-wrap align-items-center justify-content-between p-3 border-top gap-3">
+                                <div class="text-muted small">
+                                    Affichage de <span id="startIndex" class="fw-semibold">0</span> à <span id="endIndex" class="fw-semibold">0</span> sur <span id="totalEntries" class="fw-semibold">0</span> entrées
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <select id="rowsPerPage" class="form-select form-select-sm" style="width: auto;">
+                                        <option value="10">10 par page</option>
+                                        <option value="25">25 par page</option>
+                                        <option value="50">50 par page</option>
+                                        <option value="100">100 par page</option>
+                                    </select>
+                                    <ul class="pagination pagination-sm mb-0" id="paginationControls">
+                                        <!-- Pagination will be generated here -->
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -232,22 +250,38 @@
         }
 
         let allData = [];
+        let currentPage = 1;
+        let rowsPerPage = 10;
 
-        function renderTable(data) {
+        function renderTable(data, page = 1) {
+            currentPage = page;
             let html = '';
-            let filteredCount = 0;
             const search = $('#searchInput').val().toLowerCase();
             const unpaidOnly = $('#filterUnpaid').is(':checked');
 
-            data.forEach(item => {
-                // Search filter
+            // 1. Filter Data
+            let filteredData = data.filter(item => {
                 if (search && !item.full_name.toLowerCase().includes(search) && 
                     !item.email.toLowerCase().includes(search)) {
-                    return;
+                    return false;
                 }
+                return true;
+            });
 
-                filteredCount++;
-                
+            const totalEntries = filteredData.length;
+            const totalPages = Math.ceil(totalEntries / rowsPerPage);
+            
+            if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+            
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = Math.min(startIndex + rowsPerPage, totalEntries);
+            
+            // 2. Paginate Data
+            const paginatedData = filteredData.slice(startIndex, endIndex);
+
+            // 3. Render Table Rows
+            paginatedData.forEach(item => {
                 const detailsUrl = item.is_double 
                     ? `/comptabilite/tresorerie/details-suivie-echeancier/double-diplomation/${item.id}/` 
                     : `/comptabilite/tresorerie/details-suivie-echeancier/${item.id}/`;
@@ -346,7 +380,7 @@
                 `;
             });
 
-            if (filteredCount === 0) {
+            if (totalEntries === 0) {
                 html = `
                     <tr>
                         <td colspan="10" class="text-center py-5">
@@ -371,7 +405,66 @@
             }
 
             $('#paiementsTableBody').html(html);
-            $('#rowCount').text(filteredCount + ' Étudiants');
+            $('#rowCount').text(totalEntries + ' Étudiants');
+            
+            // 4. Update Pagination UI
+            $('#startIndex').text(totalEntries > 0 ? startIndex + 1 : 0);
+            $('#endIndex').text(endIndex);
+            $('#totalEntries').text(totalEntries);
+            
+            let paginationHtml = '';
+            
+            // Previous button
+            paginationHtml += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage - 1}" tabindex="-1">
+                        <i class="ri-arrow-left-s-line"></i>
+                    </a>
+                </li>
+            `;
+            
+            // Page numbers
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = startPage + maxVisiblePages - 1;
+            
+            if (endPage > totalPages) {
+                endPage = totalPages;
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            if (startPage > 1) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`;
+                if (startPage > 2) {
+                    paginationHtml += `<li class="page-item disabled"><a class="page-link" href="#">...</a></li>`;
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHtml += `
+                    <li class="page-item ${currentPage === i ? 'active' : ''}">
+                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                    </li>
+                `;
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    paginationHtml += `<li class="page-item disabled"><a class="page-link" href="#">...</a></li>`;
+                }
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a></li>`;
+            }
+            
+            // Next button
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage + 1}">
+                        <i class="ri-arrow-right-s-line"></i>
+                    </a>
+                </li>
+            `;
+            
+            $('#paginationControls').html(paginationHtml);
 
             // Re-bind click events for expansion
             $('.expand-btn').on('click', function() {
@@ -415,10 +508,23 @@
         // Event listeners
         $('#promoFilter, #groupeFilter').change(loadData);
         $('input[name="paidFilter"]').change(function() {
-            renderTable(allData);
+            renderTable(allData, 1);
         });
         $('#searchInput').on('input', function() {
-            renderTable(allData);
+            renderTable(allData, 1);
+        });
+        
+        $('#rowsPerPage').change(function() {
+            rowsPerPage = parseInt($(this).val());
+            renderTable(allData, 1);
+        });
+        
+        $(document).on('click', '.page-link', function(e) {
+            e.preventDefault();
+            const page = parseInt($(this).data('page'));
+            if (!isNaN(page) && page !== currentPage) {
+                renderTable(allData, page);
+            }
         });
 
         // Initial load
