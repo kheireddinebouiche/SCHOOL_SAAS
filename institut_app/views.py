@@ -2002,10 +2002,10 @@ def budget_campaign_realization(request, campaign_slug):
         'commentaire': global_objective.commentaire,
         'today': today_date,
         'active_quarter': (
-            'T1 (Aoû-Oct)' if today_date.month in [8, 9, 10] else
-            'T2 (Nov-Jan)' if today_date.month in [11, 12, 1] else
-            'T3 (Fév-Avr)' if today_date.month in [2, 3, 4] else
-            'T4 (Mai-Jui)'
+            'T1 (Jui-Sep)' if today_date.month in [7, 8, 9] else
+            'T2 (Oct-Déc)' if today_date.month in [10, 11, 12] else
+            'T3 (Jan-Mar)' if today_date.month in [1, 2, 3] else
+            'T4 (Avr-Juin)'
         )
     }
     return render(request, 'tenant_folder/budget/realization_budget.html', context)

@@ -115,8 +115,8 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
 
             # Revenu
             paiements = Paiements.objects.filter(
-                date_paiement__gte=campaign.date_debut,
-                date_paiement__lte=campaign.date_fin,
+                date_paiement__gte=t1_start,
+                date_paiement__lte=t4_end,
                 payment_type__isnull=False
             ).prefetch_related('lettrages', 'payment_type')
             
@@ -203,7 +203,7 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                             add_real(poste.id, net_montant, p.date_paiement)
 
             # Autre Produits
-            autres = AutreProduit.objects.filter(date_paiement__gte=campaign.date_debut, date_paiement__lte=campaign.date_fin, payment_category__isnull=False).prefetch_related('lettrages', 'payment_category')
+            autres = AutreProduit.objects.filter(date_paiement__gte=t1_start, date_paiement__lte=t4_end, payment_category__isnull=False).prefetch_related('lettrages', 'payment_category')
             for ap in autres:
                 if ap.mode_paiement in ['che', 'vir'] and not ap.lettrages.exists(): continue
                 with schema_context('public'):
@@ -219,7 +219,7 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                             add_real(poste.id, ap.montant_paiement, ap.date_paiement)
 
             # Depenses
-            depenses = Depenses.objects.filter(date_paiement__gte=campaign.date_debut, date_paiement__lte=campaign.date_fin, lignes__category__isnull=False).distinct().prefetch_related('lignes__category')
+            depenses = Depenses.objects.filter(date_paiement__gte=t1_start, date_paiement__lte=t4_end, lignes__category__isnull=False).distinct().prefetch_related('lignes__category')
             for d in depenses:
                 for ligne in d.lignes.all():
                     if not ligne.category: continue
@@ -232,8 +232,8 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
 
             # Remboursements en tant que Dépenses
             remboursements = Rembourssements.objects.filter(
-                updated_at__date__gte=campaign.date_debut,
-                updated_at__date__lte=campaign.date_fin,
+                updated_at__date__gte=t1_start,
+                updated_at__date__lte=t4_end,
                 is_done=True,
                 category__isnull=False
             ).select_related('category')
