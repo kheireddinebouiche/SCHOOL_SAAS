@@ -143,6 +143,7 @@ class BudgetLine(models.Model):
     
     STATUT_CHOICES = (
         ('draft', 'Brouillon'),
+        ('pre_validated', 'Pré-validé'),
         ('submitted', 'Soumis'),
         ('validated', 'Validé'),
         ('rejected', 'Rejeté'),

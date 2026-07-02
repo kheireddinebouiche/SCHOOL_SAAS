@@ -4575,6 +4575,11 @@
         
         // Afficher la synthèse du paiement
         $(document).on('click', '#enregistrerPaiementBtn', function(){
+            var btn = $(this);
+            var originalText = btn.html();
+            btn.prop('disabled', true);
+            btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Traitement...');
+
             // Récupérer les données du formulaire
             var id_due_paiement = $(this).data('id');
             var echeance = $('#echeancierSelection').val();
@@ -4589,6 +4594,8 @@
             // Validation simple
             if (!echeance || !datePaiement || !montant || !modePaiement || !typePaiement) {
                 alertify.error("Veuillez remplir tous les champs obligatoires.");
+                btn.prop('disabled', false);
+                btn.html(originalText);
                 return;
             }
 
@@ -4599,18 +4606,24 @@
             if (montantSaisi > maxMontant) {
                 alertify.error("Le montant saisi (" + montantSaisi.toFixed(2) + " DA) dépasse le solde de l'échéance (" + maxMontant.toFixed(2) + " DA).");
                 $('#montantPaiement').addClass('is-invalid');
+                btn.prop('disabled', false);
+                btn.html(originalText);
                 return;
             }
 
             if (montantSaisi <= 0) {
                 alertify.error("Le montant doit être supérieur à 0.");
                 $('#montantPaiement').addClass('is-invalid');
+                btn.prop('disabled', false);
+                btn.html(originalText);
                 return;
             }
 
             // Validation spécifique pour les modes de paiement qui nécessitent une référence
             if ((modePaiement === 'che' || modePaiement === 'vir') && !reference) {
                 alertify.error("Veuillez indiquer la référence du paiement pour les modes Chèque et Virement.");
+                btn.prop('disabled', false);
+                btn.html(originalText);
                 return;
             }
             
@@ -4645,10 +4658,25 @@
             // Fermer la modale de paiement et ouvrir la modale de synthèse
             $('#nouveauPaiementModal').modal('hide');
             $('#synthesePaiementModal').modal('show');
+            
+            setTimeout(function() {
+                btn.prop('disabled', false);
+                btn.html(originalText);
+            }, 1000);
         });
         
         // Confirmer le paiement
         $(document).on('click', '#confirmerPaiementBtn', function(){
+            var btn = $(this); // référence du bouton
+            if (btn.prop('disabled') || btn.hasClass('disabled')) return;
+            btn.prop('disabled', true); // désactive le bouton
+
+            var originalText = btn.html();
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Envoi en cours...
+            `);
+
             // Récupérer les données stockées
             var id_due_paiement = $(this).data('id_due_paiement');
             var echeance = $(this).data('echeance');
@@ -4685,6 +4713,10 @@
                     }else{
                         showUnpaidPaymentNotification();
                     }
+                },
+                complete: function() {
+                    btn.prop('disabled', false);
+                    btn.html(originalText);
                 }
             })
             

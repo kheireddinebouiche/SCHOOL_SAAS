@@ -258,6 +258,8 @@
                                     <p class="text-muted mb-0">Répartition de l'objectif global sur les postes et trimestres</p>
                                     {% if statut == 'draft' %}
                                         <span class="badge bg-light text-muted border fs-11 fw-medium">Brouillon</span>
+                                    {% elif statut == 'pre_validated' %}
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-11 fw-medium">Pré-validé</span>
                                     {% elif statut == 'submitted' %}
                                         <span class="badge bg-info-subtle text-info border border-info-subtle fs-11 fw-medium">En attente</span>
                                     {% elif statut == 'validated' %}
@@ -748,12 +750,42 @@
                         <div class="card-footer bg-white border-top p-3 d-flex justify-content-end gap-2">
                             <a href="{% url 'institut_app:my_budget_campaigns' %}" class="btn btn-light waves-effect waves-light px-3">Annuler</a>
                             {% if can_edit %}
-                            <button type="submit" form="dispatch-form" name="action" value="save" class="btn btn-soft-primary px-4 fw-medium">Enregistrer le brouillon</button>
-                            <button type="button" onclick="confirmSubmission()" class="btn btn-primary px-4 shadow-sm fw-medium">Soumettre pour validation</button>
+                            {% if statut == 'draft' or statut == 'none' or statut == 'rejected' %}
+                                <button type="submit" form="dispatch-form" name="action" value="save" class="btn btn-soft-primary px-4 fw-medium">Enregistrer le brouillon</button>
+                                {% if allocations %}
+                                <button type="submit" form="dispatch-form" name="action" value="validate" class="btn btn-success px-4 shadow-sm fw-medium">Valider</button>
+                                {% endif %}
+                            {% endif %}
+                            {% endif %}
+                            
+                            {% if statut == 'pre_validated' %}
+                                <button type="submit" form="dispatch-form" name="action" value="unvalidate" class="btn btn-warning px-4 shadow-sm fw-medium">Remettre en brouillon</button>
+                                <button type="button" onclick="confirmSubmission()" class="btn btn-primary px-4 shadow-sm fw-medium">Soumettre pour validation</button>
                             {% endif %}
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Submission Confirmation Modal -->
+<div class="modal fade" id="submitConfirmModal" tabindex="-1" aria-labelledby="submitConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="submitConfirmModalLabel">Confirmation de soumission</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="ri-question-line display-4 text-primary mb-3"></i>
+                <p class="fs-15 mb-0">Êtes-vous sûr de vouloir soumettre cette proposition budgétaire pour validation ?</p>
+                <p class="text-muted mb-0 mt-2 fs-13">Une fois soumise, vous ne pourrez plus la modifier.</p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary px-4" onclick="submitForm()">Oui, soumettre</button>
             </div>
         </div>
     </div>
@@ -823,47 +855,19 @@
                 return;
             }
 
-            if (globalObj > 0) {
-                const grandTotal = cleanValue(grandTotalElem.innerHTML);
-                if (Math.abs(grandTotal - globalObj) > 0.01) {
-                    Swal.fire({
-                        title: 'Attention',
-                        text: "Le montant total réparti ne correspond pas à l'objectif global. Voulez-vous quand même soumettre ?",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Oui, soumettre',
-                        cancelButtonText: 'Annuler'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            submitForm();
-                        }
-                    });
-                    return;
-                }
-            }
-
-            Swal.fire({
-                title: 'Soumettre pour validation ?',
-                text: "Une fois soumis, vous ne pourrez plus modifier la répartition jusqu'à ce qu'elle soit validée ou rejetée.",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Confirmer la soumission',
-                cancelButtonText: 'Annuler'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    submitForm();
-                }
-            });
+            // Show generic Bootstrap confirmation modal
+            var myModal = new bootstrap.Modal(document.getElementById('submitConfirmModal'));
+            myModal.show();
         };
 
-        function submitForm() {
+        window.submitForm = function() {
             const formAction = document.getElementById('form-action');
             const dispatchForm = document.getElementById('dispatch-form');
             if (formAction && dispatchForm) {
                 formAction.value = 'submit';
                 dispatchForm.submit();
             }
-        }
+        };
 
         function formatCurrency(val) {
             let res = new Intl.NumberFormat('fr-FR', {

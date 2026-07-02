@@ -1513,12 +1513,13 @@ def budget_campaign_dispatch(request, campaign_slug):
     can_edit = global_objective.statut in ['draft', 'rejected', 'none']
 
     if request.method == "POST":
-        if not can_edit:
-            messages.error(request, "Ce budget est déjà soumis ou validé et ne peut plus être modifié.")
-            return redirect('institut_app:dispatch_budget', campaign_slug=campaign_slug)
-
         action = request.POST.get('action', 'save')
         
+        # If not editable, only allow unvalidate or submit
+        if not can_edit and action not in ['unvalidate', 'submit']:
+            messages.error(request, "Ce budget est déjà soumis ou validé et ne peut plus être modifié.")
+            return redirect('institut_app:dispatch_budget', campaign_slug=campaign_slug)
+            
         saved_count = 0
         deleted_count = 0
         found_fields = 0
@@ -1528,6 +1529,9 @@ def budget_campaign_dispatch(request, campaign_slug):
             with transaction.atomic():
                 with schema_context('public'):
                     for key, value in request.POST.items():
+                        if not can_edit:
+                            break
+                        
                         if not key.startswith('amount_'):
                             continue
                         
@@ -1657,6 +1661,22 @@ def budget_campaign_dispatch(request, campaign_slug):
                             except: pass
                 except Exception as ne:
                     print(f"Notification error: {ne}")
+            elif action == 'validate':
+                from associe_app.models import BudgetLine
+                with schema_context('public'):
+                    BudgetLine.objects.filter(
+                        campaign_id=campaign.id, 
+                        institut_id=request.tenant.id
+                    ).update(statut='pre_validated')
+                messages.success(request, "Brouillon validé avec succès. Vous pouvez maintenant soumettre pour validation ou remettre en brouillon.")
+            elif action == 'unvalidate':
+                from associe_app.models import BudgetLine
+                with schema_context('public'):
+                    BudgetLine.objects.filter(
+                        campaign_id=campaign.id, 
+                        institut_id=request.tenant.id
+                    ).update(statut='draft')
+                messages.success(request, "Le budget a été remis en brouillon.")
             else:
                 if found_fields == 0:
                     messages.warning(request, "Aucune donnée budgétaire n'a été détectée dans l'envoi.")
