@@ -1,3 +1,4 @@
+from t_crm.f_views.logs import user_action_log_list, clear_logs
 from django.contrib import admin
 from django.urls import path, include
 from .views import *
@@ -7,7 +8,7 @@ from django.conf.urls.static import static
 from .f_views.entreprise import *
 from .f_views.permissions import *
 from .f_views.users import *
-from .f_views.config import general_settings_view, api_update_global_settings, api_update_tenant_settings
+from .f_views.config import general_settings_view, api_update_global_settings, api_update_tenant_settings, ConfigurationDashboardView
 from saas_admin_app.views import ApiGetActiveAnnouncement, ApiMarkAnnouncementRead
 
 app_name="institut_app"
@@ -82,6 +83,9 @@ urlpatterns = [
     path('ApiImportModules', ApiImportModules, name="ApiImportModules"),
 
     path('administration/roles/liste', roles_page, name="roles_page"),
+    path('administration/user-logs/', user_action_log_list, name='user_action_log_list'),
+    path('administration/user-logs/clear/', clear_logs, name='clear_logs'),
+
     path('ApiListeRoles',ApiListeRoles, name="ApiListeRoles"),
     path('ApiDeleteRole', ApiDeleteRole, name="ApiDeleteRole"),
     path('ApiChangeRoleStatus', ApiChangeRoleStatus, name="ApiChangeRoleStatus"),
@@ -133,7 +137,7 @@ urlpatterns = [
     path('crm/dashboard/',crm_dashboard, name="crm_dashboard"),
     # path('rh/dashboard/',rh_dashboard, name="rh_dashboard"),
     path('direction/dashboard/', directeur_dashboard, name="directeur_dashboard"),
-
+    path('configuration/dashboard/', ConfigurationDashboardView, name="ConfigurationDashboard"),
 
 
 

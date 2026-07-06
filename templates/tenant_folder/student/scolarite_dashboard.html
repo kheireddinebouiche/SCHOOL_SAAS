@@ -1,0 +1,293 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Premium Glassmorphism & UI Tokens */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 1rem;
+        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .glass-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.08);
+    }
+
+    .kpi-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 1rem;
+    }
+
+    .kpi-card::before {
+        content: "";
+        position: absolute;
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        top: -60px;
+        right: -60px;
+        opacity: 0.1;
+        transition: all 0.5s ease;
+    }
+
+    .kpi-card:hover::before {
+        transform: scale(1.2);
+    }
+
+    .kpi-primary::before { background: #4f46e5; }
+    .kpi-success::before { background: #10b981; }
+    .kpi-info::before { background: #06b6d4; }
+    .kpi-warning::before { background: #f59e0b; }
+    .kpi-danger::before { background: #ef4444; }
+
+    .avatar-sm-custom {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1rem;
+        font-size: 1.5rem;
+    }
+
+    .pro-table {
+        border-collapse: separate;
+        border-spacing: 0 0.5rem;
+        margin-top: -0.5rem;
+    }
+    
+    .pro-table tbody tr {
+        background-color: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+    }
+    
+    .pro-table tbody tr:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+    }
+
+    .pro-table td:first-child,
+    .pro-table th:first-child {
+        border-top-left-radius: 0.5rem;
+        border-bottom-left-radius: 0.5rem;
+    }
+
+    .pro-table td:last-child,
+    .pro-table th:last-child {
+        border-top-right-radius: 0.5rem;
+        border-bottom-right-radius: 0.5rem;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            
+            <!-- Navbar -->
+            {% include 'tenant_folder/scolarite_navbar.html' %}
+
+            <!-- KPIs -->
+            <div class="row">
+                <!-- Total Etudiants -->
+                <div class="col-xl-4 col-md-6 mb-4">
+                    <div class="glass-card kpi-card kpi-primary h-100 p-4">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm-custom bg-primary bg-opacity-10 text-primary me-3">
+                                <i class="bx bx-group"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <p class="text-muted fw-semibold mb-1 text-uppercase font-size-12">Total Étudiants</p>
+                                <h3 class="mb-0 font-weight-bold text-dark">{{ total_etudiants }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Groupes -->
+                <div class="col-xl-4 col-md-6 mb-4">
+                    <div class="glass-card kpi-card kpi-success h-100 p-4">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm-custom bg-success bg-opacity-10 text-success me-3">
+                                <i class="bx bx-collection"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <p class="text-muted fw-semibold mb-1 text-uppercase font-size-12">Groupes Actifs</p>
+                                <h3 class="mb-0 font-weight-bold text-dark">{{ total_groupes }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transferts en attente -->
+                <div class="col-xl-4 col-md-6 mb-4">
+                    <div class="glass-card kpi-card kpi-warning h-100 p-4">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm-custom bg-warning bg-opacity-10 text-warning me-3">
+                                <i class="bx bx-transfer"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <p class="text-muted fw-semibold mb-1 text-uppercase font-size-12">Transferts en attente</p>
+                                <h3 class="mb-0 font-weight-bold text-dark">{{ transferts_en_attente }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Derniers inscrits -->
+                <div class="col-xl-6 mb-4">
+                    <div class="glass-card h-100 p-4">
+                        <h5 class="card-title mb-4 font-weight-bold text-dark"><i class="bx bx-user-plus text-primary me-2"></i>Derniers inscrits</h5>
+                        <div class="table-responsive">
+                            <table class="table pro-table align-middle table-borderless mb-0">
+                                <thead class="text-muted font-size-13">
+                                    <tr>
+                                        <th class="fw-medium">Étudiant</th>
+                                        <th class="fw-medium">Date</th>
+                                        <th class="fw-medium">Contact</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for etudiant in derniers_etudiants %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-xs me-3">
+                                                    <span class="avatar-title rounded-circle bg-primary bg-opacity-10 text-primary font-weight-bold">
+                                                        {{ etudiant.nom|first }}
+                                                    </span>
+                                                </div>
+                                                <h6 class="mb-0 text-dark">{{ etudiant.nom }} {{ etudiant.prenom }}</h6>
+                                            </div>
+                                        </td>
+                                        <td><span class="badge bg-light text-dark">{{ etudiant.date_inscription|date:"d M, Y" }}</span></td>
+                                        <td><span class="text-muted"><i class="bx bx-phone me-1"></i>{{ etudiant.tel }}</span></td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center py-4 text-muted">
+                                            <i class="bx bx-info-circle fs-4 mb-2 d-block"></i>
+                                            Aucun étudiant trouvé
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Derniers transferts -->
+                <div class="col-xl-6 mb-4">
+                    <div class="glass-card h-100 p-4">
+                        <h5 class="card-title mb-4 font-weight-bold text-dark"><i class="bx bx-history text-warning me-2"></i>Dernières demandes de transfert</h5>
+                        <div class="table-responsive">
+                            <table class="table pro-table align-middle table-borderless mb-0">
+                                <thead class="text-muted font-size-13">
+                                    <tr>
+                                        <th class="fw-medium">Étudiant</th>
+                                        <th class="fw-medium">Nouveau Groupe</th>
+                                        <th class="fw-medium">Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for transfert in derniers_transferts %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-xs me-3">
+                                                    <span class="avatar-title rounded-circle bg-warning bg-opacity-10 text-warning font-weight-bold">
+                                                        {{ transfert.etudiant.nom|first }}
+                                                    </span>
+                                                </div>
+                                                <h6 class="mb-0 text-dark">{{ transfert.etudiant.nom }} {{ transfert.etudiant.prenom }}</h6>
+                                            </div>
+                                        </td>
+                                        <td><span class="text-dark fw-medium">{{ transfert.new_groupe.nom }}</span></td>
+                                        <td>
+                                            <span class="badge rounded-pill bg-{% if transfert.status == 'Pending' %}warning{% elif transfert.status == 'Approved' %}success{% else %}danger{% endif %} bg-opacity-10 text-{% if transfert.status == 'Pending' %}warning{% elif transfert.status == 'Approved' %}success{% else %}danger{% endif %} font-size-11 px-2 py-1">
+                                                {{ transfert.status }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center py-4 text-muted">
+                                            <i class="bx bx-check-shield fs-4 mb-2 d-block"></i>
+                                            Aucun transfert récent
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        <div class="row">
+    <div class="col-xl-12 mb-4">
+        <div class="glass-card h-100 p-4">
+            <h5 class="card-title mb-4 font-weight-bold text-dark"><i class="bx bx-collection text-success me-2"></i>Aperçu des Groupes Récents</h5>
+            <div class="table-responsive">
+                <table class="table pro-table align-middle table-borderless mb-0">
+                    <thead class="text-muted font-size-13">
+                        <tr>
+                            <th class="fw-medium">Nom du Groupe</th>
+                            <th class="fw-medium">Spécialité</th>
+                            <th class="fw-medium">Capacité</th>
+                            <th class="fw-medium">État</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for groupe in derniers_groupes %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-xs bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px; font-weight: bold;">
+                                        {{ groupe.nom|first }}
+                                    </div>
+                                    <h6 class="mb-0 text-dark">{{ groupe.nom }}</h6>
+                                </div>
+                            </td>
+                            <td><span class="text-dark fw-medium">{{ groupe.specialite.label }}</span></td>
+                            <td>
+                                <span class="badge bg-light text-dark px-3 py-2 rounded-pill">{{ groupe.num_etudiants }} / {{ groupe.max_student|default:"0" }}</span>
+                            </td>
+                            <td>
+                                {% if groupe.num_etudiants >= groupe.max_student and groupe.max_student > 0 %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-2 rounded-pill">Saturé</span>
+                                {% else %}
+                                    <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">Ouvert</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                <i class="bx bx-info-circle fs-4 mb-2 d-block"></i>
+                                Aucun groupe trouvé
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div> <!-- container-fluid -->
+    </div> <!-- page-content -->
+</div> <!-- main-content -->
+{% endblock %}

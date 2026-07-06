@@ -51,13 +51,13 @@ def user_action_log_list(request):
         'date_to': date_to if date_to != 'None' else None,
         'per_page': per_page,
     }
-    return render(request, 'tenant_folder/crm/logs_list.html', context)
+    return render(request, 'tenant_folder/administration/logs_list.html', context)
 
 @login_required
 def clear_logs(request):
     if not request.user.is_staff:
          messages.error(request, "Vous n'avez pas la permission d'effectuer cette action.")
-         return redirect('t_crm:user_action_log_list')
+         return redirect('institut_app:user_action_log_list')
          
     if request.method == 'POST':
         mode = request.POST.get('delete_mode')
@@ -91,4 +91,4 @@ def clear_logs(request):
             else:
                 messages.error(request, "Veuillez spécifier une période complète.")
         
-    return redirect('t_crm:user_action_log_list')
+    return redirect('institut_app:user_action_log_list')

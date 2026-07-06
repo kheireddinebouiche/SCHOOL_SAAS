@@ -1,0 +1,284 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Tableau de Bord - Examens{% endblock title %}
+
+{% block content %}
+<style>
+    /* Premium Glassmorphism & UI Tokens */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 1rem;
+        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .glass-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.08);
+    }
+
+    .kpi-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 1rem;
+    }
+
+    .kpi-card::before {
+        content: "";
+        position: absolute;
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        top: -60px;
+        right: -60px;
+        opacity: 0.1;
+        transition: all 0.5s ease;
+    }
+
+    .kpi-card:hover::before {
+        transform: scale(1.2);
+    }
+
+    .kpi-primary::before { background: #4f46e5; }
+    .kpi-success::before { background: #10b981; }
+    .kpi-info::before { background: #06b6d4; }
+    .kpi-warning::before { background: #f59e0b; }
+    .kpi-danger::before { background: #ef4444; }
+
+    .avatar-sm-custom {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1rem;
+        font-size: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .glass-card:hover .avatar-sm-custom {
+        transform: scale(1.1) rotate(5deg);
+    }
+
+    .badge-soft {
+        font-weight: 600;
+        padding: 0.4rem 0.8rem;
+        border-radius: 0.5rem;
+    }
+
+    .badge-soft-primary { background: rgba(79, 70, 229, 0.1); color: #4f46e5; }
+    .badge-soft-success { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .badge-soft-info { background: rgba(6, 182, 212, 0.1); color: #06b6d4; }
+    .badge-soft-warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .badge-soft-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+    /* Custom scrollbars */
+    .custom-scroll::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+
+    /* Progress ring or beautiful bars */
+    .progress-custom {
+        height: 8px;
+        border-radius: 10px;
+        background-color: #f1f5f9;
+        overflow: hidden;
+    }
+
+    .progress-bar-custom {
+        border-radius: 10px;
+        transition: width 1s ease-in-out;
+    }
+
+    .dashboard-header-gradient {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        color: #ffffff;
+        border-radius: 1.5rem;
+    }
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light pb-5">
+    <div class="container-fluid">
+      
+      {% include 'tenant_folder/exams/examens_navbar.html' %}
+
+      <!-- KPI Counters Row -->
+      <div class="row g-4 mb-4">
+        <!-- Sessions d'Examens -->
+        <div class="col-xl-3 col-md-6">
+            <div class="glass-card kpi-card kpi-primary p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="avatar-sm-custom bg-primary bg-opacity-10 text-primary">
+                        <i class="ri-calendar-event-line"></i>
+                    </div>
+                    <span class="text-muted small">Vue d'ensemble</span>
+                </div>
+                <h3 class="fs-3 fw-bold mb-1 text-dark">{{ total_sessions }}</h3>
+                <p class="text-muted mb-0 fw-semibold">Sessions d'Examens</p>
+            </div>
+        </div>
+        
+        <!-- Examens Planifis -->
+        <div class="col-xl-3 col-md-6">
+            <div class="glass-card kpi-card kpi-info p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="avatar-sm-custom bg-info bg-opacity-10 text-info">
+                        <i class="ri-file-list-3-line"></i>
+                    </div>
+                    <span class="text-muted small">Actuellement</span>
+                </div>
+                <h3 class="fs-3 fw-bold mb-1 text-dark">{{ total_planifications }}</h3>
+                <p class="text-muted mb-0 fw-semibold">Examens Planifis</p>
+            </div>
+        </div>
+
+        <!-- Commissions -->
+        <div class="col-xl-3 col-md-6">
+            <div class="glass-card kpi-card kpi-warning p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="avatar-sm-custom bg-warning bg-opacity-10 text-warning">
+                        <i class="ri-team-line"></i>
+                    </div>
+                    <span class="text-muted small">Statistiques</span>
+                </div>
+                <h3 class="fs-3 fw-bold mb-1 text-dark">{{ total_commissions }}</h3>
+                <p class="text-muted mb-0 fw-semibold">Commissions de Dlibration</p>
+            </div>
+        </div>
+
+        <!-- PVs Gnrs -->
+        <div class="col-xl-3 col-md-6">
+            <div class="glass-card kpi-card kpi-success p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="avatar-sm-custom bg-success bg-opacity-10 text-success">
+                        <i class="ri-article-line"></i>
+                    </div>
+                    <span class="text-muted small">Bilan global</span>
+                </div>
+                <h3 class="fs-3 fw-bold mb-1 text-dark">{{ total_pvs }}</h3>
+                <p class="text-muted mb-0 fw-semibold">PVs Gnrs</p>
+            </div>
+        </div>
+      </div>
+
+      <!-- Recent Data Row -->
+      <div class="row g-4">
+        <!-- Dernires Sessions -->
+        <div class="col-xl-6">
+            <div class="glass-card p-4 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="ri-time-line me-2 text-primary"></i>Dernires Sessions
+                    </h5>
+                    <a href="{% url 't_exam:ListeSession' %}" class="btn btn-sm btn-soft-primary rounded-pill px-3">
+                        Voir tout
+                    </a>
+                </div>
+                <div class="custom-scroll" style="max-height: 380px; overflow-y: auto;">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Label</th>
+                                    <th>Type</th>
+                                    <th>Date de dbut</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in dernieres_sessions %}
+                                <tr>
+                                    <td>
+                                        <h6 class="mb-0 fw-semibold text-dark">{{ session.label }}</h6>
+                                        <small class="text-muted">{{ session.code }}</small>
+                                    </td>
+                                    <td><span class="text-muted small">{{ session.get_type_session_display }}</span></td>
+                                    <td><span class="text-muted small"><i class="ri-calendar-2-line me-1"></i>{{ session.date_debut|date:"d M Y" }}</span></td>
+                                    <td>
+                                        {% if session.status == 'clo' %}
+                                        <span class="badge badge-soft-success">Cltur</span>
+                                        {% else %}
+                                        <span class="badge badge-soft-warning">En attente</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">Aucune session trouve.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dernires Commissions -->
+        <div class="col-xl-6">
+            <div class="glass-card p-4 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="ri-team-fill me-2 text-warning"></i>Dernires Commissions
+                    </h5>
+                    <a href="{% url 't_exam:PageCommission' %}" class="btn btn-sm btn-soft-warning rounded-pill px-3">
+                        Voir tout
+                    </a>
+                </div>
+                <div class="custom-scroll" style="max-height: 380px; overflow-y: auto;">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Label</th>
+                                    <th>Promo</th>
+                                    <th>Date</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for commission in dernieres_commissions %}
+                                <tr>
+                                    <td>
+                                        <h6 class="mb-0 fw-semibold text-dark">{{ commission.label }}</h6>
+                                    </td>
+                                    <td><span class="text-muted small">{{ commission.promo.label|default:"-" }}</span></td>
+                                    <td><span class="text-muted small"><i class="ri-calendar-2-line me-1"></i>{{ commission.date_commission|date:"d M Y" }}</span></td>
+                                    <td>
+                                        {% if commission.is_closed %}
+                                        <span class="badge badge-soft-danger">Ferme</span>
+                                        {% elif commission.is_validated %}
+                                        <span class="badge badge-soft-success">Valide</span>
+                                        {% else %}
+                                        <span class="badge badge-soft-info">Ouverte</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">Aucune commission trouve.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock content %}

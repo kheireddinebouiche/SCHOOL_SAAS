@@ -9,10 +9,12 @@ from .f_views.deliberation import *
 from .f_views.generate_pv import *
 from .f_views.builltins import *
 from .f_views.generate_paiements import *
+from .f_views.dashboard import examens_dashboard
 
 app_name="t_exam"
 
 urlpatterns = [
+   path('dashboard/', examens_dashboard, name="examens_dashboard"),
    path('liste-des-sessions/', ListeSession, name="ListeSession"),
    path('NewSession', NewSession, name="NewSession"),
    path('ApiListSession', ApiListSession, name="ApiListSession"),

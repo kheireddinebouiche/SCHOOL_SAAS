@@ -3,12 +3,14 @@ from django.urls import path
 from .views import *
 from .f_views.presences import *
 from .f_views.contrat import *
+from .f_views.dashboard import scolarite_dashboard
 
 from institut_app.decorators import submenu_access_required
 app_name="t_etudiants"
 
 urlpatterns = [
 
+   path('dashboard/', scolarite_dashboard, name="scolarite_dashboard"),
    path('liste-des-etudiants/', submenu_access_required("scol", "etudiants")(ListeStudents), name="ListeStudents"),
    path('ApiListeDesEtudiants', submenu_access_required("scol", "etudiants")(ApiListeDesEtudiants), name="ApiListeDesEtudiants"),
    path('ApiSaveStudentDatas', submenu_access_required("scol", "etudiants")(ApiSaveStudentDatas), name="ApiSaveStudentDatas"),

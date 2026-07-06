@@ -154,3 +154,37 @@ def api_update_tenant_settings(request):
         })
     
     return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée.'}, status=405)
+
+
+@login_required
+@superuser_required
+def ConfigurationDashboardView(request):
+    """
+    Renders the main Configuration Dashboard with KPIs and quick links.
+    """
+    from django.contrib.auth import get_user_model
+    from t_crm.models import UserActionLog
+    from institut_app.models import Role
+    from django.utils import timezone
+    from datetime import timedelta
+
+    User = get_user_model()
+    
+    # KPIs
+    total_users = User.objects.count()
+    active_users = User.objects.filter(is_active=True).count()
+    total_roles = Role.objects.count()
+    
+    # Active sessions proxy (users with a session key, or you can use your active_sessions logic if it exists)
+    # Let's count recent actions as proxy for activity if true sessions are hard to query here
+    recent_actions = UserActionLog.objects.order_by('-created_at')[:5]
+
+    context = {
+        'total_users': total_users,
+        'active_users': active_users,
+        'total_roles': total_roles,
+        'recent_actions': recent_actions,
+        'tenant': request.tenant,
+    }
+
+    return render(request, 'tenant_folder/configuration/dashboard.html', context)

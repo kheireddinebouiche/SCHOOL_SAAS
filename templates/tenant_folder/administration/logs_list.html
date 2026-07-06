@@ -1,0 +1,477 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}CRM - Journal d'actions{% endblock title %}
+
+{% block content %}
+<style>
+  :root {
+    --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+    --hover-shadow: 0 20px 40px -15px rgba(79, 70, 229, 0.15);
+    --primary-teal: #4f46e5;
+  }
+
+  .main-content {
+    background: #f1f5f9;
+    min-height: 100vh;
+  }
+
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(15px);
+    border: 1px solid var(--glass-border);
+    border-radius: 1.5rem;
+    box-shadow: var(--card-shadow);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .stat-card {
+    border-radius: 1.5rem;
+    border: 1px solid var(--glass-border);
+    background: white;
+    transition: all 0.3s ease;
+    cursor: default;
+    box-shadow: var(--card-shadow);
+  }
+
+  .stat-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--hover-shadow);
+    border-color: rgba(79, 70, 229, 0.2);
+  }
+
+  .icon-box {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1rem;
+    font-size: 1.75rem;
+    transition: all 0.4s ease;
+  }
+
+  /* Form Elements - Premium Style */
+  .premium-input {
+    background-color: #f8fafc !important;
+    border: 1.5px solid #e2e8f0 !important;
+    padding: 0.75rem 1.25rem;
+    border-radius: 1rem !important;
+    font-weight: 500;
+    transition: all 0.3s ease !important;
+  }
+
+  .premium-input-icon {
+    padding-left: 3.25rem !important;
+  }
+
+  .premium-input:focus {
+    background-color: white !important;
+    border-color: #4f46e5 !important;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1) !important;
+  }
+
+  .search-box i {
+    position: absolute;
+    top: 50%;
+    left: 1.25rem;
+    transform: translateY(-50%);
+    color: #64748b;
+    z-index: 10;
+    pointer-events: none;
+    font-size: 1.1rem;
+  }
+
+  .custom-table-container {
+    background: white;
+    border-radius: 1.5rem;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+    border: 1px solid #e2e8f0;
+  }
+
+  .table thead th {
+    background: #f8fafc;
+    color: #64748b;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 2px solid #f1f5f9 !important;
+  }
+
+  .bg-soft-primary { background: rgba(79, 70, 229, 0.1) !important; color: #4f46e5 !important; }
+  .bg-soft-info { background: rgba(13, 148, 136, 0.1) !important; color: #0d9488 !important; }
+  .bg-purple-subtle { background: rgba(124, 58, 237, 0.1) !important; color: #7c3aed !important; }
+  
+  .bulk-actions-bar { 
+    display: none; 
+    position: sticky; 
+    top: 20px; 
+    z-index: 1000; 
+    width: 100%; 
+    margin-bottom: 1.5rem; 
+    animation: slideDown 0.3s ease-out; 
+  }
+  @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  
+  .pagination .page-link { border-radius: 10px !important; margin: 0 2px; border: 1px solid #e2e8f0; padding: 0.5rem 1rem; }
+  .pagination .page-item.active .page-link { background: var(--primary-gradient); border: none; }
+</style>
+</style>
+
+<div class="main-content">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
+        {% include 'tenant_folder/configuration_navbar.html' %}
+
+      <!-- Glass Header -->
+      
+
+      <!-- Statistics -->
+      <div class="row mb-3">
+        <div class="col-xl-3 col-md-6">
+          <div class="stat-card p-3 h-100 d-flex align-items-center justify-content-between">
+            <div>
+              <p class="text-uppercase fw-bold text-muted fs-11 mb-2">Total Actions</p>
+              <h2 class="fw-bold mb-0" style="color: var(--primary-teal)">{{ page_obj.paginator.count }}</h2>
+            </div>
+            <div class="icon-box bg-soft-primary"><i class="ri-file-list-3-line"></i></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk Actions Bar -->
+      <div id="bulkActionsBar" class="bulk-actions-bar">
+        <div class="glass-card bg-primary-teal border-0 p-3 shadow-lg">
+          <div class="d-flex align-items-center justify-content-between text-white flex-wrap gap-2">
+            <div class="d-flex align-items-center">
+              <div class="bg-white bg-opacity-20 rounded-pill px-3 py-1 me-3">
+                <span id="selectedCount" class="fw-bold">0</span> sélectionnés
+              </div>
+              <h6 class="mb-0 fw-medium">Actions groupées :</h6>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-danger btn-sm rounded-pill px-3" id="bulkDelete">
+                <i class="ri-delete-bin-line me-1"></i> Supprimer la sélection
+              </button>
+              <button class="btn btn-link text-white text-decoration-none ms-2" id="clearSelection">
+                <i class="ri-refresh-line me-1"></i> Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Card with Filters -->
+      <div class="row">
+        <div class="col-12">
+          <div class="custom-table-container glass-card">
+            <div class="card-header bg-transparent border-0 p-3">
+              <form method="get" id="logs-filter-form">
+                <div class="row g-3 align-items-center">
+                  <!-- User Filter -->
+                  <div class="col-md-3">
+                    <div class="search-box position-relative">
+                      <i class="ri-user-line fs-5"></i>
+                      <select name="user" class="form-select premium-input premium-input-icon filter-input">
+                        <option value="">Tous les utilisateurs</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}" {% if selected_user == u.id %}selected{% endif %}>{{ u.username }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Action Type Filter -->
+                  <div class="col-md-3">
+                    <div class="search-box position-relative">
+                      <i class="ri-price-tag-3-line fs-5"></i>
+                      <select name="action_type" class="form-select premium-input premium-input-icon filter-input">
+                        <option value="">Toutes actions</option>
+                        {% for code, label in action_choices %}
+                        <option value="{{ code }}" {% if selected_action == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Target Model Filter -->
+                  <div class="col-md-3">
+                    <div class="search-box position-relative">
+                      <i class="ri-focus-3-line fs-5"></i>
+                      <input type="text" name="target_model" id="target_model_input" list="model_suggestions" class="form-control premium-input premium-input-icon filter-input" placeholder="Modèle Cible" value="{{ selected_target|default:'' }}">
+                      <datalist id="model_suggestions">
+                        <option value="Dérogation">
+                        <option value="Prospect">
+                        <option value="Paiement">
+                        <option value="Utilisateur">
+                        <option value="Paramètre">
+                      </datalist>
+                    </div>
+                  </div>
+
+                  <!-- Quick Action / Date Range Toggle ? -->
+                  <div class="col-md-3">
+                    <div class="d-flex gap-2 justify-content-end">
+                      <button type="button" class="btn btn-light rounded-pill shadow-sm" id="toggleDateFilters" title="Filtres de date" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
+                        <i class="ri-calendar-event-line fs-5"></i>
+                      </button>
+                      <a href="{% url 'institut_app:user_action_log_list' %}" class="btn btn-light rounded-pill shadow-sm" title="Réinitialiser" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
+                        <i class="ri-refresh-line fs-5"></i>
+                      </a>
+                    </div>
+                  </div>
+
+                  <!-- Collapsible Date Filters -->
+                  <div class="col-12 mt-2 d-none" id="dateFiltersRow">
+                    <div class="p-3 bg-light rounded-4 d-flex flex-wrap gap-3 align-items-center">
+                      <div class="d-flex align-items-center gap-2">
+                        <span class="small fw-bold text-muted text-uppercase">Période du</span>
+                        <input type="date" name="date_from" class="form-control premium-input py-1 filter-input" value="{{ date_from|default:'' }}" style="width: 160px;">
+                        <span class="small fw-bold text-muted text-uppercase">au</span>
+                        <input type="date" name="date_to" class="form-control premium-input py-1 filter-input" value="{{ date_to|default:'' }}" style="width: 160px;">
+                      </div>
+                      <div class="ms-auto d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-soft-primary rounded-pill px-3 quick-filter" data-target="Dérogation">Dérogations</button>
+                        <button type="button" class="btn btn-sm btn-soft-info rounded-pill px-3 quick-filter" data-target="Prospect">Prospects</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <button type="submit" class="btn d-none">Filtrer</button>
+              </form>
+            </div>
+
+            <div class="card-body p-0" id="logs-table-container">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead class="bg-light bg-opacity-50">
+                    <tr>
+                      <th class="border-0 px-4 py-3" style="width:50px;">
+                        <div class="form-check"><input class="form-check-input" type="checkbox" id="selectAll"></div>
+                      </th>
+                      <th class="border-0 py-3">#</th>
+                      <th class="border-0 py-3">Utilisateur</th>
+                      <th class="border-0 py-3">Action</th>
+                      <th class="border-0 py-3">Cible</th>
+                      <th class="border-0 py-3">Détails</th>
+                      <th class="border-0 py-3">Date</th>
+                      <th class="border-0 py-3 text-end pe-4">IP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for log in page_obj %}
+                    <tr>
+                      <td class="px-4">
+                        <div class="form-check">
+                          <input class="form-check-input row-checkbox" type="checkbox" value="{{ log.id }}">
+                        </div>
+                      </td>
+                      <td class="fw-bold text-muted small">#{{ forloop.counter0|add:page_obj.start_index }}</td>
+                      <td>
+                        <div class="d-flex align-items-center">
+                          {% if log.user %}
+                          <div class="avatar-xs me-2">
+                            <span class="avatar-title rounded-circle bg-primary text-white font-size-12">{{ log.user.username|slice:":1"|upper }}</span>
+                          </div>
+                          <h6 class="mb-0 text-dark">{{ log.user.username }}</h6>
+                          {% else %}
+                          <div class="avatar-xs me-2">
+                            <span class="avatar-title rounded-circle bg-light text-muted font-size-12"><i class="ri-computer-line"></i></span>
+                          </div>
+                          <h6 class="mb-0 text-muted">Système</h6>
+                          {% endif %}
+                        </div>
+                      </td>
+                      <td>
+                        {% if log.action_type == 'CREATE' %}
+                          <span class="badge bg-success-subtle text-success rounded-pill px-3"><i class="ri-add-line me-1"></i>{{ log.get_action_type_display }}</span>
+                        {% elif log.action_type == 'UPDATE' %}
+                          <span class="badge bg-warning-subtle text-warning rounded-pill px-3"><i class="ri-edit-line me-1"></i>{{ log.get_action_type_display }}</span>
+                        {% elif log.action_type == 'DELETE' %}
+                          <span class="badge bg-danger-subtle text-danger rounded-pill px-3"><i class="ri-delete-bin-line me-1"></i>{{ log.get_action_type_display }}</span>
+                        {% elif log.action_type == 'LOGIN' %}
+                          <span class="badge bg-info-subtle text-info rounded-pill px-3"><i class="ri-login-box-line me-1"></i>{{ log.get_action_type_display }}</span>
+                        {% elif log.action_type == 'LOGOUT' %}
+                          <span class="badge bg-dark-subtle text-dark rounded-pill px-3"><i class="ri-logout-box-line me-1"></i>{{ log.get_action_type_display }}</span>
+                        {% else %}
+                          <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3">{{ log.get_action_type_display }}</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if log.target_model == 'Dérogation' %}
+                          <span class="badge bg-purple-subtle text-purple rounded-3 px-2 py-1 small">
+                            <i class="ri-file-shield-line me-1"></i>Dérogation
+                          </span>
+                        {% elif log.target_model == 'Prospect' %}
+                          <span class="badge bg-primary-subtle text-primary rounded-3 px-2 py-1 small">
+                            <i class="ri-user-line me-1"></i>Prospect
+                          </span>
+                        {% else %}
+                          <h6 class="mb-0 small text-dark">{{ log.target_model|default:"-" }}</h6>
+                        {% endif %}
+                        <small class="text-muted d-block mt-1">ID: {{ log.target_id|default:"-" }}</small>
+                      </td>
+                      <td style="max-width: 300px;">
+                        <span class="d-inline-block text-truncate text-muted small" style="max-width:100%;" title="{{ log.details }}">{{ log.details|default:"-" }}</span>
+                      </td>
+                      <td>
+                        <div class="d-flex align-items-center text-muted small">
+                          <i class="ri-calendar-line me-1"></i>
+                          <span>{{ log.created_at|date:"d M Y" }}</span>
+                          <span class="mx-1">-</span>
+                          <span>{{ log.created_at|date:"H:i" }}</span>
+                        </div>
+                      </td>
+                      <td class="pe-4 text-end">
+                        <span class="badge bg-light text-muted font-monospace small">{{ log.ip_address|default:"-" }}</span>
+                      </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="8" class="text-center py-5">
+                        <div class="animate-up py-4">
+                          <div class="section-icon-box bg-light text-muted mx-auto mb-3" style="width: 70px; height: 70px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+                            <i class="ri-search-eye-line"></i>
+                          </div>
+                          <h4 class="fw-bold text-dark mb-2">Aucune activité trouvée</h4>
+                          <p class="text-muted mb-0 mx-auto" style="max-width: 350px;">Il n'y a actuellement aucune entrée dans le journal d'audit correspondant à vos critères.</p>
+                        </div>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination -->
+              <div class="row align-items-center p-3 border-top">
+                <div class="col-sm-6">
+                  <div class="d-flex align-items-center text-muted small">
+                    Afficher
+                    <select class="form-select form-select-sm w-auto mx-2 filter-input" name="per_page" form="logs-filter-form">
+                      <option value="25" {% if per_page == '25' %}selected{% endif %}>25</option>
+                      <option value="50" {% if per_page == '50' %}selected{% endif %}>50</option>
+                      <option value="100" {% if per_page == '100' %}selected{% endif %}>100</option>
+                    </select>
+                    sur <span class="fw-semibold mx-1">{{ page_obj.paginator.count }}</span> entrées
+                  </div>
+                </div>
+                <div class="col-sm-6">
+                  <ul class="pagination mb-0 justify-content-center justify-content-sm-end">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ page_obj.previous_page_number }}&user={{ selected_user }}&action_type={{ selected_action }}&target_model={{ selected_target }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}">
+                        <i class="ri-arrow-left-s-line"></i>
+                      </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><a class="page-link" href="#"><i class="ri-arrow-left-s-line"></i></a></li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                      {% if page_obj.number == num %}
+                        <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                      {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item"><a class="page-link" href="?page={{ num }}&user={{ selected_user }}&action_type={{ selected_action }}&target_model={{ selected_target }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}">{{ num }}</a></li>
+                      {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ page_obj.next_page_number }}&user={{ selected_user }}&action_type={{ selected_action }}&target_model={{ selected_target }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}">
+                        <i class="ri-arrow-right-s-line"></i>
+                      </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><a class="page-link" href="#"><i class="ri-arrow-right-s-line"></i></a></li>
+                    {% endif %}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filter logic (AJAX)
+    const filterInputs = document.querySelectorAll('.filter-input');
+    const form = document.getElementById('logs-filter-form');
+    const tableContainer = document.getElementById('logs-table-container');
+    let debounceTimer;
+
+    function fetchResults() {
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData);
+        const url = `${window.location.pathname}?${params.toString()}`;
+        window.history.pushState({}, '', url);
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.text())
+            .then(html => {
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const newContainer = doc.getElementById('logs-table-container');
+                if (newContainer) tableContainer.innerHTML = newContainer.innerHTML;
+            })
+            .catch(err => console.error('Error fetching logs:', err));
+    }
+
+    filterInputs.forEach(input => {
+        input.addEventListener('input', () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(fetchResults, 500); });
+        input.addEventListener('change', () => { clearTimeout(debounceTimer); fetchResults(); });
+    });
+    form.addEventListener('submit', e => { e.preventDefault(); fetchResults(); });
+
+    // Quick Filters Handler
+    document.querySelectorAll('.quick-filter').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const target = this.getAttribute('data-target');
+            const input = document.getElementById('target_model_input');
+            input.value = target;
+            // Trigger AJAX
+            fetchResults();
+        });
+    });
+
+    // Bulk Actions
+    document.addEventListener('change', function(e) {
+        if (e.target.id === 'selectAll') {
+            document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = e.target.checked);
+        }
+        updateBulkBar();
+    });
+
+    function updateBulkBar() {
+        const count = document.querySelectorAll('.row-checkbox:checked').length;
+        document.getElementById('selectedCount').textContent = count;
+        document.getElementById('bulkActionsBar').style.display = count > 0 ? 'block' : 'none';
+    }
+
+    document.getElementById('clearSelection').addEventListener('click', function() {
+        document.querySelectorAll('.row-checkbox, #selectAll').forEach(cb => cb.checked = false);
+        updateBulkBar();
+    });
+
+    // Toggle date filters
+    const toggleDateBtn = document.getElementById('toggleDateFilters');
+    const dateFiltersRow = document.getElementById('dateFiltersRow');
+    if (toggleDateBtn && dateFiltersRow) {
+        toggleDateBtn.addEventListener('click', function() {
+            dateFiltersRow.classList.toggle('d-none');
+            this.classList.toggle('btn-primary');
+            this.classList.toggle('btn-light');
+        });
+    }
+});
+</script>
+{% endblock content %}

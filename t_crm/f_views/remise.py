@@ -10,7 +10,7 @@ from django.core.exceptions import PermissionDenied
 from functools import wraps
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
-from t_tresorerie.models import DuePaiements
+from t_tresorerie.models import DuePaiements, Paiements
 from django.utils.dateformat import format
 from institut_app.decorators import module_permission_required
 
@@ -251,6 +251,11 @@ def ApiDeleteRemiseAppliquer(request):
         discountId = request.POST.get('id')
         try:
             remise_obj = RemiseAppliquer.objects.get(id=discountId)
+            
+            # Vérifier si l'un des prospects liés a déjà des paiements enregistrés
+            prospect_ids = RemiseAppliquerLine.objects.filter(remise_appliquer=remise_obj).values_list('prospect_id', flat=True)
+            if Paiements.objects.filter(prospect_id__in=prospect_ids).exists():
+                return JsonResponse({"status": "error", "message": "Impossible de supprimer cette réduction car des paiements ont déjà été enregistrés pour le(s) prospect(s) concerné(s)."})
             
             remise_obj.delete()
             return JsonResponse({"status": "success", "message": "La réduction a été supprimée avec succès."})
