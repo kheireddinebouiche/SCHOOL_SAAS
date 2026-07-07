@@ -993,3 +993,5 @@ M i s e   a   j o u r   d e s   f i l t r e s   d a n s   r e v i e w _ b u d g 
 - Correction de la priorité CSS sur le fond de la zone d'ajout dans configure-devis.html (application de la couleur #f4f7fb directement sur les 	d pour surcharger le fond par défaut de Bootstrap).
 
 - Ajout de marges intérieures (padding) à la carte des Prestations & Articles dans configure-devis.html pour l'aligner avec les autres blocs et l'encadrer correctement sur le fond blanc.
+
+- Résolution de l'erreur 500 (AttributeError: \'NoneType\' object has no attribute \'entite\') dans l'API ApiGetDetailsDemandePaiement : gestion sécurisée lorsque l'échéancier (echeancierId) est inexistant ou non défini, avec affichage de la mention 'Données manquantes (Entité)' au lieu de faire planter la requête.

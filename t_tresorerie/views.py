@@ -448,8 +448,8 @@ def ApiGetDetailsDemandePaiement(request):
             paiements_done_data = []
 
         obj_echeacncier_speial = EcheancierSpecial.objects.filter(prospect=obj.client, is_canceled=False).last()
-        special_echeancier_frais_inscription_entite_id = echeancierId.entite.id if echeancierId.entite else None
-        special_echeancier_frais_inscription_entite_nom = echeancierId.entite.designation if echeancierId.entite else None
+        special_echeancier_frais_inscription_entite_id = echeancierId.entite.id if echeancierId and echeancierId.entite else None
+        special_echeancier_frais_inscription_entite_nom = echeancierId.entite.designation if echeancierId and echeancierId.entite else "Données manquantes (Entité)"
         
         if obj_echeacncier_speial:
             line_echeancier_special = EcheancierPaiementSpecialLine.objects.filter(echeancier = obj_echeacncier_speial)
