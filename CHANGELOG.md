@@ -997,3 +997,7 @@ M i s e   a   j o u r   d e s   f i l t r e s   d a n s   r e v i e w _ b u d g 
 - Résolution de l'erreur 500 (AttributeError: \'NoneType\' object has no attribute \'entite\') dans l'API ApiGetDetailsDemandePaiement : gestion sécurisée lorsque l'échéancier (echeancierId) est inexistant ou non défini, avec affichage de la mention 'Données manquantes (Entité)' au lieu de faire planter la requête.
 
 - Résolution de l'erreur 500 (TypeError: unsupported operand type(s) for +=: \'decimal.Decimal\' and \'NoneType\') dans la vue AttentesPaiements : sécurisation du calcul du total des attentes (	otal_dus += (amount or 0)) pour éviter un plantage lorsqu'une spécialité ou une instance n'a pas de prix défini.
+
+- Correction de l'affichage du montant dû dans /comptabilite/tresorerie/attentes-de-paiements/ : le montant affiché et le total global sont désormais calculés à partir des échéances réellement générées (DuePaiements) pour chaque prospect. Si l'échéancier n'est pas encore généré, le montant est évalué à 0 (affiché comme Non disponible), évitant ainsi d'afficher un prix théorique trompeur.
+
+- Correction d'un bug potentiel dans l'API ApiListeDemandePaiement et la vue AttentesPaiements : suppression du filtre sur la promo lors de la récupération des DuePaiements (ce modèle ne possède pas de champ promo), ce qui permet aux étudiants en double diplomation (et standards) d'avoir un total affiché strictement identique à celui de leur page de détails.

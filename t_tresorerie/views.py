@@ -20,8 +20,10 @@ def AttentesPaiements(request):
     
     total_dus = 0
     for obj in listes:
-        amount = obj.amount if obj.amount else (obj.specialite.prix if obj.specialite else ((obj.specialite_double.prix_spec1 or 0) + (obj.specialite_double.prix_spec2 or 0)) if obj.specialite_double else 0)
-        total_dus += (amount or 0)
+        if obj.client:
+            due_query = Q(client=obj.client)
+            amount = DuePaiements.objects.filter(due_query).aggregate(total=Sum('montant_due'))['total'] or 0
+            total_dus += float(amount)
         
     total_paye = clientPaiementsRequestLine.objects.filter(paiement_request__client__statut="instance").aggregate(total=Sum('montant_paye'))['total'] or 0
 
@@ -84,15 +86,10 @@ def ApiListeDemandePaiement(request):
         # Calculer le montant déjà payé pour cette instance
         total_paye = clientPaiementsRequestLine.objects.filter(paiement_request=obj).aggregate(total=Sum('montant_paye'))['total'] or 0
 
-        # Calcul des frais d'inscription à ajouter depuis l'échéancier
-        frais_inscription = 0
-        if special_echeancier and special_echeancier.is_validate:
-            frais_inscription = special_echeancier.frais_inscription
-        elif obj.ref_echeancier:
-            frais_inscription = obj.ref_echeancier.frais_inscription
-
-        base_amount = obj.amount if obj.amount else (obj.specialite.prix if obj.specialite else ((obj.specialite_double.prix_spec1 or 0) + (obj.specialite_double.prix_spec2 or 0)) if obj.specialite_double else 0)
-        total_due_amount = float(base_amount or 0) + float(frais_inscription or 0)
+        total_due_amount = 0
+        if obj.client:
+            due_query = Q(client=obj.client)
+            total_due_amount = float(DuePaiements.objects.filter(due_query).aggregate(total=Sum('montant_due'))['total'] or 0)
 
         data.append({
             "id": obj.id,
