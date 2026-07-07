@@ -951,6 +951,9 @@
                             <p class="mb-0 text-muted small">Cliquez sur détails pour voir les informations de l'échéancier.</p>
                         </div>
                         <div class="flex-shrink-0 ms-3">
+                            <button type="button" class="btn btn-danger btn-sm me-1 btn-cancel-special-echeancier">
+                                <i class="ri-close-circle-line me-1"></i>Annuler
+                            </button>
                             <button type="button" class="btn btn-primary btn-sm" id="showEcheancierSpecialDetails">
                                 <i class="ri-eye-line me-1"></i>Détails
                             </button>
@@ -965,6 +968,9 @@
                             <p class="mb-0 text-muted small">Veuillez patienter pendant que nous traitons votre demande.</p>
                         </div>
                         <div class="flex-shrink-0 ms-3">
+                            <button type="button" class="btn btn-danger btn-sm me-1 btn-cancel-special-echeancier">
+                                <i class="ri-close-circle-line me-1"></i>Annuler
+                            </button>
                             <button type="button" class="btn btn-warning btn-sm" id="showEcheancierExamenDetails">
                                 <i class="ri-eye-line me-1"></i>Détails
                             </button>
@@ -1000,6 +1006,11 @@
                         <div class="flex-grow-1">
                             <strong>Le client à bénificier d'un echéancier spécial !</strong>
                             <p class="mb-0 text-muted small">L'echéancier est valider.</p>
+                        </div>
+                        <div class="flex-shrink-0 ms-3">
+                            <button type="button" class="btn btn-danger btn-sm me-1 btn-cancel-special-echeancier">
+                                <i class="ri-close-circle-line me-1"></i>Annuler
+                            </button>
                         </div>
                     </div>
                     
@@ -1550,8 +1561,12 @@
                 <div class="row mb-4">
                     <div class="col-lg-12">
                         <div class="card border border-warning card-equal-height">
-                            <div class="card-header bg-warning bg-opacity-10">
+                            <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0 text-warning">Configuration de l'échéancier</h6>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" id="toggleFraisInscription" checked>
+                                    <label class="form-check-label small fw-bold text-muted" for="toggleFraisInscription">Inclure les frais d'inscription</label>
+                                </div>
                             </div>
                             <div class="card-body d-flex flex-column">
                                 <div class="mb-3">
@@ -1561,6 +1576,10 @@
                                 <div class="mb-3">
                                     <label for="frais_inscription_special" class="form-label fw-medium">Frais d'inscription</label>
                                     <input type="number" class="form-control border-0 bg-light py-2" id="frais_inscription_special" min="0" placeholder="0.00">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="date_frais_inscription_special" class="form-label fw-medium">Date frais</label>
+                                    <input type="date" class="form-control border-0 bg-light py-2" id="date_frais_inscription_special">
                                 </div>
                                 <div class="mb-3">
                                     <label for="entite_special_select" class="form-label fw-medium">Entité</label>
@@ -2220,7 +2239,7 @@
 
 <!-- Modal Détails Échéancier Spécial -->
 <div class="modal fade" id="echeancierSpecialDetailsModal" tabindex="-1" aria-labelledby="echeancierSpecialDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content rounded-3 shadow border-0">
             <div class="modal-header border-0 bg-primary bg-opacity-10 px-3 py-2">
                 <div class="d-flex align-items-center">
@@ -2281,7 +2300,7 @@
 
 <!-- Modal Détails Échéancier Spécial en Examen (sans bouton Appliquer) -->
 <div class="modal fade" id="echeancierExamenDetailsModal" tabindex="-1" aria-labelledby="echeancierExamenDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content rounded-3 shadow border-0">
             <div class="modal-header border-0 bg-warning bg-opacity-10 px-3 py-2">
                 <div class="d-flex align-items-center">
@@ -2296,6 +2315,38 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-2">
+                {% if echeancier_special %}
+                <div class="card border-0 bg-light mb-3">
+                    <div class="card-body p-2">
+                        <div class="row g-2">
+                            <div class="col-sm-6">
+                                <p class="text-muted mb-0 small">Tarif formation:</p>
+                                <h6 class="mb-0">{{ echeancier_special.tarif_formation|default:"0" }} DA</h6>
+                            </div>
+                            <div class="col-sm-6">
+                                <p class="text-muted mb-0 small">Frais d'inscription:</p>
+                                <h6 class="mb-0">{{ echeancier_special.frais_inscription|default:"0" }} DA</h6>
+                            </div>
+                            <div class="col-sm-4">
+                                <p class="text-muted mb-0 small">Remise:</p>
+                                <h6 class="mb-0">
+                                    {{ echeancier_special.remise|default:"0" }} {% if echeancier_special.type_remise == 'pourcentage' %}%{% else %}DA{% endif %}
+                                </h6>
+                            </div>
+                            <div class="col-sm-4">
+                                <p class="text-muted mb-0 small">Majoration:</p>
+                                <h6 class="mb-0">
+                                    {{ echeancier_special.majoration|default:"0" }} {% if echeancier_special.type_majoration == 'pourcentage' %}%{% else %}DA{% endif %}
+                                </h6>
+                            </div>
+                            <div class="col-sm-4">
+                                <p class="text-muted mb-0 small">Tranches:</p>
+                                <h6 class="mb-0">{{ echeancier_special.nombre_tranche|default:"0" }}</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
                                
                 <div class="row">
                     <div class="col-12">
@@ -3947,7 +3998,7 @@
                         $('#availableEcheanciersCard').show();
                         let availableHtml = "";
                         $.each(data.available_echeanciers, function(index, item) {
-                            const isCurrent = data.has_saved_echeancier && item.id === data.id_echeancier;
+                            const isCurrent = data.has_saved_echeancier && !data.special_echeancier_validate && item.id === data.id_echeancier;
                             availableHtml += `
                                 <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center ${isCurrent ? 'bg-light border-start border-primary border-4' : ''}">
                                     <div class="flex-grow-1">
@@ -4161,6 +4212,14 @@
                         IdSpecialEcheancier = data.echancierSpecialeId;
 
                         var rowSpecial = "";
+                        if (data.special_echeancier_frais_inscription > 0) {
+                            rowSpecial += '<tr data-entite-id="' + (data.special_echeancier_frais_inscription_entite_id || '') + '">';
+                            rowSpecial += '<td class="fw-medium text-dark"><span class="badge bg-info">Frais d\'inscription</span></td>';
+                            rowSpecial += '<td><span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">-</span></td>';
+                            rowSpecial += '<td class="fw-bold text-success">'+formatComptable(data.special_echeancier_frais_inscription)+' DA</td>';
+                            rowSpecial += '<td class="text-muted fw-medium">'+(data.special_echeancier_date_frais_inscription || '-')+'</td>';
+                            rowSpecial += '</tr>';
+                        }
                         $.each(data.special_echeancier_line, function(index, item){
                             rowSpecial += '<tr data-entite-id="' + (item.entite_id || '') + '">';
                             rowSpecial += "<td>"+item.value+"</td>";
@@ -4172,7 +4231,7 @@
                         $('#echeancierSpecialLinesTable').html(rowSpecial);
                     }
 
-                    if(data.echeancier_special_state_approuvel){
+                    if(data.echeancier_special_state_approuvel || data.has_special_echeancier){
                         document.getElementById('specialBoutonConf').disabled = true;
                         
                     }else{
@@ -4180,25 +4239,18 @@
                     
                     }
                     
+                    // Hide all notifications by default
+                    document.getElementById('echeancierExamenNotificationf').style.setProperty('display', "none", "important");
+                    document.getElementById('applicedEcheancierSpecial').style.setProperty('display', "none", "important");
+                    document.getElementById('echeancierSpecialNotification').style.setProperty('display', "none", "important");
+
                     if(data.special_echeancier_validate){
-                        validated_echeancier = true
-                        document.getElementById('echeancierExamenNotificationf').style.setProperty('display', "none", "important");
+                        validated_echeancier = true;
                         document.getElementById('applicedEcheancierSpecial').style.setProperty('display', "flex", "important");
-                       
-                    }else if (data.echeancier_special_state_approuvel){
-
-                        document.getElementById('echeancierExamenNotificationf').style.setProperty('display', "none", "important");
-                        document.getElementById('applicedEcheancierSpecial').style.setProperty('display', "none", "important");
+                    } else if (data.echeancier_special_state_approuvel){
                         document.getElementById('echeancierSpecialNotification').style.setProperty('display', "flex", "important");
-
-                    }else if(data.has_special_echeancier && !data.echeancier_special_state_approuvel) {
-
+                    } else if(data.has_special_echeancier && !data.echeancier_special_state_approuvel) {
                         document.getElementById('echeancierExamenNotificationf').style.setProperty('display', "flex", "important");
-                    }else{
-                        
-                        document.getElementById('echeancierExamenNotificationf').style.setProperty('display', "none", "important");
-                        document.getElementById('applicedEcheancierSpecial').style.setProperty('display', "none", "important");
-                        document.getElementById('echeancierSpecialNotification').style.setProperty('display', "none", "important");
                     }
 
                     if(data.has_due_paiement){
@@ -4710,30 +4762,30 @@
                 // Show the processed refund notification
                 document.getElementById('remboursementTraiteNotification').style.setProperty("display", "flex", "important");
                 document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "none", "important");
-                document.getElementById('btnNewPaiementModal').disabled = true;
-                document.getElementById('btnRefundRequestModal').disabled = true;
-                document.getElementById('btnPrintEngagement').disabled = true;
+                if (document.getElementById('btnNewPaiementModal')) document.getElementById('btnNewPaiementModal').disabled = true;
+                if (document.getElementById('btnRefundRequestModal')) document.getElementById('btnRefundRequestModal').disabled = true;
+                if (document.getElementById('btnPrintEngagement')) document.getElementById('btnPrintEngagement').disabled = true;
             } else if(has_pending_refund){
                 // Show the pending refund notification
                 document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "flex", "important");
                 document.getElementById('remboursementTraiteNotification').style.setProperty("display", "none", "important");
-                document.getElementById('btnNewPaiementModal').disabled = true;
-                document.getElementById('btnRefundRequestModal').disabled = true;
-                document.getElementById('btnPrintEngagement').disabled = true;
+                if (document.getElementById('btnNewPaiementModal')) document.getElementById('btnNewPaiementModal').disabled = true;
+                if (document.getElementById('btnRefundRequestModal')) document.getElementById('btnRefundRequestModal').disabled = true;
+                if (document.getElementById('btnPrintEngagement')) document.getElementById('btnPrintEngagement').disabled = true;
             }else if(has_processed_refund && is_appliced){
                 // Hide both notifications
                 document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "none", "important");
                 document.getElementById('remboursementTraiteNotification').style.setProperty("display", "none", "important");
-                document.getElementById('btnNewPaiementModal').disabled = false;
-                document.getElementById('btnRefundRequestModal').disabled = false;  
-                document.getElementById('btnPrintEngagement').disabled = false;
+                if (document.getElementById('btnNewPaiementModal')) document.getElementById('btnNewPaiementModal').disabled = false;
+                if (document.getElementById('btnRefundRequestModal')) document.getElementById('btnRefundRequestModal').disabled = false;  
+                if (document.getElementById('btnPrintEngagement')) document.getElementById('btnPrintEngagement').disabled = false;
             }else{
                 // Hide both notifications
                 document.getElementById('remboursementEnAttenteNotification').style.setProperty("display", "none", "important");
                 document.getElementById('remboursementTraiteNotification').style.setProperty("display", "none", "important");
-                document.getElementById('btnNewPaiementModal').disabled = false;
-                document.getElementById('btnRefundRequestModal').disabled = false;  
-                document.getElementById('btnPrintEngagement').disabled = false;
+                if (document.getElementById('btnNewPaiementModal')) document.getElementById('btnNewPaiementModal').disabled = false;
+                if (document.getElementById('btnRefundRequestModal')) document.getElementById('btnRefundRequestModal').disabled = false;  
+                if (document.getElementById('btnPrintEngagement')) document.getElementById('btnPrintEngagement').disabled = false;
             }
         }
       
@@ -5633,6 +5685,14 @@
             $('#saveSpecialEcheancierBtn').prop('disabled', false);
         }
         
+        // Handle frais d'inscription toggle
+        $(document).on('change', '#toggleFraisInscription', function() {
+            var isChecked = $(this).is(':checked');
+            $('#frais_inscription_special').prop('disabled', !isChecked);
+            $('#date_frais_inscription_special').prop('disabled', !isChecked);
+            $('#entite_special_select').prop('disabled', !isChecked);
+        });
+        
         // Ouvrir la modale de confirmation lors du clic sur "Enregistrer l'échéancier"
         $(document).on('click', '#saveSpecialEcheancierBtn', function(){
             $('#confirmSaveEcheancierModal').modal('show');
@@ -5650,17 +5710,12 @@
         // Confirmer l'enregistrement de l'échéancier
         $(document).on('click', '#confirmSaveEcheancierBtn', function(){
             var btn = $(this); // référence du bouton
-            btn.prop('disabled', true); // désactive le bouton
-
-            // Optionnel : afficher un spinner pour indiquer le chargement
             var originalText = btn.html();
-            btn.html(`
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                Envoi en cours...
-            `);
+
             // Collect data from the special echeancier table
             var echeancierLines = [];
             var isValid = true;
+            var isEntityMissing = false;
 
             $('#specialEcheancierTable tr').each(function() {
                 var $row = $(this);
@@ -5677,8 +5732,11 @@
                 var entite = $row.find('td:nth-child(5)').text(); // Get entity from the 5th column (now hidden)
 
                 // Validate required fields
-                if ((!taux && taux !== 0) || !montant || !date) {
+                if ((!taux && taux !== 0) || !montant || !date || !entite) {
                     isValid = false;
+                    if (!entite) {
+                        isEntityMissing = true;
+                    }
                     return false; // Break the loop
                 }
 
@@ -5687,20 +5745,33 @@
                     value: nom_tranche, // We don't have this value in the UI, so leave it empty
                     montant_tranche: montant,
                     date_echeancier: date,
-                    entite: entite  // Add entity to the data
+                    entite_id: entite  // Add entity to the data
                 });
             });
             
             if (!isValid) {
-                alert("Veuillez remplir tous les champs pour chaque tranche.");
+                if (isEntityMissing) {
+                    alertify.error("Veuillez sélectionner une entité d'encaissement pour toutes les tranches.");
+                } else {
+                    alertify.error("Veuillez remplir tous les champs (date, montant, entité) pour chaque tranche.");
+                }
+                $('#confirmSaveEcheancierModal').modal('hide');
                 return;
             }
+            
+            btn.prop('disabled', true); // désactive le bouton
+            btn.html(`
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Envoi en cours...
+            `);
             
             // Get other required data
             var prospectId = clientId; // Use the stored client ID
             var nombreTranches = $('#nombreTranches').val();
-            var fraisInscription = $('#frais_inscription_special').val();
-            var entiteId = $('#entite_special_select').val();
+            var isFraisEnabled = $('#toggleFraisInscription').is(':checked');
+            var fraisInscription = isFraisEnabled ? $('#frais_inscription_special').val() : 0;
+            var dateFraisInscription = isFraisEnabled ? $('#date_frais_inscription_special').val() : null;
+            var entiteId = isFraisEnabled ? $('#entite_special_select').val() : null;
             
             // Prepare data for API call
             var data = {
@@ -5708,6 +5779,7 @@
                 nombre_tranches: nombreTranches,
                 echeancier_lines: echeancierLines,
                 frais_inscription: fraisInscription,
+                date_frais_inscription: dateFraisInscription,
                 entite_id: entiteId
             };
             
@@ -7355,6 +7427,38 @@
             });
             $('#specialEcheancierModal').modal('hide');
 
+        });
+
+        $(document).on('click', '.btn-cancel-special-echeancier', function(){
+            var btn = $(this);
+            var originalText = btn.html();
+            
+            alertify.confirm("Annulation de la demande", "Voulez-vous vraiment annuler cet échéancier spécial ?",
+                function(){
+                    btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>').prop('disabled', true);
+                    $.ajax({
+                        url : "{% url 't_tresorerie:ApiCancelEcheancierSpecial' %}",
+                        dataType : "JSON",
+                        type : "POST",
+                        data : {
+                            'id_echeancier_special' : IdSpecialEcheancier,
+                            'csrfmiddlewaretoken': '{{ csrf_token }}'
+                        },
+                        success : function(response){
+                            if(response.status === "success"){
+                                alertify.success("L'échéancier spécial a été annulé avec succès");
+                                loadDatas();
+                            }else{
+                                alertify.error("Une erreur s'est produite lors du traitement de la requête");
+                            }
+                        },
+                        complete: function() {
+                            btn.html(originalText).prop('disabled', false);
+                        }
+                    });
+                },
+                function(){}
+            );
         });
         
         function showUnpaidPaymentNotification() {

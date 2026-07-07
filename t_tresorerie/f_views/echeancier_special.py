@@ -31,6 +31,7 @@ def ListeEcheancierSpecial(request):
             },
             'is_validate': echeancier.is_validate,
             'is_approuved': echeancier.is_approuved,
+            'is_canceled': echeancier.is_canceled,
             'frais_inscription': str(echeancier.frais_inscription) if echeancier.frais_inscription else "0",
             'entite': echeancier.entite.designation if echeancier.entite else "Non définie",
             'entite_id': echeancier.entite.id if echeancier.entite else None,
@@ -96,6 +97,7 @@ def ApiListEcheancierSpecial(request):
                 'double_degree_data': double_degree_data,
                 'is_validate': echeancier.is_validate,
                 'is_approuved': echeancier.is_approuved,
+                'is_canceled': echeancier.is_canceled,
                 'frais_inscription': str(echeancier.frais_inscription) if echeancier.frais_inscription else "0",
                 'entite': echeancier.entite.designation if echeancier.entite else "Non définie",
                 'entite_id': echeancier.entite.id if echeancier.entite else None,
@@ -254,6 +256,7 @@ def ApiStoreEcheancierSpecial(request):
         nombre_tranches = data.get('nombre_tranches')
         echeancier_lines = data.get('echeancier_lines')
         frais_inscription = data.get('frais_inscription')
+        date_frais_inscription = data.get('date_frais_inscription')
         entite_id = data.get('entite_id')
 
         # # Validate required fields
@@ -268,6 +271,7 @@ def ApiStoreEcheancierSpecial(request):
             prospect_id=prospect_id,
             nombre_tranche=nombre_tranches,
             frais_inscription=Decimal(str(frais_inscription)) if frais_inscription else None,
+            date_frais_inscription=date_frais_inscription if date_frais_inscription else None,
             entite_id=entite_id if entite_id else None,
             is_validate=False,
             is_approuved=False
@@ -303,7 +307,7 @@ def ApiStoreEcheancierSpecial(request):
             else:
                 montant_tranche = Decimal('0')
 
-            entite_line_id = line.get('entite')
+            entite_line_id = line.get('entite_id')
             if not entite_line_id or entite_line_id == "" or entite_line_id == "None":
                 entite_line_id = None
 

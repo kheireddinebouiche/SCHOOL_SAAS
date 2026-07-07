@@ -27,6 +27,13 @@ from .views_paie import *
 
 from t_conseil.views import ListeDesFactures, ListeDesDevis, ListeDesClients
 
+from t_crm.f_views.remise import (
+    ListeRemiseApplique, AipLoadRemise, ApiStoreApplicedReduction,
+    ApiloadRemiseAppliquer, ApiLoadRemiseAppliquerDetails,
+    ApiGetReductionDetails, ApiActivateRemiseAppliquer,
+    ApiLoadProspectParticulier, ApiDeleteRemiseAppliquer
+)
+
 app_name="t_tresorerie"
 
 urlpatterns = [
@@ -108,6 +115,7 @@ urlpatterns = [
     
     path('ApiDeletePaiement', ApiDeletePaiement, name="ApiDeletePaiement"),
     path("ApiApplyEcheancierSpecial", ApiApplyEcheancierSpecial, name="ApiApplyEcheancierSpecial"),
+    path("ApiCancelEcheancierSpecial", ApiCancelEcheancierSpecial, name="ApiCancelEcheancierSpecial"),
     path('ApiLoadSpecialites', ApiLoadSpecialites, name="ApiLoadSpecialites"),
 
     path('ApiConfirmInscription', ApiConfirmInscription, name="ApiConfirmInscription"),
@@ -344,4 +352,15 @@ urlpatterns = [
     # Gestion de la paie
     path('paies/liste/', submenu_access_required("tre", "tresorerie")(liste_paie_finance), name="liste_paie_finance"),
     path('paies/lancer-depense/', submenu_access_required("tre", "tresorerie")(lancer_depense_paie), name="lancer_depense_paie"),
+
+    # Gestion des reductions
+    path('gestion-des-reductions/', submenu_access_required("tre", "tresorerie")(ListeRemiseApplique), name="ListeRemiseApplique"),
+    path('AipLoadRemise', AipLoadRemise, name="AipLoadRemise"),
+    path('ApiLoadProspectParticulier', ApiLoadProspectParticulier, name="ApiLoadProspectParticulier"),
+    path('ApiStoreApplicedReduction', ApiStoreApplicedReduction, name="ApiStoreApplicedReduction"), 
+    path('ApiloadRemiseAppliquer', ApiloadRemiseAppliquer, name="ApiloadRemiseAppliquer"),
+    path('ApiLoadRemiseAppliquerDetails', ApiLoadRemiseAppliquerDetails, name="ApiLoadRemiseAppliquerDetails"),
+    path('ApiGetReductionDetails', ApiGetReductionDetails, name="ApiGetReductionDetails"),
+    path('ApiActivateRemiseAppliquer', ApiActivateRemiseAppliquer, name="ApiActivateRemiseAppliquer"),
+    path('ApiDeleteRemiseAppliquer', ApiDeleteRemiseAppliquer, name="ApiDeleteRemiseAppliquer"),
 ]

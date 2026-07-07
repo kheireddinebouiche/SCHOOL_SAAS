@@ -301,6 +301,7 @@ class EcheancierSpecial(models.Model):
     prospect = models.ForeignKey(Prospets, on_delete=models.CASCADE, null=True, blank=True)
     
     frais_inscription = models.DecimalField(decimal_places=2, max_digits=200, null=True, blank=True)
+    date_frais_inscription = models.DateField(null=True, blank=True)
     remise = models.DecimalField(decimal_places=2, max_digits=20, default=0, null=True, blank=True)
     type_remise = models.CharField(max_length=20, default='fixe', choices=[('fixe', 'Montant Fixe'), ('pourcentage', 'Pourcentage')])
     majoration = models.DecimalField(decimal_places=2, max_digits=20, default=0, null=True, blank=True)
@@ -312,6 +313,7 @@ class EcheancierSpecial(models.Model):
 
     is_validate = models.BooleanField(default=False)
     is_approuved = models.BooleanField(default=False)
+    is_canceled = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

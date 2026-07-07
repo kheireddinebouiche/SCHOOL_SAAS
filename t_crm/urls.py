@@ -56,12 +56,7 @@ from .f_views.secondwishe import (
     ApiListeSecondWishes, ApiStoreSecondWish, ApiDeleteSecondWish,
     ApiCountFormationSupplementaire, ApiConfirmeSecondWish
 )
-from .f_views.remise import (
-    ListeRemiseApplique, AipLoadRemise, ApiStoreApplicedReduction,
-    ApiloadRemiseAppliquer, ApiLoadRemiseAppliquerDetails,
-    ApiGetReductionDetails, ApiActivateRemiseAppliquer,
-    ApiLoadProspectParticulier, ApiDeleteRemiseAppliquer
-)
+
 from .f_views.counter import get_crm_counters, increment_crm_counter, get_activity_history
 from .f_views.logs import user_action_log_list, clear_logs
 from .f_views.reporting import crm_reporting, ApiGetCrmReportingData
@@ -224,14 +219,6 @@ urlpatterns = [
     path('ApiCountFormationSupplementaire', ApiCountFormationSupplementaire, name="ApiCountFormationSupplementaire"),
     path('ApiConfirmeSecondWish', ApiConfirmeSecondWish, name="ApiConfirmeSecondWish"),
 
-    path('gestion-des-reductions/', ListeRemiseApplique, name="ListeRemiseApplique"),
-    path('AipLoadRemise', AipLoadRemise, name="AipLoadRemise"),
-
-    path('ApiLoadProspectParticulier', ApiLoadProspectParticulier, name="ApiLoadProspectParticulier"),
-    path('ApiStoreApplicedReduction', ApiStoreApplicedReduction, name="ApiStoreApplicedReduction"), 
-    path('ApiloadRemiseAppliquer', ApiloadRemiseAppliquer, name="ApiloadRemiseAppliquer"),
-    path('ApiLoadRemiseAppliquerDetails', ApiLoadRemiseAppliquerDetails, name="ApiLoadRemiseAppliquerDetails"),
-
     path('ApiValidatePreinscrit', ApiValidatePreinscrit, name="ApiValidatePreinscrit"),
     path('ApiCancelPreinscrit', ApiCancelPreinscrit, name="ApiCancelPreinscrit"),
     path('ApiReactivatePreinscrit', ApiReactivatePreinscrit, name="ApiReactivatePreinscrit"),
@@ -239,11 +226,6 @@ urlpatterns = [
     path('ApiGeneratePaiementRequest', ApiGeneratePaiementRequest, name="ApiGeneratePaiementRequest"),
 
     path('ApiLoadFinancialData', ApiLoadFinancialData, name="ApiLoadFinancialData"),
-
-    path('ApiGetReductionDetails', ApiGetReductionDetails, name="ApiGetReductionDetails"),
-
-    path('ApiActivateRemiseAppliquer', ApiActivateRemiseAppliquer, name="ApiActivateRemiseAppliquer"),
-    path('ApiDeleteRemiseAppliquer', ApiDeleteRemiseAppliquer, name="ApiDeleteRemiseAppliquer"),
 
     path('ApiCreateVoeuxDouble', ApiCreateVoeuxDouble, name="ApiCreateVoeuxDouble"),
     

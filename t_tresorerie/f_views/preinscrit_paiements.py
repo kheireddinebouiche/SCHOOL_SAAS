@@ -416,6 +416,38 @@ def ApiApplyEcheancierSpecial(request):
     else:
         return JsonResponse({"status" : "error"})
 
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+@module_permission_required('tre', 'add')
+def ApiCancelEcheancierSpecial(request):
+    if request.method == "POST":
+        id_echeancier_special = request.POST.get('id_echeancier_special')
+
+        if not id_echeancier_special:
+            return JsonResponse({"status": "error","message":"Informations manquante"})
+        
+        obj_echeancier_special = EcheancierSpecial.objects.get(id = id_echeancier_special)
+        obj_echeancier_special.is_canceled = True
+        obj_echeancier_special.save()
+        
+        prospect = obj_echeancier_special.prospect
+        if prospect:
+            prospect.has_special_echeancier = False
+            prospect.save()
+        
+        # Log d'annulation d'échéancier spécial
+        UserActionLog.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='EcheancierSpecial',
+            target_id=str(id_echeancier_special),
+            details=f"Annulation de l'échéancier spécial pour l'étudiant {obj_echeancier_special.prospect.nom if obj_echeancier_special.prospect else ''}.",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        return JsonResponse({"status" : "success"})
+    else:
+        return JsonResponse({"status" : "error"})
 
 def generate_matricule_interne(promo_code):
     

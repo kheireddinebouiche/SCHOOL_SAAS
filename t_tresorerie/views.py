@@ -41,13 +41,13 @@ def ApiListeDemandePaiement(request):
         has_rembourssement = Rembourssements.objects.filter(client = obj.client, is_done=False).exists()
 
         # Alertes échéancier spécial
-        special_echeancier = EcheancierSpecial.objects.filter(prospect=obj.client).last()
+        special_echeancier = EcheancierSpecial.objects.filter(prospect=obj.client, is_canceled=False).last()
         echeancier_special_alerte = None
         if special_echeancier:
             if not special_echeancier.is_approuved:
                 echeancier_special_alerte = "en_attente"
             elif not special_echeancier.is_validate:
-                echeancier_special_alerte = "non_accepte"
+                echeancier_special_alerte = "approuve"
         
         # Alertes remise
         remise_appliquer = RemiseAppliquerLine.objects.filter(prospect=obj.client).select_related('remise_appliquer').last()
@@ -105,6 +105,12 @@ def PageDetailsDemandePaiement(request, pk):
 
     obj = ClientPaiementsRequest.objects.get(id = pk)
     
+    # Check for pending echeancier special
+    from t_tresorerie.models import EcheancierSpecial
+    echeancier_special_en_attente = EcheancierSpecial.objects.filter(prospect=obj.client, is_approuved=False, is_validate=True).first()
+    if not echeancier_special_en_attente:
+        echeancier_special_en_attente = EcheancierSpecial.objects.filter(prospect=obj.client, is_approuved=False).first()
+
     # Log de consultation
     UserActionLog.objects.create(
         user=request.user,
@@ -119,7 +125,8 @@ def PageDetailsDemandePaiement(request, pk):
         'tenant' : request.tenant,
         'pk' : pk,
         'payment_types': PaymentType.objects.all(),
-        'activer_ticket_caisse': params.activer_ticket_caisse
+        'activer_ticket_caisse': params.activer_ticket_caisse,
+        'echeancier_special': echeancier_special_en_attente
     }
 
     if obj.client.is_double:
@@ -415,7 +422,7 @@ def ApiGetDetailsDemandePaiement(request):
         else:
             paiements_done_data = []
 
-        obj_echeacncier_speial = EcheancierSpecial.objects.filter(prospect = obj.client).last()
+        obj_echeacncier_speial = EcheancierSpecial.objects.filter(prospect=obj.client, is_canceled=False).last()
         special_echeancier_frais_inscription_entite_id = echeancierId.entite.id if echeancierId.entite else None
         special_echeancier_frais_inscription_entite_nom = echeancierId.entite.designation if echeancierId.entite else None
         
@@ -497,6 +504,9 @@ def ApiGetDetailsDemandePaiement(request):
         if obj_echeacncier_speial and obj_echeacncier_speial.is_validate:
             echeancier_data = special_echeancier_data
             frais_inscription = obj_echeacncier_speial.frais_inscription
+            special_date = obj_echeacncier_speial.date_frais_inscription
+        else:
+            special_date = None
         
         refund = Rembourssements.objects.filter(client = obj.client).last()
         refund_data = []
@@ -556,7 +566,7 @@ def ApiGetDetailsDemandePaiement(request):
             'promo' : voeux.promo.code,
             'prix_formation' : voeux.specialite.prix,
             'frais_inscription' : frais_inscription,
-            'date_frais_inscription': echeancierId.date_frais_inscription.strftime("%Y-%m-%d") if echeancierId and echeancierId.date_frais_inscription else None,
+            'date_frais_inscription': special_date.strftime("%Y-%m-%d") if special_date else (echeancierId.date_frais_inscription.strftime("%Y-%m-%d") if echeancierId and echeancierId.date_frais_inscription else None),
             'logo_header' : voeux.specialite.formation.entite_legal.entete_logo.url,
             'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url,
         }
@@ -582,7 +592,7 @@ def ApiGetDetailsDemandePaiement(request):
             'id_echeancier_special' : obj_echeacncier_speial.id if obj_echeacncier_speial else None,
             'id_echeancier' : echeancierId.id,
             'available_echeanciers': list(available_echeanciers),
-            'has_saved_echeancier': obj.ref_echeancier is not None,
+            'has_saved_echeancier': obj.ref_echeancier is not None or (obj_echeacncier_speial and obj_echeacncier_speial.is_validate),
             'special_echeancier_line' : list(special_echeancier_data),
             'echeancier_special_state_approuvel' : echeancier_state_approuvel,
             "has_due_paiement" : has_due_paiement,
@@ -597,6 +607,8 @@ def ApiGetDetailsDemandePaiement(request):
             'is_appliced' : is_appliced,
             "refund_data" : refund_data,
             'special_echeancier_validate' : special_echeancier_validate,
+            'special_echeancier_frais_inscription' : obj_echeacncier_speial.frais_inscription if obj_echeacncier_speial else 0,
+            'special_echeancier_date_frais_inscription' : obj_echeacncier_speial.date_frais_inscription.strftime("%Y-%m-%d") if obj_echeacncier_speial and obj_echeacncier_speial.date_frais_inscription else None,
             'special_echeancier_frais_inscription_entite_id' : special_echeancier_frais_inscription_entite_id,
             'special_echeancier_frais_inscription_entite_nom' : special_echeancier_frais_inscription_entite_nom,
             'annee_academique' : voeux.promo.annee_academique,
@@ -780,7 +792,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
         else:
             remiseDatas = None
 
-        obj_echeacncier_speial = EcheancierSpecial.objects.filter(prospect = obj.client).last()
+        obj_echeacncier_speial = EcheancierSpecial.objects.filter(prospect = obj.client, is_canceled=False).last()
         special_echeancier_frais_inscription_entite_id = echeancierId.entite.id if echeancierId and echeancierId.entite else None
         special_echeancier_frais_inscription_entite_nom = echeancierId.entite.designation if echeancierId and echeancierId.entite else None
 
@@ -828,6 +840,9 @@ def ApiGetDetailsDemandePaiementDouble(request):
         ## Changement de d'echeancier -- a remplacer une fois valider par l'utilisateur
         if obj_echeacncier_speial and obj_echeacncier_speial.is_validate:
             echeancier_data = special_echeancier_data
+            special_date = obj_echeacncier_speial.date_frais_inscription
+        else:
+            special_date = None
 
         refund = Rembourssements.objects.filter(client = obj.client).last()
         refund_data = []
@@ -898,7 +913,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
             'promo' : resolved_promo.code if resolved_promo else "N/A",
             'prix_formation' : (resolved_spec_double.prix_spec1 or 0) + (resolved_spec_double.prix_spec2 or 0) if resolved_spec_double else 0,
             'frais_inscription' : frais_inscription,
-            'date_frais_inscription': echeancierId.date_frais_inscription.strftime("%Y-%m-%d") if echeancierId and echeancierId.date_frais_inscription else None,
+            'date_frais_inscription': special_date.strftime("%Y-%m-%d") if special_date else (echeancierId.date_frais_inscription.strftime("%Y-%m-%d") if echeancierId and echeancierId.date_frais_inscription else None),
             'logo_header' : echeancierId.entite.entete_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.entete_logo else None,
             'logo_footer' : echeancierId.entite.pied_page_logo.url if echeancierId and echeancierId.entite and echeancierId.entite.pied_page_logo else None,
         }
@@ -936,7 +951,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
             "total_paiement" : total_paiement if has_paiement else 0,
             'id_echeancier' : echeancierId.id,
             'available_echeanciers': list(available_echeanciers),
-            'has_saved_echeancier': obj.ref_echeancier is not None,
+            'has_saved_echeancier': obj.ref_echeancier is not None or (obj_echeacncier_speial and obj_echeacncier_speial.is_validate),
             "has_invoice": done_paiements.filter(is_refund=False, facture__isnull=False).exists() if has_paiement else False,
             "refund_data" : refund_data,
             "has_pending_refund" : has_pending_refund,
@@ -946,6 +961,8 @@ def ApiGetDetailsDemandePaiementDouble(request):
             'echeancier_special_state_approuvel' : echeancier_state_approuvel,
             'has_special_echeancier' : has_special_echeancier,
             'special_echeancier_validate' : special_echeancier_validate,
+            'special_echeancier_frais_inscription' : obj_echeacncier_speial.frais_inscription if obj_echeacncier_speial else 0,
+            'special_echeancier_date_frais_inscription' : obj_echeacncier_speial.date_frais_inscription.strftime("%Y-%m-%d") if obj_echeacncier_speial and obj_echeacncier_speial.date_frais_inscription else None,
             'special_echeancier_frais_inscription_entite_id' : special_echeancier_frais_inscription_entite_id,
             'special_echeancier_frais_inscription_entite_nom' : special_echeancier_frais_inscription_entite_nom,
             'specialite_data_price' : specialite_data_price,
