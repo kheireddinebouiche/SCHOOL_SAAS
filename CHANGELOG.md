@@ -1001,3 +1001,5 @@ M i s e   a   j o u r   d e s   f i l t r e s   d a n s   r e v i e w _ b u d g 
 - Correction de l'affichage du montant dû dans /comptabilite/tresorerie/attentes-de-paiements/ : le montant affiché et le total global sont désormais calculés à partir des échéances réellement générées (DuePaiements) pour chaque prospect. Si l'échéancier n'est pas encore généré, le montant est évalué à 0 (affiché comme Non disponible), évitant ainsi d'afficher un prix théorique trompeur.
 
 - Correction d'un bug potentiel dans l'API ApiListeDemandePaiement et la vue AttentesPaiements : suppression du filtre sur la promo lors de la récupération des DuePaiements (ce modèle ne possède pas de champ promo), ce qui permet aux étudiants en double diplomation (et standards) d'avoir un total affiché strictement identique à celui de leur page de détails.
+
+- Amélioration de l'expérience utilisateur (UX) dans /comptabilite/tresorerie/attentes-de-paiements/ : ajout d'une animation de chargement (spinner) dans le tableau lors de la récupération asynchrone des données (loadItems), permettant d'indiquer visuellement que les données sont en cours de traitement.
