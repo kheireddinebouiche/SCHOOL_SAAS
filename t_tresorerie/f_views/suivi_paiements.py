@@ -7,17 +7,19 @@ from django.utils.timezone import now
 from t_crm.models import Prospets
 from ..models import DuePaiements, Paiements
 from t_groupe.models import Groupe, GroupeLine
-from t_formations.models import Promos
+from t_formations.models import Promos, Specialites
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('tre', 'view')
 def PageSuiviPaiements(request):
     promos = Promos.objects.filter(etat="active")
     groupes = Groupe.objects.all()
+    specialites = Specialites.objects.all()
     context = {
         'tenant': request.tenant,
         'promos': promos,
         'groupes': groupes,
+        'specialites': specialites,
     }
     return render(request, 'tenant_folder/comptabilite/tresorerie/suivi_paiements.html', context)
 
@@ -26,6 +28,7 @@ def PageSuiviPaiements(request):
 def ApiSuiviPaiements(request):
     promo_id = request.GET.get('promo_id')
     groupe_id = request.GET.get('groupe_id')
+    specialite_id = request.GET.get('specialite_id')
 
     # Base queryset: Converted prospects
     prospects = Prospets.objects.filter(statut='convertit')
@@ -35,6 +38,13 @@ def ApiSuiviPaiements(request):
 
     if groupe_id:
         prospects = prospects.filter(groupe_line_student__groupe_id=groupe_id)
+
+    if specialite_id:
+        prospects = prospects.filter(
+            Q(prospect_fiche_voeux__specialite_id=specialite_id) |
+            Q(prospect_fiche_voeux_double__specialite__specialite1_id=specialite_id) |
+            Q(prospect_fiche_voeux_double__specialite__specialite2_id=specialite_id)
+        )
 
     prospects = prospects.distinct()
 

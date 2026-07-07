@@ -29,6 +29,7 @@ from t_conseil.views import ListeDesFactures, ListeDesDevis, ListeDesClients
 
 from t_crm.f_views.remise import (
     ListeRemiseApplique, AipLoadRemise, ApiStoreApplicedReduction,
+    ApiStoreSingleReduction,
     ApiloadRemiseAppliquer, ApiLoadRemiseAppliquerDetails,
     ApiGetReductionDetails, ApiActivateRemiseAppliquer,
     ApiLoadProspectParticulier, ApiDeleteRemiseAppliquer
@@ -358,6 +359,7 @@ urlpatterns = [
     path('AipLoadRemise', AipLoadRemise, name="AipLoadRemise"),
     path('ApiLoadProspectParticulier', ApiLoadProspectParticulier, name="ApiLoadProspectParticulier"),
     path('ApiStoreApplicedReduction', ApiStoreApplicedReduction, name="ApiStoreApplicedReduction"), 
+    path('ApiStoreSingleReduction', ApiStoreSingleReduction, name="ApiStoreSingleReduction"), 
     path('ApiloadRemiseAppliquer', ApiloadRemiseAppliquer, name="ApiloadRemiseAppliquer"),
     path('ApiLoadRemiseAppliquerDetails', ApiLoadRemiseAppliquerDetails, name="ApiLoadRemiseAppliquerDetails"),
     path('ApiGetReductionDetails', ApiGetReductionDetails, name="ApiGetReductionDetails"),

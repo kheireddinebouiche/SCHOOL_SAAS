@@ -659,7 +659,7 @@ def ApiListeClients(request):
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")
-@module_permission_required('con', 'change')
+@module_permission_required('con', 'approuv')
 @transaction.atomic
 def ApiTransformeToClient(request):
     id_prospect = request.POST.get('id_prospect')

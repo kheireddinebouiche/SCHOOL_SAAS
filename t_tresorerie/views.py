@@ -16,9 +16,19 @@ from institut_app.decorators import *
 @login_required(login_url="institut_app:login")
 @module_permission_required('tre', 'view')
 def AttentesPaiements(request):
+    listes = ClientPaiementsRequest.objects.select_related("promo", "specialite", "client", 'specialite_double').filter(client__statut="instance")
+    
+    total_dus = 0
+    for obj in listes:
+        amount = obj.amount if obj.amount else (obj.specialite.prix if obj.specialite else ((obj.specialite_double.prix_spec1 or 0) + (obj.specialite_double.prix_spec2 or 0)) if obj.specialite_double else 0)
+        total_dus += amount
+        
+    total_paye = clientPaiementsRequestLine.objects.filter(paiement_request__client__statut="instance").aggregate(total=Sum('montant_paye'))['total'] or 0
+
     context = {
-       
         'tenant' : request.tenant,
+        'total_dus': total_dus,
+        'total_paye': total_paye,
     }
 
     return render(request, 'tenant_folder/comptabilite/tresorerie/attentes_de_paiement.html', context)
@@ -71,6 +81,19 @@ def ApiListeDemandePaiement(request):
                                Paiements.objects.filter(pay_query).exists() or \
                                obj.paid
 
+        # Calculer le montant déjà payé pour cette instance
+        total_paye = clientPaiementsRequestLine.objects.filter(paiement_request=obj).aggregate(total=Sum('montant_paye'))['total'] or 0
+
+        # Calcul des frais d'inscription à ajouter depuis l'échéancier
+        frais_inscription = 0
+        if special_echeancier and special_echeancier.is_validate:
+            frais_inscription = special_echeancier.frais_inscription
+        elif obj.ref_echeancier:
+            frais_inscription = obj.ref_echeancier.frais_inscription
+
+        base_amount = obj.amount if obj.amount else (obj.specialite.prix if obj.specialite else ((obj.specialite_double.prix_spec1 or 0) + (obj.specialite_double.prix_spec2 or 0)) if obj.specialite_double else 0)
+        total_due_amount = float(base_amount or 0) + float(frais_inscription or 0)
+
         data.append({
             "id": obj.id,
             "motif": obj.motif,
@@ -81,7 +104,8 @@ def ApiListeDemandePaiement(request):
             "promo_begin" : obj.promo.begin_year,
             "promo_end" : obj.promo.end_year,
             "specialite": obj.specialite.id if obj.specialite else None,
-            "amount" : obj.amount if obj.amount else (obj.specialite.prix if obj.specialite else ((obj.specialite_double.prix_spec1 or 0) + (obj.specialite_double.prix_spec2 or 0)) if obj.specialite_double else 0),
+            "amount" : total_due_amount,
+            "montant_deja_paye": total_paye,
             "nom": obj.client.nom if obj.client else None,
             "prenom": obj.client.prenom if obj.client else None,
             "is_double" : obj.client.is_double if obj.client.is_double else None,
@@ -333,8 +357,9 @@ def ApiGetDetailsDemandePaiement(request):
                     is_active=True
                 ).first()
                 
-                if not echeancierId:
-                    return JsonResponse({'status': 'error', 'error_type': 'missing_echeancier', 'message': "Échéancier non trouvé pour cette spécialité et promo."}, status=200)
+        is_missing_echeancier = False
+        if not echeancierId:
+            is_missing_echeancier = True
     
         if echeancierId and echeancierId.model and not echeancierId.model.has_frais_inscription:
             frais_inscription = None
@@ -590,7 +615,8 @@ def ApiGetDetailsDemandePaiement(request):
             'remise' : remiseDatas,
             'has_special_echeancier' : has_special_echeancier,
             'id_echeancier_special' : obj_echeacncier_speial.id if obj_echeacncier_speial else None,
-            'id_echeancier' : echeancierId.id,
+            'id_echeancier' : echeancierId.id if echeancierId else None,
+            'missing_echeancier': is_missing_echeancier,
             'available_echeanciers': list(available_echeanciers),
             'has_saved_echeancier': obj.ref_echeancier is not None or (obj_echeacncier_speial and obj_echeacncier_speial.is_validate),
             'special_echeancier_line' : list(special_echeancier_data),
@@ -682,17 +708,9 @@ def ApiGetDetailsDemandePaiementDouble(request):
                     is_active=True
                 ).first()
             
+        is_missing_echeancier = False
         if not echeancierId:
-            return JsonResponse({
-                'status': 'error', 
-                'error_type': 'missing_echeancier', 
-                'message': "Échéancier non trouvé.",
-                'debug_info': {
-                    'target_spec_double_id': target_spec_double_id,
-                    'target_promo_id': target_promo_id,
-                    'has_voeux': voeux is not None
-                }
-            }, status=200)
+            is_missing_echeancier = True
 
         echeancier = echeancierId
         if echeancier and echeancier.model and not echeancier.model.has_frais_inscription:
@@ -898,11 +916,11 @@ def ApiGetDetailsDemandePaiementDouble(request):
         resolved_promo = obj.promo or (voeux.promo if voeux else None)
 
         other_data = {
-            'id' : echeancierId.id,
-            'modele' : echeancierId.model.label if echeancierId.model else "Sans modèle",
-            'formation' : f"{echeancierId.formation_double.specialite1.label} / {echeancierId.formation_double.specialite2.label}" if echeancierId.formation_double and echeancierId.formation_double.specialite1 and echeancierId.formation_double.specialite2 else (echeancierId.formation_double.label if echeancierId.formation_double else "Double Diplomation"),
-            'specialite_1' : echeancierId.formation_double.specialite1.label if echeancierId.formation_double and echeancierId.formation_double.specialite1 else "",
-            'specialite_2' : echeancierId.formation_double.specialite2.label if echeancierId.formation_double and echeancierId.formation_double.specialite2 else "",
+            'id' : echeancierId.id if echeancierId else None,
+            'modele' : echeancierId.model.label if echeancierId and echeancierId.model else "Sans modèle",
+            'formation' : f"{echeancierId.formation_double.specialite1.label} / {echeancierId.formation_double.specialite2.label}" if echeancierId and echeancierId.formation_double and echeancierId.formation_double.specialite1 and echeancierId.formation_double.specialite2 else (echeancierId.formation_double.label if echeancierId and echeancierId.formation_double else "Double Diplomation"),
+            'specialite_1' : echeancierId.formation_double.specialite1.label if echeancierId and echeancierId.formation_double and echeancierId.formation_double.specialite1 else "",
+            'specialite_2' : echeancierId.formation_double.specialite2.label if echeancierId and echeancierId.formation_double and echeancierId.formation_double.specialite2 else "",
         }
 
         voeux_data = {
@@ -949,7 +967,8 @@ def ApiGetDetailsDemandePaiementDouble(request):
             "paiements_done_data" : paiements_done_data,
             "has_paiement" : has_paiement,
             "total_paiement" : total_paiement if has_paiement else 0,
-            'id_echeancier' : echeancierId.id,
+            'id_echeancier' : echeancierId.id if echeancierId else None,
+            'missing_echeancier': is_missing_echeancier,
             'available_echeanciers': list(available_echeanciers),
             'has_saved_echeancier': obj.ref_echeancier is not None or (obj_echeacncier_speial and obj_echeacncier_speial.is_validate),
             "has_invoice": done_paiements.filter(is_refund=False, facture__isnull=False).exists() if has_paiement else False,

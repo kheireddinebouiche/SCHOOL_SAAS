@@ -46,6 +46,51 @@ def ApiLoadProspectParticulier(request):
 
 @login_required(login_url="institut_app:login")
 @transaction.atomic
+def ApiStoreSingleReduction(request):
+    if request.method == 'POST':
+        try:
+            type_remise_id = request.POST.get('type_remise')
+            fichier_justificatif = request.FILES.get('fichier_justificatif')
+            prospect_id = request.POST.get('prospect_id')
+            
+            try:
+                remise = Remises.objects.get(id=type_remise_id, is_enabled=True)
+            except Remises.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Type de remise invalide'}, status=400)
+            
+            if remise.has_to_justify and not fichier_justificatif:
+                return JsonResponse({'status': 'error', 'message': 'Un fichier justificatif est requis pour cette réduction'}, status=400)
+            
+            if not prospect_id:
+                return JsonResponse({'status': 'error', 'message': 'Aucun prospect spécifié'}, status=400)
+                
+            try:
+                prospect = Prospets.objects.get(id=prospect_id)
+            except Prospets.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Prospect introuvable'}, status=400)
+            
+            # Créer l'enregistrement de remise appliquée
+            remise_appliquer = RemiseAppliquer.objects.create(
+                remise=remise,
+                fichie_justificatif=fichier_justificatif if remise.has_to_justify else None,
+                is_approuved=False,
+                is_applicated=False,
+            )
+            
+            RemiseAppliquerLine.objects.create(
+                remise_appliquer=remise_appliquer,
+                prospect=prospect
+            )
+            
+            return JsonResponse({'status': 'success', 'message': 'Réduction ajoutée avec succès. Elle est en attente de validation.'})
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+            
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
 def ApiStoreApplicedReduction(request):
     if request.method == 'POST':
         try:

@@ -17,6 +17,18 @@
         --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
 
+    /* Global Premium Button Classes for Pipeline */
+    .btn-rounded { border-radius: 0.75rem !important; padding-left: 1.25rem; padding-right: 1.25rem; }
+    .shadow-primary { box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39) !important; }
+    
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+    
     .main-content {
         background-color: var(--kanban-bg);
         min-height: 100vh;
@@ -37,6 +49,8 @@
         top: 70px;
         z-index: 50;
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+        border-radius: 1rem;
+        margin-bottom: 1rem;
     }
 
     .pipeline-tabs {
@@ -73,6 +87,8 @@
         align-items: center;
         gap: 1rem;
         flex-wrap: wrap;
+        border-radius: 1rem;
+        margin-bottom: 1rem;
     }
     
     .search-input-group input {
@@ -318,9 +334,9 @@
 </style>
 
 <div class="main-content">
-    <div style="padding-top: 80px; padding-left: 2rem; padding-right: 2rem; padding-bottom: 1rem;">
+  <div class="page-content bg-light">
+    <div class="container-fluid">
         {% include 'tenant_folder/executive_education_navbar.html' %}
-    </div>
     <!-- Toolbar -->
     <div class="pipeline-toolbar">
         <div class="d-flex align-items-center gap-3">
@@ -328,24 +344,24 @@
                 <a href="?view=stage" class="pipeline-tab {% if view_type == 'stage' %}active{% endif %}">Pipeline par étape</a>
                 <a href="?view=closing" class="pipeline-tab {% if view_type == 'closing' %}active{% endif %}">Pipeline par dates de closing</a>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="openCreateOppModal()">
+            <button class="btn btn-primary btn-sm btn-rounded shadow-primary" onclick="openCreateOppModal()">
                 <i class="ri-add-line me-1"></i> Nouvelle Opportunité
             </button>
         </div>
 
         <div class="d-flex align-items-center gap-2">
-            <a href="{% url 't_conseil:ExportPipelineCsv' %}" class="btn btn-sm btn-outline-secondary">
+            <a href="{% url 't_conseil:ExportPipelineCsv' %}" class="btn btn-sm btn-outline-secondary btn-rounded">
                 <i class="ri-download-line me-1"></i> Exporter
             </a>
-            <div class="btn-group btn-group-sm">
-                <button class="btn btn-outline-secondary active"><i class="ri-kanban-view"></i></button>
-                <button class="btn btn-outline-secondary"><i class="ri-list-check"></i></button>
+            <div class="d-flex bg-light rounded-pill p-1 border" style="gap: 2px;">
+                <button type="button" id="btn-view-kanban" class="btn btn-sm btn-primary rounded-pill shadow-sm border-0 px-3"><i class="ri-kanban-view"></i></button>
+                <button type="button" id="btn-view-list" class="btn btn-sm btn-light rounded-pill text-muted border-0 bg-transparent px-3"><i class="ri-list-check"></i></button>
             </div>
             <div class="dropdown">
-                <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-sm btn-primary btn-rounded shadow-primary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     Action suivante <i class="ri-arrow-down-s-line"></i>
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-4">
                     <li><a class="dropdown-item" href="#" onclick="openCreateOppModal()"><i class="ri-add-line me-2 text-muted align-bottom"></i>Nouvelle Opportunité</a></li>
                     <li><a class="dropdown-item" href="#" onclick="openCreateRendezVousModal()"><i class="ri-calendar-event-line me-2 text-muted align-bottom"></i>Planifier un rendez-vous</a></li>
                     <li><a class="dropdown-item" href="#"><i class="ri-mail-send-line me-2 text-muted align-bottom"></i>Envoyer un email</a></li>
@@ -366,23 +382,23 @@
                 <input type="text" name="search" class="form-control form-control-sm" placeholder="Nom, entreprise..." value="{{ current_filters.search }}">
             </div>
 
-            <select name="commercial" class="form-select filter-select" onchange="this.form.submit()">
+            <select name="commercial" class="form-select form-select-sm filter-select btn-rounded" onchange="this.form.submit()">
                 <option value="">Tous les commerciaux</option>
                 {% for c in commercials %}
                 <option value="{{ c.id }}" {% if current_filters.commercial == c.id|stringformat:"s" %}selected{% endif %}>{{ c.username }}</option>
                 {% endfor %}
             </select>
 
-            <select name="state" class="form-select filter-select" onchange="this.form.submit()">
+            <select name="state" class="form-select form-select-sm filter-select btn-rounded" onchange="this.form.submit()">
                 <option value="active" {% if current_filters.state == 'active' %}selected{% endif %}>Actif</option>
                 <option value="inactive" {% if current_filters.state == 'inactive' %}selected{% endif %}>Inactif</option>
                 <option value="all" {% if current_filters.state == 'all' %}selected{% endif %}>Tous</option>
             </select>
 
-            <button type="submit" class="btn btn-sm btn-soft-primary"><i class="ri-filter-3-line"></i> Filtrer</button>
+            <button type="submit" class="btn btn-sm btn-soft-primary btn-rounded"><i class="ri-filter-3-line"></i> Filtrer</button>
             
             {% if current_filters.search or current_filters.commercial or current_filters.state != 'active' %}
-            <a href="?view={{ view_type }}" class="btn btn-sm btn-soft-danger"><i class="ri-refresh-line"></i></a>
+            <a href="?view={{ view_type }}" class="btn btn-sm btn-soft-danger btn-rounded"><i class="ri-refresh-line"></i></a>
             {% endif %}
 
             <div class="ms-auto">
@@ -487,14 +503,82 @@
                     {% endif %}
                 </div>
             </div>
+
             {% endfor %}
         </div>
+        </div>
     </div>
-</div>
+
+    <!-- ListView -->
+    <div class="list-wrapper mt-4" style="display: none;">
+        <div class="glass-card overflow-hidden">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0 table-hover">
+                        <thead class="bg-light text-muted">
+                            <tr>
+                                <th class="ps-4">Opportunité</th>
+                                <th>Client / Prospect</th>
+                                <th>Étape</th>
+                                <th class="text-end">Budget (DZA)</th>
+                                <th>Date de closing</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stage in pipeline_stages %}
+                                {% for item in stage.items %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="fw-semibold text-dark">{{ item.nom }}</div>
+                                        <div class="small text-muted">{% if item.is_active %}Actif{% else %}Inactif{% endif %}</div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="client-avatar me-2" style="width: 30px; height: 30px; font-size: 0.75rem;">
+                                                {{ item.prospect.nom|slice:":2"|upper }}
+                                            </div>
+                                            <div>
+                                                <div class="fw-medium">{{ item.prospect.nom }} {{ item.prospect.prenom }}</div>
+                                                {% if item.prospect.entreprise %}<div class="small text-muted">{{ item.prospect.entreprise }}</div>{% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-soft-primary text-primary border">{{ stage.label }}</span>
+                                    </td>
+                                    <td class="text-end fw-bold">
+                                        {{ item.budget|floatformat:0|intcomma }}
+                                    </td>
+                                    <td>
+                                        {% if item.closing_date %}
+                                        <div class="date-badge"><i class="ri-calendar-line"></i> {{ item.closing_date|date:"d/m/Y" }}</div>
+                                        {% else %}
+                                        <span class="text-muted small">Non défini</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        {% if item.opportunite_devis.all %}
+                                        <a href="{% url 't_conseil:DetailsDevis' item.opportunite_devis.first.num_devis %}" class="btn btn-sm btn-light btn-rounded"><i class="ri-file-text-line"></i></a>
+                                        {% else %}
+                                        <button class="btn btn-sm btn-light btn-rounded" onclick="editOpportunity(event, '{{ item.id }}')"><i class="ri-pencil-line"></i></button>
+                                        <button class="btn btn-sm btn-light btn-rounded" onclick="convertToQuote(event, '{{ item.id }}')" title="Convertir en devis"><i class="ri-file-add-line"></i></button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 
     </div>
+    </div>
+  </div>
 </div>
-
 <!-- Create Opportunity Modal -->
 <div class="modal fade" id="createOppModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -715,6 +799,47 @@
 </div>
 
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // View Toggle Logic
+        const btnKanban = document.getElementById('btn-view-kanban');
+        const btnList = document.getElementById('btn-view-list');
+        const kanbanWrapper = document.querySelector('.kanban-wrapper');
+        const listWrapper = document.querySelector('.list-wrapper');
+
+        const currentView = localStorage.getItem('pipelineView') || 'kanban';
+
+        function setView(viewType) {
+            if (viewType === 'list') {
+                kanbanWrapper.style.display = 'none';
+                listWrapper.style.display = 'block';
+                
+                btnList.classList.add('btn-primary', 'shadow-sm');
+                btnList.classList.remove('btn-light', 'text-muted', 'bg-transparent');
+                
+                btnKanban.classList.remove('btn-primary', 'shadow-sm');
+                btnKanban.classList.add('btn-light', 'text-muted', 'bg-transparent');
+                
+                localStorage.setItem('pipelineView', 'list');
+            } else {
+                kanbanWrapper.style.display = 'block';
+                listWrapper.style.display = 'none';
+                
+                btnKanban.classList.add('btn-primary', 'shadow-sm');
+                btnKanban.classList.remove('btn-light', 'text-muted', 'bg-transparent');
+                
+                btnList.classList.remove('btn-primary', 'shadow-sm');
+                btnList.classList.add('btn-light', 'text-muted', 'bg-transparent');
+                
+                localStorage.setItem('pipelineView', 'kanban');
+            }
+        }
+
+        btnKanban.addEventListener('click', () => setView('kanban'));
+        btnList.addEventListener('click', () => setView('list'));
+
+        setView(currentView);
+    });
+
     let draggedElement = null;
 
     function handleDragStart(e) {
