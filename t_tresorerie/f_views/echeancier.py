@@ -721,6 +721,11 @@ def ApiToggleEcheancierAvailability(request):
 def ApiUpdateEcheancier(request):
     if request.method == 'POST':
         try:
+            def clean_decimal(val):
+                if not val: return None
+                cleaned = str(val).replace('\xa0', '').replace(' ', '').replace(',', '.')
+                return cleaned if cleaned != '' else None
+                
             ids_raw = request.POST.get('id')
             if not ids_raw:
                 return JsonResponse({"status": "error", "message": "ID manquant"})
@@ -729,14 +734,13 @@ def ApiUpdateEcheancier(request):
             
             is_active_val = request.POST.get('is_active') == '1'
             entite_id = request.POST.get('entite')
-            frais_inscription = request.POST.get('frais_inscription')
-            if frais_inscription == '': frais_inscription = None
+            frais_inscription = clean_decimal(request.POST.get('frais_inscription'))
             date_frais_inscription = request.POST.get('date_frais_inscription')
             if date_frais_inscription == '': date_frais_inscription = None
             entite_id = request.POST.get('entite')
-            remise = request.POST.get('remise')
+            remise = clean_decimal(request.POST.get('remise'))
             type_remise = request.POST.get('type_remise')
-            majoration = request.POST.get('majoration')
+            majoration = clean_decimal(request.POST.get('majoration'))
             type_majoration = request.POST.get('type_majoration')
             tranche_updates_json = request.POST.get('tranche_updates')
             import json
@@ -763,11 +767,20 @@ def ApiUpdateEcheancier(request):
                 if remise is not None:
                     echeancier.remise = remise
                     echeancier.has_remise = float(remise or 0) > 0
+                elif 'remise' in request.POST:
+                    echeancier.remise = None
+                    echeancier.has_remise = False
+                    
                 if type_remise:
                     echeancier.type_remise = type_remise
+                    
                 if majoration is not None:
                     echeancier.majoration = majoration
                     echeancier.has_majoration = float(majoration or 0) > 0
+                elif 'majoration' in request.POST:
+                    echeancier.majoration = None
+                    echeancier.has_majoration = False
+                    
                 if type_majoration:
                     echeancier.type_majoration = type_majoration
                 echeancier.save()
@@ -793,8 +806,8 @@ def ApiUpdateEcheancier(request):
                         if update.get('date'):
                             tranche_obj.date_echeancier = update.get('date')
                         
-                        taux_custom = update.get('taux')
-                        if taux_custom is not None and str(taux_custom).strip() != "":
+                        taux_custom = clean_decimal(update.get('taux'))
+                        if taux_custom is not None:
                             try:
                                 tranche_obj.taux = float(taux_custom)
                             except ValueError:
@@ -831,8 +844,8 @@ def ApiUpdateEcheancier(request):
                         else:
                             tranche_obj.montant_tranche = (net_total * taux / 100.0)
                         
-                        montant_custom = update.get('montant')
-                        if montant_custom is not None and str(montant_custom).strip() != "":
+                        montant_custom = clean_decimal(update.get('montant'))
+                        if montant_custom is not None:
                             try:
                                 tranche_obj.montant_tranche = float(montant_custom)
                             except ValueError:
