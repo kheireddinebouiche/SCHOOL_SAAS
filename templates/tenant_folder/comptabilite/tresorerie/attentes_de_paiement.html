@@ -411,7 +411,7 @@
 
         var allPaymentData = [];
         var currentSearchTerm = '';
-        var isLoading = false;
+        var originalEmptyTable = '';
  
         function getAvatarClasses(name) {
             if (!name) return { bg: 'bg-primary', text: 'text-white' };
@@ -497,21 +497,24 @@
         }
 
         function loadItems(){
-            isLoading = true;
-            table.clear(); // On vide les données internes sans redessiner la table pour éviter le message "Aucun paiement"
-            $('#example tbody').html('<tr><td colspan="10" class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div><p class="mt-2 text-muted fw-medium">Chargement des données...</p></td></tr>');
+            if (!originalEmptyTable) {
+                originalEmptyTable = table.settings()[0].oLanguage.sEmptyTable;
+            }
+            table.settings()[0].oLanguage.sEmptyTable = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div><p class="mt-2 text-muted fw-medium">Chargement des données...</p></div>';
+            table.clear().draw(); 
             
             $.ajax({
                 url : "{% url 't_tresorerie:ApiListeDemandePaiement' %}",
                 dataType : 'JSON',
                 type : 'GET',
                 success : function(data){
-                    isLoading = false;
+                    table.settings()[0].oLanguage.sEmptyTable = originalEmptyTable;
                     allPaymentData = data;
-                    applyFilters(); // Use applyFilters to draw initially
+                    applyFilters(); 
                 },
                 error: function() {
-                    isLoading = false;
+                    table.settings()[0].oLanguage.sEmptyTable = originalEmptyTable;
+                    table.draw();
                 }
             });
         }
@@ -523,7 +526,6 @@
         });
         
         function applyFilters() {
-            if (isLoading) return; // Empêcher le rafraîchissement si on est en train de charger
             console.log("Applying filters...");
             var dateFrom = $('#dateFrom').val();
             var dateTo = $('#dateTo').val();

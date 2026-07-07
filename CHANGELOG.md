@@ -1005,3 +1005,5 @@ M i s e   a   j o u r   d e s   f i l t r e s   d a n s   r e v i e w _ b u d g 
 - Amélioration de l'expérience utilisateur (UX) dans /comptabilite/tresorerie/attentes-de-paiements/ : ajout d'une animation de chargement (spinner) dans le tableau lors de la récupération asynchrone des données (loadItems), permettant d'indiquer visuellement que les données sont en cours de traitement.
 
 - Correction du comportement de l'animation de chargement dans /comptabilite/tresorerie/attentes-de-paiements/ : ajout d'une sécurité (flag isLoading) pour empêcher les autres événements de la page (comme l'initialisation des filtres de date, promo ou spécialité) d'interrompre l'animation en redessinant le tableau trop tôt avec un message de liste vide.
+
+- Finalisation de l'animation de chargement du tableau dans /comptabilite/tresorerie/attentes-de-paiements/ : utilisation de l'API native de DataTables (sEmptyTable) pour afficher le spinner. Cela permet aux filtres de rester fonctionnels pendant le chargement sans faire disparaître l'animation prématurément.
