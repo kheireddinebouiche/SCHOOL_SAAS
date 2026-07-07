@@ -387,11 +387,32 @@ def ApiGetDetailsDemandePaiement(request):
             groupe_data = {}
             group = None
 
+        total_initial_db = DuePaiements.objects.filter(client=obj.client).aggregate(total=Sum('montant_due'))['total']
+        if total_initial_db is not None and float(total_initial_db) > 0:
+            total_initial = float(total_initial_db)
+        else:
+            base_amount = obj.amount if obj.amount else (voeux.specialite.prix if voeux and voeux.specialite else 0)
+            frais_inscription = 0
+            obj_echeacncier_speial_temp = EcheancierSpecial.objects.filter(prospect=obj.client, is_canceled=False).last()
+            if obj_echeacncier_speial_temp and obj_echeacncier_speial_temp.is_validate:
+                frais_inscription = obj_echeacncier_speial_temp.frais_inscription
+            elif obj.ref_echeancier:
+                frais_inscription = obj.ref_echeancier.frais_inscription
+            elif echeancierId:
+                frais_inscription = echeancierId.frais_inscription
+            
+            remiseObj = RemiseAppliquerLine.objects.filter(prospect=obj.client, remise_appliquer__is_approuved=True).last()
+            montant_remise = 0
+            if remiseObj:
+                remise = remiseObj.remise_appliquer.remise
+                montant_remise = remise.montant if remise.is_value else ((remise.taux or 0) * float(base_amount) / 100)
+            
+            total_initial = float(base_amount or 0) + float(frais_inscription or 0) - float(montant_remise or 0)
+
         due_paiement = DuePaiements.objects.filter(client=obj.client).filter(Q(is_done=False) | Q(montant_restant__gt=0))
 
         if due_paiement.count() > 0:
             has_due_paiement = True
-            total_initial = DuePaiements.objects.filter(client = obj.client).aggregate(total=Sum('montant_due'))['total'] or 0
             for i in due_paiement:
                 due_paiement_data.append({
                     'id_due_paiement' : i.id,
@@ -593,7 +614,7 @@ def ApiGetDetailsDemandePaiement(request):
             'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url,
         }
 
-        total_solde = total_initial - total_paiement if has_due_paiement and has_paiement else 0
+        total_solde = float(total_initial) - float(total_paiement if has_paiement else 0)
 
         # Available echeanciers for this specialty and promo
         available_echeanciers = EcheancierPaiement.objects.filter(
@@ -623,7 +644,7 @@ def ApiGetDetailsDemandePaiement(request):
             "has_paiement" : has_paiement,
             "paiements_done_data" : paiements_done_data,
             "total_paiement" : total_paiement if has_paiement else 0,
-            "total_initial" : total_initial if has_due_paiement else 0,
+            "total_initial" : total_initial,
             "total_solde" : total_solde ,
             "has_pending_refund" : has_pending_refund,
             'has_processed_refund'  : has_processed_refund,
@@ -715,11 +736,32 @@ def ApiGetDetailsDemandePaiementDouble(request):
         else:
             frais_inscription = echeancier.frais_inscription if echeancier else 0
 
+        total_initial_db = DuePaiements.objects.filter(client=obj.client).aggregate(total=Sum('montant_due'))['total']
+        if total_initial_db is not None and float(total_initial_db) > 0:
+            total_initial = float(total_initial_db)
+        else:
+            base_amount = obj.amount if obj.amount else (((voeux.specialite.prix_spec1 or 0) + (voeux.specialite.prix_spec2 or 0)) if voeux and voeux.specialite else 0)
+            frais_inscription = 0
+            obj_echeacncier_speial_temp = EcheancierSpecial.objects.filter(prospect=obj.client, is_canceled=False).last()
+            if obj_echeacncier_speial_temp and obj_echeacncier_speial_temp.is_validate:
+                frais_inscription = obj_echeacncier_speial_temp.frais_inscription
+            elif obj.ref_echeancier:
+                frais_inscription = obj.ref_echeancier.frais_inscription
+            elif echeancierId:
+                frais_inscription = echeancierId.frais_inscription
+            
+            remiseObj = RemiseAppliquerLine.objects.filter(prospect=obj.client, remise_appliquer__is_approuved=True).last()
+            montant_remise = 0
+            if remiseObj:
+                remise = remiseObj.remise_appliquer.remise
+                montant_remise = remise.montant if remise.is_value else ((remise.taux or 0) * float(base_amount) / 100)
+            
+            total_initial = float(base_amount or 0) + float(frais_inscription or 0) - float(montant_remise or 0)
+
         due_paiement = DuePaiements.objects.filter(client=obj.client).filter(Q(is_done=False) | Q(montant_restant__gt=0))
 
         if due_paiement.count() > 0:
             has_due_paiement = True
-            total_initial = DuePaiements.objects.filter(client = obj.client).aggregate(total=Sum('montant_due'))['total'] or 0
             for i in due_paiement:
                 due_paiement_data.append({
                     'id_due_paiement' : i.id,
@@ -960,7 +1002,7 @@ def ApiGetDetailsDemandePaiementDouble(request):
             'echeancier' : list(echeancier_data),
             "has_due_paiement" : has_due_paiement,
             "due_paiement_data" : due_paiement_data,
-            "total_initial" : total_initial if has_due_paiement else 0,
+            "total_initial" : total_initial,
             "paiements_done_data" : paiements_done_data,
             "has_paiement" : has_paiement,
             "total_paiement" : total_paiement if has_paiement else 0,

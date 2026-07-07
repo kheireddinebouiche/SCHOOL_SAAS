@@ -1007,3 +1007,5 @@ M i s e   a   j o u r   d e s   f i l t r e s   d a n s   r e v i e w _ b u d g 
 - Correction du comportement de l'animation de chargement dans /comptabilite/tresorerie/attentes-de-paiements/ : ajout d'une sécurité (flag isLoading) pour empêcher les autres événements de la page (comme l'initialisation des filtres de date, promo ou spécialité) d'interrompre l'animation en redessinant le tableau trop tôt avec un message de liste vide.
 
 - Finalisation de l'animation de chargement du tableau dans /comptabilite/tresorerie/attentes-de-paiements/ : utilisation de l'API native de DataTables (sEmptyTable) pour afficher le spinner. Cela permet aux filtres de rester fonctionnels pendant le chargement sans faire disparaître l'animation prématurément.
+
+- Correction critique du calcul de la Synthèse Financière dans les détails des demandes de paiement (Standard et Double Diplomation) : le Total initial/dû est désormais calculé et affiché correctement même lorsque l'étudiant a réglé toutes ses échéances (has_due_paiement = False), et s'appuie dynamiquement sur le prix de la formation (+ frais - remises) si l'échéancier n'a pas encore été généré.
