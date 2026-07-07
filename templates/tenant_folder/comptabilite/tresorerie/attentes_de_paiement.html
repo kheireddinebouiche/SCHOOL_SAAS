@@ -411,6 +411,7 @@
 
         var allPaymentData = [];
         var currentSearchTerm = '';
+        var isLoading = false;
  
         function getAvatarClasses(name) {
             if (!name) return { bg: 'bg-primary', text: 'text-white' };
@@ -496,16 +497,21 @@
         }
 
         function loadItems(){
-            table.clear().draw();
-            $('#example tbody').html('<tr><td colspan="8" class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div><p class="mt-2 text-muted fw-medium">Chargement des données...</p></td></tr>');
+            isLoading = true;
+            table.clear(); // On vide les données internes sans redessiner la table pour éviter le message "Aucun paiement"
+            $('#example tbody').html('<tr><td colspan="10" class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Chargement...</span></div><p class="mt-2 text-muted fw-medium">Chargement des données...</p></td></tr>');
             
             $.ajax({
                 url : "{% url 't_tresorerie:ApiListeDemandePaiement' %}",
                 dataType : 'JSON',
                 type : 'GET',
                 success : function(data){
+                    isLoading = false;
                     allPaymentData = data;
                     applyFilters(); // Use applyFilters to draw initially
+                },
+                error: function() {
+                    isLoading = false;
                 }
             });
         }
@@ -517,6 +523,7 @@
         });
         
         function applyFilters() {
+            if (isLoading) return; // Empêcher le rafraîchissement si on est en train de charger
             console.log("Applying filters...");
             var dateFrom = $('#dateFrom').val();
             var dateTo = $('#dateTo').val();
