@@ -86,9 +86,10 @@ def ApiLoadEcheancierDetails(request):
             composite_formation_label = ", ".join(specs) if specs else ""
         
         # Récupérer les tranches associées au premier (identiques pour le groupe)
-        tranches = EcheancierPaiementLine.objects.filter(echeancier=echeancier).order_by('id').values(
-            'id', 'taux', 'value', 'date_echeancier','montant_tranche', 'entite_id'
-        )
+        tranches_qs = EcheancierPaiementLine.objects.filter(echeancier=echeancier).order_by('id')
+        tranches_list = []
+        old_remise_val = float(echeancier.remise or 0)
+        old_maj_val = float(echeancier.majoration or 0)
         
         # Priority to stored tarif_formation
         tarif_formation = echeancier.tarif_formation or 0
@@ -122,6 +123,48 @@ def ApiLoadEcheancierDetails(request):
             
         total_after_adjustments = max(0, tarif_formation_float - actual_discount + actual_majoration)
             
+        for t in tranches_qs:
+            t_taux = float(t.taux or 100)
+            t_montant = float(t.montant_tranche or 0)
+            base_price_net = t_montant * 100.0 / t_taux if t_taux > 0 else 0
+            
+            inferred_base_price = tarif_formation_float
+            if echeancier.formation_double:
+                prix1 = float(echeancier.formation_double.prix_spec1 or 0)
+                prix2 = float(echeancier.formation_double.prix_spec2 or 0)
+                
+                disc1 = (prix1 * old_remise_val / 100.0) if type_remise == 'pourcentage' else (old_remise_val / 2.0)
+                maj1 = (prix1 * old_maj_val / 100.0) if type_majoration == 'pourcentage' else (old_maj_val / 2.0)
+                prix1_net = max(0.0, prix1 - disc1 + maj1)
+                
+                disc2 = (prix2 * old_remise_val / 100.0) if type_remise == 'pourcentage' else (old_remise_val / 2.0)
+                maj2 = (prix2 * old_maj_val / 100.0) if type_majoration == 'pourcentage' else (old_maj_val / 2.0)
+                prix2_net = max(0.0, prix2 - disc2 + maj2)
+                
+                if abs(base_price_net - prix1_net) < abs(base_price_net - prix2_net):
+                    inferred_base_price = prix1
+                elif abs(base_price_net - prix2_net) < abs(base_price_net - prix1_net):
+                    inferred_base_price = prix2
+                else:
+                    label1 = echeancier.formation_double.specialite1.label if echeancier.formation_double.specialite1 else ""
+                    label2 = echeancier.formation_double.specialite2.label if echeancier.formation_double.specialite2 else ""
+                    if label1 and label1 in t.value:
+                        inferred_base_price = prix1
+                    elif label2 and label2 in t.value:
+                        inferred_base_price = prix2
+                    else:
+                        inferred_base_price = prix1 + prix2
+            
+            tranches_list.append({
+                'id': t.id,
+                'taux': t.taux,
+                'value': t.value,
+                'date_echeancier': t.date_echeancier,
+                'montant_tranche': t.montant_tranche,
+                'entite_id': t.entite_id,
+                'base_price': inferred_base_price
+            })
+
         data = {
             'id': echeancier.id,
             'model_label': echeancier.model.label,
@@ -131,7 +174,7 @@ def ApiLoadEcheancierDetails(request):
             'is_active': echeancier.is_active,
             'type_model' : "Double Diplomation" if echeancier.model.is_double_diplomation else "Modèle Standard",
             'created_at': echeancier.created_at,
-            'tranches': list(tranches),
+            'tranches': tranches_list,
             'entite' : echeancier.entite.id if echeancier.entite else None,
             'entite_label' : echeancier.entite.designation if echeancier.entite else None,
             'frais_inscription' : str(echeancier.frais_inscription) if echeancier.frais_inscription else "0.00",
@@ -751,6 +794,9 @@ def ApiUpdateEcheancier(request):
                 if not echeancier:
                     continue
                 
+                old_remise_val_db = float(echeancier.remise or 0)
+                old_maj_val_db = float(echeancier.majoration or 0)
+                
                 echeancier.is_active = is_active_val
                 if entite_id and entite_id != "0":
                     echeancier.entite_id = entite_id
@@ -824,20 +870,38 @@ def ApiUpdateEcheancier(request):
                             prix1 = float(double_obj.prix_spec1 or 0)
                             prix2 = float(double_obj.prix_spec2 or 0)
                             
-                            # check which specialty block this tranche belongs to
-                            t_val = tranche_obj.value or ""
-                            if label1 and label1 in t_val:
+                            # reverse-engineer base_price from old db values BEFORE they are updated in memory
+                            old_db_taux = float(tranche_obj.taux or 100)
+                            old_db_montant = float(tranche_obj.montant_tranche or 0)
+                            old_base_net = old_db_montant * 100.0 / old_db_taux if old_db_taux > 0 else 0
+                            
+                            # old model discounts
+                            old_remise_val = old_remise_val_db
+                            old_maj_val = old_maj_val_db
+                            
+                            disc1 = (prix1 * old_remise_val / 100.0) if echeancier.type_remise == 'pourcentage' else (old_remise_val / 2.0)
+                            maj1 = (prix1 * old_maj_val / 100.0) if echeancier.type_majoration == 'pourcentage' else (old_maj_val / 2.0)
+                            prix1_net = max(0.0, prix1 - disc1 + maj1)
+                            
+                            disc2 = (prix2 * old_remise_val / 100.0) if echeancier.type_remise == 'pourcentage' else (old_remise_val / 2.0)
+                            maj2 = (prix2 * old_maj_val / 100.0) if echeancier.type_majoration == 'pourcentage' else (old_maj_val / 2.0)
+                            prix2_net = max(0.0, prix2 - disc2 + maj2)
+                            
+                            if abs(old_base_net - prix1_net) < abs(old_base_net - prix2_net):
                                 base_price = prix1
-                                disc = (base_price * remise_val / 100.0) if echeancier.type_remise == 'pourcentage' else (remise_val / 2.0)
-                                maj = (base_price * maj_val / 100.0) if echeancier.type_majoration == 'pourcentage' else (maj_val / 2.0)
-                            elif label2 and label2 in t_val:
+                            elif abs(old_base_net - prix2_net) < abs(old_base_net - prix1_net):
                                 base_price = prix2
-                                disc = (base_price * remise_val / 100.0) if echeancier.type_remise == 'pourcentage' else (remise_val / 2.0)
-                                maj = (base_price * maj_val / 100.0) if echeancier.type_majoration == 'pourcentage' else (maj_val / 2.0)
                             else:
-                                base_price = prix1 + prix2
-                                disc = (base_price * remise_val / 100.0) if echeancier.type_remise == 'pourcentage' else remise_val
-                                maj = (base_price * maj_val / 100.0) if echeancier.type_majoration == 'pourcentage' else maj_val
+                                t_val = tranche_obj.value or ""
+                                if label1 and label1 in t_val:
+                                    base_price = prix1
+                                elif label2 and label2 in t_val:
+                                    base_price = prix2
+                                else:
+                                    base_price = prix1 + prix2
+                                    
+                            disc = (base_price * remise_val / 100.0) if echeancier.type_remise == 'pourcentage' else (remise_val / 2.0)
+                            maj = (base_price * maj_val / 100.0) if echeancier.type_majoration == 'pourcentage' else (maj_val / 2.0)
                             
                             net_block = max(0.0, base_price - disc + maj)
                             tranche_obj.montant_tranche = (net_block * taux / 100.0)
