@@ -995,3 +995,5 @@ M i s e   a   j o u r   d e s   f i l t r e s   d a n s   r e v i e w _ b u d g 
 - Ajout de marges intérieures (padding) à la carte des Prestations & Articles dans configure-devis.html pour l'aligner avec les autres blocs et l'encadrer correctement sur le fond blanc.
 
 - Résolution de l'erreur 500 (AttributeError: \'NoneType\' object has no attribute \'entite\') dans l'API ApiGetDetailsDemandePaiement : gestion sécurisée lorsque l'échéancier (echeancierId) est inexistant ou non défini, avec affichage de la mention 'Données manquantes (Entité)' au lieu de faire planter la requête.
+
+- Résolution de l'erreur 500 (TypeError: unsupported operand type(s) for +=: \'decimal.Decimal\' and \'NoneType\') dans la vue AttentesPaiements : sécurisation du calcul du total des attentes (	otal_dus += (amount or 0)) pour éviter un plantage lorsqu'une spécialité ou une instance n'a pas de prix défini.

@@ -21,7 +21,7 @@ def AttentesPaiements(request):
     total_dus = 0
     for obj in listes:
         amount = obj.amount if obj.amount else (obj.specialite.prix if obj.specialite else ((obj.specialite_double.prix_spec1 or 0) + (obj.specialite_double.prix_spec2 or 0)) if obj.specialite_double else 0)
-        total_dus += amount
+        total_dus += (amount or 0)
         
     total_paye = clientPaiementsRequestLine.objects.filter(paiement_request__client__statut="instance").aggregate(total=Sum('montant_paye'))['total'] or 0
 
