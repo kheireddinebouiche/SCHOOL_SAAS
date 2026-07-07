@@ -1558,10 +1558,15 @@ $(document).ready(function () {
                         if(data.tranches.length > 0) {
                             $.each(data.tranches, function(index, tranche) {
                                 var dateEcheance = tranche.date_echeancier ? new Date(tranche.date_echeancier).toISOString().split('T')[0] : '';
+                                var montant_t = parseFloat(tranche.montant_tranche) || 0;
+                                var global_net = parseFloat(data.net_total) || 0;
+                                var global_tarif = parseFloat(data.tarif_formation) || 0;
+                                var display_taux = global_net > 0 ? (montant_t / global_net * 100) : parseFloat(tranche.taux);
+                                var original_base_montant = global_net > 0 ? (montant_t * (global_tarif / global_net)) : montant_t;
                                 
-                                tranchesHtml += '<tr class="tranche-row" data-index="' + index + '" data-base-price="' + tranche.base_price + '">';
+                                tranchesHtml += '<tr class="tranche-row" data-index="' + index + '" data-base-montant="' + original_base_montant + '">';
                                 tranchesHtml += '<td><input type="text" class="form-control fw-medium border-0 bg-light rounded-2 px-3 py-2 tranche-libelle" value="' + tranche.value + '" data-id="' + (tranche.id || '') + '"></td>';
-                                tranchesHtml += '<td><div class="input-group input-group-sm" style="max-width: 100px;"><input type="number" step="0.01" class="form-control fw-bold text-primary border-0 bg-primary bg-opacity-10 shadow-sm rounded-2 tranche-taux" value="' + parseFloat(tranche.taux) + '"><span class="input-group-text border-0 bg-transparent fw-bold text-primary">%</span></div></td>';
+                                tranchesHtml += '<td><div class="input-group input-group-sm" style="max-width: 100px;"><input type="number" step="0.01" class="form-control fw-bold text-primary border-0 bg-primary bg-opacity-10 shadow-sm rounded-2 tranche-taux" value="' + display_taux.toFixed(2) + '"><span class="input-group-text border-0 bg-transparent fw-bold text-primary">%</span></div></td>';
                                 tranchesHtml += '<td><div class="input-group input-group-sm"><input type="number" step="0.01" class="form-control fw-bold text-dark border-0 bg-white shadow-sm rounded-2 tranche-montant" value="' + parseFloat(tranche.montant_tranche).toFixed(2) + '"><span class="input-group-text border-0 bg-transparent fw-bold text-dark">DA</span></div></td>';
                                 
                                 // Entity Select
@@ -1697,6 +1702,7 @@ $(document).ready(function () {
         var labelSpec2 = $('#editEcheancierModal').data('spec2-label') || '';
 
         var tarifBase = parseFloat($('#editSummaryTarif').attr('data-raw-tarif')) || 0;
+        var tarifBase = parseFloat($('#editSummaryTarif').attr('data-raw-tarif')) || 0;
         var remise = parseFloat($('#editEcheancierRemise').val()) || 0;
         var typeRemise = $('#editEcheancierTypeRemise').val();
         var majoration = parseFloat($('#editEcheancierMajoration').val()) || 0;
@@ -1704,22 +1710,10 @@ $(document).ready(function () {
         
         var actualRemiseTotal = (typeRemise === 'pourcentage') ? (tarifBase * remise / 100) : remise;
         var actualMajorationTotal = (typeMajoration === 'pourcentage') ? (tarifBase * majoration / 100) : majoration;
+        var netTotal = Math.max(0, tarifBase - actualRemiseTotal + actualMajorationTotal);
         
-        var libelle = $row.find('.tranche-libelle').val() || "";
         var taux = parseFloat($(this).val()) || 0;
-        
-        var basePrice = tarifBase;
-        var actualDiscount = actualRemiseTotal;
-        var actualMaj = actualMajorationTotal;
-        
-        if (isDouble) {
-            basePrice = parseFloat($row.data('base-price')) || basePrice;
-            actualDiscount = (typeRemise === 'pourcentage') ? (basePrice * remise / 100) : (remise / 2);
-            actualMaj = (typeMajoration === 'pourcentage') ? (basePrice * majoration / 100) : (majoration / 2);
-        }
-        
-        var basePriceNet = Math.max(0, basePrice - actualDiscount + actualMaj);
-        var nouveauMontant = (basePriceNet * taux) / 100;
+        var nouveauMontant = (netTotal * taux) / 100;
         $row.find('.tranche-montant').val(nouveauMontant.toFixed(2));
         
         checkDistributionValidation();
@@ -1729,12 +1723,6 @@ $(document).ready(function () {
     $(document).on('input', '.tranche-montant', function() {
         var $row = $(this).closest('.tranche-row');
         
-        var isDouble = $('#editEcheancierModal').data('is-double');
-        var prixSpec1 = parseFloat($('#editEcheancierModal').data('prix-spec1')) || 0;
-        var prixSpec2 = parseFloat($('#editEcheancierModal').data('prix-spec2')) || 0;
-        var labelSpec1 = $('#editEcheancierModal').data('spec1-label') || '';
-        var labelSpec2 = $('#editEcheancierModal').data('spec2-label') || '';
-
         var tarifBase = parseFloat($('#editSummaryTarif').attr('data-raw-tarif')) || 0;
         var remise = parseFloat($('#editEcheancierRemise').val()) || 0;
         var typeRemise = $('#editEcheancierTypeRemise').val();
@@ -1743,23 +1731,12 @@ $(document).ready(function () {
         
         var actualRemiseTotal = (typeRemise === 'pourcentage') ? (tarifBase * remise / 100) : remise;
         var actualMajorationTotal = (typeMajoration === 'pourcentage') ? (tarifBase * majoration / 100) : majoration;
+        var netTotal = Math.max(0, tarifBase - actualRemiseTotal + actualMajorationTotal);
         
-        var libelle = $row.find('.tranche-libelle').val() || "";
         var montant = parseFloat($(this).val()) || 0;
         
-        var basePrice = tarifBase;
-        var actualDiscount = actualRemiseTotal;
-        var actualMaj = actualMajorationTotal;
-        
-        if (isDouble) {
-            basePrice = parseFloat($row.data('base-price')) || basePrice;
-            actualDiscount = (typeRemise === 'pourcentage') ? (basePrice * remise / 100) : (remise / 2);
-            actualMaj = (typeMajoration === 'pourcentage') ? (basePrice * majoration / 100) : (majoration / 2);
-        }
-        
-        var basePriceNet = Math.max(0, basePrice - actualDiscount + actualMaj);
-        if (basePriceNet > 0) {
-            var nouveauTaux = (montant / basePriceNet) * 100;
+        if (netTotal > 0) {
+            var nouveauTaux = (montant / netTotal) * 100;
             $row.find('.tranche-taux').val(nouveauTaux.toFixed(2));
         } else {
             $row.find('.tranche-taux').val((0).toFixed(2));
@@ -1770,14 +1747,7 @@ $(document).ready(function () {
     
     // Recalculate amounts visually in the modal
     $('#btnRecalculerMontants').on('click', function() {
-        var isDouble = $('#editEcheancierModal').data('is-double');
-        var prixSpec1 = parseFloat($('#editEcheancierModal').data('prix-spec1')) || 0;
-        var prixSpec2 = parseFloat($('#editEcheancierModal').data('prix-spec2')) || 0;
-        var labelSpec1 = $('#editEcheancierModal').data('spec1-label') || '';
-        var labelSpec2 = $('#editEcheancierModal').data('spec2-label') || '';
-
         var tarifBase = parseFloat($('#editSummaryTarif').attr('data-raw-tarif')) || 0;
-        
         var remise = parseFloat($('#editEcheancierRemise').val()) || 0;
         var typeRemise = $('#editEcheancierTypeRemise').val();
         var majoration = parseFloat($('#editEcheancierMajoration').val()) || 0;
@@ -1787,27 +1757,28 @@ $(document).ready(function () {
         var actualMajorationTotal = (typeMajoration === 'pourcentage') ? (tarifBase * majoration / 100) : majoration;
         var netTotal = Math.max(0, tarifBase - actualRemiseTotal + actualMajorationTotal);
         
-        // Update summary
-        $('#editSummaryNet').text(netTotal.toLocaleString() + ' DA');
+        var numTranches = $('#editTranchesList .tranche-row').length;
+        var remisePerTranche = (typeRemise === 'DA' && numTranches > 0) ? (remise / numTranches) : 0;
+        var majPerTranche = (typeMajoration === 'DA' && numTranches > 0) ? (majoration / numTranches) : 0;
         
         // Update tranches table visually
         $('#editTranchesList .tranche-row').each(function() {
-            var libelle = $(this).find('.tranche-libelle').val() || "";
-            var taux = parseFloat($(this).find('.tranche-taux').val()) || 0;
+            var originalBaseMontant = parseFloat($(this).attr('data-base-montant')) || 0;
             
-            var basePrice = tarifBase;
-            var actualDiscount = actualRemiseTotal;
-            var actualMaj = actualMajorationTotal;
+            // Apply tranche specific remise and majoration
+            var trancheRemise = (typeRemise === 'pourcentage') ? (originalBaseMontant * remise / 100) : remisePerTranche;
+            var trancheMaj = (typeMajoration === 'pourcentage') ? (originalBaseMontant * majoration / 100) : majPerTranche;
             
-            if (isDouble) {
-                basePrice = parseFloat($(this).data('base-price')) || basePrice;
-                actualDiscount = (typeRemise === 'pourcentage') ? (basePrice * remise / 100) : (remise / 2);
-                actualMaj = (typeMajoration === 'pourcentage') ? (basePrice * majoration / 100) : (majoration / 2);
-            }
-            
-            var basePriceNet = Math.max(0, basePrice - actualDiscount + actualMaj);
-            var nouveauMontant = (basePriceNet * taux) / 100;
+            var nouveauMontant = Math.max(0, originalBaseMontant - trancheRemise + trancheMaj);
             $(this).find('.tranche-montant').val(nouveauMontant.toFixed(2));
+            
+            // Update taux based on the new netTotal so it accurately reflects the proportion
+            if (netTotal > 0) {
+                var nouveauTaux = (nouveauMontant / netTotal) * 100;
+                $(this).find('.tranche-taux').val(nouveauTaux.toFixed(2));
+            } else {
+                $(this).find('.tranche-taux').val((0).toFixed(2));
+            }
         });
         
         checkDistributionValidation();
