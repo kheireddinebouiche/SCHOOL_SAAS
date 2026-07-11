@@ -86,6 +86,7 @@ urlpatterns = [
     path('ApiSaveModeleEcheancier', ApiSaveModeleEcheancier, name="ApiSaveModeleEcheancier"),
     path('ApiLoadModeleEcheancierDetails', ApiLoadModeleEcheancierDetails, name="ApiLoadModeleEcheancierDetails"),
     path('ApiUpdateModeleEcheancier', ApiUpdateModeleEcheancier, name="ApiUpdateModeleEcheancier"),
+    path('ApiDeleteModeleEcheancier', ApiDeleteModeleEcheancier, name="ApiDeleteModeleEcheancier"),
 
     path('configuration-des-echeancier/', submenu_access_required("tre", "echeanciers")(CreeEcheancier), name="CreeEcheancier"),
     path('echeanciers-configures/', submenu_access_required("tre", "echeanciers")(ListeEcheanciersConfigures), name="ListeEcheanciersConfigures"),
@@ -155,6 +156,7 @@ urlpatterns = [
     path('rembourssement/cancel/<int:pk>/', ApiCancelRefund, name="ApiCancelRefund"),
     path('ApiLoadRemboursements/', ApiLoadRemboursements, name="ApiLoadRemboursements"),
     path('api/search-prospect-refund/', ApiSearchProspectForRefund, name="ApiSearchProspectForRefund"),
+    path('api/get-client-paiements/', ApiGetClientPaiementsForRefund, name="ApiGetClientPaiementsForRefund"),
 
     path('ApiCheckEcheancierState', ApiCheckEcheancierState, name="ApiCheckEcheancierState"),
     path('ApiCheckStateModel', ApiCheckStateModel, name="ApiCheckStateModel"),

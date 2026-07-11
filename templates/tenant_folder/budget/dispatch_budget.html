@@ -323,7 +323,7 @@
             <div class="row mb-4">
                 <!-- Card 1: Objectif Global -->
                 <div class="col-md-3 position-relative group-hover">
-                    <div class="glass-card p-3 h-100 border-start border-4 border-primary shadow-sm">
+                    <div class="glass-card p-3 h-100 border-0 shadow-sm">
                         <div class="d-flex align-items-center mb-3">
                             <div class="bg-primary bg-gradient bg-opacity-10 rounded-3 p-2 me-2 shadow-sm">
                                 <i class="ri-pie-chart-line text-primary fs-5"></i>
@@ -333,24 +333,12 @@
                         <h3 class="fw-black mb-0 text-primary fs-5 lh-sm" id="disp-global-obj" data-value="{{ global_objective.montant }}">
                             {{ global_objective.montant|format_comptable }}
                         </h3>
-                        <!-- Decorative progress representing dispatched vs remaining if needed -->
-                        <div class="d-flex justify-content-between align-items-end mt-3 border-top border-light pt-2">
-                            <div class="w-100">
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span class="fs-10 text-uppercase fw-bold text-muted">Progression</span>
-                                    <span class="fs-11 fw-bold text-primary" id="disp-percent">{{ percent_dispatched|floatformat:1 }}%</span>
-                                </div>
-                                <div class="progress" style="height: 6px; border-radius: 10px;">
-                                    <div id="disp-progress-bar" class="progress-bar bg-primary" role="progressbar" style="width:{{ percent_dispatched }}%"></div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
                 <!-- Card 2: Recette Prévue -->
                 <div class="col-md-3 position-relative group-hover">
-                    <div class="glass-card p-3 h-100 border-start border-4 border-success shadow-sm">
+                    <div class="glass-card p-3 h-100 border-0 shadow-sm">
                         <div class="d-flex align-items-center mb-3">
                             <div class="bg-success bg-gradient bg-opacity-10 rounded-3 p-2 me-2 shadow-sm">
                                 <i class="ri-arrow-right-up-line text-success fs-5"></i>
@@ -365,7 +353,7 @@
 
                 <!-- Card 3: Dépense Prévue -->
                 <div class="col-md-3 position-relative group-hover">
-                    <div class="glass-card p-3 h-100 border-start border-4 border-danger shadow-sm">
+                    <div class="glass-card p-3 h-100 border-0 shadow-sm">
                         <div class="d-flex align-items-center mb-3">
                             <div class="bg-danger bg-gradient bg-opacity-10 rounded-3 p-2 me-2 shadow-sm">
                                 <i class="ri-arrow-left-down-line text-danger fs-5"></i>
@@ -380,7 +368,7 @@
 
                 <!-- Card 4: Résultat Net Prévu -->
                 <div class="col-md-3 position-relative group-hover">
-                    <div class="glass-card p-3 h-100 border-start border-4 border-info shadow-sm">
+                    <div class="glass-card p-3 h-100 border-0 shadow-sm">
                         <div class="d-flex align-items-center mb-3">
                             <div class="bg-info bg-gradient bg-opacity-10 rounded-3 p-2 me-2 shadow-sm">
                                 <i class="ri-scales-3-line text-info fs-5"></i>
@@ -511,10 +499,15 @@
                                                             {% if not group.is_standalone %}
                                                             <tr class="poste-parent-row" style="background-color: #f1f5f9; border-top: 2px solid #e2e8f0;">
                                                                 <td class="sticky-col p-3 border-bottom-0" style="background-color: #f1f5f9 !important; border-left: 4px solid #3b82f6;">
-                                                                    <h6 class="m-0 fw-bold d-flex align-items-center text-uppercase" style="color: #0f172a; font-size: 13px;">
-                                                                        <i class="ri-folder-open-fill me-2 text-primary fs-5"></i>
-                                                                        {{ group.parent_poste.label }}
-                                                                    </h6>
+                                                                    <div class="d-flex flex-column">
+                                                                        <h6 class="m-0 fw-bold d-flex align-items-center text-uppercase" style="color: #0f172a; font-size: 13px;">
+                                                                            <i class="ri-folder-open-fill me-2 text-primary fs-5"></i>
+                                                                            {{ group.parent_poste.label }}
+                                                                        </h6>
+                                                                        {% if group.parent_poste.description %}
+                                                                            <small class="text-muted mt-1" style="font-size: 11px; white-space: normal; line-height: 1.2; padding-left: 28px;">{{ group.parent_poste.description }}</small>
+                                                                        {% endif %}
+                                                                    </div>
                                                                 </td>
                                                                 <td class="text-end fw-bold p-3 parent-total" id="parent_total_{{ group.parent_poste.id }}" style="background-color: #f1f5f9 !important; color: #1e293b;">0,00</td>
                                                                 <td class="text-center p-3 fw-bold" style="background-color: #f1f5f9 !important;"><span id="parent_amt_t1_{{ group.parent_poste.id }}">0,00</span></td>
@@ -529,24 +522,29 @@
                                                             <tr class="poste-row">
                                                                 <td class="sticky-col" style="width: 300px; min-width: 300px; background-color: #f8fafc !important; {% if not group.is_standalone %}padding-left: 2.5rem !important; border-left: 4px solid #94a3b8;{% else %}border-left: 4px solid #3b82f6;{% endif %}">
                                                                     <div class="d-flex align-items-center justify-content-between">
-                                                                        <div class="d-flex align-items-center">
-                                                                            <span class="poste-label">{{ poste.label }}</span>
-                                                                            {% if poste.type == 'recette' and poste.payment_categories.all %}
-                                                                                <i class="ri-information-fill text-primary ms-2" 
-                                                                                   data-bs-toggle="tooltip" 
-                                                                                   data-bs-placement="top" 
-                                                                                   data-bs-html="true"
-                                                                                   data-bs-custom-class="premium-tooltip"
-                                                                                   title="<div class='tooltip-header'><i class='ri-broadcast-line'></i> Canaux autorisés</div><div class='d-flex flex-wrap'>{% for cat in poste.payment_categories.all %}<span class='channel-tag'>{{ cat.name }}</span>{% endfor %}</div>" 
-                                                                                   style="cursor: help; font-size: 15px;"></i>
-                                                                            {% elif poste.type == 'depense' and poste.depense_categories.all %}
-                                                                                <i class="ri-information-fill text-primary ms-2" 
-                                                                                   data-bs-toggle="tooltip" 
-                                                                                   data-bs-placement="top" 
-                                                                                   data-bs-html="true"
-                                                                                   data-bs-custom-class="premium-tooltip"
-                                                                                   title="<div class='tooltip-header'><i class='ri-broadcast-line'></i> Canaux autorisés</div><div class='d-flex flex-wrap'>{% for cat in poste.depense_categories.all %}<span class='channel-tag'>{{ cat.name }}</span>{% endfor %}</div>" 
-                                                                                   style="cursor: help; font-size: 15px;"></i>
+                                                                        <div class="d-flex flex-column">
+                                                                            <div class="d-flex align-items-center">
+                                                                                <span class="poste-label">{{ poste.label }}</span>
+                                                                                {% if poste.type == 'recette' and poste.payment_categories.all %}
+                                                                                    <i class="ri-information-fill text-primary ms-2" 
+                                                                                       data-bs-toggle="tooltip" 
+                                                                                       data-bs-placement="top" 
+                                                                                       data-bs-html="true"
+                                                                                       data-bs-custom-class="premium-tooltip"
+                                                                                       title="<div class='tooltip-header'><i class='ri-broadcast-line'></i> Canaux autorisés</div><div class='d-flex flex-wrap'>{% for cat in poste.payment_categories.all %}<span class='channel-tag'>{{ cat.name }}</span>{% endfor %}</div>" 
+                                                                                       style="cursor: help; font-size: 15px;"></i>
+                                                                                {% elif poste.type == 'depense' and poste.depense_categories.all %}
+                                                                                    <i class="ri-information-fill text-primary ms-2" 
+                                                                                       data-bs-toggle="tooltip" 
+                                                                                       data-bs-placement="top" 
+                                                                                       data-bs-html="true"
+                                                                                       data-bs-custom-class="premium-tooltip"
+                                                                                       title="<div class='tooltip-header'><i class='ri-broadcast-line'></i> Canaux autorisés</div><div class='d-flex flex-wrap'>{% for cat in poste.depense_categories.all %}<span class='channel-tag'>{{ cat.name }}</span>{% endfor %}</div>" 
+                                                                                       style="cursor: help; font-size: 15px;"></i>
+                                                                                {% endif %}
+                                                                            </div>
+                                                                            {% if poste.description %}
+                                                                                <small class="text-muted mt-1" style="font-size: 11px; white-space: normal; line-height: 1.2;">{{ poste.description }}</small>
                                                                             {% endif %}
                                                                         </div>
                                                                         {% if group.is_standalone %}
@@ -639,10 +637,15 @@
                                                             {% if not group.is_standalone %}
                                                             <tr class="poste-parent-row" style="background-color: #f1f5f9; border-top: 2px solid #e2e8f0;">
                                                                 <td class="sticky-col p-3 border-bottom-0" style="background-color: #f1f5f9 !important; border-left: 4px solid #3b82f6;">
-                                                                    <h6 class="m-0 fw-bold d-flex align-items-center text-uppercase" style="color: #0f172a; font-size: 13px;">
-                                                                        <i class="ri-folder-open-fill me-2 text-primary fs-5"></i>
-                                                                        {{ group.parent_poste.label }}
-                                                                    </h6>
+                                                                    <div class="d-flex flex-column">
+                                                                        <h6 class="m-0 fw-bold d-flex align-items-center text-uppercase" style="color: #0f172a; font-size: 13px;">
+                                                                            <i class="ri-folder-open-fill me-2 text-primary fs-5"></i>
+                                                                            {{ group.parent_poste.label }}
+                                                                        </h6>
+                                                                        {% if group.parent_poste.description %}
+                                                                            <small class="text-muted mt-1" style="font-size: 11px; white-space: normal; line-height: 1.2; padding-left: 28px;">{{ group.parent_poste.description }}</small>
+                                                                        {% endif %}
+                                                                    </div>
                                                                 </td>
                                                                 <td class="text-end fw-bold p-3 parent-total" id="parent_total_{{ group.parent_poste.id }}" style="background-color: #f1f5f9 !important; color: #1e293b;">0,00</td>
                                                                 <td class="text-center p-3 fw-bold" style="background-color: #f1f5f9 !important;"><span id="parent_amt_t1_{{ group.parent_poste.id }}">0,00</span></td>
@@ -657,24 +660,29 @@
                                                             <tr class="poste-row">
                                                                 <td class="sticky-col" style="width: 300px; min-width: 300px; background-color: #f8fafc !important; {% if not group.is_standalone %}padding-left: 2.5rem !important; border-left: 4px solid #94a3b8;{% else %}border-left: 4px solid #3b82f6;{% endif %}">
                                                                     <div class="d-flex align-items-center justify-content-between">
-                                                                        <div class="d-flex align-items-center">
-                                                                            <span class="poste-label">{{ poste.label }}</span>
-                                                                            {% if poste.type == 'recette' and poste.payment_categories.all %}
-                                                                                <i class="ri-information-fill text-primary ms-2" 
-                                                                                   data-bs-toggle="tooltip" 
-                                                                                   data-bs-placement="top" 
-                                                                                   data-bs-html="true"
-                                                                                   data-bs-custom-class="premium-tooltip"
-                                                                                   title="<div class='tooltip-header'><i class='ri-broadcast-line'></i> Canaux autorisés</div><div class='d-flex flex-wrap'>{% for cat in poste.payment_categories.all %}<span class='channel-tag'>{{ cat.name }}</span>{% endfor %}</div>" 
-                                                                                   style="cursor: help; font-size: 15px;"></i>
-                                                                            {% elif poste.type == 'depense' and poste.depense_categories.all %}
-                                                                                <i class="ri-information-fill text-primary ms-2" 
-                                                                                   data-bs-toggle="tooltip" 
-                                                                                   data-bs-placement="top" 
-                                                                                   data-bs-html="true"
-                                                                                   data-bs-custom-class="premium-tooltip"
-                                                                                   title="<div class='tooltip-header'><i class='ri-broadcast-line'></i> Canaux autorisés</div><div class='d-flex flex-wrap'>{% for cat in poste.depense_categories.all %}<span class='channel-tag'>{{ cat.name }}</span>{% endfor %}</div>" 
-                                                                                   style="cursor: help; font-size: 15px;"></i>
+                                                                        <div class="d-flex flex-column">
+                                                                            <div class="d-flex align-items-center">
+                                                                                <span class="poste-label">{{ poste.label }}</span>
+                                                                                {% if poste.type == 'recette' and poste.payment_categories.all %}
+                                                                                    <i class="ri-information-fill text-primary ms-2" 
+                                                                                       data-bs-toggle="tooltip" 
+                                                                                       data-bs-placement="top" 
+                                                                                       data-bs-html="true"
+                                                                                       data-bs-custom-class="premium-tooltip"
+                                                                                       title="<div class='tooltip-header'><i class='ri-broadcast-line'></i> Canaux autorisés</div><div class='d-flex flex-wrap'>{% for cat in poste.payment_categories.all %}<span class='channel-tag'>{{ cat.name }}</span>{% endfor %}</div>" 
+                                                                                       style="cursor: help; font-size: 15px;"></i>
+                                                                                {% elif poste.type == 'depense' and poste.depense_categories.all %}
+                                                                                    <i class="ri-information-fill text-primary ms-2" 
+                                                                                       data-bs-toggle="tooltip" 
+                                                                                       data-bs-placement="top" 
+                                                                                       data-bs-html="true"
+                                                                                       data-bs-custom-class="premium-tooltip"
+                                                                                       title="<div class='tooltip-header'><i class='ri-broadcast-line'></i> Canaux autorisés</div><div class='d-flex flex-wrap'>{% for cat in poste.depense_categories.all %}<span class='channel-tag'>{{ cat.name }}</span>{% endfor %}</div>" 
+                                                                                       style="cursor: help; font-size: 15px;"></i>
+                                                                                {% endif %}
+                                                                            </div>
+                                                                            {% if poste.description %}
+                                                                                <small class="text-muted mt-1" style="font-size: 11px; white-space: normal; line-height: 1.2;">{{ poste.description }}</small>
                                                                             {% endif %}
                                                                         </div>
                                                                         {% if group.is_standalone %}
@@ -1030,7 +1038,13 @@
 
             // Progress: Objective is revenues-only
             const percent = globalObj > 0 ? (recettesTotal / globalObj * 100) : 0;
-            if (percentElem) percentElem.innerHTML = percent.toFixed(1) + '%';
+            if (percentElem) {
+                let formattedPercent = new Intl.NumberFormat('fr-FR', {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1
+                }).format(percent);
+                percentElem.innerHTML = formattedPercent + ' %';
+            }
             if (progressBar) {
                 progressBar.style.width = Math.min(percent, 100) + '%';
                 progressBar.setAttribute('aria-valuenow', percent);

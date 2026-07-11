@@ -63,7 +63,7 @@ def ApiLoadRemboursements(request):
             specialite = voeux.specialite.label if voeux and voeux.specialite else None
             formation = voeux.specialite.formation.nom if voeux and voeux.specialite and voeux.specialite.formation else None
 
-        paiements_base = Paiements.objects.filter(prospect=client.id, is_refund=False, context="frais_f")
+        paiements_base = Paiements.objects.filter(prospect=client.id, is_refund=False)
         paiements = paiements_base.filter(Q(is_done=True) | Q(mode_paiement='esp')).aggregate(total=Sum('montant_paye'))['total'] or 0
         paiements_attente = paiements_base.filter(is_done=False).exclude(mode_paiement='esp').aggregate(total=Sum('montant_paye'))['total'] or 0
         
@@ -133,11 +133,11 @@ def DetailsRembourssement(request, pk):
             specialite_label = "Inconnue"
             promotion_label = "-"
 
-    paiements_base = Paiements.objects.filter(prospect=obj.client, is_refund=False).exclude(Q(context='frais_i') | Q(is_frais_inscription=True))
+    paiements_base = Paiements.objects.filter(prospect=obj.client, is_refund=False)
     total_paye = paiements_base.filter(Q(is_done=True) | Q(mode_paiement='esp')).aggregate(total=Sum('montant_paye'))['total'] or 0
     total_attente = paiements_base.filter(is_done=False).exclude(mode_paiement='esp').aggregate(total=Sum('montant_paye'))['total'] or 0
-    paiements = Paiements.objects.filter(prospect=obj.client).exclude(Q(context='frais_i') | Q(is_frais_inscription=True)).order_by('due_paiements__date_echeance', 'id')
-    last_paiements = Paiements.objects.filter(prospect=obj.client, is_refund=False).exclude(Q(context='frais_i') | Q(is_frais_inscription=True)).last()
+    paiements = Paiements.objects.filter(prospect=obj.client).order_by('due_paiements__date_echeance', 'id')
+    last_paiements = Paiements.objects.filter(prospect=obj.client, is_refund=False).last()
 
     groupe_line = GroupeLine.objects.filter(student=obj.client)
     has_factured_payments = paiements.filter(facture__isnull=False).exists()
@@ -192,6 +192,33 @@ def ApiLoadPaiements(request):
 
     else:
         return JsonResponse({"status":"error"})
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'view')
+def ApiGetClientPaiementsForRefund(request):
+    if request.method == "GET":
+        client_id = request.GET.get('client_id')
+        if not client_id:
+            return JsonResponse({"status": "error", "message": "Client ID manquant"})
+
+        paiements_liste = Paiements.objects.filter(prospect_id=client_id, is_refund=False).order_by('date_paiement', 'id')
+        data = []
+        for i in paiements_liste:
+            data.append({
+                'id' : i.id,
+                'num' : i.num,
+                'montant_paye' : i.montant_paye,
+                'date_paiement' : i.date_paiement.strftime("%d-%m-%Y") if i.date_paiement else "-",
+                'mode_paiement' : i.mode_paiement,
+                'mode_paiement_label' : i.get_mode_paiement_display() if i.mode_paiement else "-",
+                'paiement_label' : i.paiement_label or "-",
+                'context' : i.get_context_display() if i.context else "-",
+                'is_frais_inscription' : i.is_frais_inscription,
+                'is_done': i.is_done or i.mode_paiement == 'esp',
+            })
+
+        return JsonResponse({"status": "success", "paiements": data})
+    return JsonResponse({"status": "error"})
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('tre', 'view')
@@ -250,7 +277,7 @@ def ApiSearchProspectForRefund(request):
             due_paiements_qs = DuePaiements.objects.filter(client=prospect, is_annulated=False)
             total_due = due_paiements_qs.aggregate(total=Sum('montant_due'))['total'] or Decimal('0.0')
             
-            paiements_qs_all = Paiements.objects.filter(prospect=prospect, is_refund=False).exclude(Q(context='frais_i') | Q(is_frais_inscription=True) | Q(paiement_label__icontains="inscription"))
+            paiements_qs_all = Paiements.objects.filter(prospect=prospect, is_refund=False)
             paiements_qs_encaisse = paiements_qs_all.filter(Q(is_done=True) | Q(mode_paiement='esp'))
             paiements_qs_attente = paiements_qs_all.filter(is_done=False).exclude(mode_paiement='esp')
             

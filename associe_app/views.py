@@ -1084,6 +1084,56 @@ def crm_statistics(request):
         'status_counts': {s: 0 for s in statuses}
     }
 
+    from django.utils import timezone
+    from datetime import date
+    
+    today = timezone.now().date()
+    if today.month >= 7:
+        year_n_start = today.year
+    else:
+        year_n_start = today.year - 1
+
+    n_t1_start = date(year_n_start, 7, 1)
+    n_t1_end = date(year_n_start, 9, 30)
+    n_t2_start = date(year_n_start, 10, 1)
+    n_t2_end = date(year_n_start, 12, 31)
+    n_t3_start = date(year_n_start + 1, 1, 1)
+    n_t3_end = date(year_n_start + 1, 3, 31)
+    n_t4_start = date(year_n_start + 1, 4, 1)
+    n_t4_end = date(year_n_start + 1, 6, 30)
+
+    year_n_1_start = year_n_start - 1
+    n_1_t1_start = date(year_n_1_start, 7, 1)
+    n_1_t1_end = date(year_n_1_start, 9, 30)
+    n_1_t2_start = date(year_n_1_start, 10, 1)
+    n_1_t2_end = date(year_n_1_start, 12, 31)
+    n_1_t3_start = date(year_n_1_start + 1, 1, 1)
+    n_1_t3_end = date(year_n_1_start + 1, 3, 31)
+    n_1_t4_start = date(year_n_1_start + 1, 4, 1)
+    n_1_t4_end = date(year_n_1_start + 1, 6, 30)
+
+    def get_quarter(d):
+        if n_t1_start <= d <= n_t1_end: return 'n', 't1'
+        if n_t2_start <= d <= n_t2_end: return 'n', 't2'
+        if n_t3_start <= d <= n_t3_end: return 'n', 't3'
+        if n_t4_start <= d <= n_t4_end: return 'n', 't4'
+        if n_1_t1_start <= d <= n_1_t1_end: return 'n_1', 't1'
+        if n_1_t2_start <= d <= n_1_t2_end: return 'n_1', 't2'
+        if n_1_t3_start <= d <= n_1_t3_end: return 'n_1', 't3'
+        if n_1_t4_start <= d <= n_1_t4_end: return 'n_1', 't4'
+        return None, None
+
+    kpi_keys = ['prospects', 'opportunites'] + statuses
+    comparison_data = {
+        kpi: {
+            't1': {'n': 0, 'n_1': 0},
+            't2': {'n': 0, 'n_1': 0},
+            't3': {'n': 0, 'n_1': 0},
+            't4': {'n': 0, 'n_1': 0},
+            'global': {'n': 0, 'n_1': 0}
+        } for kpi in kpi_keys
+    }
+
     for tenant in tenants:
         try:
             with schema_context(tenant.schema_name):
@@ -1131,6 +1181,24 @@ def crm_statistics(request):
                 global_stats['total_prospects'] += prospects_count
                 global_stats['active_opportunities'] += opportunities_count
                 global_stats['total_budget'] += budget_sum
+
+                # Comparison logic
+                comp_prospects = Prospets.objects.filter(created_at__date__gte=n_1_t1_start, created_at__date__lte=n_t4_end)
+                for p in comp_prospects:
+                    year, quarter = get_quarter(p.created_at.date())
+                    if year:
+                        comparison_data['prospects'][quarter][year] += 1
+                        comparison_data['prospects']['global'][year] += 1
+                        if p.statut in comparison_data:
+                            comparison_data[p.statut][quarter][year] += 1
+                            comparison_data[p.statut]['global'][year] += 1
+
+                comp_opportunites = Opportunite.objects.filter(created_at__date__gte=n_1_t1_start, created_at__date__lte=n_t4_end)
+                for o in comp_opportunites:
+                    year, quarter = get_quarter(o.created_at.date())
+                    if year:
+                        comparison_data['opportunites'][quarter][year] += 1
+                        comparison_data['opportunites']['global'][year] += 1
         except Exception as e:
             continue
 
@@ -1139,6 +1207,9 @@ def crm_statistics(request):
         'institutes_stats': institutes_stats,
         'global_stats': global_stats,
         'statuses': statuses,
+        'comparison_data': comparison_data,
+        'year_n': f"{year_n_start}-{year_n_start+1}",
+        'year_n_1': f"{year_n_1_start}-{year_n_1_start+1}",
         'title': 'Statistiques CRM Globales'
     }
     
@@ -1570,6 +1641,56 @@ def perform_bulk_notification(campaign):
     link = "/direction/mes-campagnes-budgetaires/" 
     
     success_count = 0
+    from django.utils import timezone
+    from datetime import date
+    
+    today = timezone.now().date()
+    if today.month >= 7:
+        year_n_start = today.year
+    else:
+        year_n_start = today.year - 1
+
+    n_t1_start = date(year_n_start, 7, 1)
+    n_t1_end = date(year_n_start, 9, 30)
+    n_t2_start = date(year_n_start, 10, 1)
+    n_t2_end = date(year_n_start, 12, 31)
+    n_t3_start = date(year_n_start + 1, 1, 1)
+    n_t3_end = date(year_n_start + 1, 3, 31)
+    n_t4_start = date(year_n_start + 1, 4, 1)
+    n_t4_end = date(year_n_start + 1, 6, 30)
+
+    year_n_1_start = year_n_start - 1
+    n_1_t1_start = date(year_n_1_start, 7, 1)
+    n_1_t1_end = date(year_n_1_start, 9, 30)
+    n_1_t2_start = date(year_n_1_start, 10, 1)
+    n_1_t2_end = date(year_n_1_start, 12, 31)
+    n_1_t3_start = date(year_n_1_start + 1, 1, 1)
+    n_1_t3_end = date(year_n_1_start + 1, 3, 31)
+    n_1_t4_start = date(year_n_1_start + 1, 4, 1)
+    n_1_t4_end = date(year_n_1_start + 1, 6, 30)
+
+    def get_quarter(d):
+        if n_t1_start <= d <= n_t1_end: return 'n', 't1'
+        if n_t2_start <= d <= n_t2_end: return 'n', 't2'
+        if n_t3_start <= d <= n_t3_end: return 'n', 't3'
+        if n_t4_start <= d <= n_t4_end: return 'n', 't4'
+        if n_1_t1_start <= d <= n_1_t1_end: return 'n_1', 't1'
+        if n_1_t2_start <= d <= n_1_t2_end: return 'n_1', 't2'
+        if n_1_t3_start <= d <= n_1_t3_end: return 'n_1', 't3'
+        if n_1_t4_start <= d <= n_1_t4_end: return 'n_1', 't4'
+        return None, None
+
+    kpi_keys = ['prospects', 'opportunites', 'pipeline'] + statuses
+    comparison_data = {
+        kpi: {
+            't1': {'n': 0, 'n_1': 0},
+            't2': {'n': 0, 'n_1': 0},
+            't3': {'n': 0, 'n_1': 0},
+            't4': {'n': 0, 'n_1': 0},
+            'global': {'n': 0, 'n_1': 0}
+        } for kpi in kpi_keys
+    }
+
     for tenant in tenants:
         try:
             with schema_context(tenant.schema_name):
@@ -1801,6 +1922,22 @@ def budget_campaign_review(request, campaign_slug, institut_id):
                 allocations[key].depense_category_id = None
             else:
                 allocations[key].montant += d.montant
+
+            # Add category specific totals
+            if d.payment_category_id:
+                cat_key = f"{d.poste_id}_pay_{d.payment_category_id}_0"
+                if cat_key not in allocations:
+                    import copy
+                    allocations[cat_key] = copy.copy(d)
+                else:
+                    allocations[cat_key].montant += d.montant
+            elif d.depense_category_id:
+                cat_key = f"{d.poste_id}_dep_{d.depense_category_id}_0"
+                if cat_key not in allocations:
+                    import copy
+                    allocations[cat_key] = copy.copy(d)
+                else:
+                    allocations[cat_key].montant += d.montant
         
         total_dispatched = details.aggregate(Sum('montant'))['montant__sum'] or 0
         total_recette_propose = details.filter(poste__type='recette').aggregate(Sum('montant'))['montant__sum'] or 0
@@ -1935,29 +2072,37 @@ def budget_campaign_review(request, campaign_slug, institut_id):
 
     # 3. Realization Data for this specific institute
     realization_data = get_campaign_realization_data(campaign, [institut])
+    
+    # 4. Previous Campaign Data (N-1)
+    previous_campaign = BudgetCampaign.objects.filter(date_fin__lte=campaign.date_debut).order_by('-date_fin').first()
+    prev_realization_data = None
+    prev_data_dict = {}
+    if previous_campaign:
+        prev_realization_data = get_campaign_realization_data(previous_campaign, [institut])
+        for group in prev_realization_data['combined_postes']:
+            for item in group['display_postes']:
+                prev_data_dict[str(item['poste'].id)] = item
 
     context = {
         'campaign': campaign,
         'institut': institut,
         'budget_line': budget_line,
         'structured_postes': structured_postes,
-        'entreprises': entreprises,
-        'allocations': allocations,
         'total_dispatched': total_dispatched,
         'total_recette_propose': total_recette_propose,
         'total_depense_propose': total_depense_propose,
+        'remaining': total_recette_propose - total_depense_propose,
+        'entreprises': entreprises,
         'row_quarters': row_quarters,
+        'allocations': allocations,
         'is_visible_to_admin': is_visible_to_admin,
-        
-        # Stats
-        'remaining': budget_line.montant - total_depense_propose,
-        'percent_dispatched': (total_depense_propose / budget_line.montant * 100) if budget_line.montant > 0 else 0,
-
-        # Realization Data
-        'combined_postes': realization_data['combined_postes'],
-        'realization_totals': realization_data['totals']
+        'realization_data': realization_data,
+        'combined_postes': realization_data.get('combined_postes', []) if realization_data else [],
+        'realization_totals': realization_data.get('totals', {}) if realization_data else {},
+        'previous_campaign': previous_campaign,
+        'prev_data_dict': prev_data_dict,
+        'title': f'Révision Budget - {institut.nom}',
     }
-    context['title'] = f'Révision Budget - {institut.nom}'
     return render(request, 'associe_app/budget_campaign_review.html', context)
 
 @login_required(login_url="login")
@@ -1967,8 +2112,14 @@ def extension_requests_list(request):
     requests = BudgetExtensionRequest.objects.filter(institut__is_visible=True).select_related('campaign', 'institut').order_by('-created_at')
     
     context = {
-        'requests': requests,
-        'title': 'Demandes de Rallonge Budgétaire'
+        'tenants': tenants, # For the selector
+        'institutes_stats': institutes_stats,
+        'global_stats': global_stats,
+        'statuses': statuses,
+        'comparison_data': comparison_data,
+        'year_n': f"{year_n_start}-{year_n_start+1}",
+        'year_n_1': f"{year_n_1_start}-{year_n_1_start+1}",
+        'title': 'Statistiques CRM Globales'
     }
     return render(request, 'associe_app/extension_requests_list.html', context)
 
@@ -2081,10 +2232,14 @@ def review_extension(request, request_id):
         print(f"Error fetching entreprises: {e}")
 
     context = {
-        'ext_request': ext_request,
-        'items': items,
-        'entreprise_map': entreprise_map,
-        'total_requested': sum(item.requested_amount for item in items),
+        'tenants': tenants, # For the selector
+        'institutes_stats': institutes_stats,
+        'global_stats': global_stats,
+        'statuses': statuses,
+        'comparison_data': comparison_data,
+        'year_n': f"{year_n_start}-{year_n_start+1}",
+        'year_n_1': f"{year_n_1_start}-{year_n_1_start+1}",
+        'title': 'Statistiques CRM Globales'
     }
     context['title'] = f'Révision de Rallonge - {ext_request.institut.nom}'
     return render(request, 'associe_app/review_extension.html', context)
@@ -2368,6 +2523,56 @@ def crm_user_logs(request):
     
     institutes_logs = []
 
+    from django.utils import timezone
+    from datetime import date
+    
+    today = timezone.now().date()
+    if today.month >= 7:
+        year_n_start = today.year
+    else:
+        year_n_start = today.year - 1
+
+    n_t1_start = date(year_n_start, 7, 1)
+    n_t1_end = date(year_n_start, 9, 30)
+    n_t2_start = date(year_n_start, 10, 1)
+    n_t2_end = date(year_n_start, 12, 31)
+    n_t3_start = date(year_n_start + 1, 1, 1)
+    n_t3_end = date(year_n_start + 1, 3, 31)
+    n_t4_start = date(year_n_start + 1, 4, 1)
+    n_t4_end = date(year_n_start + 1, 6, 30)
+
+    year_n_1_start = year_n_start - 1
+    n_1_t1_start = date(year_n_1_start, 7, 1)
+    n_1_t1_end = date(year_n_1_start, 9, 30)
+    n_1_t2_start = date(year_n_1_start, 10, 1)
+    n_1_t2_end = date(year_n_1_start, 12, 31)
+    n_1_t3_start = date(year_n_1_start + 1, 1, 1)
+    n_1_t3_end = date(year_n_1_start + 1, 3, 31)
+    n_1_t4_start = date(year_n_1_start + 1, 4, 1)
+    n_1_t4_end = date(year_n_1_start + 1, 6, 30)
+
+    def get_quarter(d):
+        if n_t1_start <= d <= n_t1_end: return 'n', 't1'
+        if n_t2_start <= d <= n_t2_end: return 'n', 't2'
+        if n_t3_start <= d <= n_t3_end: return 'n', 't3'
+        if n_t4_start <= d <= n_t4_end: return 'n', 't4'
+        if n_1_t1_start <= d <= n_1_t1_end: return 'n_1', 't1'
+        if n_1_t2_start <= d <= n_1_t2_end: return 'n_1', 't2'
+        if n_1_t3_start <= d <= n_1_t3_end: return 'n_1', 't3'
+        if n_1_t4_start <= d <= n_1_t4_end: return 'n_1', 't4'
+        return None, None
+
+    kpi_keys = ['prospects', 'opportunites', 'pipeline'] + statuses
+    comparison_data = {
+        kpi: {
+            't1': {'n': 0, 'n_1': 0},
+            't2': {'n': 0, 'n_1': 0},
+            't3': {'n': 0, 'n_1': 0},
+            't4': {'n': 0, 'n_1': 0},
+            'global': {'n': 0, 'n_1': 0}
+        } for kpi in kpi_keys
+    }
+
     for tenant in tenants:
         try:
             with schema_context(tenant.schema_name):
@@ -2398,14 +2603,14 @@ def crm_user_logs(request):
             continue
 
     context = {
-        'institutes_logs': institutes_logs,
-        'title': 'Logs',
-        'all_tenants': all_tenants,
-        'all_users': all_users,
-        'action_choices': action_choices,
-        'filter_tenant': filter_tenant,
-        'filter_user': filter_user,
-        'filter_action': filter_action,
+        'tenants': tenants, # For the selector
+        'institutes_stats': institutes_stats,
+        'global_stats': global_stats,
+        'statuses': statuses,
+        'comparison_data': comparison_data,
+        'year_n': f"{year_n_start}-{year_n_start+1}",
+        'year_n_1': f"{year_n_1_start}-{year_n_1_start+1}",
+        'title': 'Statistiques CRM Globales'
     }
 
     if request.GET.get('export_csv') == '1':
@@ -2490,6 +2695,56 @@ def platform_usage_rate(request):
 
     now = timezone.now()
 
+    from django.utils import timezone
+    from datetime import date
+    
+    today = timezone.now().date()
+    if today.month >= 7:
+        year_n_start = today.year
+    else:
+        year_n_start = today.year - 1
+
+    n_t1_start = date(year_n_start, 7, 1)
+    n_t1_end = date(year_n_start, 9, 30)
+    n_t2_start = date(year_n_start, 10, 1)
+    n_t2_end = date(year_n_start, 12, 31)
+    n_t3_start = date(year_n_start + 1, 1, 1)
+    n_t3_end = date(year_n_start + 1, 3, 31)
+    n_t4_start = date(year_n_start + 1, 4, 1)
+    n_t4_end = date(year_n_start + 1, 6, 30)
+
+    year_n_1_start = year_n_start - 1
+    n_1_t1_start = date(year_n_1_start, 7, 1)
+    n_1_t1_end = date(year_n_1_start, 9, 30)
+    n_1_t2_start = date(year_n_1_start, 10, 1)
+    n_1_t2_end = date(year_n_1_start, 12, 31)
+    n_1_t3_start = date(year_n_1_start + 1, 1, 1)
+    n_1_t3_end = date(year_n_1_start + 1, 3, 31)
+    n_1_t4_start = date(year_n_1_start + 1, 4, 1)
+    n_1_t4_end = date(year_n_1_start + 1, 6, 30)
+
+    def get_quarter(d):
+        if n_t1_start <= d <= n_t1_end: return 'n', 't1'
+        if n_t2_start <= d <= n_t2_end: return 'n', 't2'
+        if n_t3_start <= d <= n_t3_end: return 'n', 't3'
+        if n_t4_start <= d <= n_t4_end: return 'n', 't4'
+        if n_1_t1_start <= d <= n_1_t1_end: return 'n_1', 't1'
+        if n_1_t2_start <= d <= n_1_t2_end: return 'n_1', 't2'
+        if n_1_t3_start <= d <= n_1_t3_end: return 'n_1', 't3'
+        if n_1_t4_start <= d <= n_1_t4_end: return 'n_1', 't4'
+        return None, None
+
+    kpi_keys = ['prospects', 'opportunites', 'pipeline'] + statuses
+    comparison_data = {
+        kpi: {
+            't1': {'n': 0, 'n_1': 0},
+            't2': {'n': 0, 'n_1': 0},
+            't3': {'n': 0, 'n_1': 0},
+            't4': {'n': 0, 'n_1': 0},
+            'global': {'n': 0, 'n_1': 0}
+        } for kpi in kpi_keys
+    }
+
     for tenant in tenants:
         try:
             with schema_context(tenant.schema_name):
@@ -2559,9 +2814,14 @@ def platform_usage_rate(request):
             continue
 
     context = {
-        'title': "Taux d'utilisation",
-        'usage_data': usage_data,
-        'all_tenants': all_tenants
+        'tenants': tenants, # For the selector
+        'institutes_stats': institutes_stats,
+        'global_stats': global_stats,
+        'statuses': statuses,
+        'comparison_data': comparison_data,
+        'year_n': f"{year_n_start}-{year_n_start+1}",
+        'year_n_1': f"{year_n_1_start}-{year_n_1_start+1}",
+        'title': 'Statistiques CRM Globales'
     }
     
     if is_print:

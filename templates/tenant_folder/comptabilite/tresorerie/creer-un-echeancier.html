@@ -769,7 +769,8 @@
                     </div>
 
                     <div id="listeTranchesContainer"></div>
-                      
+                    
+
                       <div class="d-flex justify-content-end mt-4">
                         <button type="button" class="btn btn-success btn-rounded px-4 py-2" id="btnEnregistrerEcheancier">
                           <i class="ri-save-line me-2"></i>Enregistrer l'échéancier
@@ -1719,6 +1720,9 @@ $(document).ready(function () {
                 renderTranchesBlock(container, trArray, prixFinal, labelFinal, null, null, actualRemise, actualMajoration);
             }
         }
+        
+        // Trigger validation to update totals
+        setTimeout(checkCreationDistributionValidation, 100);
     }
 
     // Helper function to render a block of tranches
@@ -1726,7 +1730,7 @@ $(document).ready(function () {
         var basePriceNet = Math.max(0, basePrice - remise + majoration);
         var blockId = 'block-' + (specId || 'global').toString().replace(/,/g, '-');
         container.append(`
-            <div class="specialite-header mb-3 mt-4" id="${blockId}">
+            <div class="specialite-header mb-3 mt-4" id="${blockId}" data-expected-total="${basePriceNet}">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="text-primary fw-bold mb-0">
                         <i class="ri-building-line me-2"></i>Échéancier ${isDoubleDiplomationMode ? 'pour ' + label : ''} d'un montant de ${basePriceNet.toLocaleString('fr-FR')} DA
@@ -1770,26 +1774,22 @@ $(document).ready(function () {
 
             var montantEcheance = (basePriceNet * parseFloat(tranche.value) / 100).toFixed(2);
             var trancheHtml = `
-                <div class="tranche-item mb-3 p-3 bg-light rounded-3 shadow-sm border" style="border-color: #e2e8f0 !important;">
+                <div class="tranche-item mb-3 p-3 bg-light rounded-3 shadow-sm border" style="border-color: #e2e8f0 !important;" data-block-id="${blockId}">
                     <div class="row g-3 align-items-center">
                         <div class="col-md-auto">
                             <div class="form-check mb-0">
                                 <input class="form-check-input tranche-checkbox" type="checkbox" data-block="${blockId}">
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="form-label fw-medium small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 0.65rem;">Libellé de la tranche ${index + 1}</label>
                             <input type="text" class="form-control border-0 shadow-sm bg-white" name="tranche_libelle[]" value="${libelleDefault}" style="font-weight: 500;">
                             <input type="hidden" name="tranche_id[]" value="${tranche.id || ''}">
                             <input type="hidden" name="tranche_specialite_id[]" value="${specId || ''}">
                         </div>
-                        <div class="col-md-1">
-                            <label class="form-label fw-medium small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 0.65rem;">Part (%)</label>
-                            <input type="number" class="form-control border-0 shadow-sm bg-white tranche-pourcentage" name="tranche_pourcentage[]" value="${tranche.value}" data-base-price="${basePrice}" style="font-weight: 600;">
-                        </div>
                         <div class="col-md-2">
                             <label class="form-label fw-medium small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 0.65rem;">Montant (DA)</label>
-                            <input type="text" class="form-control border-0 shadow-sm bg-light montant-echeance text-primary" name="montant_echeance[]" value="${montantEcheance}" readonly style="font-weight: 700;">
+                            <input type="number" step="0.01" class="form-control border-0 shadow-sm bg-white montant-echeance text-primary" name="montant_echeance[]" value="${montantEcheance}" style="font-weight: 700;">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-medium small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 0.65rem;">Entité quittance</label>
@@ -1802,17 +1802,53 @@ $(document).ready(function () {
                                 <label class="form-label fw-medium small text-muted text-uppercase mb-0" style="letter-spacing: 0.5px; font-size: 0.65rem;">Échéance</label>
                                 <span class="weekend-warning badge bg-danger text-white d-none shadow-sm" style="font-size: 0.6rem; padding: 2px 6px;"></span>
                             </div>
-                            <input type="date" class="form-control border-0 shadow-sm bg-white tranche-date-input" name="tranche_date[]" value="" style="font-weight: 600; color: #334155;">
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="date" class="form-control border-0 shadow-sm bg-white tranche-date-input" name="tranche_date[]" value="" style="font-weight: 600; color: #334155;">
+                                <button type="button" class="btn btn-soft-danger btn-sm rounded-circle btn-remove-tranche ${isDoubleDiplomationMode ? '' : 'd-none'}" title="Supprimer la tranche" tabindex="-1"><i class="ri-delete-bin-line"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>
             `;
             container.append(trancheHtml);
         });
+        
+        var footerHtml = `
+            <div class="mt-3 p-3 rounded-3 shadow-sm d-flex justify-content-between align-items-center verif-distribution-container" data-block="${blockId}" style="background-color: #f8fafc; border: 1px solid #e2e8f0; transition: all 0.3s ease; margin-bottom: 30px;">
+              <div class="d-flex align-items-center">
+                <div class="icon-circle me-3 verif-distribution-icon" style="width: 36px; height: 36px; background-color: rgba(16, 185, 129, 0.1); transition: all 0.3s ease;">
+                  <i class="ri-check-line text-success fs-5"></i>
+                </div>
+                <div>
+                  <h6 class="mb-0 fw-bold verif-distribution-title" style="color: #10b981; transition: all 0.3s ease;">Répartition Valide</h6>
+                  <p class="mb-0 small text-muted verif-distribution-text">Le total correspond au net à payer.</p>
+                </div>
+              </div>
+              <div class="text-end">
+                <div class="d-flex gap-4">
+                  <div>
+                    <span class="text-secondary small fw-bold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.65rem;">Total Montant</span>
+                    <h5 class="mb-0 fw-bold verif-total-montant" style="transition: all 0.3s ease;">0 DA</h5>
+                  </div>
+                </div>
+              </div>
+            </div>
+        `;
+        container.append(footerHtml);
     }
 
     $(document).on('change', '.tranche-date-input', function() {
         checkTrancheWeekend($(this));
+    });
+    
+    // Remove tranche row
+    $(document).on('click', '.btn-remove-tranche', function() {
+        var $item = $(this).closest('.tranche-item');
+        $item.remove();
+        
+        // Recalculate amounts if needed, though for creation they might just hit recalculate button
+        // Optional: trigger recalculation if needed
+        // $('#btnRecalculerTranches').trigger('click');
     });
 
     function checkTrancheWeekend($input) {
@@ -1890,7 +1926,7 @@ $(document).ready(function () {
             var tranche = {
                 libelle: $(this).find('input[name="tranche_libelle[]"]').val(),
                 montant_echeance: $(this).find('input[name="montant_echeance[]"]').val(),
-                pourcentage: $(this).find('input[name="tranche_pourcentage[]"]').val(),
+                pourcentage: 0,
                 date: $(this).find('input[name="tranche_date[]"]').val(),
                 description: $(this).find('textarea[name="tranche_description[]"]').val(),
                 entite_id: $(this).find('select[name="tranche_entite_id[]"]').val() || null,
@@ -1902,7 +1938,7 @@ $(document).ready(function () {
         // Vérifier que toutes les tranches ont des données
         var isValid = true;
         $.each(tranchesData, function(index, tranche) {
-            if(!tranche.libelle || !tranche.pourcentage || !tranche.date) {
+            if(!tranche.libelle || !tranche.montant_echeance || !tranche.date) {
                 isValid = false;
                 return false; // break loop
             }
@@ -1910,6 +1946,23 @@ $(document).ready(function () {
         
         if(!isValid) {
             alertify.error("Veuillez remplir tous les champs obligatoires pour chaque tranche");
+            return;
+        }
+        var allValid = true;
+        $('.specialite-header').each(function() {
+            var blockId = $(this).attr('id');
+            var blockExpectedTotal = parseFloat($(this).attr('data-expected-total')) || 0;
+            var blockCurrentTotal = 0;
+            $('.tranche-item[data-block-id="' + blockId + '"]').each(function() {
+                blockCurrentTotal += parseFloat($(this).find('.montant-echeance').val()) || 0;
+            });
+            if (Math.abs(blockExpectedTotal - blockCurrentTotal) >= 0.01) {
+                allValid = false;
+            }
+        });
+        
+        if (!allValid) {
+            alertify.error("La somme des tranches ne correspond pas au total attendu pour l'une des spécialités.");
             return;
         }
         
@@ -2002,5 +2055,61 @@ $(document).ready(function () {
     loadDoubleDiplomation();
 
 });
+    function checkCreationDistributionValidation() {
+        var allValid = true;
+        
+        $('.specialite-header').each(function() {
+            var blockId = $(this).attr('id');
+            var expectedTotal = parseFloat($(this).attr('data-expected-total')) || 0;
+            var currentTotal = 0;
+            
+            // Sum all montants for this block
+            $('.tranche-item[data-block-id="' + blockId + '"]').each(function() {
+                currentTotal += parseFloat($(this).find('.montant-echeance').val()) || 0;
+            });
+            
+            var isValid = Math.abs(expectedTotal - currentTotal) < 0.01;
+            if (!isValid) allValid = false;
+            
+            var $footer = $('.verif-distribution-container[data-block="' + blockId + '"]');
+            $footer.find('.verif-total-montant').text(currentTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' DA');
+            
+            if (isValid) {
+                $footer.css('border-color', '#10b981').css('background-color', 'rgba(16, 185, 129, 0.05)');
+                $footer.find('.verif-distribution-icon').css('background-color', 'rgba(16, 185, 129, 0.1)').html('<i class="ri-check-line text-success fs-5"></i>');
+                $footer.find('.verif-distribution-title').css('color', '#10b981').text('Répartition Valide');
+                $footer.find('.verif-distribution-text').text('Le total correspond au net à payer.');
+                $footer.find('.verif-total-montant').removeClass('text-danger').addClass('text-success');
+            } else {
+                $footer.css('border-color', '#ef4444').css('background-color', 'rgba(239, 68, 68, 0.05)');
+                $footer.find('.verif-distribution-icon').css('background-color', 'rgba(239, 68, 68, 0.1)').html('<i class="ri-error-warning-line text-danger fs-5"></i>');
+                $footer.find('.verif-distribution-title').css('color', '#ef4444').text('Répartition Invalide');
+                if (currentTotal < expectedTotal) {
+                    $footer.find('.verif-distribution-text').text('Le total est inférieur au net à payer (' + expectedTotal.toLocaleString() + ' DA).');
+                } else {
+                    $footer.find('.verif-distribution-text').text('Le total est supérieur au net à payer (' + expectedTotal.toLocaleString() + ' DA).');
+                }
+                $footer.find('.verif-total-montant').removeClass('text-success').addClass('text-danger');
+            }
+            
+            // Show footer only if there are tranches
+            if ($('.tranche-item[data-block-id="' + blockId + '"]').length > 0) {
+                $footer.show();
+            } else {
+                $footer.hide();
+            }
+        });
+        
+        $('#btnEnregistrerEcheancier').prop('disabled', !allValid);
+    }
+    
+    $(document).on('input', '.montant-echeance', function() {
+        checkCreationDistributionValidation();
+    });
+    
+    $(document).on('click', '#btnAppliquerEcheancier, .btn-remove-tranche', function() {
+        setTimeout(checkCreationDistributionValidation, 100);
+    });
+
 </script>
 {% endblock content %}

@@ -173,7 +173,7 @@ def ApiLoadRefundDetails(request):
     if request.method == "GET":
         id = request.GET.get('id')
         obj = Rembourssements.objects.get(id = id)
-        paiements_qs = Paiements.objects.filter(prospect=obj.client, is_refund=False).exclude(Q(context='frais_i') | Q(is_frais_inscription=True) | Q(paiement_label__icontains="inscription"))
+        paiements_qs = Paiements.objects.filter(prospect=obj.client, is_refund=False)
         paiement_lines = paiements_qs.filter(Q(is_done=True) | Q(mode_paiement='esp')).aggregate(total=Sum('montant_paye'))['total'] or 0
 
         # Récupération des informations de groupe

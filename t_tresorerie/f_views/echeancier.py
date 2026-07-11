@@ -494,7 +494,20 @@ def ApiUpdateModeleEcheancier(request):
         return JsonResponse({"status": "success"})
     except Exception as e:
         print(f"Error updating ModelEcheancier: {e}")
-        return JsonResponse({"status": "error"})
+        return JsonResponse({"status" : "error"})
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('tre', 'delete')
+def ApiDeleteModeleEcheancier(request):
+    if request.method == "POST":
+        echeancierId = request.POST.get('echeancierId')
+        try:
+            model = ModelEcheancier.objects.get(id=echeancierId)
+            model.delete()
+            return JsonResponse({"status": "success"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    return JsonResponse({"status": "error"})
 
 
 @login_required(login_url="institut_app:login")
@@ -841,6 +854,10 @@ def ApiUpdateEcheancier(request):
                 actual_discount = (tarif * remise_val / 100) if echeancier.type_remise == 'pourcentage' else remise_val
                 actual_majoration = (tarif * maj_val / 100) if echeancier.type_majoration == 'pourcentage' else maj_val
                 net_total = tarif - actual_discount + actual_majoration
+                
+                # Identify tranches to delete
+                update_t_ids = [u.get('id') for u in tranche_updates if u.get('id')]
+                EcheancierPaiementLine.objects.filter(echeancier=echeancier).exclude(id__in=update_t_ids).delete()
                 
                 # Update tranches by matching ID to prevent duplication or mismatch
                 for update in tranche_updates:

@@ -101,8 +101,8 @@ class BudgetCampaign(models.Model):
     date_fin = models.DateField()
     is_active = models.BooleanField(default=False)
     
-    target_revenue = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name="Objectif Recettes (Global)")
-    target_expense = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name="Objectif Dépenses (Global)")
+    target_revenue = models.DecimalField(max_digits=20, decimal_places=2, default=0, verbose_name="Objectif Recettes (Global)")
+    target_expense = models.DecimalField(max_digits=20, decimal_places=2, default=0, verbose_name="Objectif Dépenses (Global)")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -139,7 +139,7 @@ class BudgetCampaign(models.Model):
 class BudgetLine(models.Model):
     campaign = models.ForeignKey(BudgetCampaign, on_delete=models.CASCADE, related_name='lines')
     institut = models.ForeignKey(Institut, on_delete=models.CASCADE, related_name='budget_lines')
-    montant = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    montant = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     
     STATUT_CHOICES = (
         ('draft', 'Brouillon'),
@@ -169,7 +169,7 @@ class BudgetLineDetail(models.Model):
     payment_category = models.ForeignKey(GlobalPaymentCategory, on_delete=models.CASCADE, related_name='budget_details', null=True, blank=True)
     depense_category = models.ForeignKey(GlobalDepensesCategory, on_delete=models.CASCADE, related_name='budget_details', null=True, blank=True)
     entreprise_id = models.IntegerField()  # ID of the Entreprise in tenant schema
-    montant = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    montant = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     
     # Quarterly Dispatch Percentages (0-100)
     t1_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0) # Jul-Sep
@@ -217,8 +217,8 @@ class BudgetExtensionItem(models.Model):
     depense_category = models.ForeignKey(GlobalDepensesCategory, on_delete=models.CASCADE, null=True, blank=True)
     entreprise_id = models.IntegerField(help_text="ID of the Entreprise in tenant schema")
     
-    old_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Montant Actuel")
-    requested_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Nouveau Montant")
+    old_amount = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Montant Actuel")
+    requested_amount = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Nouveau Montant")
 
     class Meta:
         verbose_name = "Détail Rallonge"

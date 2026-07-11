@@ -385,6 +385,11 @@
                         Suivi des Réalisations
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link d-flex align-items-center gap-2" id="comparison-tab" data-bs-toggle="pill" data-bs-target="#comparison-content" type="button" role="tab">
+                        Comparaison (N vs N-1)
+                    </button>
+                </li>
                 {% endif %}
             </ul>
 
@@ -727,6 +732,202 @@
                     <!-- Summary Cards moved to header -->
                 </div>
                 {% endif %}
+                
+                <!-- Tab 3: Comparaison (N vs N-1) -->
+                {% if budget_line.statut == 'validated' %}
+                <div class="tab-pane fade" id="comparison-content" role="tabpanel">
+                    <div class="matrix-card">
+                        <div class="card-header bg-white border-bottom py-4 px-4">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-0">
+                                <div class="d-flex align-items-center gap-3">
+                                    <i class="ri-scales-3-line fs-24 text-teal"></i>
+                                    <h5 class="card-title mb-0 fs-18 fw-bold">Comparaison (N vs N-1)</h5>
+                                </div>
+                                
+                                {% if previous_campaign %}
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-light text-muted border px-3 py-2">
+                                        N : {{ campaign.date_debut|date:"Y" }}-{{ campaign.date_fin|date:"Y" }}
+                                    </span>
+                                    <span class="badge bg-light text-muted border px-3 py-2">
+                                        N-1 : {{ previous_campaign.date_debut|date:"Y" }}-{{ previous_campaign.date_fin|date:"Y" }}
+                                    </span>
+                                </div>
+                                {% else %}
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-warning text-white px-3 py-2">
+                                        Aucun point de comparaison pour le moment (Budget N-1 introuvable)
+                                    </span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if previous_campaign %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0 matrix-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="sticky-col matrix-header" rowspan="2" style="min-width: 280px; vertical-align: middle;">Poste</th>
+                                            <th class="text-center col-t1 matrix-header" colspan="4">Trimestre 1 (Jui-Sep)</th>
+                                            <th class="text-center col-t2 matrix-header" colspan="4">Trimestre 2 (Oct-Déc)</th>
+                                            <th class="text-center col-t3 matrix-header" colspan="4">Trimestre 3 (Jan-Mar)</th>
+                                            <th class="text-center col-t4 matrix-header" colspan="4">Trimestre 4 (Avr-Juin)</th>
+                                            <th class="text-center bg-light matrix-header" colspan="4">Global (Annuel)</th>
+                                        </tr>
+                                        <tr>
+                                            <!-- T1 -->
+                                            <th class="text-end col-t1 matrix-header" style="font-size: 10px;">Prévu N-1</th>
+                                            <th class="text-end col-t1 matrix-header" style="font-size: 10px;">Prévu N</th>
+                                            <th class="text-end col-t1 matrix-header" style="font-size: 10px;">Réalisé N-1</th>
+                                            <th class="text-end col-t1 matrix-header" style="font-size: 10px;">Réalisé N</th>
+                                            <!-- T2 -->
+                                            <th class="text-end col-t2 matrix-header" style="font-size: 10px;">Prévu N-1</th>
+                                            <th class="text-end col-t2 matrix-header" style="font-size: 10px;">Prévu N</th>
+                                            <th class="text-end col-t2 matrix-header" style="font-size: 10px;">Réalisé N-1</th>
+                                            <th class="text-end col-t2 matrix-header" style="font-size: 10px;">Réalisé N</th>
+                                            <!-- T3 -->
+                                            <th class="text-end col-t3 matrix-header" style="font-size: 10px;">Prévu N-1</th>
+                                            <th class="text-end col-t3 matrix-header" style="font-size: 10px;">Prévu N</th>
+                                            <th class="text-end col-t3 matrix-header" style="font-size: 10px;">Réalisé N-1</th>
+                                            <th class="text-end col-t3 matrix-header" style="font-size: 10px;">Réalisé N</th>
+                                            <!-- T4 -->
+                                            <th class="text-end col-t4 matrix-header" style="font-size: 10px;">Prévu N-1</th>
+                                            <th class="text-end col-t4 matrix-header" style="font-size: 10px;">Prévu N</th>
+                                            <th class="text-end col-t4 matrix-header" style="font-size: 10px;">Réalisé N-1</th>
+                                            <th class="text-end col-t4 matrix-header" style="font-size: 10px;">Réalisé N</th>
+                                            <!-- Global -->
+                                            <th class="text-end bg-light matrix-header" style="font-size: 10px;">Prévu N-1</th>
+                                            <th class="text-end bg-light matrix-header" style="font-size: 10px;">Prévu N</th>
+                                            <th class="text-end bg-light matrix-header" style="font-size: 10px;">Réalisé N-1</th>
+                                            <th class="text-end bg-light matrix-header" style="font-size: 10px;">Réalisé N</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for group in combined_postes %}
+                                        
+                                        {% ifchanged group.parent_poste.type %}
+                                        <tr class="bg-light">
+                                            <td colspan="21" class="py-3 px-4">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div style="width: 4px; height: 20px; background: {% if group.parent_poste.type == 'recette' %}var(--primary-teal){% else %}#e74c3c{% endif %}; border-radius: 2px;"></div>
+                                                    <h6 class="mb-0 fw-bold text-uppercase letter-spacing-1" style="font-size: 0.85rem; color: {% if group.parent_poste.type == 'recette' %}var(--primary-teal){% else %}#e74c3c{% endif %};">
+                                                        {% if group.parent_poste.type == 'recette' %}Flux de Recettes{% else %}Flux de Dépenses{% endif %}
+                                                    </h6>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endifchanged %}
+                                        
+                                        {% for item in group.display_postes %}
+                                        <!-- Find previous item -->
+                                        {% get_dict_value prev_data_dict item.poste.id as prev_item %} 
+                                        
+                                        <tr class="poste-row row-{{ group.parent_poste.type }}" onclick="toggleSubPostesCompare('{{ item.poste.id }}')" style="cursor: pointer;">
+                                            <td class="sticky-col" style="{% if not group.is_standalone %}padding-left: 3rem !important; border-left: 6px solid #e2e8f0;{% else %}border-left: 6px solid var(--primary-teal);{% endif %}">
+                                                <div class="d-flex align-items-center justify-content-between">
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="ri-arrow-right-s-line text-muted" id="icon-compare-poste-{{ item.poste.id }}"></i>
+                                                        <span class="poste-label">{{ item.poste.label }}</span>
+                                                    </div>
+                                                    <span class="poste-type-badge {% if item.poste.type == 'depense' %}badge-depense{% else %}badge-recette{% endif %}">
+                                                        {{ item.poste.get_type_display }}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            
+                                            <!-- T1 -->
+                                            <td class="text-end col-t1"><span class="text-muted" style="font-size: 0.85rem;">{{ prev_item.t1.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t1"><span class="val-prevu" style="font-size: 0.85rem;">{{ item.t1.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t1"><span class="text-muted" style="font-size: 0.85rem;">{{ prev_item.t1.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t1"><span class="val-realise" style="font-size: 0.85rem;">{{ item.t1.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                            
+                                            <!-- T2 -->
+                                            <td class="text-end col-t2"><span class="text-muted" style="font-size: 0.85rem;">{{ prev_item.t2.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t2"><span class="val-prevu" style="font-size: 0.85rem;">{{ item.t2.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t2"><span class="text-muted" style="font-size: 0.85rem;">{{ prev_item.t2.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t2"><span class="val-realise" style="font-size: 0.85rem;">{{ item.t2.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                            
+                                            <!-- T3 -->
+                                            <td class="text-end col-t3"><span class="text-muted" style="font-size: 0.85rem;">{{ prev_item.t3.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t3"><span class="val-prevu" style="font-size: 0.85rem;">{{ item.t3.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t3"><span class="text-muted" style="font-size: 0.85rem;">{{ prev_item.t3.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t3"><span class="val-realise" style="font-size: 0.85rem;">{{ item.t3.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                            
+                                            <!-- T4 -->
+                                            <td class="text-end col-t4"><span class="text-muted" style="font-size: 0.85rem;">{{ prev_item.t4.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t4"><span class="val-prevu" style="font-size: 0.85rem;">{{ item.t4.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t4"><span class="text-muted" style="font-size: 0.85rem;">{{ prev_item.t4.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end col-t4"><span class="val-realise" style="font-size: 0.85rem;">{{ item.t4.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                            
+                                            <!-- Global -->
+                                            <td class="text-end bg-light"><span class="text-muted" style="font-size: 0.85rem;">{{ prev_item.global.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end bg-light"><span class="val-prevu" style="font-size: 0.85rem;">{{ item.global.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end bg-light"><span class="text-muted" style="font-size: 0.85rem;">{{ prev_item.global.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                            <td class="text-end bg-light"><span class="val-realise" style="font-size: 0.85rem;">{{ item.global.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                        </tr>
+                                        
+                                        <!-- Categories (Sub-postes) -->
+                                        {% if item.categories %}
+                                            {% for cat_id, cat_data in item.categories.items %}
+                                            {% get_dict_value prev_item.categories cat_id as prev_cat %}
+                                            
+                                            <tr class="poste-row sub-compare-poste-{{ item.poste.id }}" style="display: none; background-color: #f8fafc;">
+                                                <td class="sticky-col" style="padding-left: 4.5rem !important; border-left: 6px solid #e2e8f0;">
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="ri-corner-down-right-line text-muted"></i>
+                                                        <span class="text-muted" style="font-size: 0.85rem;">{{ cat_data.name }}</span>
+                                                    </div>
+                                                </td>
+                                                
+                                                <!-- T1 -->
+                                                <td class="text-end col-t1"><span class="text-muted" style="font-size: 0.8rem;">{{ prev_cat.t1.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                                <td class="text-end col-t1"><span class="val-prevu" style="font-size: 0.8rem;">{{ cat_data.t1.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                                <td class="text-end col-t1"><span class="text-muted" style="font-size: 0.8rem;">{{ prev_cat.t1.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                                <td class="text-end col-t1"><span class="val-realise" style="font-size: 0.8rem;">{{ cat_data.t1.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                                
+                                                <!-- T2 -->
+                                                <td class="text-end col-t2"><span class="text-muted" style="font-size: 0.8rem;">{{ prev_cat.t2.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                                <td class="text-end col-t2"><span class="val-prevu" style="font-size: 0.8rem;">{{ cat_data.t2.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                                <td class="text-end col-t2"><span class="text-muted" style="font-size: 0.8rem;">{{ prev_cat.t2.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                                <td class="text-end col-t2"><span class="val-realise" style="font-size: 0.8rem;">{{ cat_data.t2.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                                
+                                                <!-- T3 -->
+                                                <td class="text-end col-t3"><span class="text-muted" style="font-size: 0.8rem;">{{ prev_cat.t3.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                                <td class="text-end col-t3"><span class="val-prevu" style="font-size: 0.8rem;">{{ cat_data.t3.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                                <td class="text-end col-t3"><span class="text-muted" style="font-size: 0.8rem;">{{ prev_cat.t3.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                                <td class="text-end col-t3"><span class="val-realise" style="font-size: 0.8rem;">{{ cat_data.t3.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                                
+                                                <!-- T4 -->
+                                                <td class="text-end col-t4"><span class="text-muted" style="font-size: 0.8rem;">{{ prev_cat.t4.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                                <td class="text-end col-t4"><span class="val-prevu" style="font-size: 0.8rem;">{{ cat_data.t4.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                                <td class="text-end col-t4"><span class="text-muted" style="font-size: 0.8rem;">{{ prev_cat.t4.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                                <td class="text-end col-t4"><span class="val-realise" style="font-size: 0.8rem;">{{ cat_data.t4.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                                
+                                                <!-- Global -->
+                                                <td class="text-end bg-light"><span class="text-muted" style="font-size: 0.8rem;">{{ prev_cat.global.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                                <td class="text-end bg-light"><span class="val-prevu" style="font-size: 0.8rem;">{{ cat_data.global.prevu|default:0|floatformat:2|intcomma }}</span></td>
+                                                <td class="text-end bg-light"><span class="text-muted" style="font-size: 0.8rem;">{{ prev_cat.global.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                                <td class="text-end bg-light"><span class="val-realise" style="font-size: 0.8rem;">{{ cat_data.global.realise|default:0|floatformat:2|intcomma }}</span></td>
+                                            </tr>
+                                            {% endfor %}
+                                        {% endif %}
+                                        {% endfor %}
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="p-5 text-center">
+                                <i class="ri-file-chart-line text-muted" style="font-size: 48px;"></i>
+                                <h5 class="mt-3 text-muted">Aucune donnée N-1</h5>
+                                <p class="text-muted">Il n'y a pas de campagne précédente pour effectuer une comparaison.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -990,6 +1191,29 @@
                 } else {
                     icon.classList.remove('ri-arrow-up-s-line');
                     icon.classList.add('ri-arrow-down-s-line');
+                }
+            }
+        };
+
+        window.toggleSubPostesCompare = function(posteId) {
+            const rows = document.querySelectorAll(`.sub-compare-poste-${posteId}`);
+            const icon = document.getElementById(`icon-compare-poste-${posteId}`);
+            let isHidden = false;
+            
+            if (rows.length > 0) {
+                isHidden = rows[0].style.display === 'none';
+                rows.forEach(row => {
+                    row.style.display = isHidden ? '' : 'none';
+                });
+            }
+            
+            if (icon) {
+                if (isHidden) {
+                    icon.classList.remove('ri-arrow-right-s-line');
+                    icon.classList.add('ri-arrow-down-s-line');
+                } else {
+                    icon.classList.remove('ri-arrow-down-s-line');
+                    icon.classList.add('ri-arrow-right-s-line');
                 }
             }
         };

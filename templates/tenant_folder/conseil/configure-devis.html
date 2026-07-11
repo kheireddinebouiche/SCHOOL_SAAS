@@ -506,7 +506,8 @@
             $(newThematique).select2({
                 placeholder: "-- Sélectionner Thématique --",
                 width: '100%',
-                allowClear: true
+                allowClear: true,
+                tags: true
             });
         });
 
@@ -548,9 +549,11 @@
             if(th) {
                 newDesignation.value = th.label;
                 newPrice.value = th.prix;
-                newTva.value = parseFloat(th.default_tva).toFixed(6); 
+                if(newTva) newTva.value = parseFloat(th.default_tva).toFixed(6); 
                 newLongDescription.value = th.description || "";
                 updateInputRowTotal();
+            } else {
+                newDesignation.value = tId;
             }
         });
 
@@ -684,14 +687,20 @@
 
         if(addItemBtn) {
             addItemBtn.addEventListener('click', () => {
-                const d = newDesignation.value.trim();
+                let d = newDesignation.value.trim();
                 const longDesc = newLongDescription.value.trim();
                 const q = parseFloat(newQty.value);
                 const u = document.getElementById('newUnit').value;
                 const p = parseFloat(newPrice.value);
                 const r = (parseFloat(newRemise.value) || 0);
                 const tva = parseFloat(newTva ? newTva.value : 0) || 0;
-                const tId = newThematique.value;
+                let tId = newThematique.value;
+                
+                const existingTh = thematiques.find(x => x.id == tId);
+                if (tId && !existingTh) {
+                    if (!d) d = tId;
+                    tId = null;
+                }
 
                 if(!d && !tId) return alertify.error("Saisie invalide: Veuillez sélectionner une thématique ou entrer une désignation.");
                 if(q <= 0 || p < 0) return alertify.error("Saisie invalide: Quantité ou prix unitaire incorrect.");

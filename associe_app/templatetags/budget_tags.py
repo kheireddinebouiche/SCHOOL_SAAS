@@ -4,7 +4,13 @@ register = template.Library()
 
 @register.filter
 def get_item(dictionary, key):
-    return dictionary.get(str(key))
+    val = dictionary.get(str(key))
+    if val is None:
+        try:
+            val = dictionary.get(int(key))
+        except (ValueError, TypeError):
+            pass
+    return val
 
 @register.simple_tag
 def get_allocation(dictionary, poste_id, cat_type, cat_id, entreprise_id):
@@ -25,11 +31,18 @@ def sub(value, arg):
         return value - arg
     except (ValueError, TypeError):
         return 0
+
 @register.simple_tag
 def get_dict_value(dictionary, key):
     if not dictionary:
         return None
-    return dictionary.get(str(key))
+    val = dictionary.get(str(key))
+    if val is None:
+        try:
+            val = dictionary.get(int(key))
+        except (ValueError, TypeError):
+            pass
+    return val
 
 @register.filter
 def format_comptable(value):

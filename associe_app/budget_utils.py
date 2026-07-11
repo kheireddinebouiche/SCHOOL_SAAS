@@ -69,9 +69,9 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                     't2_montant': Decimal('0'),
                     't3_montant': Decimal('0'),
                     't4_montant': Decimal('0'),
+                    'categories': {}
                 }
             
-            all_allocations[pid]['montant'] += d.montant
             t1 = d.t1_percent or 0
             t2 = d.t2_percent or 0
             t3 = d.t3_percent or 0
@@ -81,14 +81,33 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
             if (t1 + t2 + t3 + t4) == 0 and d.montant > 0:
                 t1 = t2 = t3 = t4 = Decimal('25')
             
-            all_allocations[pid]['t1_montant'] += (d.montant * t1) / 100
-            all_allocations[pid]['t2_montant'] += (d.montant * t2) / 100
-            all_allocations[pid]['t3_montant'] += (d.montant * t3) / 100
-            all_allocations[pid]['t4_montant'] += (d.montant * t4) / 100
+            d_t1 = (d.montant * t1) / 100
+            d_t2 = (d.montant * t2) / 100
+            d_t3 = (d.montant * t3) / 100
+            d_t4 = (d.montant * t4) / 100
+
+            all_allocations[pid]['montant'] += d.montant
+            all_allocations[pid]['t1_montant'] += d_t1
+            all_allocations[pid]['t2_montant'] += d_t2
+            all_allocations[pid]['t3_montant'] += d_t3
+            all_allocations[pid]['t4_montant'] += d_t4
+            
+            cat_id = d.payment_category_id or d.depense_category_id or 0
+            if cat_id not in all_allocations[pid]['categories']:
+                all_allocations[pid]['categories'][cat_id] = {
+                    'montant': Decimal('0'), 't1_montant': Decimal('0'), 't2_montant': Decimal('0'),
+                    't3_montant': Decimal('0'), 't4_montant': Decimal('0')
+                }
+            
+            all_allocations[pid]['categories'][cat_id]['montant'] += d.montant
+            all_allocations[pid]['categories'][cat_id]['t1_montant'] += d_t1
+            all_allocations[pid]['categories'][cat_id]['t2_montant'] += d_t2
+            all_allocations[pid]['categories'][cat_id]['t3_montant'] += d_t3
+            all_allocations[pid]['categories'][cat_id]['t4_montant'] += d_t4
 
         # B. Collect Realizations (Tenant Schema)
         with schema_context(inst.schema_name):
-            def add_real(p_id, val, date_pay):
+            def add_real(p_id, val, date_pay, cat_id=0):
                 if val is None or val == 0: return
                 if p_id not in all_realisations:
                     all_realisations[p_id] = {
@@ -97,21 +116,40 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                         't2_montant': Decimal('0'),
                         't3_montant': Decimal('0'),
                         't4_montant': Decimal('0'),
-                        'months': {m: Decimal('0') for m in range(1, 13)}
+                        'months': {m: Decimal('0') for m in range(1, 13)},
+                        'categories': {}
                     }
                 
                 real = all_realisations[p_id]
+                
+                if cat_id not in real['categories']:
+                    real['categories'][cat_id] = {
+                        'montant': Decimal('0'), 't1_montant': Decimal('0'), 't2_montant': Decimal('0'),
+                        't3_montant': Decimal('0'), 't4_montant': Decimal('0')
+                    }
+                cat_real = real['categories'][cat_id]
+
                 if date_pay:
                     m = date_pay.month
-                    if m in [7, 8, 9]: real['t1_montant'] += val
-                    elif m in [10, 11, 12]: real['t2_montant'] += val
-                    elif m in [1, 2, 3]: real['t3_montant'] += val
-                    elif m in [4, 5, 6]: real['t4_montant'] += val
+                    if m in [7, 8, 9]: 
+                        real['t1_montant'] += val
+                        cat_real['t1_montant'] += val
+                    elif m in [10, 11, 12]: 
+                        real['t2_montant'] += val
+                        cat_real['t2_montant'] += val
+                    elif m in [1, 2, 3]: 
+                        real['t3_montant'] += val
+                        cat_real['t3_montant'] += val
+                    elif m in [4, 5, 6]: 
+                        real['t4_montant'] += val
+                        cat_real['t4_montant'] += val
                     
                     real['months'][m] += val
                     real['montant'] += val
+                    cat_real['montant'] += val
                 else:
                     real['montant'] += val
+                    cat_real['montant'] += val
 
             # Revenu
             paiements = Paiements.objects.filter(
@@ -194,13 +232,12 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                 
                 # 2. Add Realization to the correct Budget Poste
                 if target_g_cat:
-                    refunds = p.remboursements.filter(remboursement__is_done=True).aggregate(total=Sum('montant'))['total'] or Decimal('0')
-                    net_montant = p.montant_paye - refunds
+                    net_montant = p.montant_paye
                     
                     with schema_context('public'):
                         poste = PostesBudgetaire.objects.filter(payment_categories=target_g_cat).first()
                         if poste and net_montant > 0:
-                            add_real(poste.id, net_montant, p.date_paiement)
+                            add_real(poste.id, net_montant, p.date_paiement, target_g_cat.id)
 
             # Autre Produits
             autres = AutreProduit.objects.filter(date_paiement__gte=t1_start, date_paiement__lte=t4_end, payment_category__isnull=False).prefetch_related('lettrages', 'payment_category')
@@ -216,7 +253,7 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                     if g_cat:
                         poste = PostesBudgetaire.objects.filter(payment_categories=g_cat).first()
                         if poste: 
-                            add_real(poste.id, ap.montant_paiement, ap.date_paiement)
+                            add_real(poste.id, ap.montant_paiement, ap.date_paiement, g_cat.id)
 
             # Depenses
             depenses = Depenses.objects.filter(date_paiement__gte=t1_start, date_paiement__lte=t4_end, lignes__category__isnull=False).distinct().prefetch_related('lignes__category')
@@ -227,7 +264,7 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                         g_cat = GlobalDepensesCategory.objects.filter(name=ligne.category.name).first()
                         if g_cat:
                             poste = PostesBudgetaire.objects.filter(depense_categories=g_cat).first()
-                            if poste: add_real(poste.id, ligne.montant_ttc, d.date_paiement)
+                            if poste: add_real(poste.id, ligne.montant_ttc, d.date_paiement, g_cat.id)
 
 
             # Remboursements en tant que Dépenses
@@ -243,7 +280,7 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                     g_cat = GlobalDepensesCategory.objects.filter(name=r.category.name).first()
                     if g_cat:
                         poste = PostesBudgetaire.objects.filter(depense_categories=g_cat).first()
-                        if poste: add_real(poste.id, r.allowed_amount, r.updated_at.date() if r.updated_at else None)
+                        if poste: add_real(poste.id, r.allowed_amount, r.updated_at.date() if r.updated_at else None, g_cat.id)
 
     # 6. Structure Final Data
     structured_postes = []
@@ -303,6 +340,47 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                     total_pro_rata_depense += prevu
                     total_realized_depense += realise
 
+                cat_details = {}
+                alloc_cats = alloc.get('categories', {})
+                real_cats = real.get('categories', {})
+                
+                cat_ids = set(alloc_cats.keys()).union(set(real_cats.keys()))
+                for cid in cat_ids:
+                    c_alloc = alloc_cats.get(cid, {'montant': 0, 't1_montant': 0, 't2_montant': 0, 't3_montant': 0, 't4_montant': 0})
+                    c_real = real_cats.get(cid, {'montant': 0, 't1_montant': 0, 't2_montant': 0, 't3_montant': 0, 't4_montant': 0})
+                    
+                    c_full_t1 = Decimal(str(c_alloc['t1_montant']))
+                    c_full_t2 = Decimal(str(c_alloc['t2_montant']))
+                    c_full_t3 = Decimal(str(c_alloc['t3_montant']))
+                    c_full_t4 = Decimal(str(c_alloc['t4_montant']))
+                    c_full_prevu = c_full_t1 + c_full_t2 + c_full_t3 + c_full_t4
+                    
+                    c_t1_prevu = round(c_full_t1 * t1_ratio, 2)
+                    c_t2_prevu = round(c_full_t2 * t2_ratio, 2)
+                    c_t3_prevu = round(c_full_t3 * t3_ratio, 2)
+                    c_t4_prevu = round(c_full_t4 * t4_ratio, 2)
+                    c_prevu = c_t1_prevu + c_t2_prevu + c_t3_prevu + c_t4_prevu
+                    
+                    c_realise = Decimal(str(c_real['montant']))
+                    c_t1_realise = Decimal(str(c_real['t1_montant']))
+                    c_t2_realise = Decimal(str(c_real['t2_montant']))
+                    c_t3_realise = Decimal(str(c_real['t3_montant']))
+                    c_t4_realise = Decimal(str(c_real['t4_montant']))
+                    
+                    cat_details[cid] = {
+                        'global': {
+                            'prevu': c_prevu,
+                            'full_prevu': c_full_prevu,
+                            'realise': c_realise,
+                            'ecart': c_realise - c_prevu,
+                            'taux': (c_realise / c_prevu * 100) if c_prevu > 0 else (Decimal('100') if c_realise > 0 else Decimal('0')),
+                        },
+                        't1': {'prevu': c_t1_prevu, 'full_prevu': c_full_t1, 'realise': c_t1_realise, 'ecart': c_t1_realise - c_t1_prevu},
+                        't2': {'prevu': c_t2_prevu, 'full_prevu': c_full_t2, 'realise': c_t2_realise, 'ecart': c_t2_realise - c_t2_prevu},
+                        't3': {'prevu': c_t3_prevu, 'full_prevu': c_full_t3, 'realise': c_t3_realise, 'ecart': c_t3_realise - c_t3_prevu},
+                        't4': {'prevu': c_t4_prevu, 'full_prevu': c_full_t4, 'realise': c_t4_realise, 'ecart': c_t4_realise - c_t4_prevu},
+                    }
+
                 group_data['display_postes'].append({
                     'poste': dp,
                     'global': {
@@ -316,7 +394,8 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                     't2': {'prevu': t2_prevu, 'full_prevu': full_t2, 'realise': t2_realise, 'ecart': t2_realise - t2_prevu},
                     't3': {'prevu': t3_prevu, 'full_prevu': full_t3, 'realise': t3_realise, 'ecart': t3_realise - t3_prevu},
                     't4': {'prevu': t4_prevu, 'full_prevu': full_t4, 'realise': t4_realise, 'ecart': t4_realise - t4_prevu},
-                    'months': real.get('months', {m: Decimal('0') for m in range(1, 13)})
+                    'months': real.get('months', {m: Decimal('0') for m in range(1, 13)}),
+                    'categories': cat_details
                 })
             
             combined_postes.append(group_data)
