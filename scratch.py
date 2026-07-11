@@ -1,23 +1,34 @@
+import os
+import django
 import re
-with open('c:/Users/kheir/Documents/saldae/SCHOOL_SAAS/templates/t_ressource_humaine/fiche_paie_list_formateur.html', 'r', encoding='utf-8') as f:
-    content = f.read()
 
-tabs_pattern = r'            <!-- Entity Tabs -->\n.*?</div>\n            </div>'
-tabs_match = re.search(tabs_pattern, content, flags=re.DOTALL)
-if tabs_match:
-    tabs_str = tabs_match.group(0)
-    # Remove from current location
-    content = content.replace(tabs_str, '')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'school.settings')
+django.setup()
+
+from pdf_editor.models import DocumentTemplate
+from django_tenants.utils import schema_context
+from app.models import Institut
+
+tenant = Institut.objects.get(schema_name='alger')
+with schema_context(tenant.schema_name):
+    t = DocumentTemplate.objects.get(slug='dolibare')
+    content = t.content
     
-    insert_target = '            <div class="row">\n                <div class="col-lg-12">\n                    <div class="glass-card border-0 overflow-hidden">\n                        <div class="card-header bg-transparent'
-    insert_point = content.find(insert_target)
+    # List of variables to add DA to
+    vars_to_add_da = [
+        r'\{\{\s*ligne\.prix_unitaire\|floatformat:2\s*\}\}',
+        r'\{\{\s*ligne\.montant\|floatformat:2\s*\}\}',
+        r'\{\{\s*total_ht\|floatformat:2\s*\}\}',
+        r'\{\{\s*total_remise\|floatformat:2\s*\}\}',
+        r'\{\{\s*total_tva\|floatformat:2\s*\}\}',
+        r'\{\{\s*total_ttc\|floatformat:2\s*\}\}'
+    ]
     
-    if insert_point != -1:
-        content = content[:insert_point] + tabs_str + '\n\n' + content[insert_point:]
-        with open('c:/Users/kheir/Documents/saldae/SCHOOL_SAAS/templates/t_ressource_humaine/fiche_paie_list_formateur.html', 'w', encoding='utf-8') as f:
-            f.write(content)
-        print('Success')
-    else:
-        print('Insert target not found')
-else:
-    print('Tabs not found')
+    for var in vars_to_add_da:
+        # Check if " DA" is already there so we don't duplicate
+        pattern = var + r'(?!\s*DA)'
+        content = re.sub(pattern, lambda m: m.group(0) + ' DA', content)
+        
+    t.content = content
+    t.save()
+    print('Modifié avec succès pour ajouter DA!')

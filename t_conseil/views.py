@@ -1064,7 +1064,10 @@ def PrintDevisConseil(request, pk):
 
     total_tva = sum(tva_breakdown.values())
     total_ttc = total_ht + total_tva
-    total_remise = 0 # Not present in Devis model
+    total_remise = sum(float(ligne.prix_unitaire) * float(ligne.quantite) * float(getattr(ligne, 'remise_percent', 0)) / 100 for ligne in lignes_devis)
+    
+    # Masquer la remise si elle est nulle
+    show_remise_final = devis.show_remise and total_remise > 0
 
     emetteur = getattr(devis, 'entreprise', None)
 
@@ -1100,6 +1103,7 @@ def PrintDevisConseil(request, pk):
                 'designation': getattr(ligne.thematique, 'label', '') if hasattr(ligne, 'thematique') and ligne.thematique else getattr(ligne, 'description', ''),
                 'description': getattr(ligne, 'long_description', getattr(ligne, 'description', '')),
                 'quantite': float(ligne.quantite),
+                'unite': getattr(ligne, 'unite', ''),
                 'prix_unitaire': float(ligne.prix_unitaire),
                 'tva_percent': float(getattr(ligne, 'tva_percent', 0)) if devis.show_tva else 0,
                 'remise_percent': float(getattr(ligne, 'remise_percent', 0)) if devis.show_remise else 0,
@@ -1111,7 +1115,7 @@ def PrintDevisConseil(request, pk):
         'total_ttc': round(total_ttc, 2),
         'total_remise': round(total_remise, 2),
         'show_tva': devis.show_tva,
-        'show_remise': devis.show_remise,
+        'show_remise': devis.show_remise and total_remise > 0,
     }
 
     try:
@@ -1582,6 +1586,7 @@ def PrintFactureConseil(request, pk):
                 'designation': getattr(ligne.thematique, 'label', '') if hasattr(ligne, 'thematique') and ligne.thematique else getattr(ligne, 'description', ''),
                 'description': getattr(ligne, 'long_description', getattr(ligne, 'description', '')),
                 'quantite': float(ligne.quantite),
+                'unite': getattr(ligne, 'unite', ''),
                 'prix_unitaire': float(ligne.prix_unitaire_ht) if hasattr(ligne, 'prix_unitaire_ht') else float(getattr(ligne, 'prix_unitaire', 0)),
                 'tva_percent': float(getattr(ligne, 'tva_percent', 0)) if facture.show_tva else 0,
                 'remise_percent': float(getattr(ligne, 'remise_percent', 0)) if getattr(facture, 'show_remise', False) else 0,
@@ -1594,7 +1599,7 @@ def PrintFactureConseil(request, pk):
         'total_remise': round(total_remise, 2),
         'timbre': round(timbre, 2),
         'show_tva': facture.show_tva,
-        'show_remise': getattr(facture, 'show_remise', False),
+        'show_remise': getattr(facture, 'show_remise', False) and total_remise > 0,
     }
 
     try:

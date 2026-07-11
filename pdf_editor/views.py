@@ -332,14 +332,29 @@ class DocumentExportView(LoginRequiredMixin, View):
             }
             html_content = render_to_string('documents/pdf_base.html', context)
 
+            # Convertir les URLs des médias pour WeasyPrint (car runserver bloque sur les requêtes HTTP locales)
+            media_url = request.build_absolute_uri(settings.MEDIA_URL)
+            media_root_uri = 'file:///' + str(settings.MEDIA_ROOT).replace('\\', '/') + '/'
+            html_content = html_content.replace(media_url, media_root_uri)
+
             pdf_file = BytesIO()
 
             # Créer le PDF avec le contenu HTML et les styles
             HTML(string=html_content, base_url=request.build_absolute_uri('/')).write_pdf(pdf_file)
             pdf_file.seek(0)
 
+            # Déterminer le nom du fichier en fonction du contexte
+            filename = f"document_{document.pk}.pdf"
+            if document.context_data:
+                if 'devis_numero' in document.context_data:
+                    filename = f"Devis_{document.context_data['devis_numero']}.pdf"
+                elif 'num_facture' in document.context_data:
+                    filename = f"Facture_{document.context_data['num_facture']}.pdf"
+                elif 'reference' in document.context_data:
+                    filename = f"Document_{document.context_data['reference']}.pdf"
+
             response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-            response['Content-Disposition'] = f'attachment; filename="document_{document.pk}.pdf"'
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
             return response
 
         except ImportError:
