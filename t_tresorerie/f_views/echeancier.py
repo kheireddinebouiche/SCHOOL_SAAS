@@ -162,11 +162,12 @@ def ApiLoadEcheancierDetails(request):
                 'date_echeancier': t.date_echeancier,
                 'montant_tranche': t.montant_tranche,
                 'entite_id': t.entite_id,
+                'entite_label': t.entite.designation if t.entite else "",
                 'base_price': inferred_base_price
             })
 
         data = {
-            'id': echeancier.id,
+            'id': ids_raw,
             'model_label': echeancier.model.label,
             'formation_label': composite_formation_label,
             'formation_nom': f_nom,
@@ -790,7 +791,8 @@ def ApiUpdateEcheancier(request):
             
             ids = str(ids_raw).split(',')
             
-            is_active_val = request.POST.get('is_active') == '1'
+            is_active_raw = str(request.POST.get('is_active', '')).strip().lower()
+            is_active_val = is_active_raw in ['1', 'true']
             entite_id = request.POST.get('entite')
             frais_inscription = clean_decimal(request.POST.get('frais_inscription'))
             date_frais_inscription = request.POST.get('date_frais_inscription')
@@ -855,49 +857,52 @@ def ApiUpdateEcheancier(request):
                 actual_majoration = (tarif * maj_val / 100) if echeancier.type_majoration == 'pourcentage' else maj_val
                 net_total = tarif - actual_discount + actual_majoration
                 
-                # Identify tranches to delete
-                update_t_ids = [u.get('id') for u in tranche_updates if u.get('id')]
-                EcheancierPaiementLine.objects.filter(echeancier=echeancier).exclude(id__in=update_t_ids).delete()
+                existing_tranches = list(EcheancierPaiementLine.objects.filter(echeancier=echeancier).order_by('id'))
                 
-                # Update tranches by matching ID to prevent duplication or mismatch
-                for update in tranche_updates:
-                    t_id = update.get('id')
-                    if t_id:
-                        tranche_obj = EcheancierPaiementLine.objects.filter(id=t_id, echeancier=echeancier).first()
-                        if not tranche_obj:
-                            continue
+                for idx, update in enumerate(tranche_updates):
+                    if idx < len(existing_tranches):
+                        tranche_obj = existing_tranches[idx]
+                    else:
+                        tranche_obj = EcheancierPaiementLine(echeancier=echeancier)
                         
+                    if update.get('value'):
                         tranche_obj.value = update.get('value')
-                        if update.get('date'):
-                            tranche_obj.date_echeancier = update.get('date')
+                    if update.get('date'):
+                        tranche_obj.date_echeancier = update.get('date')
+                    else:
+                        tranche_obj.date_echeancier = None
                         
-                        taux_custom = clean_decimal(update.get('taux'))
-                        if taux_custom is not None:
-                            try:
-                                tranche_obj.taux = float(taux_custom)
-                            except ValueError:
-                                pass
+                    # Recalculate montant_tranche
+                    taux_custom = clean_decimal(update.get('taux'))
+                    if taux_custom is not None:
+                        try:
+                            tranche_obj.taux = str(float(taux_custom))
+                        except ValueError:
+                            pass
+                    
+                    taux = float(tranche_obj.taux or 0)
+                    tranche_obj.montant_tranche = (net_total * taux / 100.0)
+                    
+                    montant_custom = clean_decimal(update.get('montant'))
+                    if montant_custom is not None:
+                        try:
+                            tranche_obj.montant_tranche = float(montant_custom)
+                        except ValueError:
+                            pass
+                    
+                    # Update tranche entity
+                    t_entite_id = update.get('entite_id')
+                    if t_entite_id and t_entite_id != "0":
+                        tranche_obj.entite_id = t_entite_id
+                    else:
+                        tranche_obj.entite = None
                         
-                        # Recalculate montant_tranche
-                        taux = float(tranche_obj.taux or 0)
-                        tranche_obj.montant_tranche = (net_total * taux / 100.0)
-                        
-                        montant_custom = clean_decimal(update.get('montant'))
-                        if montant_custom is not None:
-                            try:
-                                tranche_obj.montant_tranche = float(montant_custom)
-                            except ValueError:
-                                pass
-                        
-                        
-                        # Update tranche entity
-                        t_entite_id = update.get('entite_id')
-                        if t_entite_id and t_entite_id != "0":
-                            tranche_obj.entite_id = t_entite_id
-                        else:
-                            tranche_obj.entite = None
-                            
-                        tranche_obj.save()
+                    tranche_obj.save()
+                
+                # Delete extra tranches if any were removed
+                if len(existing_tranches) > len(tranche_updates):
+                    for extra_tranche in existing_tranches[len(tranche_updates):]:
+                        extra_tranche.delete()
 
             return JsonResponse({"status": "success", "message": f"{len(ids)} échéancier(s) mis à jour avec succès"})
         except Exception as e:

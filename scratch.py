@@ -12,23 +12,22 @@ from app.models import Institut
 tenant = Institut.objects.get(schema_name='alger')
 with schema_context(tenant.schema_name):
     t = DocumentTemplate.objects.get(slug='dolibare')
-    content = t.content
     
-    # List of variables to add DA to
-    vars_to_add_da = [
-        r'\{\{\s*ligne\.prix_unitaire\|floatformat:2\s*\}\}',
-        r'\{\{\s*ligne\.montant\|floatformat:2\s*\}\}',
-        r'\{\{\s*total_ht\|floatformat:2\s*\}\}',
-        r'\{\{\s*total_remise\|floatformat:2\s*\}\}',
-        r'\{\{\s*total_tva\|floatformat:2\s*\}\}',
-        r'\{\{\s*total_ttc\|floatformat:2\s*\}\}'
-    ]
+    # Replace regular space + DA with non-breaking space + DA right after floatformat
+    pattern = r'(\{\{.*?floatformat:2\s*\}\})\s*DA'
     
-    for var in vars_to_add_da:
-        # Check if " DA" is already there so we don't duplicate
-        pattern = var + r'(?!\s*DA)'
-        content = re.sub(pattern, lambda m: m.group(0) + ' DA', content)
+    if re.search(pattern, t.content):
+        t.content = re.sub(pattern, r'\1&nbsp;DA', t.content)
         
-    t.content = content
-    t.save()
-    print('Modifié avec succès pour ajouter DA!')
+        # Also ensure the Total columns have white-space: nowrap just in case
+        t.content = t.content.replace('width: 40%;">{{ total_ht', 'width: 45%; white-space: nowrap;">{{ total_ht')
+        t.content = t.content.replace('width: 40%;">\n<table', 'width: 45%;">\n<table')
+        t.content = t.content.replace('width: 60%; vertical-align', 'width: 55%; vertical-align')
+        
+        # Just add white-space: nowrap to the total TTC row as well
+        t.content = t.content.replace('color: #2c3e50;">{{ total_ttc', 'color: #2c3e50; white-space: nowrap;">{{ total_ttc')
+
+        t.save()
+        print('Modifié avec succès pour &nbsp; et nowrap!')
+    else:
+        print('Aucune occurrence trouvée!')

@@ -1,5 +1,6 @@
 {% extends 'tenant_folder/base.html' %}
 {% load static %}
+{% load permissions_tags %}
 {% block title %} Trésorerie - Liste des échéanciers spéciaux {% endblock title %}
 
 {% block content %}
@@ -488,6 +489,9 @@
 </div>
 
 <script>
+    {% user_can_access 'tre' permission='delete' as has_delete_perm %}
+    const hasDeletePerm = {% if has_delete_perm or request.user.is_superuser %}true{% else %}false{% endif %};
+
     $(document).ready(function(){
 
         // Function to load echeanciers
@@ -534,6 +538,11 @@
                                 html += '<button class="btn btn-soft-primary btn-sm btn-rounded view-details" data-id="' + echeancier.id + '">';
                                 html += '<i class="ri-eye-line me-1"></i>Détails';
                                 html += '</button>';
+                                if (!echeancier.is_validate && hasDeletePerm) {
+                                    html += '<button class="btn btn-soft-danger btn-sm btn-rounded ms-1 delete-echeancier" data-id="' + echeancier.id + '">';
+                                    html += '<i class="ri-delete-bin-line"></i>';
+                                    html += '</button>';
+                                }
                                 html += '</td>';
                                 html += '</tr>';
                             });
@@ -825,11 +834,39 @@
                     btn.prop('disabled', false);
                     btn.html(originalText);
                 }
-            })
+            });
         });
+
+        // Delete echeancier button click event
+        $(document).on('click', '.delete-echeancier', function() {
+            var echeancierId = $(this).data('id');
+            alertify.confirm("Confirmer la suppression", "Êtes-vous sûr de vouloir supprimer cette demande d'échéancier spécial ?",
+                function() {
+                    $.ajax({
+                        url: "{% url 't_tresorerie:ApiDeleteEcheancierSpecial' %}",
+                        type: 'POST',
+                        dataType: 'json',
+                        data: JSON.stringify({'echeancier_id': echeancierId}),
+                        contentType: 'application/json',
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                alertify.success(response.message);
+                                loadEcheanciers();
+                            } else {
+                                alertify.error(response.message || "Erreur lors de la suppression");
+                            }
+                        },
+                        error: function() {
+                            alertify.error("Erreur de connexion");
+                        }
+                    });
+                },
+                function() {
+                    // cancel
+                }
+            );
+        });
+
     });
 </script>
-
-
-
 {% endblock content %}

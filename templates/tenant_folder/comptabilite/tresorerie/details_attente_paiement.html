@@ -3824,6 +3824,7 @@
                                 <th class="text-muted fw-semibold py-3 ps-4">Tranche</th>
                                 <th class="text-muted fw-semibold py-3">Taux</th>
                                 <th class="text-muted fw-semibold py-3">Date</th>
+                                <th class="text-muted fw-semibold py-3">Entité</th>
                                 <th class="text-muted fw-semibold py-3 text-end pe-4">Montant de la tranche</th>
                             </tr>
                         </thead>
@@ -4517,6 +4518,7 @@
                                     <td class="ps-4 fw-medium text-dark"><span class="badge bg-info">Frais d'inscription</span></td>
                                     <td><span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">-</span></td>
                                     <td class="text-muted fw-medium">${actualDateFrais}</td>
+                                    <td class="text-muted fw-medium">${response.data.entite_label || '-'}</td>
                                     <td class="text-end pe-4 fw-bold text-success">${formatComptable(actualFrais)} DA</td>
                                 </tr>
                             `;
@@ -4529,6 +4531,7 @@
                                         <td class="ps-4 fw-medium text-dark">${line.value}</td>
                                         <td><span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">${line.taux}%</span></td>
                                         <td class="text-muted fw-medium">${line.date_echeancier || '-'}</td>
+                                        <td class="text-muted fw-medium">${line.entite_label || '-'}</td>
                                         <td class="text-end pe-4 fw-bold text-success">${formatComptable(line.montant_tranche)} DA</td>
                                     </tr>
                                 `;
@@ -4602,6 +4605,7 @@
                                     <td class="ps-4 fw-medium text-dark"><span class="badge bg-info">Frais d'inscription</span></td>
                                     <td><span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">-</span></td>
                                     <td class="text-muted fw-medium">${actualDateFrais}</td>
+                                    <td class="text-muted fw-medium">${response.data.entite_label || '-'}</td>
                                     <td class="text-end pe-4 fw-bold text-success">${formatComptable(actualFrais)} DA</td>
                                 </tr>
                             `;
@@ -4614,6 +4618,7 @@
                                         <td class="ps-4 fw-medium text-dark">${line.value}</td>
                                         <td><span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">${line.taux}%</span></td>
                                         <td class="text-muted fw-medium">${line.date_echeancier || '-'}</td>
+                                        <td class="text-muted fw-medium">${line.entite_label || '-'}</td>
                                         <td class="text-end pe-4 fw-bold text-success">${formatComptable(line.montant_tranche)} DA</td>
                                     </tr>
                                 `;
@@ -5541,7 +5546,11 @@
         
         // Ouvrir la modale de confirmation lors du clic sur "Enregistrer l'échéancier"
         $(document).on('click', '#saveSpecialEcheancierBtn', function(){
+            var btn = $(this);
+            if (btn.prop('disabled')) return;
+            btn.prop('disabled', true);
             $('#confirmSaveEcheancierModal').modal('show');
+            setTimeout(function() { btn.prop('disabled', false); }, 1000);
         });
         
         // Gérer la case à cocher de confirmation
@@ -5556,6 +5565,8 @@
         // Confirmer l'enregistrement de l'échéancier
         $(document).on('click', '#confirmSaveEcheancierBtn', function(){
             var btn = $(this); // référence du bouton
+            if (btn.data('is_processing')) return;
+            btn.data('is_processing', true);
             var originalText = btn.html();
 
             // Collect data from the special echeancier table
@@ -5596,6 +5607,7 @@
                     alertify.error("Veuillez remplir tous les champs (date, montant, entité) pour chaque tranche.");
                 }
                 $('#confirmSaveEcheancierModal').modal('hide');
+                btn.data('is_processing', false);
                 return;
             }
             
@@ -5653,6 +5665,7 @@
                     // Réactiver le bouton et restaurer son texte après la requête
                     btn.prop('disabled', false);
                     btn.html(originalText);
+                    btn.data('is_processing', false);
                 }
             });
         });

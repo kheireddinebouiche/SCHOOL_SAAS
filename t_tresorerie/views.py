@@ -616,7 +616,6 @@ def ApiGetDetailsDemandePaiement(request):
 
         total_solde = float(total_initial) - float(total_paiement if has_paiement else 0)
 
-        # Available echeanciers for this specialty and promo
         available_echeanciers = EcheancierPaiement.objects.filter(
             Q(specialite=voeux.specialite) | Q(specialite__isnull=True),
             formation_id=voeux.specialite.formation.id,
@@ -624,7 +623,27 @@ def ApiGetDetailsDemandePaiement(request):
             is_active=True
         ).values('id', 'model__label', 'is_default')
 
+        print(f"\n--- DEBUG ECHEANCIER ---")
+        print(f"voeux.promo_id: {voeux.promo_id if voeux else None}")
+        print(f"voeux.specialite.formation.id: {voeux.specialite.formation.id if voeux and voeux.specialite else None}")
+        print(f"voeux.specialite_id: {voeux.specialite_id if voeux else None}")
+        
+        if voeux and voeux.specialite:
+            all_e = EcheancierPaiement.objects.filter(formation_id=voeux.specialite.formation.id)
+            print(f"Found {all_e.count()} echeanciers for this formation.")
+            for e in all_e:
+                promo_match = e.model.promo_id == voeux.promo_id if e.model else False
+                spec_match = e.specialite_id == voeux.specialite_id or e.specialite_id is None
+                print(f"  - Echeancier ID {e.id}: promo_id={e.model.promo_id if e.model else None} (match: {promo_match}), specialite_id={e.specialite_id} (match: {spec_match}), is_active={e.is_active}")
+        print(f"------------------------\n")
+
+        debug_query = list(EcheancierPaiement.objects.filter(
+            formation_id=voeux.specialite.formation.id,
+            model__promo=voeux.promo
+        ).values('id', 'model__label', 'specialite__label', 'is_active', 'is_default'))
+        
         data = {
+            'debug_info': debug_query,
             'user_data' : user_data,
             'voeux' : voeux_data,
             'frais_inscription' : frais_inscription,

@@ -109,6 +109,7 @@ urlpatterns = [
     path('ApiListEcheancierSpecial', ApiListEcheancierSpecial, name="ApiListEcheancierSpecial"),
     path('ApiApproveEcheancierSpecial', ApiApproveEcheancierSpecial, name="ApiApproveEcheancierSpecial"),
     path('ApiRejectEcheancierSpecial', ApiRejectEcheancierSpecial, name="ApiRejectEcheancierSpecial"),
+    path('ApiDeleteEcheancierSpecial', ApiDeleteEcheancierSpecial, name="ApiDeleteEcheancierSpecial"),
     path('ApiStoreEcheancierSpecial', ApiStoreEcheancierSpecial, name="ApiStoreEcheancierSpecial"),
 
     path('ApiApplyRemiseToPaiement', ApiApplyRemiseToPaiement, name="ApiApplyRemiseToPaiement"),

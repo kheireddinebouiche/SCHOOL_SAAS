@@ -189,6 +189,15 @@ def ApiApproveEcheancierSpecial(request):
                 obj.entite_id = entite_id
                 
             obj.save()
+            
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='EcheancierSpecial',
+                target_id=str(obj.id),
+                details=f"Approbation de l'échéancier spécial (ID: {obj.id}) pour l'étudiant {obj.prospect.nom} {obj.prospect.prenom}.",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
 
             return JsonResponse({"status": "success", "message": "Échéancier approuvé avec succès"})
         except EcheancierSpecial.DoesNotExist:
@@ -205,6 +214,7 @@ def ApiApproveEcheancierSpecial(request):
     return JsonResponse({"status": "error", "message": "Méthode non autorisée"})
 
 @login_required(login_url="institut_app:login")
+@csrf_exempt
 @module_permission_required('tre', 'view')
 def ApiRejectEcheancierSpecial(request):
     if request.method == 'POST':
@@ -222,6 +232,15 @@ def ApiRejectEcheancierSpecial(request):
             echeancier.is_approuved = False
             echeancier.save()
             
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                target_model='EcheancierSpecial',
+                target_id=str(echeancier.id),
+                details=f"Rejet de l'échéancier spécial (ID: {echeancier.id}) pour l'étudiant {echeancier.prospect.nom} {echeancier.prospect.prenom}.",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             return JsonResponse({
                 'status': 'success',
                 'message': 'Échéancier rejeté avec succès'
@@ -235,6 +254,61 @@ def ApiRejectEcheancierSpecial(request):
             return JsonResponse({
                 'status': 'error',
                 'message': f'Erreur lors du rejet: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Méthode non autorisée'
+    })
+
+@login_required(login_url="institut_app:login")
+@csrf_exempt
+@module_permission_required('tre', 'delete')
+def ApiDeleteEcheancierSpecial(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            echeancier_id = data.get('echeancier_id')
+            
+            if not echeancier_id:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'ID de l\'échéancier manquant'
+                })
+            
+            echeancier = EcheancierSpecial.objects.get(id=echeancier_id)
+            if echeancier.is_validate:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Impossible de supprimer un échéancier déjà validé'
+                })
+                
+            prospect_nom = echeancier.prospect.nom
+            prospect_prenom = echeancier.prospect.prenom
+            echeancier.delete()
+            
+            UserActionLog.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                target_model='EcheancierSpecial',
+                target_id=str(echeancier_id),
+                details=f"Suppression de l'échéancier spécial (ID: {echeancier_id}) pour l'étudiant {prospect_nom} {prospect_prenom}.",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Échéancier supprimé avec succès'
+            })
+        except EcheancierSpecial.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Échéancier non trouvé'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Erreur lors de la suppression: {str(e)}'
             })
     
     return JsonResponse({
