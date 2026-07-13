@@ -1649,7 +1649,6 @@
                                             <tr>
                                                 <th class="ps-3">Tranche</th>
                                                 <th>Entité (Entité d'encaissement)</th>
-                                                <th>Pourcentage</th>
                                                 <th>Montant</th>
                                                 <th class="pe-3">Date d'échéance</th>
                                             </tr>
@@ -1672,8 +1671,7 @@
                                         <tfoot id="specialEcheancierFooter" class="total-footer-row border-top">
                                             <tr>
                                                 <td colspan="2" class="ps-3 fw-bold text-end">Total cumulé</td>
-                                                <td id="totalPercentage" class="fw-bold text-primary">0%</td>
-                                                <td id="totalAmount" class="total-amount-display">0.00 DA</td>
+                                                <td id="totalAmount" class="total-amount-display fw-bold text-primary">0.00 DA</td>
                                                 <td class="pe-3"></td>
                                             </tr>
                                         </tfoot>
@@ -4017,7 +4015,7 @@
                     'override_echeancier_id': override_echeancier_id
                 },
                 success : function(data){
-                    if (data.missing_echeancier) {
+                    if (data.missing_echeancier && !data.has_special_echeancier) {
                         $('#missingEcheancierNotification').attr('style', 'display: flex !important;');
                     } else {
                         $('#missingEcheancierNotification').attr('style', 'display: none !important;');
@@ -5483,8 +5481,7 @@
                 html += '<tr>';
                 html += '<td class="ps-3"><div class="tranche-badge tranche-cell-special"><i class="ri-calendar-event-line"></i> Tranche ' + i + '</div></td>';
                 html += '<td><select class="form-select border-0 bg-light py-1 tranche-entite-select" style="font-size: 0.85rem;">' + optionsHtml + '</select></td>';
-                html += '<td><div class="percentage-input-wrapper"><input type="number" class="form-control border-0 bg-light py-1 percentage-input" value="' + pourcentageParTranche + '" data-index="' + (i-1) + '" step="0.01" min="0"></div></td>';
-                html += '<td class="fw-bold text-success montant-cell">' + formatComptable(montant) + ' DA</td>';
+                html += '<td><div class="input-group special-input-group p-1"><input type="number" class="form-control border-0 bg-transparent py-1 montant-input montant-cell" value="' + montant + '" step="0.01" min="0"><span class="input-group-text bg-transparent border-0 p-0 ms-2">DA</span></div></td>';
                 html += '<td class="pe-3"><div class="input-group special-input-group p-1"><span class="input-group-text bg-transparent border-0 p-0 me-2"><i class="ri-calendar-line text-muted"></i></span><input type="date" class="form-control border-0 bg-transparent p-0" style="width: 120px;"></div></td>';
                 html += '</tr>';
             }
@@ -5496,40 +5493,22 @@
             calculateTotals();
         });
         
-        // Mise à jour manuelle des pourcentages sans recalcul des autres
-        $(document).on('input', '.percentage-input', function(){
-            var $this = $(this);
-            var newPercentage = parseFloat($this.val()) || 0;
-            var prix = parseFloat(prixFormation) || 0;
-            
-            // Mettre à jour le montant pour l'élément modifié
-            updateMontant($this, newPercentage, prix);
-            
-            // Recalculer les totaux
+        // Mise à jour manuelle des montants
+        $(document).on('input', '.montant-input', function(){
             calculateTotals();
         });
         
-        // Fonction pour mettre à jour le montant
-        function updateMontant($input, percentage, prix) {
-            var montant = (prix * (percentage / 100)).toFixed(2);
-            $input.closest('tr').find('.fw-bold.text-success').text(formatComptable(montant) + ' DA');
-        }
-        
         // Fonction pour calculer les totaux
         function calculateTotals() {
-            var totalPercentage = 0;
             var totalAmount = 0;
-            var prix = parseFloat(prixFormation) || 0;
             
             // Calculer les totaux
-            $('.percentage-input').each(function(){
-                var percentage = parseFloat($(this).val()) || 0;
-                totalPercentage += percentage;
-                totalAmount += (prix * (percentage / 100));
+            $('.montant-input').each(function(){
+                var amount = parseFloat($(this).val()) || 0;
+                totalAmount += amount;
             });
             
             // Mettre à jour les totaux dans le footer
-            $('#totalPercentage').text(totalPercentage.toFixed(2) + '%');
             $('#totalAmount').text(formatComptable(totalAmount.toFixed(2)) + ' DA');
             
             // Activer/désactiver le bouton d'enregistrement (toujours activé maintenant)
@@ -5576,14 +5555,14 @@
             
             $('#specialEcheancierTable tr').each(function() {
                 var $row = $(this);
-                var taux = $row.find('.percentage-input').val();
+                var taux = "";
                 var nom_tranche = $row.find('.tranche-cell-special').text().trim();
-                var montant = $row.find('.montant-cell').text().replace(' DA', '').replace(/\./g, '').replace(',', '.').trim();
+                var montant = $row.find('.montant-input').val();
                 var date = $row.find('input[type="date"]').val();
                 var trancheEntiteId = $row.find('.tranche-entite-select').val();
                 
                 // Validate required fields
-                if (!taux || !montant || !date || !trancheEntiteId) {
+                if (!montant || !date || !trancheEntiteId) {
                     isValid = false;
                     if (!trancheEntiteId) {
                         isEntityMissing = true;

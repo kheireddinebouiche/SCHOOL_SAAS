@@ -139,6 +139,7 @@ class GlobalConfiguration(models.Model):
     session_timeout_seconds = models.PositiveIntegerField(default=0, verbose_name=_("Délai d'inactivité (secondes)"))
     session_timeout_enabled = models.BooleanField(default=True, verbose_name=_("Verrouillage de session actif"))
     device_lock_enabled = models.BooleanField(default=True, verbose_name=_("Verrouillage par appareil actif"))
+    bypass_preinscrit_verification = models.BooleanField(default=True, verbose_name=_("Désactiver la vérification du dossier (validation directe)"))
     
     # Derogation Settings
     NOTIFICATION_MODE_CHOICES = (

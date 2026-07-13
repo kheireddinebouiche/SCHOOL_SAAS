@@ -1617,7 +1617,6 @@
                                         <thead>
                                             <tr>
                                                 <th>Tranche</th>
-                                                <th>Pourcentage</th>
                                                 <th>Montant</th>
                                                 <th>Date d'échéance</th>
                                                 <th>Entité</th>
@@ -1625,17 +1624,24 @@
                                         </thead>
                                         <tbody id="specialEcheancierTable">
                                             <tr>
-                                                <td colspan="5" class="text-center text-muted py-4">
+                                                <td colspan="4" class="text-center text-muted py-4">
                                                     <i class="ri-information-line me-2"></i>
                                                     Veuillez générer les tranches en cliquant sur le bouton ci-dessus
                                                 </td>
                                             </tr>
                                         </tbody>
+                                        <tfoot id="specialEcheancierFooter" class="border-top">
+                                            <tr>
+                                                <td class="fw-bold text-end">Total cumulé</td>
+                                                <td id="totalAmount" class="fw-bold text-primary">0.00 DA</td>
+                                                <td colspan="2"></td>
+                                            </tr>
+                                        </tfoot>
                                     </table>
                                 </div>
                                 <div id="percentageWarning" class="alert alert-info mt-3" role="alert">
                                     <i class="ri-information-line me-2"></i>
-                                    <span>Modifiez les pourcentages manuellement. La somme totale peut dépasser ou être inférieure à 100%.</span>
+                                    <span>Modifiez les montants manuellement selon vos besoins.</span>
                                 </div>
                             </div>
                         </div>
@@ -3934,7 +3940,7 @@
                     'override_echeancier_id': override_echeancier_id
                 },
                 success : function(data){
-                    if (data.missing_echeancier) {
+                    if (data.missing_echeancier && !data.has_special_echeancier) {
                         $('#missingEcheancierNotification').attr('style', 'display: flex !important;');
                     } else {
                         $('#missingEcheancierNotification').attr('style', 'display: none !important;');
@@ -5604,7 +5610,7 @@
             // Générer les tranches pour le prix 1
             if (prix1 > 0) {
                 var label1Text = formation1Label ? formation1Label + " - " + specialite1Label : specialite1Label;
-                html += '<tr class="table-light"><td colspan="5" class="fw-bold text-primary py-2 px-3"><i class="fas fa-graduation-cap me-2"></i>' + label1Text + '</td></tr>';
+                html += '<tr class="table-light"><td colspan="4" class="fw-bold text-primary py-2 px-3"><i class="fas fa-graduation-cap me-2"></i>' + label1Text + '</td></tr>';
                 
                 for (var i = 1; i <= nombreTranches; i++) {
                     var basePercentage = Math.floor(100 / nombreTranches);
@@ -5612,14 +5618,10 @@
                     var pourcentage = (i <= remainder) ? basePercentage + 1 : basePercentage;
 
                     var montant = (prix1 * (pourcentage / 100)).toFixed(2);
-                    // Calculate index for percentage array based on existing entries
-                    var currentIndex = previousPercentages.length;
-                    previousPercentages.push(parseFloat(pourcentage.toFixed(2)));
                     
                     html += '<tr>';
                     html += '<td class="tranche-cell-special ps-4"><span class="badge bg-soft-primary text-primary border border-primary-subtle">Tranche ' + i + '</span></td>';
-                    html += '<td>' + parseFloat(pourcentage.toFixed(2)) + ' %</td>';
-                    html += '<td class="montant-cell">' + parseFloat(montant).toLocaleString('fr-DZ', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' DA</td>';
+                    html += '<td><div class="input-group special-input-group p-1"><input type="number" class="form-control border-0 bg-light py-1 montant-input montant-cell" value="' + montant + '" step="0.01" min="0"><span class="input-group-text bg-light border-0 p-0 ms-2">DA</span></div></td>';
                     html += '<td><input type="date" class="form-control border-0 bg-light py-1" style="width: 150px;"></td>';
                     html += '<td>' + getEntiteSelect(entite1) + '</td>';
                     html += '</tr>';
@@ -5629,7 +5631,7 @@
             // Générer les tranches pour le prix 2
             if (prix2 > 0) {
                 var label2Text = formation2Label ? formation2Label + " - " + specialite2Label : specialite2Label;
-                html += '<tr class="table-light"><td colspan="5" class="fw-bold text-success py-2 px-3"><i class="fas fa-graduation-cap me-2"></i>' + label2Text + '</td></tr>';
+                html += '<tr class="table-light"><td colspan="4" class="fw-bold text-success py-2 px-3"><i class="fas fa-graduation-cap me-2"></i>' + label2Text + '</td></tr>';
 
                 for (var i = 1; i <= nombreTranches; i++) {
                     var basePercentage = Math.floor(100 / nombreTranches);
@@ -5637,14 +5639,10 @@
                     var pourcentage = (i <= remainder) ? basePercentage + 1 : basePercentage;
 
                     var montant = (prix2 * (pourcentage / 100)).toFixed(2);
-                    // Calculate index for percentage array based on existing entries
-                    var currentIndex = previousPercentages.length;
-                    previousPercentages.push(parseFloat(pourcentage.toFixed(2)));
                     
                     html += '<tr>';
                     html += '<td class="tranche-cell-special ps-4"><span class="badge bg-soft-success text-success border border-success-subtle">Tranche ' + i + '</span></td>';
-                    html += '<td>' + parseFloat(pourcentage.toFixed(2)) + ' %</td>';
-                    html += '<td class="montant-cell">' + parseFloat(montant).toLocaleString('fr-DZ', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' DA</td>';
+                    html += '<td><div class="input-group special-input-group p-1"><input type="number" class="form-control border-0 bg-light py-1 montant-input montant-cell" value="' + montant + '" step="0.01" min="0"><span class="input-group-text bg-light border-0 p-0 ms-2">DA</span></div></td>';
                     html += '<td><input type="date" class="form-control border-0 bg-light py-1" style="width: 150px;"></td>';
                     html += '<td>' + getEntiteSelect(entite2) + '</td>';
                     html += '</tr>';
@@ -5658,40 +5656,22 @@
             calculateTotals();
         });
         
-        // Mise à jour manuelle des pourcentages sans recalcul des autres
-        $(document).on('input', '.percentage-input', function(){
-            var $this = $(this);
-            var newPercentage = parseFloat($this.val()) || 0;
-            var prix = parseFloat(prixFormation) || 0;
-            
-            // Mettre à jour le montant pour l'élément modifié
-            updateMontant($this, newPercentage, prix);
-            
-            // Recalculer les totaux
+        // Mise à jour manuelle des montants
+        $(document).on('input', '.montant-input', function(){
             calculateTotals();
         });
         
-        // Fonction pour mettre à jour le montant
-        function updateMontant($input, percentage, prix) {
-            var montant = (prix * (percentage / 100)).toFixed(2);
-            $input.closest('tr').find('.montant-cell').text(montant + ' DA');
-        }
-        
         // Fonction pour calculer les totaux
         function calculateTotals() {
-            var totalPercentage = 0;
             var totalAmount = 0;
-            var prix = parseFloat(prixFormation) || 0;
             
             // Calculer les totaux
-            $('.percentage-input').each(function(){
-                var percentage = parseFloat($(this).val()) || 0;
-                totalPercentage += percentage;
-                totalAmount += (prix * (percentage / 100));
+            $('.montant-input').each(function(){
+                var amount = parseFloat($(this).val()) || 0;
+                totalAmount += amount;
             });
             
             // Mettre à jour les totaux dans le footer
-            $('#totalPercentage').text(totalPercentage.toFixed(2) + '%');
             $('#totalAmount').text(totalAmount.toFixed(2) + ' DA');
             
             // Activer/désactiver le bouton d'enregistrement (toujours activé maintenant)
@@ -5744,14 +5724,14 @@
                     return true; // Continue to next row
                 }
 
-                var taux = $row.find('td:nth-child(2)').text().replace(' %', ''); // Get percentage from the 2nd column
+                var taux = ""; // No longer used
                 var nom_tranche = $row.find('.tranche-cell-special').text();
-                var montant = $row.find('.montant-cell').text().replace(' DA', '').replace(/\s/g, ''); // Handle spaces in amount
+                var montant = $row.find('.montant-input').val(); // Get value from input
                 var date = $row.find('input[type="date"]').val();
-                var entite = $row.find('td:nth-child(5)').text(); // Get entity from the 5th column (now hidden)
+                var entite = $row.find('.tranche-entite-select').val(); // Get entity value correctly
 
                 // Validate required fields
-                if ((!taux && taux !== 0) || !montant || !date || !entite) {
+                if (!montant || !date || !entite) {
                     isValid = false;
                     if (!entite) {
                         isEntityMissing = true;
