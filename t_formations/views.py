@@ -1309,7 +1309,7 @@ def ApiListePromos(request):
     annee = request.GET.get('annee_academique')
     search = request.GET.get('search')
 
-    queryset = Promos.objects.all().order_by('-id')
+    queryset = Promos.objects.all().order_by('-created_at', '-id')
     if session:
         queryset = queryset.filter(session=session)
     if etat:
@@ -1322,13 +1322,14 @@ def ApiListePromos(request):
             Q(code__icontains=search)
         )
 
-    liste = queryset.values('id','label','session','etat','code','begin_year','end_year','annee_academique')
+    liste = queryset.values('id','label','session','etat','code','begin_year','end_year','annee_academique', 'created_at')
     liste_list = list(liste)
 
     for l in liste_list:
         l_obj = Promos.objects.get(id = l['id'])
         l['etat_label'] = l_obj.get_etat_display()
         l['session_label'] = l_obj.get_session_display()
+        l['created_at'] = l_obj.created_at.strftime('%d/%m/%Y %H:%M') if l_obj.created_at else ''
 
     return JsonResponse(liste_list, safe=False)
 
