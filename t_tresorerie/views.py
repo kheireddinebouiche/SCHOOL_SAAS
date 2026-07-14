@@ -116,6 +116,7 @@ def ApiListeDemandePaiement(request):
             "has_due_payments": has_due_payments,
             "formation_label": obj.specialite.formation.nom if obj.specialite else (obj.specialite_double.label if obj.specialite_double else ""),
             "specialite_label": obj.specialite.label if obj.specialite else "",
+            "specialite_code": obj.specialite.code if obj.specialite else "",
         })
     
     return JsonResponse(data, safe=False)
