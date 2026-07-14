@@ -34,6 +34,7 @@ import calendar
 from django.db.models.functions import TruncMonth
 from .decorators import ajax_required, module_permission_required, role_required
 from .utils_notifications import send_notification_to_user
+from associe_app.models import PostesBudgetaire
 
 
 @login_required(login_url='institut_app:login')
@@ -1397,42 +1398,7 @@ def my_budget_campaigns(request):
         # Fetch active campaigns
         campaigns = BudgetCampaign.objects.filter(is_active=True).order_by('-date_debut')
         
-        # Fetch all budget items for the modal and structure them (recursive arborescence)
-        # Prefetch categories and payment types to avoid N+1
-        all_postes = list(PostesBudgetaire.objects.all().prefetch_related(
-            'payment_categories',
-            'depense_categories'
-        ).order_by('order', 'label'))
-        
-        def build_recursive_tree(nodes, parent_id=None):
-            tree = []
-            relevant_nodes = [n for n in nodes if n.parent_id == parent_id]
-            for node in relevant_nodes:
-                # Gather channels
-                channels = set()
-                try:
-                    if node.type == 'recette':
-                        for cat in node.payment_categories.all():
-                            if cat.name:
-                                channels.add(cat.name)
-                    else:
-                        for cat in node.depense_categories.all():
-                            if cat.name:
-                                channels.add(cat.name)
-                except Exception:
-                    pass
-                
-                tree.append({
-                    'item': node,
-                    'channels': sorted(list(channels)),
-                    'children': build_recursive_tree(nodes, node.id)
-                })
-            return tree
-
-        postes_tree = {
-            'recette': build_recursive_tree([p for p in all_postes if p.type == 'recette']),
-            'depense': build_recursive_tree([p for p in all_postes if p.type == 'depense'])
-        }
+        # Postes tree generation moved to budget_posts_view
         
         # Get budget lines for this specific institute
         institute = request.tenant
@@ -1461,9 +1427,51 @@ def my_budget_campaigns(request):
     context = {
         'tenant': request.tenant,
         'campaign_data': campaign_data,
-        'postes_tree': postes_tree,
     }
     return render(request, 'tenant_folder/budget/my_campaigns.html', context)
+
+@login_required(login_url="institut_app:login")
+@module_permission_required('ger','view')
+def budget_posts_view(request):
+    all_postes = list(PostesBudgetaire.objects.all().prefetch_related(
+        'payment_categories',
+        'depense_categories'
+    ).order_by('order', 'label'))
+    
+    def build_recursive_tree(nodes, parent_id=None):
+        tree = []
+        relevant_nodes = [n for n in nodes if n.parent_id == parent_id]
+        for node in relevant_nodes:
+            channels = set()
+            try:
+                if node.type == 'recette':
+                    for cat in node.payment_categories.all():
+                        if cat.name:
+                            channels.add(cat.name)
+                else:
+                    for cat in node.depense_categories.all():
+                        if cat.name:
+                            channels.add(cat.name)
+            except Exception:
+                pass
+            
+            tree.append({
+                'item': node,
+                'channels': sorted(list(channels)),
+                'children': build_recursive_tree(nodes, node.id)
+            })
+        return tree
+
+    postes_tree = {
+        'recette': build_recursive_tree([p for p in all_postes if p.type == 'recette']),
+        'depense': build_recursive_tree([p for p in all_postes if p.type == 'depense'])
+    }
+    
+    context = {
+        'tenant': request.tenant,
+        'postes_tree': postes_tree,
+    }
+    return render(request, 'tenant_folder/budget/budget_posts.html', context)
 @login_required(login_url="institut_app:login")
 @module_permission_required('ger','view')
 @module_permission_required('ger','add')

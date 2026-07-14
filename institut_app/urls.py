@@ -157,6 +157,7 @@ urlpatterns = [
     path('direction/dispatch-budget/<slug:campaign_slug>/', budget_campaign_dispatch, name="dispatch_budget"),
     path('direction/extension-budget/<slug:campaign_slug>/', request_extension, name="request_extension"),
     path('direction/suivi-realisation-budget/<slug:campaign_slug>/', budget_campaign_realization, name="budget_campaign_realization"),
+    path('direction/referentiel-postes-budgetaires/', budget_posts_view, name="budget_posts"),
     
     ########################################## Configuration Globale ##########################################
     path('configuration/generale/', general_settings_view, name="general_settings"),

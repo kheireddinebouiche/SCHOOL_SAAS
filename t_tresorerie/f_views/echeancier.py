@@ -850,6 +850,16 @@ def ApiUpdateEcheancier(request):
                 
                 # Recalculate tranches amounts if needed
                 tarif = float(echeancier.tarif_formation or 0)
+                if not tarif:
+                    try:
+                        if echeancier.formation_double:
+                            tarif = float((echeancier.formation_double.prix_spec1 or 0) + (echeancier.formation_double.prix_spec2 or 0))
+                        elif echeancier.specialite:
+                            tarif = float(echeancier.specialite.prix_double_diplomation if echeancier.model and echeancier.model.is_double_diplomation else echeancier.specialite.prix)
+                        elif echeancier.formation:
+                            tarif = float(echeancier.formation.prix_formation or 0)
+                    except Exception as e:
+                        tarif = 0
                 remise_val = float(echeancier.remise or 0)
                 maj_val = float(echeancier.majoration or 0)
                 

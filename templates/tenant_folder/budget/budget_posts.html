@@ -1,0 +1,303 @@
+{% extends "tenant_folder/base.html" %}
+{% load static %}
+{% block title %}Référentiel des Postes Budgétaires | {{ tenant.nom }}{% endblock %}
+
+{% block content %}
+<style>
+    .tree-content {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        background: white;
+        border: 1px solid #f1f5f9;
+        border-radius: 0.75rem;
+        transition: all 0.2s;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+    }
+
+    .tree-content:hover {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+        transform: translateX(4px);
+    }
+
+    .tree-toggle {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        background: #f8fafc;
+        color: #64748b;
+        margin-right: 0.75rem;
+        transition: all 0.2s;
+    }
+
+    .tree-toggle.empty {
+        opacity: 0.3;
+        cursor: default;
+    }
+
+    .tree-children {
+        margin-left: 1.5rem;
+        padding-left: 1rem;
+        border-left: 1px dashed #e2e8f0;
+        display: none;
+    }
+
+    .tree-children.show {
+        display: block;
+    }
+
+    .node-icon {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        margin-right: 0.75rem;
+        font-size: 1.1rem;
+    }
+
+    .icon-recette { background: rgba(16, 185, 129, 0.1); color: #059669; }
+    .icon-depense { background: rgba(244, 63, 94, 0.1); color: #e11d48; }
+
+    .node-title {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 0.9rem;
+    }
+
+    .node-desc {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: block;
+    }
+</style>
+
+<div class="main-content">
+    <div class="page-content bg-light">
+        <div class="container-fluid">
+            {% include 'tenant_folder/direction_navbar.html' %}
+            <div class="d-flex justify-content-between align-items-center bg-white p-4 rounded-4 shadow-sm border border-light mb-4">
+                <div class="d-flex align-items-center">
+                    <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3 text-info">
+                        <i class="ri-list-settings-line fs-3"></i>
+                    </div>
+                    <div>
+                        <h4 class="fs-18 fw-bold text-dark mb-1">Référentiel des Postes Budgétaires</h4>
+                        <p class="text-muted mb-0 fs-13">Liste des centres de coûts et revenus configurés</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-4 shadow-sm p-4">
+                <div class="row">
+                    <!-- Recettes Section -->
+                    <div class="col-md-6 mb-4 mb-md-0">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 fw-bold w-100 text-start">
+                                <i class="ri-funds-line me-2"></i> Arborescence des Recettes
+                            </span>
+                        </div>
+                        <div class="tree-container">
+                            {% for entry in postes_tree.recette %}
+                                <!-- Level 1 -->
+                                <div class="tree-node">
+                                    <div class="tree-content" onclick="toggleNode({{ entry.item.id }})">
+                                        <div class="tree-toggle {% if not entry.children %}empty{% endif %}">
+                                            {% if entry.children %}
+                                                <i class="ri-arrow-right-s-line" id="icon-{{ entry.item.id }}"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="node-icon icon-recette">
+                                            <i class="ri-funds-line"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <span class="node-title">{{ entry.item.label }}</span>
+                                            {% if entry.item.description %}
+                                                <span class="node-desc">{{ entry.item.description|truncatechars:50 }}</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if entry.channels %}
+                                            <div class="ms-2" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Canaux: {{ entry.channels|join:', ' }}">
+                                                <i class="ri-information-line text-info fs-16"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    {% if entry.children %}
+                                        <div class="tree-children" id="children-{{ entry.item.id }}">
+                                            {% for child_entry in entry.children %}
+                                                <!-- Level 2 -->
+                                                <div class="tree-node">
+                                                    <div class="tree-content mb-2 py-2" onclick="toggleNode({{ child_entry.item.id }})">
+                                                        <div class="tree-toggle {% if not child_entry.children %}empty{% endif %}">
+                                                            {% if child_entry.children %}
+                                                                <i class="ri-arrow-right-s-line" id="icon-{{ child_entry.item.id }}"></i>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="node-icon icon-recette" style="width:28px; height:28px; font-size:0.9rem;">
+                                                            <i class="ri-corner-down-right-line"></i>
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <span class="node-title fs-13">{{ child_entry.item.label }}</span>
+                                                        </div>
+                                                        {% if child_entry.channels %}
+                                                            <div class="ms-2" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Canaux: {{ child_entry.channels|join:', ' }}">
+                                                                <i class="ri-information-line text-info fs-14"></i>
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if child_entry.children %}
+                                                        <div class="tree-children" id="children-{{ child_entry.item.id }}">
+                                                            {% for grandchild_entry in child_entry.children %}
+                                                                <!-- Level 3 -->
+                                                                <div class="tree-content mb-2 py-1 ms-2" style="background: rgba(248, 250, 252, 0.5);">
+                                                                    <div class="tree-toggle empty"></div>
+                                                                    <div class="node-icon icon-recette" style="width:24px; height:24px; font-size:0.8rem;">
+                                                                        <i class="ri-subtract-line"></i>
+                                                                    </div>
+                                                                    <div class="flex-grow-1">
+                                                                        <span class="node-title fs-12 text-muted fw-medium">{{ grandchild_entry.item.label }}</span>
+                                                                    </div>
+                                                                    {% if grandchild_entry.channels %}
+                                                                        <div class="ms-2" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Canaux: {{ grandchild_entry.channels|join:', ' }}">
+                                                                            <i class="ri-information-line text-info fs-12"></i>
+                                                                        </div>
+                                                                    {% endif %}
+                                                                </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% empty %}
+                                <div class="text-center py-4 text-muted">Aucune recette configurée.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Dépenses Section -->
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2 fw-bold w-100 text-start">
+                                <i class="ri-bill-line me-2"></i> Arborescence des Dépenses
+                            </span>
+                        </div>
+                        <div class="tree-container">
+                            {% for entry in postes_tree.depense %}
+                                <!-- Level 1 -->
+                                <div class="tree-node">
+                                    <div class="tree-content" onclick="toggleNode({{ entry.item.id }})">
+                                        <div class="tree-toggle {% if not entry.children %}empty{% endif %}">
+                                            {% if entry.children %}
+                                                <i class="ri-arrow-right-s-line" id="icon-{{ entry.item.id }}"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="node-icon icon-depense">
+                                            <i class="ri-bill-line"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <span class="node-title">{{ entry.item.label }}</span>
+                                            {% if entry.item.description %}
+                                                <span class="node-desc">{{ entry.item.description|truncatechars:50 }}</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if entry.channels %}
+                                            <div class="ms-2" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Canaux: {{ entry.channels|join:', ' }}">
+                                                <i class="ri-information-line text-info fs-16"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    {% if entry.children %}
+                                        <div class="tree-children" id="children-{{ entry.item.id }}">
+                                            {% for child_entry in entry.children %}
+                                                <!-- Level 2 -->
+                                                <div class="tree-node">
+                                                    <div class="tree-content mb-2 py-2" onclick="toggleNode({{ child_entry.item.id }})">
+                                                        <div class="tree-toggle {% if not child_entry.children %}empty{% endif %}">
+                                                            {% if child_entry.children %}
+                                                                <i class="ri-arrow-right-s-line" id="icon-{{ child_entry.item.id }}"></i>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="node-icon icon-depense" style="width:28px; height:28px; font-size:0.9rem;">
+                                                            <i class="ri-corner-down-right-line"></i>
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <span class="node-title fs-13">{{ child_entry.item.label }}</span>
+                                                        </div>
+                                                        {% if child_entry.channels %}
+                                                            <div class="ms-2" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Canaux: {{ child_entry.channels|join:', ' }}">
+                                                                <i class="ri-information-line text-info fs-14"></i>
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if child_entry.children %}
+                                                        <div class="tree-children" id="children-{{ child_entry.item.id }}">
+                                                            {% for grandchild_entry in child_entry.children %}
+                                                                <!-- Level 3 -->
+                                                                <div class="tree-content mb-2 py-1 ms-2" style="background: rgba(248, 250, 252, 0.5);">
+                                                                    <div class="tree-toggle empty"></div>
+                                                                    <div class="node-icon icon-depense" style="width:24px; height:24px; font-size:0.8rem;">
+                                                                        <i class="ri-subtract-line"></i>
+                                                                    </div>
+                                                                    <div class="flex-grow-1">
+                                                                        <span class="node-title fs-12 text-muted fw-medium">{{ grandchild_entry.item.label }}</span>
+                                                                    </div>
+                                                                    {% if grandchild_entry.channels %}
+                                                                        <div class="ms-2" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Canaux: {{ grandchild_entry.channels|join:', ' }}">
+                                                                            <i class="ri-information-line text-info fs-12"></i>
+                                                                        </div>
+                                                                    {% endif %}
+                                                                </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% empty %}
+                                <div class="text-center py-4 text-muted">Aucune dépense configurée.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function () {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    });
+
+    function toggleNode(id) {
+        const childrenContainer = document.getElementById('children-' + id);
+        const icon = document.getElementById('icon-' + id);
+        if (childrenContainer) {
+            if (childrenContainer.classList.contains('show')) {
+                childrenContainer.classList.remove('show');
+                if (icon) icon.style.transform = 'rotate(0deg)';
+            } else {
+                childrenContainer.classList.add('show');
+                if (icon) icon.style.transform = 'rotate(90deg)';
+            }
+        }
+    }
+</script>
+{% endblock %}
