@@ -38,7 +38,7 @@ def AttentesPaiements(request):
 @login_required(login_url="insitut_app:login")
 @module_permission_required('tre', 'view')
 def ApiListeDemandePaiement(request):
-    listes = ClientPaiementsRequest.objects.select_related("promo", "specialite", "client",'specialite_double').filter(client__statut = "instance")
+    listes = ClientPaiementsRequest.objects.select_related("promo", "specialite", "specialite__formation", "client",'specialite_double').filter(client__statut = "instance")
     
     promo_id = request.GET.get('promo_id')
     formation_id = request.GET.get('formation_id')
@@ -47,7 +47,7 @@ def ApiListeDemandePaiement(request):
         listes = listes.filter(promo_id=promo_id)
         
     if formation_id:
-        listes = listes.filter(Q(formation_id=formation_id) | Q(specialite__formation_id=formation_id))
+        listes = listes.filter(Q(formation_id=formation_id) | Q(specialite__formation__id=formation_id))
     data = []
     for obj in listes:
         has_rembourssement = Rembourssements.objects.filter(client = obj.client, is_done=False).exists()
@@ -96,7 +96,7 @@ def ApiListeDemandePaiement(request):
             "motif": obj.motif,
             "motif_label": obj.get_motif_display(),
             "promo": obj.promo.id if obj.promo else None,
-            "formation": obj.formation.id if obj.formation else (obj.specialite.formation_id if obj.specialite else None),
+            "formation": obj.formation.id if obj.formation else (obj.specialite.formation.id if obj.specialite and obj.specialite.formation else None),
             "promo_session": obj.promo.session if obj.promo else None,
             "promo_begin" : obj.promo.begin_year,
             "promo_end" : obj.promo.end_year,
