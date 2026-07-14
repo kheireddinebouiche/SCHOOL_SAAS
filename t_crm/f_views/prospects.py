@@ -689,19 +689,27 @@ def ApiUpdateProspectData(request):
 @login_required(login_url="institut_app:login")
 @transaction.atomic
 def ApiCreateVoeux(request):
-    specialite = request.POST.get('specialite')
-    id_prospect = request.POST.get('id_prospect')
-    promo = request.POST.get('promo')
-    comment = request.POST.get('comment')
-
-    FicheDeVoeux.objects.create(
-        prospect = Prospets.objects.get(id = id_prospect),
-        specialite = Specialites.objects.get(id = specialite),
-        promo = Promos.objects.get(code = promo),
-        commentaire = comment
-    )
-
-    return JsonResponse({"status" : "success", "message" : "La fiche de voeux a été enregistrée avec succès"})
+    if request.method == 'POST':
+        specialite = request.POST.get('specialite')
+        id_prospect = request.POST.get('id_prospect')
+        promo = request.POST.get('promo')
+        comment = request.POST.get('comment')
+        
+        if specialite and id_prospect and promo:
+            try:
+                FicheDeVoeux.objects.create(
+                    prospect = Prospets.objects.get(id = id_prospect),
+                    specialite = Specialites.objects.get(id = specialite),
+                    promo = Promos.objects.get(code = promo),
+                    commentaire = comment
+                )
+                return JsonResponse({"status" : "success", "message" : "La fiche de voeux a été enregistrée avec succès"})
+            except Exception as e:
+                return JsonResponse({"status" : "error", "message" : str(e)})
+        else:
+            return JsonResponse({"status" : "error", "message" : "Veuillez remplir tous les champs obligatoires."})
+    else:
+        return JsonResponse({"status" : "error", "message" : "Méthode non autorisée."})
 
 @login_required(login_url="institut_app:login")
 @module_permission_required('crm', 'approuv')

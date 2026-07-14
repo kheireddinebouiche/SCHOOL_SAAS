@@ -123,9 +123,13 @@ def ApiLoadEcheancierDetails(request):
             
         total_after_adjustments = max(0, tarif_formation_float - actual_discount + actual_majoration)
             
+        sum_tranches = sum([float(t.montant_tranche or 0) for t in tranches_qs])
         for t in tranches_qs:
-            t_taux = float(t.taux or 100)
+            t_taux = float(t.taux or 0)
             t_montant = float(t.montant_tranche or 0)
+            if sum_tranches > 0 and (t_taux <= 0 or len(tranches_qs) > 1 and t_taux >= 100):
+                t_taux = (t_montant / sum_tranches) * 100
+            
             base_price_net = t_montant * 100.0 / t_taux if t_taux > 0 else 0
             
             inferred_base_price = tarif_formation_float
@@ -157,7 +161,7 @@ def ApiLoadEcheancierDetails(request):
             
             tranches_list.append({
                 'id': t.id,
-                'taux': t.taux,
+                'taux': t_taux,
                 'value': t.value,
                 'date_echeancier': t.date_echeancier,
                 'montant_tranche': t.montant_tranche,
