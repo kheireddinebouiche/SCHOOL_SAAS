@@ -59,7 +59,7 @@ def ApiSelectSpecialite(request):
         if not value:
             return JsonResponse({"status":'error',"message":"Valeurs manquantes"})
         
-        liste= Specialites.objects.filter(formation__code=value).values('id','label','version','abr')
+        liste= Specialites.objects.filter(formation__code=value).values('id','label','version','abr', 'code')
         return JsonResponse(list(liste), safe=False)
     else:
         return JsonResponse({"status" : "error",'message':"méthode non autorisée"})
