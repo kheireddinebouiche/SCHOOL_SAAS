@@ -2523,55 +2523,7 @@ def crm_user_logs(request):
     
     institutes_logs = []
 
-    from django.utils import timezone
-    from datetime import date
-    
-    today = timezone.now().date()
-    if today.month >= 7:
-        year_n_start = today.year
-    else:
-        year_n_start = today.year - 1
 
-    n_t1_start = date(year_n_start, 7, 1)
-    n_t1_end = date(year_n_start, 9, 30)
-    n_t2_start = date(year_n_start, 10, 1)
-    n_t2_end = date(year_n_start, 12, 31)
-    n_t3_start = date(year_n_start + 1, 1, 1)
-    n_t3_end = date(year_n_start + 1, 3, 31)
-    n_t4_start = date(year_n_start + 1, 4, 1)
-    n_t4_end = date(year_n_start + 1, 6, 30)
-
-    year_n_1_start = year_n_start - 1
-    n_1_t1_start = date(year_n_1_start, 7, 1)
-    n_1_t1_end = date(year_n_1_start, 9, 30)
-    n_1_t2_start = date(year_n_1_start, 10, 1)
-    n_1_t2_end = date(year_n_1_start, 12, 31)
-    n_1_t3_start = date(year_n_1_start + 1, 1, 1)
-    n_1_t3_end = date(year_n_1_start + 1, 3, 31)
-    n_1_t4_start = date(year_n_1_start + 1, 4, 1)
-    n_1_t4_end = date(year_n_1_start + 1, 6, 30)
-
-    def get_quarter(d):
-        if n_t1_start <= d <= n_t1_end: return 'n', 't1'
-        if n_t2_start <= d <= n_t2_end: return 'n', 't2'
-        if n_t3_start <= d <= n_t3_end: return 'n', 't3'
-        if n_t4_start <= d <= n_t4_end: return 'n', 't4'
-        if n_1_t1_start <= d <= n_1_t1_end: return 'n_1', 't1'
-        if n_1_t2_start <= d <= n_1_t2_end: return 'n_1', 't2'
-        if n_1_t3_start <= d <= n_1_t3_end: return 'n_1', 't3'
-        if n_1_t4_start <= d <= n_1_t4_end: return 'n_1', 't4'
-        return None, None
-
-    kpi_keys = ['prospects', 'opportunites', 'pipeline'] + statuses
-    comparison_data = {
-        kpi: {
-            't1': {'n': 0, 'n_1': 0},
-            't2': {'n': 0, 'n_1': 0},
-            't3': {'n': 0, 'n_1': 0},
-            't4': {'n': 0, 'n_1': 0},
-            'global': {'n': 0, 'n_1': 0}
-        } for kpi in kpi_keys
-    }
 
     for tenant in tenants:
         try:
@@ -2603,14 +2555,14 @@ def crm_user_logs(request):
             continue
 
     context = {
-        'tenants': tenants, # For the selector
-        'institutes_stats': institutes_stats,
-        'global_stats': global_stats,
-        'statuses': statuses,
-        'comparison_data': comparison_data,
-        'year_n': f"{year_n_start}-{year_n_start+1}",
-        'year_n_1': f"{year_n_1_start}-{year_n_1_start+1}",
-        'title': 'Statistiques CRM Globales'
+        'all_tenants': all_tenants,
+        'all_users': all_users,
+        'action_choices': action_choices,
+        'filter_tenant': filter_tenant,
+        'filter_user': filter_user,
+        'filter_action': filter_action,
+        'institutes_logs': institutes_logs,
+        'title': 'Logs CRM'
     }
 
     if request.GET.get('export_csv') == '1':
