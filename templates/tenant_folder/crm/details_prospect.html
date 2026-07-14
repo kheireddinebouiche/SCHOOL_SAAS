@@ -1942,8 +1942,9 @@
         function applyProspectRestrictions(statut, motif_annulation, etat) {
             console.log("Applying prospect restrictions - Statut:", statut, "Motif:", motif_annulation, "Etat:", etat);
 
-            const isRefundCancelled = (statut === "annuler" && motif_annulation === "rembourssement");
-            const isSimpleCancelled = (statut === "annuler" && motif_annulation !== "rembourssement");
+            const isCancelled = (statut === "annuler" || (motif_annulation && motif_annulation.trim() !== ""));
+            const isRefundCancelled = (isCancelled && motif_annulation === "rembourssement");
+            const isSimpleCancelled = (isCancelled && motif_annulation !== "rembourssement");
             const isAccepted = (etat === "accepte");
 
             // 1. Manage the page-content class 'prospect-refunded' which disables pointer events
@@ -1967,18 +1968,7 @@
             }
 
             // 3. Manage action buttons visibility and attributes
-            if (isAccepted) {
-                $('#validateProspectBtn').prop('hidden', true).hide();
-                $('#udapteProspectDetailsBtn').prop('hidden', true).hide();
-                if ($('#editVoeuxBtn').length) {
-                    $('#editVoeuxBtn').prop('disabled', true).prop('hidden', true).hide();
-                }
-                if ($('#inscriptionDoubleDiplomation').length) {
-                    $('#inscriptionDoubleDiplomation').prop('hidden', true).hide();
-                }
-                $('#addReminderBtn').show();
-                $('#addNoteModalBtn').show();
-            } else if (isRefundCancelled) {
+            if (isRefundCancelled) {
                 $('#validateProspectBtn').prop('hidden', true).hide();
                 $('#udapteProspectDetailsBtn').prop('hidden', true).hide();
                 if ($('#editVoeuxBtn').length) {
@@ -1988,7 +1978,7 @@
                     $('#resetVoeuxBtn').prop('disabled', true).prop('hidden', true).hide();
                 }
                 if ($('#inscriptionDoubleDiplomation').length) {
-                    $('#inscriptionDoubleDiplomation').prop('hidden', true).hide();
+                    $('#inscriptionDoubleDiplomation').prop('hidden', false).show();
                 }
                 $('#addReminderBtn').hide();
                 $('#addNoteModalBtn').hide();
@@ -2003,6 +1993,17 @@
                 }
                 if ($('#inscriptionDoubleDiplomation').length) {
                     $('#inscriptionDoubleDiplomation').prop('hidden', false).show();
+                }
+                $('#addReminderBtn').show();
+                $('#addNoteModalBtn').show();
+            } else if (isAccepted) {
+                $('#validateProspectBtn').prop('hidden', true).hide();
+                $('#udapteProspectDetailsBtn').prop('hidden', true).hide();
+                if ($('#editVoeuxBtn').length) {
+                    $('#editVoeuxBtn').prop('disabled', true).prop('hidden', true).hide();
+                }
+                if ($('#inscriptionDoubleDiplomation').length) {
+                    $('#inscriptionDoubleDiplomation').prop('hidden', true).hide();
                 }
                 $('#addReminderBtn').show();
                 $('#addNoteModalBtn').show();
