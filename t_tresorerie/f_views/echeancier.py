@@ -182,6 +182,7 @@ def ApiLoadEcheancierDetails(request):
             'date_frais_inscription': echeancier.date_frais_inscription.strftime("%Y-%m-%d") if echeancier.date_frais_inscription else "",
             'has_frais_inscription': echeancier.model.has_frais_inscription,
             'has_remise': echeancier.has_remise,
+            'remise': str(remise_val),
             'type_remise': type_remise,
             'majoration': str(majoration_val),
             'has_majoration': echeancier.has_majoration,
