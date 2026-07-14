@@ -5,6 +5,7 @@ from t_etudiants.models import Etudiant, StudentTransferRequest
 from t_groupe.models import Groupe
 from django.db.models import Count
 
+
 @login_required
 @submenu_access_required("scol", "etudiants")
 def scolarite_dashboard(request):
@@ -21,8 +22,8 @@ def scolarite_dashboard(request):
     # Recent 5 Transferts
     derniers_transferts = StudentTransferRequest.objects.all().order_by('-id')[:5]
 
-    # Recent 5 Groupes
-    derniers_groupes = Groupe.objects.annotate(num_etudiants=Count('groupe_line_groupe')).order_by('-date_creation')[:5]
+    # All Groupes for table with pagination
+    derniers_groupes = Groupe.objects.select_related('specialite', 'specialite__formation').annotate(num_etudiants=Count('groupe_line_groupe')).order_by('-date_creation')
 
     context = {
         "total_etudiants": total_etudiants,
