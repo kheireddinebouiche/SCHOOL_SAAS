@@ -72,26 +72,38 @@ def ApiSpecialiteByPromo(request):
     # =====================================================
     # 1️⃣ Spécialités simples
     # =====================================================
+    affectation_exists_simple = AffectationGroupe.objects.filter(
+        etudiant_id=OuterRef('prospect_id'),
+        specialite_id=OuterRef('specialite_id')
+    )
+
     voeux_simples = (
         FicheDeVoeux.objects.filter(
             promo__code=promoCode,
             is_confirmed=True,
-            prospect__statut="convertit",
-            prospect__is_affected=False
+            prospect__statut="convertit"
         )
-        .values("specialite__id", "specialite__label","specialite__formation__nom")
+        .annotate(is_affected=Exists(affectation_exists_simple))
+        .values("specialite__id", "specialite__label", "specialite__formation__nom", "is_affected")
         .annotate(nombre=Count("id"))
     )
 
     for v in voeux_simples:
         sid = v["specialite__id"]
-        result[sid] = {
-            "specialite_id": sid,
-            "specialite_label": v["specialite__label"],
-            "formation_label": v["specialite__formation__nom"],
-            "nombre_etudiants": v["nombre"],
-            "nombre_double": 0,
-        }
+        if sid not in result:
+            result[sid] = {
+                "specialite_id": sid,
+                "specialite_label": v["specialite__label"],
+                "formation_label": v["specialite__formation__nom"],
+                "nombre_etudiants": 0,
+                "nombre_double": 0,
+                "nombre_affectes": 0,
+            }
+        
+        if v["is_affected"]:
+            result[sid]["nombre_affectes"] += v["nombre"]
+        else:
+            result[sid]["nombre_etudiants"] += v["nombre"]
 
     # =====================================================
     # 2️⃣ Spécialités DOUBLE → réparties en spec1 & spec2
@@ -106,8 +118,7 @@ def ApiSpecialiteByPromo(request):
         .filter(
             promo__code=promoCode,
             is_confirmed=True,
-            prospect__statut="convertit",
-            prospect__is_affected=False
+            prospect__statut="convertit"
         )
     )
 
@@ -117,23 +128,36 @@ def ApiSpecialiteByPromo(request):
         for spec in [double_spec.specialite1, double_spec.specialite2]:
             if not spec:
                 continue
-
-            if spec.id in result:
-                result[spec.id]["nombre_etudiants"] += 1
-                result[spec.id]["nombre_double"] += 1
-            else:
-                result[spec.id] = {
-                    "specialite_id": spec.id,
+                
+            sid = spec.id
+            if sid not in result:
+                result[sid] = {
+                    "specialite_id": sid,
                     "specialite_label": spec.label,
                     "formation_label": spec.formation.nom if spec.formation else "N/A",
-                    "nombre_etudiants": 1,
-                    "nombre_double": 1,
+                    "nombre_etudiants": 0,
+                    "nombre_double": 0,
+                    "nombre_affectes": 0,
                 }
+
+            # Check if affected for this specific specialty
+            is_affected = AffectationGroupe.objects.filter(
+                etudiant_id=voeu.prospect_id,
+                specialite_id=sid
+            ).exists()
+
+            result[sid]["nombre_double"] += 1
+            if is_affected:
+                result[sid]["nombre_affectes"] += 1
+            else:
+                result[sid]["nombre_etudiants"] += 1
 
     # =====================================================
     # 3️⃣ Tri final
     # =====================================================
-    response = sorted(result.values(), key=lambda x: x["specialite_label"])
+    # We include all specialties that have either waiting or affected students.
+    filtered_result = [r for r in result.values() if r["nombre_etudiants"] > 0 or r["nombre_affectes"] > 0]
+    response = sorted(filtered_result, key=lambda x: x["specialite_label"])
 
     return JsonResponse(response, safe=False)
 
