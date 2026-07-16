@@ -1010,8 +1010,8 @@ def ApiShowRefundTraiteResult(request):
     )
 
     data = {
-        'client__prenom': rembourssement_obj.client.prenom,
-        'client__nom': rembourssement_obj.client.nom,
+        'client__prenom': rembourssement_obj.client.prenom if rembourssement_obj.client else '',
+        'client__nom': rembourssement_obj.client.nom if rembourssement_obj.client else '',
         'motif_rembourssement': rembourssement_obj.motif_rembourssement,
         'allowed_amount': rembourssement_obj.allowed_amount,
         'etat': rembourssement_obj.get_etat_display(),
