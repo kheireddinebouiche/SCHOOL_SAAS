@@ -1,6 +1,7 @@
 # ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬?ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸ÃƒÂ¯Ã‚Â¿Ã‚Â½ Journal des Mises ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  Jour (Changelog)
 
 ## [Unreleased]
+- **SaaS Admin / Entreprise** : Ajout de la colonne "Actions" avec des boutons rapides (Détails, Modifier, Supprimer) dans la liste des entreprises (`mes_entreprises.html`). Le bouton "Modifier" ouvre un formulaire modal pré-rempli et sauvegarde les modifications via AJAX.
 - **SaaS Admin / Entreprise** : Correction d'une erreur 500 (AttributeError) lors du chargement ou de la mise à jour des données de l'entreprise due à des champs `quittance_prefix` et `quittance_suffix` obsolètes. Ils ont été remplacés par `quittance_format` et `quittance_sequence_length`.
 - **CRM / Liste des préinscrits** : Ajout d'une option de tri et de groupement par Promo & Spécialité.
 - **TrÃ©sorerie / Suivi des paiements** : Ajout d'une pagination cÃ´tÃ© client pour la liste des paiements, avec un contrÃ´le pour sÃ©lectionner le nombre d'Ã©lÃ©ments par page.

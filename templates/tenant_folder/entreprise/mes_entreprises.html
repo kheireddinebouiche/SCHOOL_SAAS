@@ -171,6 +171,7 @@
                       <th class="border-0">N° ART</th>
                       <th class="border-0">N° NIF</th>
                       <th class="border-0">N° NIS</th>
+                      <th class="border-0 rounded-end text-end">Actions</th>
                     </tr>
                   </thead>
                   <tbody id="listeItem" class="border-top-0">
@@ -191,7 +192,25 @@
                           <td><span class="fw-semibold">{{i.art}}</span></td>
                           <td><span class="fw-semibold">{{i.nif}}</span></td>
                           <td><span class="fw-semibold">{{i.nis}}</span></td>
-                          
+                          <td class="text-end">
+                            <ul class="list-inline hstack gap-2 mb-0 justify-content-end">
+                              <li class="list-inline-item" data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-placement="top" title="Détails">
+                                <a href="{% url 'institut_app:details_entreprise' pk=i.id %}" class="text-primary d-inline-block">
+                                  <i class="ri-eye-line fs-5"></i>
+                                </a>
+                              </li>
+                              <li class="list-inline-item" data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-placement="top" title="Modifier">
+                                <a href="javascript:void(0);" class="text-info d-inline-block edit-item-btn" data-id="{{i.id}}">
+                                  <i class="ri-edit-line fs-5"></i>
+                                </a>
+                              </li>
+                              <li class="list-inline-item" data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-placement="top" title="Supprimer">
+                                <a href="javascript:void(0);" class="text-danger d-inline-block remove-item-btn" data-id="{{i.id}}">
+                                  <i class="ri-delete-bin-line fs-5"></i>
+                                </a>
+                              </li>
+                            </ul>
+                          </td>
                         </tr>
                       {% endfor %}
                     {% else %}
@@ -505,15 +524,60 @@
 
     // Gestionnaire pour le bouton de modification d'entreprise
     $(document).on('click', '.edit-item-btn', function() {
-      // Simulation de chargement des données
-      $('#editEntrepriseModal').modal('show');
+      var id = $(this).data('id');
+      $.ajax({
+        url: '{% url "institut_app:ApiLoadEntrepriseData" %}',
+        type: 'GET',
+        data: { 'id_entreprise': id },
+        success: function(response) {
+          $('#edit_designation').val(response.designation);
+          $('#edit_rc').val(response.rc);
+          $('#edit_art').val(response.art);
+          $('#edit_nif').val(response.nif);
+          $('#edit_nis').val(response.nis);
+          $('#updateEntrepriseBtn').data('id', id); // Store ID for update
+          $('#editEntrepriseModal').modal('show');
+        },
+        error: function(error) {
+          alertify.error("Erreur lors du chargement des données de l'entreprise");
+        }
+      });
     });
 
     // Gestionnaire pour le bouton d'enregistrement des modifications
     $(document).on('click', '#updateEntrepriseBtn', function() {
-      // Simulation d'enregistrement des modifications
-      $('#editEntrepriseModal').modal('hide');
-      alertify.success("Entreprise modifiée avec succès");
+      var id = $(this).data('id');
+      var designation = $('#edit_designation').val();
+      var rc = $('#edit_rc').val();
+      var art = $('#edit_art').val();
+      var nif = $('#edit_nif').val();
+      var nis = $('#edit_nis').val();
+      
+      $.ajax({
+        url: '{% url "institut_app:ApiUpdateEntrepriseData" %}',
+        type: 'POST',
+        data: {
+          'id_entreprise': id,
+          'designation': designation,
+          'rc': rc,
+          'art': art,
+          'nif': nif,
+          'nis': nis,
+          'csrfmiddlewaretoken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+          if(response.status === 'success') {
+            $('#editEntrepriseModal').modal('hide');
+            alertify.success(response.message || "Entreprise modifiée avec succès");
+            setTimeout(function() { location.reload(); }, 1000);
+          } else {
+            alertify.error(response.message || "Erreur lors de la modification");
+          }
+        },
+        error: function(error) {
+          alertify.error("Erreur lors de la modification");
+        }
+      });
     });
 
     // Gestionnaire pour le bouton de suppression d'entreprise
