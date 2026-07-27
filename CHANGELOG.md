@@ -1,6 +1,8 @@
 # ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬?ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸ÃƒÂ¯Ã‚Â¿Ã‚Â½ Journal des Mises ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  Jour (Changelog)
 
 ## [Unreleased]
+- **Trésorerie / Remboursement** : Ajout d'un bouton de désinscription dans la vue détails (`details_rembourssement.html`) si l'étudiant est encore actif. Si l'étudiant est déjà désinscrit, une alerte d'information s'affiche.
+- **Trésorerie / Remboursement** : Ajout d'un bouton "Retirer du groupe" à côté des informations du groupe actuel de l'étudiant, permettant de le supprimer manuellement de son groupe (`GroupeLine` et `AffectationGroupe`) via l'API existante. La récupération du groupe de l'étudiant a été corrigée pour utiliser `.first`.
 - **SaaS Admin / Entreprise** : Ajout de la colonne "Actions" avec des boutons rapides (Détails, Modifier, Supprimer) dans la liste des entreprises (`mes_entreprises.html`). Le bouton "Modifier" ouvre un formulaire modal pré-rempli et sauvegarde les modifications via AJAX.
 - **SaaS Admin / Entreprise** : Correction d'une erreur 500 (AttributeError) lors du chargement ou de la mise à jour des données de l'entreprise due à des champs `quittance_prefix` et `quittance_suffix` obsolètes. Ils ont été remplacés par `quittance_format` et `quittance_sequence_length`.
 - **CRM / Liste des préinscrits** : Ajout d'une option de tri et de groupement par Promo & Spécialité.
