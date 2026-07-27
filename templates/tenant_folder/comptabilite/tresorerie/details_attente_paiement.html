@@ -1367,6 +1367,7 @@
                                                             <th scope="col">Date d'échéance</th>
                                                             <th scope="col">Montant dû</th>
                                                             <th scope="col">Restant à payer</th>
+                                                            <th scope="col" style="width: 80px;">Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody id="ListePaiementRequestLine">
@@ -4013,6 +4014,10 @@
                     'id_demande' : id_demande,
                     'override_echeancier_id': override_echeancier_id
                 },
+                error: function(xhr, status, error) {
+                    alertify.error("Erreur lors du chargement des données. Veuillez réessayer.");
+                    console.error("AJAX Error:", error);
+                },
                 success : function(data){
                     if (data.missing_echeancier && !data.has_special_echeancier) {
                         $('#missingEcheancierNotification').attr('style', 'display: flex !important;');
@@ -4020,42 +4025,58 @@
                         $('#missingEcheancierNotification').attr('style', 'display: none !important;');
                     }
 
-                    // Informations du demandeur
-                    $('#demandeur').text(data.user_data.demandeur_nom+" "+data.user_data.demandeur_prenom);
-                    $('#created_at').text(data.user_data.created_at.split('T')[0]);
-                    $('#motif').text(data.user_data.motif);
+                    // Sécurisation des accès aux objets pour éviter TypeError
+                    const ud = data.user_data || {};
+                    const vo = data.voeux || {};
+                    const gr = data.groupe_data || {};
 
-                    const createdAt = new Date(data.user_data.created_at);
-                    const date_frais_inscription = data.voeux.date_frais_inscription || createdAt.toISOString().split('T')[0];
+                    // Informations du demandeur
+                    $('#demandeur').text((ud.demandeur_nom || '') + " " + (ud.demandeur_prenom || ''));
+                    if (ud.created_at) {
+                        $('#created_at').text(ud.created_at.split('T')[0]);
+                    } else {
+                        $('#created_at').text('');
+                    }
+                    $('#motif').text(ud.motif || '');
+
+                    const createdAt = ud.created_at ? new Date(ud.created_at) : new Date();
+                    let date_frais_inscription = vo.date_frais_inscription || '';
+                    if (!date_frais_inscription && ud.created_at) {
+                        try {
+                            date_frais_inscription = createdAt.toISOString().split('T')[0];
+                        } catch(e) {
+                            date_frais_inscription = '';
+                        }
+                    }
 
                     frais_inscription = data.frais_inscription;
-                    clientId = data.user_data.client_id;
-                    promoCode = data.voeux.promo;
+                    clientId = ud.client_id || '';
+                    promoCode = vo.promo || '';
                     id_echeancier = data.id_echeancier;
                     annee_academique = data.annee_academique;
                     has_due_paiement = data.has_due_paiement;
                     has_saved_echeancier = data.has_saved_echeancier;
 
                     $('#clientIdInput').val(clientId);
-                    $('#_date_naissance').val(data.user_data.demandeur_date_naissance);
-                    $('#_lieu_naissance').val(data.user_data.demandeur_lieu_naissance);
-                    $('#_formation').val(data.voeux.formation);
-                    $('#_entite').val(data.voeux.entite);
-                    entiteIdFormation = data.voeux.entite;
-                    $('#_ville').val(data.voeux.entite_ville);
-                    $('#_nom_groupe').val(data.groupe_data.groupe_nom || '');
-                    $('#_semestre_groupe').val(data.groupe_data.groupe_semestre || '');
+                    $('#_date_naissance').val(ud.demandeur_date_naissance || '');
+                    $('#_lieu_naissance').val(ud.demandeur_lieu_naissance || '');
+                    $('#_formation').val(vo.formation || '');
+                    $('#_entite').val(vo.entite || '');
+                    entiteIdFormation = vo.entite || '';
+                    $('#_ville').val(vo.entite_ville || '');
+                    $('#_nom_groupe').val(gr.groupe_nom || '');
+                    $('#_semestre_groupe').val(gr.groupe_semestre || '');
 
                     // UI Info
-                    $('#formation_label').text(data.voeux.formation);
-                    $('#specialite').text(data.voeux.specialite_label);
-                    $('#promo').text(data.voeux.promo);
-                    $('#prix_formation').text(formatComptable(data.voeux.prix_formation) + " DA");
+                    $('#formation_label').text(vo.formation || '');
+                    $('#specialite').text(vo.specialite_label || '');
+                    $('#promo').text(vo.promo || '');
+                    $('#prix_formation').text(formatComptable(vo.prix_formation || 0) + " DA");
                     
-                    $('#_logoHeader').val(data.voeux.logo_header);
-                    $('#_logoFooter').val(data.voeux.logo_footer);
+                    $('#_logoHeader').val(vo.logo_header || '');
+                    $('#_logoFooter').val(vo.logo_footer || '');
                     
-                    prixFormation = data.voeux.prix_formation;
+                    prixFormation = vo.prix_formation || 0;
                     $('#_montant_formation').val(prixFormation);
 
                     // Charger les échéanciers disponibles
@@ -4263,6 +4284,11 @@
                             duePaiementHtml += '<td>' + item.date_echeance + '</td>';
                             duePaiementHtml += '<td><span class="amount-cell">' + formatComptable(item.montant_due) + ' DA</span></td>';
                             duePaiementHtml += '<td><span class="amount-cell">' + formatComptable(item.montant_restant)+ ' DA</span></td>';
+                            if (parseFloat(item.montant_due) === parseFloat(item.montant_restant)) {
+                                duePaiementHtml += '<td><button type="button" class="btn btn-sm btn-outline-danger btn-delete-tranche" data-id="' + item.id_due_paiement + '" title="Supprimer la tranche"><i class="ri-delete-bin-line"></i></button></td>';
+                            } else {
+                                duePaiementHtml += '<td></td>';
+                            }
                             duePaiementHtml += '</tr>';
                         });
                         $('#ListePaiementRequestLine').html(duePaiementHtml);
@@ -7674,6 +7700,46 @@
             }
         });    
     });
+
+    // ==================================================================
+    // Supprimer une tranche spécifique - Ouvre le modal
+    $(document).on('click', '.btn-delete-tranche', function() {
+        var id_due = $(this).data('id');
+        $('#deleteTrancheId').val(id_due);
+        $('#modalDeleteTranche').modal('show');
+    });
+
+    // Confirmation de suppression depuis le modal
+    $(document).on('click', '#btnConfirmDeleteTranche', function() {
+        var id_due = $('#deleteTrancheId').val();
+        var btn = $(this);
+        var originalText = btn.html();
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Suppression...');
+
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiDeleteTrancheDuePaiement' %}",
+            type: "POST",
+            data: {
+                'id_due': id_due,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.status === 'success') {
+                    $('#modalDeleteTranche').modal('hide');
+                    alertify.success(response.message);
+                    LoadDetails(); // Reload data
+                } else {
+                    alertify.error(response.message);
+                }
+            },
+            error: function() {
+                alertify.error("Erreur lors de la suppression de la tranche.");
+            },
+            complete: function() {
+                btn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
     // ==================================================================
     </script>
 
@@ -7803,6 +7869,33 @@
       </div>
     </div>
   </div>
+</div>
+<!-- Modal Confirm Delete Tranche -->
+<div class="modal fade" id="modalDeleteTranche" tabindex="-1" aria-labelledby="modalDeleteTrancheLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+            <div class="modal-header bg-danger text-white border-0 py-3">
+                <h5 class="modal-title fw-bold text-white" id="modalDeleteTrancheLabel">
+                    <i class="ri-delete-bin-line me-2"></i> Supprimer la tranche
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="mb-3">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-danger bg-opacity-10" style="width: 80px; height: 80px;">
+                        <i class="ri-error-warning-line text-danger" style="font-size: 40px;"></i>
+                    </div>
+                </div>
+                <h5 class="mb-3 text-dark fw-bold">Êtes-vous sûr de vouloir supprimer cette tranche ?</h5>
+                <p class="text-muted mb-0">Cette action est irréversible.</p>
+                <input type="hidden" id="deleteTrancheId">
+            </div>
+            <div class="modal-footer bg-light border-0 py-3 d-flex justify-content-center gap-3">
+                <button type="button" class="btn btn-light px-4 shadow-sm" data-bs-dismiss="modal" style="border-radius: 10px; font-weight: 600;">Annuler</button>
+                <button type="button" class="btn btn-danger px-4 shadow-sm" id="btnConfirmDeleteTranche" style="border-radius: 10px; font-weight: 600;">Oui, supprimer</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% endblock content %}

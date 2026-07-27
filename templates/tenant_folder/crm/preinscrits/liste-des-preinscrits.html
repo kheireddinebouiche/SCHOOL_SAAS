@@ -667,6 +667,9 @@
                         <button type="button" class="btn btn-view-toggle" id="cardViewBtn" data-view="card">
                             <i class="ri-grid-fill me-1"></i> Cartes
                         </button>
+                        <button type="button" class="btn btn-view-toggle" id="groupedViewBtn" data-view="grouped_table">
+                            <i class="ri-table-line me-1"></i> Tableaux
+                        </button>
                     </div>
 
                     <div class="vr opacity-25 d-none d-sm-block" style="height: 30px;"></div>
@@ -738,6 +741,7 @@
                                 <option value="nom_desc">Trier par : Nom (Z-A)</option>
                                 <option value="date_desc">Trier par : Date (Récent)</option>
                                 <option value="date_asc">Trier par : Date (Ancien)</option>
+                                <option value="promo_spec">Trier par : Promo & Spécialité</option>
                             </select>
                         </div>
                     </div>
@@ -746,9 +750,9 @@
             </div>
             <div class="card-body p-3" id="cardContentBody">
               <!-- Table View -->
-              <div id="tableView" style="display: none;">
+              <div id="tableView" style="display: none; overflow-x: hidden;">
                 <div class="table-responsive table-card mb-1">
-                  <table class="table table-nowrap table-hover align-middle mb-0" id="example">
+                  <table class="table table-hover align-middle mb-0" style="width: 100%; table-layout: auto;" id="example">
                     <thead class="table-light text-muted">
                       <tr>
                         <th scope="col">Nom & Prénom</th>
@@ -777,6 +781,11 @@
               <!-- Card View Container -->
               <div id="cardViewContainer" class="cards-container">
                 <!-- Cards will be populated here by JavaScript -->
+              </div>
+
+              <!-- Grouped Table View -->
+              <div id="groupedTableView" style="display: none; overflow-x: hidden;">
+                <div id="groupedTableContainer"></div>
               </div>
             </div>
             
@@ -1282,8 +1291,10 @@
       currentView = 'table';
       $(this).addClass('active').addClass('btn-primary').removeClass('btn-light');
       $('#cardViewBtn').removeClass('active').removeClass('btn-primary').addClass('btn-light');
+      $('#groupedViewBtn').removeClass('active').removeClass('btn-primary').addClass('btn-light');
       $('#tableView').show();
       $('#cardViewContainer').hide();
+      $('#groupedTableView').hide();
       if (!isLoading) {
           renderData(originalData);
       }
@@ -1293,12 +1304,41 @@
       currentView = 'card';
       $(this).addClass('active').addClass('btn-primary').removeClass('btn-light');
       $('#tableViewBtn').removeClass('active').removeClass('btn-primary').addClass('btn-light');
+      $('#groupedViewBtn').removeClass('active').removeClass('btn-primary').addClass('btn-light');
       $('#tableView').hide();
+      $('#groupedTableView').hide();
       $('#cardViewContainer').show();
       if (!isLoading) {
           renderCardView(originalData);
       }
     });
+
+    $('#groupedViewBtn').on('click', function() {
+      currentView = 'grouped_table';
+      $(this).addClass('active').addClass('btn-primary').removeClass('btn-light');
+      $('#tableViewBtn').removeClass('active').removeClass('btn-primary').addClass('btn-light');
+      $('#cardViewBtn').removeClass('active').removeClass('btn-primary').addClass('btn-light');
+      $('#tableView').hide();
+      $('#cardViewContainer').hide();
+      $('#groupedTableView').show();
+      
+      if ($('#filter-promo').val() === "" && $('#filter-promo option').length > 1) {
+          $('#filter-promo').prop('selectedIndex', 1).trigger('change');
+      } else {
+          if (!isLoading) {
+              renderGroupedTableView(originalData);
+          }
+      }
+    });
+    
+    window.loadPreviousPromo = function() {
+        var promoSelect = document.getElementById('filter-promo');
+        var currentIndex = promoSelect.selectedIndex;
+        if (currentIndex > 0 && currentIndex < promoSelect.options.length - 1) {
+            promoSelect.selectedIndex = currentIndex + 1;
+            $(promoSelect).trigger('change');
+        }
+    };
 
     function updateStatistics(data, serverTotal) {
       // Count total records
@@ -1421,8 +1461,11 @@
 
       var row = "";
       var lastMonthYear = "";
+      var lastPromo = "";
+      var lastSpec = "";
       var sortOrder = $('#sort-order').val();
       var displayDateHeaders = (sortOrder === 'date_desc' || sortOrder === 'date_asc');
+      var displayPromoHeaders = (sortOrder === 'promo_spec');
 
       if (data.length === 0) {
         row += '<tr><td colspan="8"><div class="text-center py-5 animate-up">';
@@ -1441,6 +1484,19 @@
           if (displayDateHeaders && currentMonthYear !== lastMonthYear) {
               row += '<tr><td colspan="8" class="table-date-header"><i class="ri-calendar-event-line me-2"></i>' + currentMonthYear + '</td></tr>';
               lastMonthYear = currentMonthYear;
+          } else if (displayPromoHeaders) {
+              var currentPromo = item.promo_label || "Promo N/A";
+              var currentSpec = item.spec_label || "Spécialité N/A";
+              
+              if (currentPromo !== lastPromo) {
+                  row += '<tr><td colspan="8" class="table-date-header bg-primary-subtle text-primary border-bottom border-top fs-6"><i class="ri-calendar-event-line me-2"></i>' + currentPromo + '</td></tr>';
+                  row += '<tr><td colspan="8" class="table-date-header bg-light border-bottom text-muted ps-4"><i class="ri-book-read-line me-2"></i>' + currentSpec + '</td></tr>';
+                  lastPromo = currentPromo;
+                  lastSpec = currentSpec;
+              } else if (currentSpec !== lastSpec) {
+                  row += '<tr><td colspan="8" class="table-date-header bg-light border-bottom text-muted ps-4"><i class="ri-book-read-line me-2"></i>' + currentSpec + '</td></tr>';
+                  lastSpec = currentSpec;
+              }
           }
 
           // Missing documents notification
@@ -1452,8 +1508,21 @@
               </span>`;
           }
 
+          var initials = "";
+          if (item.entreprise) {
+              initials = item.entreprise.substring(0, 2).toUpperCase();
+          } else {
+              initials = (item.nom ? item.nom.charAt(0) : "") + (item.prenom ? item.prenom.charAt(0) : "");
+              if (initials === "") initials = "NA";
+          }
+          initials = initials.toUpperCase();
+          
+          var avatarColors = ['primary', 'secondary', 'success', 'info', 'warning', 'danger', 'dark'];
+          var colorClass = 'bg-' + avatarColors[index % avatarColors.length] + '-subtle text-' + avatarColors[index % avatarColors.length];
+          var avatarHtml = '<div class="avatar-xs d-inline-block me-2"><div class="avatar-title rounded-circle ' + colorClass + ' fw-semibold">' + initials + '</div></div>';
+
           row += "<tr class='align-middle'>";
-          row += "<td><div class='d-flex align-items-center'><a href='/crm/details-preinscrit/" + item.id + "/' class='fw-medium link-primary'>" + item.nom + " " + item.prenom + "</a>" + missingDocsHtml + "</div></td>";
+          row += "<td><div class='d-flex align-items-center'>" + avatarHtml + "<a href='/crm/details-preinscrit/" + item.id + "/' class='fw-medium link-primary'>" + item.nom + " " + item.prenom + "</a>" + missingDocsHtml + "</div></td>";
           row += "<td>" + (item.entreprise ? "<span class='d-flex align-items-center'><i class='ri-building-line text-muted me-2'></i>" + item.entreprise + "</span>" : "<span class='text-muted'>-</span>") + "</td>";
           row += "<td>" + item.telephone + "</td>";
           row += "<td>" + item.email + "</td>";
@@ -1520,6 +1589,8 @@
       // If current view is card view, also render the card view to keep data in sync
       if (currentView === 'card') {
         renderCardView(data);
+      } else if (currentView === 'grouped_table') {
+        renderGroupedTableView(data);
       }
     }
 
@@ -1527,10 +1598,13 @@
     function renderCardView(data) {
       var cards = "";
       var lastMonthYear = "";
+      var lastPromo = "";
+      var lastSpec = "";
       // Colors for avatars
       const avatarColors = ['primary', 'success', 'warning', 'danger', 'info', 'dark'];
       var sortOrder = $('#sort-order').val();
       var displayDateHeaders = (sortOrder === 'date_desc' || sortOrder === 'date_asc');
+      var displayPromoHeaders = (sortOrder === 'promo_spec');
 
       if (data.length === 0) {
         cards = '<div class="d-flex flex-column align-items-center justify-content-center py-5 w-100 animate-up" style="grid-column: 1 / -1; min-height: 350px;">';
@@ -1549,6 +1623,19 @@
           if (displayDateHeaders && currentMonthYear !== lastMonthYear) {
               cards += '<div class="date-group-header"><i class="ri-calendar-event-fill"></i>' + currentMonthYear + '</div>';
               lastMonthYear = currentMonthYear;
+          } else if (displayPromoHeaders) {
+              var currentPromo = item.promo_label || "Promo N/A";
+              var currentSpec = item.spec_label || "Spécialité N/A";
+              
+              if (currentPromo !== lastPromo) {
+                  cards += '<div class="date-group-header w-100 bg-primary-subtle text-primary p-2 rounded mt-3 mb-2"><i class="ri-calendar-event-fill me-2"></i>' + currentPromo + '</div>';
+                  cards += '<div class="date-group-header w-100 fs-6 text-muted mt-1 mb-3 ps-3 border-start border-3 border-primary"><i class="ri-book-read-line me-2"></i>' + currentSpec + '</div>';
+                  lastPromo = currentPromo;
+                  lastSpec = currentSpec;
+              } else if (currentSpec !== lastSpec) {
+                  cards += '<div class="date-group-header w-100 fs-6 text-muted mt-3 mb-3 ps-3 border-start border-3 border-primary"><i class="ri-book-read-line me-2"></i>' + currentSpec + '</div>';
+                  lastSpec = currentSpec;
+              }
           }
 
           // Detect initials
@@ -1670,6 +1757,138 @@
 
       // Re-initialize tooltips
       var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+      })
+    }
+
+    function renderGroupedTableView(data) {
+      var html = "";
+      var lastPromo = "";
+      var lastSpec = "";
+      var sortOrder = $('#sort-order').val();
+
+      if (data.length === 0) {
+        html = '<div class="d-flex flex-column align-items-center justify-content-center py-5 w-100 animate-up" style="min-height: 350px;">';
+        html += '<div class="section-icon-box bg-light text-muted mb-3" style="width: 80px; height: 80px; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem;">';
+        html += '<i class="ri-user-unfollow-line"></i></div>';
+        html += '<h3 class="fw-bold text-dark mb-2">Aucun préinscrit</h3>';
+        html += '<p class="text-muted mb-0 text-center" style="max-width: 400px;">Il n\'y a aucun dossier enregistré correspondant à cette sélection. Vérifiez vos filtres ou ajoutez un nouveau prospect.</p></div>';
+      } else {
+        var isTableOpen = false;
+        
+        $.each(data, function(index, item) {
+            var currentPromo = item.promo_label || "Promo N/A";
+            var currentSpec = item.spec_label || "Spécialité N/A";
+            var itemDate = item.created_at ? new Date(item.created_at) : new Date();
+            var currentMonthYear = itemDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+            var isDateSort = (sortOrder === 'date_desc' || sortOrder === 'date_asc');
+            
+            if (isDateSort) {
+                currentPromo = currentMonthYear;
+                currentSpec = "Préinscrits";
+            }
+            
+            if (currentPromo !== lastPromo || currentSpec !== lastSpec) {
+                if (isTableOpen) {
+                    html += '</tbody></table></div></div></div>'; // close previous table
+                }
+                
+                if (currentPromo !== lastPromo) {
+                    html += '<h4 class="mt-4 mb-3 text-primary"><i class="ri-calendar-event-fill me-2"></i>' + currentPromo + '</h4>';
+                    lastPromo = currentPromo;
+                }
+                
+                html += '<div class="card mb-3 border border-light shadow-sm">';
+                html += '<div class="card-header bg-light border-bottom-0 py-2"><h5 class="mb-0 fs-6 text-muted"><i class="ri-book-read-line me-2"></i>' + currentSpec + '</h5></div>';
+                html += '<div class="card-body p-0">';
+                html += '<div class="table-responsive"><table class="table table-hover mb-0 align-middle" style="width: 100%; table-layout: auto;">';
+                html += '<thead class="table-light text-muted"><tr><th>Candidat</th><th>Entreprise</th><th>Téléphone</th><th>Email</th><th>Cursus</th><th>Statut</th><th>Observations</th><th class="text-end">Actions</th></tr></thead>';
+                html += '<tbody>';
+                isTableOpen = true;
+                lastSpec = currentSpec;
+            }
+            
+            var missingDocsHtml = "";
+            if (item.missing_docs && item.missing_docs.length > 0) {
+                missingDocsHtml = `<span class="ms-2 text-danger animate__animated animate__pulse animate__infinite" data-bs-toggle="tooltip" data-bs-html="true" title="<b>Documents manquants:</b><br>${item.missing_docs.join("<br>")}">
+                    <i class="ri-error-warning-fill fs-5"></i>
+                </span>`;
+            }
+            
+            var initials = "";
+            if (item.entreprise) {
+                initials = item.entreprise.substring(0, 2).toUpperCase();
+            } else {
+                initials = (item.nom ? item.nom.charAt(0) : "") + (item.prenom ? item.prenom.charAt(0) : "");
+                if (initials === "") initials = "NA";
+            }
+            initials = initials.toUpperCase();
+            
+            var avatarColors = ['primary', 'secondary', 'success', 'info', 'warning', 'danger', 'dark'];
+            var colorClass = 'bg-' + avatarColors[index % avatarColors.length] + '-subtle text-' + avatarColors[index % avatarColors.length];
+            var avatarHtml = '<div class="avatar-xs d-inline-block me-2"><div class="avatar-title rounded-circle ' + colorClass + ' fw-semibold">' + initials + '</div></div>';
+            
+            html += "<tr class='align-middle'>";
+            html += "<td><div class='d-flex align-items-center'>" + avatarHtml + "<a href='/crm/details-preinscrit/" + item.id + "/' class='fw-medium link-primary'>" + item.nom + " " + item.prenom + "</a>" + missingDocsHtml + "</div></td>";
+            html += "<td>" + (item.entreprise ? "<span class='d-flex align-items-center'><i class='ri-building-line text-muted me-2'></i>" + item.entreprise + "</span>" : "<span class='text-muted'>-</span>") + "</td>";
+            html += "<td>" + item.telephone + "</td>";
+            html += "<td>" + item.email + "</td>";
+            
+            var cursusBadge = item.is_double ? 
+              "<span class='badge bg-info-subtle text-info text-uppercase font-size-11'><i class='ri-links-line me-1'></i>Double Diplomation</span>" : 
+              "<span class='badge bg-primary-subtle text-primary text-uppercase font-size-11'><i class='ri-user-line me-1'></i>Standard</span>";
+            html += "<td>" + cursusBadge + "</td>";
+            
+            var statusBadge = "";
+            if (item.statut === 'instance') {
+              statusBadge = "<span class='badge bg-primary-subtle text-primary text-uppercase'>Instance</span>";
+            } else if (item.statut === 'prinscrit') {
+              statusBadge = "<span class='badge bg-warning-subtle text-warning text-uppercase'>Préinscrit</span>";
+            } else if (item.statut === 'convertit') {
+              statusBadge = "<span class='badge bg-success-subtle text-success text-uppercase'>Converti</span>";
+            } else {
+              statusBadge = "<span class='badge bg-secondary-subtle text-secondary text-uppercase'>" + (item.statut_label || 'Inconnu') + "</span>";
+            }
+            html += "<td>" + statusBadge + "</td>";
+            
+            html += "<td><div class='text-truncate-2 small text-muted' style='max-width: 200px;' title='" + (item.observation || "") + "'>" + (item.observation || "<span class='text-light-emphasis italic'>-</span>") + "</div></td>";
+            
+            html += '<td class="text-end">';
+            html += '<div class="dropdown d-inline-block">';
+            html += '<button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">';
+            html += '<i class="ri-more-fill align-middle"></i>';
+            html += '</button>';
+            html += '<ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg">';
+            html += '<li><a href="/crm/details-preinscrit/' + item.id + '/" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> Consulter</a></li>';
+            if (!item.has_due_payments) {
+                html += '<li><a class="dropdown-item cancel-preinscription text-warning" href="javascript:void(0)" data-prospect-id="' + item.id + '"><i class="ri-close-circle-line align-bottom me-2 text-warning"></i> Annuler la préinscription</a></li>';
+            }
+            html += '<li><hr class="dropdown-divider"></li>';
+            if (item.statut !== 'instance' && item.statut !== 'convertit') {
+                if (typeof canDeletePreinscrit !== 'undefined' && canDeletePreinscrit) {
+                    html += '<li><a class="dropdown-item delete-prospect text-danger" href="javascript:void(0)" data-prospect-id="' + item.id + '" data-bs-toggle="modal" data-bs-target="#deleteModal"><i class="ri-delete-bin-fill align-bottom me-2 text-danger"></i> Supprimer</a></li>';
+                } else {
+                    html += '<li><a class="dropdown-item text-danger opacity-50" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#noPermissionModal"><i class="ri-delete-bin-fill align-bottom me-2 text-danger"></i> Supprimer</a></li>';
+                }
+            }
+            html += '</ul></div></td></tr>';
+        });
+        
+        if (isTableOpen) {
+            html += '</tbody></table></div></div></div>';
+        }
+      }
+      
+      var promoSelect = document.getElementById('filter-promo');
+      var currentIndex = promoSelect.selectedIndex;
+      if (currentIndex > 0 && currentIndex < promoSelect.options.length - 1) {
+          html += '<div class="text-center mt-4 mb-2"><button type="button" class="btn btn-soft-primary px-4 rounded-pill shadow-sm" onclick="loadPreviousPromo()"><i class="ri-history-line me-2"></i>Charger la promo précédente</button></div>';
+      }
+      
+      $("#groupedTableContainer").html(html);
+      
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('#groupedTableContainer [data-bs-toggle="tooltip"]'))
       var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl)
       })

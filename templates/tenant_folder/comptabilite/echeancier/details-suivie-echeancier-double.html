@@ -1304,6 +1304,7 @@
                                                             <th scope="col">Date d'échéance</th>
                                                             <th scope="col" class="text-end">Montant dû</th>
                                                             <th scope="col" class="text-end">Restant à payer</th>
+                                                            <th scope="col" class="text-end" style="width: 80px;">Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody id="ListePaiementRequestLine">
@@ -3696,6 +3697,11 @@
                             duePaiementHtml += '<td>' + item.date_echeance + '</td>';
                             duePaiementHtml += '<td class="text-end"><span class="amount-cell amount-due-cell">' + formatSimple(item.montant_due) + ' DA</span></td>';
                             duePaiementHtml += '<td class="text-end"><span class="amount-cell amount-restant-cell">' + formatSimple(item.montant_restant) + ' DA</span></td>';
+                            if (parseFloat(item.montant_due) === parseFloat(item.montant_restant)) {
+                                duePaiementHtml += '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger btn-delete-tranche" data-id="' + item.id_due_paiement + '" title="Supprimer la tranche"><i class="ri-delete-bin-line"></i></button></td>';
+                            } else {
+                                duePaiementHtml += '<td></td>';
+                            }
                             duePaiementHtml += '</tr>';
                         });
                         
@@ -4296,7 +4302,12 @@
         });
         
         // Confirmation définitive de l'échéancier
-        $(document).on('click', '#finalConfirmBtn', function(){
+        $(document).off('click', '#finalConfirmBtn').on('click', '#finalConfirmBtn', function(){
+            var btn = $(this);
+            btn.prop('disabled', true);
+            var originalText = btn.html();
+            btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Envoi...');
+
             // Récupérer les données nécessaires
             var id_demande = "{{pk}}";
             
@@ -4347,6 +4358,9 @@
                 error: function(xhr, status, error) {
                     console.error('Erreur lors de la récupération des détails du paiement:', error);
                     alert('Erreur lors de la récupération des détails du paiement.');
+                },
+                complete: function() {
+                    btn.prop('disabled', false).html(originalText);
                 }
             });
         });
@@ -5632,6 +5646,47 @@
     }
     // ==================================================================
 
+    // Supprimer une tranche spécifique - Ouvre le modal
+    $(document).on('click', '.btn-delete-tranche', function() {
+        var id_due = $(this).data('id');
+        $('#deleteTrancheId').val(id_due);
+        $('#modalDeleteTranche').modal('show');
+    });
+
+    // Confirmation de suppression depuis le modal
+    $(document).on('click', '#btnConfirmDeleteTranche', function() {
+        var id_due = $('#deleteTrancheId').val();
+        var btn = $(this);
+        var originalText = btn.html();
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Suppression...');
+
+        $.ajax({
+            url: "{% url 't_tresorerie:ApiDeleteTrancheDuePaiement' %}",
+            type: "POST",
+            data: {
+                'id_due': id_due,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.status === 'success') {
+                    $('#modalDeleteTranche').modal('hide');
+                    alertify.success(response.message);
+                    loadDatas(); // Reload data
+                } else {
+                    alertify.error(response.message);
+                }
+            },
+            error: function() {
+                alertify.error("Erreur lors de la suppression de la tranche.");
+            },
+            complete: function() {
+                btn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+
+    // ==================================================================
+
 
         // === Financial Alert Handlers ===
 
@@ -5821,5 +5876,33 @@
 </script>
 
 
+
+<!-- Modal Confirm Delete Tranche -->
+<div class="modal fade" id="modalDeleteTranche" tabindex="-1" aria-labelledby="modalDeleteTrancheLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+            <div class="modal-header bg-danger text-white border-0 py-3">
+                <h5 class="modal-title fw-bold text-white" id="modalDeleteTrancheLabel">
+                    <i class="ri-delete-bin-line me-2"></i> Supprimer la tranche
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="mb-3">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-danger bg-opacity-10" style="width: 80px; height: 80px;">
+                        <i class="ri-error-warning-line text-danger" style="font-size: 40px;"></i>
+                    </div>
+                </div>
+                <h5 class="mb-3 text-dark fw-bold">Êtes-vous sûr de vouloir supprimer cette tranche ?</h5>
+                <p class="text-muted mb-0">Cette action est irréversible.</p>
+                <input type="hidden" id="deleteTrancheId">
+            </div>
+            <div class="modal-footer bg-light border-0 py-3 d-flex justify-content-center gap-3">
+                <button type="button" class="btn btn-light px-4 shadow-sm" data-bs-dismiss="modal" style="border-radius: 10px; font-weight: 600;">Annuler</button>
+                <button type="button" class="btn btn-danger px-4 shadow-sm" id="btnConfirmDeleteTranche" style="border-radius: 10px; font-weight: 600;">Oui, supprimer</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock content %}

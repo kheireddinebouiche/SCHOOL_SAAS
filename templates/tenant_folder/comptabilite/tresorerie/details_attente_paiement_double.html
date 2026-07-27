@@ -3938,6 +3938,10 @@
                     'id_demande' : id_demande,
                     'override_echeancier_id': override_echeancier_id
                 },
+                error: function(xhr, status, error) {
+                    alertify.error("Erreur lors du chargement des données. Veuillez réessayer.");
+                    console.error("AJAX Error:", error);
+                },
                 success : function(data){
                     if (data.missing_echeancier && !data.has_special_echeancier) {
                         $('#missingEcheancierNotification').attr('style', 'display: flex !important;');
@@ -3945,59 +3949,66 @@
                         $('#missingEcheancierNotification').attr('style', 'display: none !important;');
                     }
 
+                    // Sécurisation des accès aux objets pour éviter TypeError
+                    const ud = data.user_data || {};
+                    const vo = data.voeux || {};
+
                     // Informations du demandeur
-                    $('#demandeur').text(data.user_data.demandeur_nom+" "+data.user_data.demandeur_prenom);
-                    $('#created_at').text(data.user_data.created_at.split('T')[0]);
-                    $('#motif').text(data.user_data.motif);
+                    $('#demandeur').text((ud.demandeur_nom || '') + " " + (ud.demandeur_prenom || ''));
+                    if (ud.created_at) {
+                        $('#created_at').text(ud.created_at.split('T')[0]);
+                    } else {
+                        $('#created_at').text('');
+                    }
+                    $('#motif').text(ud.motif || '');
 
-                    const createdAt = new Date(data.user_data.created_at);
-                    const date_frais_inscription = data.voeux.date_frais_inscription || createdAt.toISOString().split('T')[0];
-
+                    const createdAt = ud.created_at ? new Date(ud.created_at) : new Date();
+                    let date_frais_inscription = vo.date_frais_inscription || '';
+                    if (!date_frais_inscription && ud.created_at) {
+                        try {
+                            date_frais_inscription = createdAt.toISOString().split('T')[0];
+                        } catch(e) {
+                            date_frais_inscription = '';
+                        }
+                    }
 
                     prix_specialite = data.specialite_data_price;
                     
-                    
                     // Store client ID
-                    clientId = data.user_data.client_id;
-                    promoCode = data.voeux.promo;
+                    clientId = ud.client_id || '';
+                    promoCode = vo.promo || '';
                     $('#clientIdInput').val(clientId);
-                    // $('#_formation').val(data.voeux.formation);
-                    // $('#_entite').val(data.voeux.entite);
-                    // $('#_ville').val(data.voeux.entite_ville);
-
-                    // $('#_nom_groupe').val(data.groupe_data.groupe_nom);
-                    // $('#_semestre_groupe').val(data.groupe_data.groupe_semestre);
 
                     annee_academique = data.annee_academique;
                     has_due_paiement = data.has_due_paiement;
                     has_saved_echeancier = data.has_saved_echeancier;
 
                     // Informations du client pour la modale
-                    $('#clientFullName').text(data.user_data.demandeur_nom+" "+data.user_data.demandeur_prenom);
-                    $('#clientEmail').text(data.user_data.email || 'Non spécifié');
-                    $('#clientPhone').text(data.user_data.telephone || 'Non spécifié');
-                    $('#clientAddress').text(data.user_data.adresse || 'Non spécifié');
-                    $('#clientBirthDate').text(data.user_data.date_naissance || 'Non spécifié');
-                    $('#clientBirthPlace').text(data.user_data.lieu_naissance || 'Non spécifié');
+                    $('#clientFullName').text((ud.demandeur_nom || '') + " " + (ud.demandeur_prenom || ''));
+                    $('#clientEmail').text(ud.email || 'Non spécifié');
+                    $('#clientPhone').text(ud.telephone || 'Non spécifié');
+                    $('#clientAddress').text(ud.adresse || 'Non spécifié');
+                    $('#clientBirthDate').text(ud.date_naissance || 'Non spécifié');
+                    $('#clientBirthPlace').text(ud.lieu_naissance || 'Non spécifié');
                     
                     // Informations sur la formation
-                    $('#formation_label').text(data.voeux.formation_label);
-                    $('#specialite').text(data.voeux.specialite_label);
+                    $('#formation_label').text(vo.formation_label || '');
+                    $('#specialite').text(vo.specialite_label || '');
                     
-                    $('#promo').text(data.voeux.promo);
-                    $('#prix_formation').text(formatComptable(data.voeux.prix_formation) + " DA");
+                    $('#promo').text(vo.promo || '');
+                    $('#prix_formation').text(formatComptable(vo.prix_formation || 0) + " DA");
                     
-                    $('#_logoHeader').val(data.voeux.logo_header);
-                    $('#_logoFooter').val(data.voeux.logo_footer);
+                    $('#_logoHeader').val(vo.logo_header || '');
+                    $('#_logoFooter').val(vo.logo_footer || '');
 
-                    $('#_date_naissance').val(data.user_data.demandeur_date_naissance);
-                    $('#_lieu_naissance').val(data.user_data.demandeur_lieu_naissance);
+                    $('#_date_naissance').val(ud.demandeur_date_naissance || '');
+                    $('#_lieu_naissance').val(ud.demandeur_lieu_naissance || '');
 
-                    $('#_demandeurAdresse').val(data.user_data.demandeur_adresse);
-                    $('#_demandeurContact').val(data.user_data.demandeur_telephone);
+                    $('#_demandeurAdresse').val(ud.demandeur_adresse || '');
+                    $('#_demandeurContact').val(ud.demandeur_telephone || '');
 
                     // Stocker le prix de la formation pour le modal spécial
-                    prixFormation = data.voeux.prix_formation;
+                    prixFormation = vo.prix_formation || 0;
 
                     // Charger les échéanciers disponibles
                     if (data.available_echeanciers && data.available_echeanciers.length > 0) {

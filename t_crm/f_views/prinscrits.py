@@ -21,6 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from .generate_paiements import ApiGeneratePaiementRequest
 from django.db.models import Q, Sum
 from django.urls import reverse
+from django.db.models.functions import Coalesce
 from institut_app.utils_notifications import send_notification_to_module_level, send_notification_to_user
 from institut_app.models import GlobalConfiguration
 from django.core.paginator import Paginator
@@ -103,7 +104,13 @@ def ApiLoadPrinscrits(request):
 
     qs = Prospets.objects.filter(
         Q(statut="prinscrit") | Q(statut="instance") | Q(statut="convertit")
-    ).exclude(context='con')
+    ).exclude(context='con').prefetch_related(
+        'prospect_fiche_voeux__promo',
+        'prospect_fiche_voeux__specialite',
+        'prospect_fiche_voeux_double__promo',
+        'prospect_fiche_voeux_double__specialite__specialite1',
+        'prospect_fiche_voeux_double__specialite__specialite2'
+    )
 
     # Status filter
     if statuses:
@@ -166,6 +173,11 @@ def ApiLoadPrinscrits(request):
         qs = qs.order_by('-created_at')
     elif sort_order == 'date_asc':
         qs = qs.order_by('created_at')
+    elif sort_order == 'promo_spec':
+        qs = qs.annotate(
+            annotated_promo_label=Coalesce('prospect_fiche_voeux__promo__label', 'prospect_fiche_voeux_double__promo__label'),
+            annotated_spec_label=Coalesce('prospect_fiche_voeux__specialite__label', 'prospect_fiche_voeux_double__specialite__specialite1__label')
+        ).order_by('annotated_promo_label', 'annotated_spec_label', 'nom', 'prenom')
     else:  # nom_asc is the default
         qs = qs.order_by('nom', 'prenom', '-created_at')
     
@@ -179,6 +191,20 @@ def ApiLoadPrinscrits(request):
         
         # Check for due payments
         has_due_payments = DuePaiements.objects.filter(client=obj, is_annulated=False).exists()
+        
+        promo_label = "N/A"
+        spec_label = "N/A"
+        if obj.is_double:
+            fiche = obj.prospect_fiche_voeux_double.first()
+            if fiche:
+                promo_label = fiche.promo.label if fiche.promo else "N/A"
+                if fiche.specialite and fiche.specialite.specialite1:
+                    spec_label = fiche.specialite.specialite1.label
+        else:
+            fiche = obj.prospect_fiche_voeux.first()
+            if fiche:
+                promo_label = fiche.promo.label if fiche.promo else "N/A"
+                spec_label = fiche.specialite.label if fiche.specialite else "N/A"
         
         liste.append({
             'slug': obj.slug,
@@ -201,6 +227,8 @@ def ApiLoadPrinscrits(request):
             'is_double': obj.is_double,
             'has_due_payments': has_due_payments,
             'observation': obj.observation or "",
+            'promo_label': promo_label,
+            'spec_label': spec_label,
         })
     
     return JsonResponse({

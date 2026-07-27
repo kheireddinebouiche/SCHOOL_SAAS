@@ -147,6 +147,7 @@ urlpatterns = [
 
     path('ApiGetClientEcheancier', ApiGetClientEcheancier, name="ApiGetClientEcheancier"),
     path('ApiGetClientEcheancierDouble',ApiGetClientEcheancierDouble, name="ApiGetClientEcheancierDouble"),
+    path('ApiDeleteTrancheDuePaiement', ApiDeleteTrancheDuePaiement, name="ApiDeleteTrancheDuePaiement"),
 
     path('ApiSaveRefundOperation', ApiSaveRefundOperation, name="ApiSaveRefundOperation"),
     path('ApiStats', ApiStats, name="ApiStats"),

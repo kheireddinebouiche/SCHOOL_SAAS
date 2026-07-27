@@ -1383,3 +1383,23 @@ def ApiMarkQuittancePrinted(request):
         return JsonResponse({'status': 'error', 'message': 'Paiement non trouvé'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required(login_url="institut_app:login")
+@transaction.atomic
+@module_permission_required('tre', 'delete')
+def ApiDeleteTrancheDuePaiement(request):
+    if request.method == "POST":
+        id_due = request.POST.get('id_due')
+        if not id_due:
+            return JsonResponse({'status': 'error', 'message': 'ID de la tranche manquant.'})
+        try:
+            tranche = DuePaiements.objects.get(id=id_due)
+            if float(tranche.montant_due) != float(tranche.montant_restant):
+                return JsonResponse({'status': 'error', 'message': 'Impossible de supprimer cette tranche car elle a des paiements associes.'})
+            tranche.delete()
+            return JsonResponse({'status': 'success', 'message': 'Tranche supprimée avec succès.'})
+        except DuePaiements.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Tranche introuvable.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Requête invalide.'})
