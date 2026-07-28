@@ -1252,3 +1252,9 @@ M i s e   a   j o u r   d e s   f i l t r e s   d a n s   r e v i e w _ b u d g 
 - Application du mécanisme de suppression de tranches et de la modale Bootstrap à l'interface double (details-suivie-echeancier-double.html).
 
 - Correction du problème de double validation sur le bouton finalConfirmBtn dans les interfaces d'échéancier standard et double (désactivation du bouton pendant l'envoi AJAX et suppression des doublons d'événements jQuery).
+- Correction de l'affichage du montant 'déjà payé' dans attentes-de-paiements (prise en compte des paiements des préinscrits via le modèle Paiements).
+- Correction du montant total payé dans suivi-des-paiements pour intégrer à la fois Paiements et clientPaiementsRequestLine.
+- Correction d'une erreur (TypeError) dans le calcul du montant restant lors du suivi des paiements.
+- Correction du total payé dans le suivi des paiements pour les étudiants convertis en incluant les paiements dont le champ is_refund est NULL.
+- Correction : suppression complète du filtre is_refund dans le calcul du total_paid pour le suivi des paiements, car les remboursements utilisent déjà des montants négatifs pour équilibrer, et certaines entrées de paiement classiques ont is_refund=True par erreur dans la base.
+- Correction : résolution du bug d'affichage des montants dans details-suivie-echeancier (standard et double diplomation) en calculant les totaux (dû, payé, solde) indépendamment du fait que toutes les tranches soient payées ou qu'il n'y ait encore aucun paiement.

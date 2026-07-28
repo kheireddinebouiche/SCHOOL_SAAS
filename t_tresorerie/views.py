@@ -25,7 +25,9 @@ def AttentesPaiements(request):
             amount = DuePaiements.objects.filter(due_query).aggregate(total=Sum('montant_due'))['total'] or 0
             total_dus += float(amount)
         
-    total_paye = clientPaiementsRequestLine.objects.filter(paiement_request__client__statut="instance").aggregate(total=Sum('montant_paye'))['total'] or 0
+    paye_req = clientPaiementsRequestLine.objects.filter(paiement_request__client__statut="instance").aggregate(total=Sum('montant_paye'))['total'] or 0
+    paye_paiements = Paiements.objects.filter(prospect__statut="instance").aggregate(total=Sum('montant_paye'))['total'] or 0
+    total_paye = float(paye_req) + float(paye_paiements)
 
     context = {
         'tenant' : request.tenant,
@@ -84,7 +86,9 @@ def ApiListeDemandePaiement(request):
                                obj.paid
 
         # Calculer le montant déjà payé pour cette instance
-        total_paye = clientPaiementsRequestLine.objects.filter(paiement_request=obj).aggregate(total=Sum('montant_paye'))['total'] or 0
+        paye_req = clientPaiementsRequestLine.objects.filter(paiement_request=obj).aggregate(total=Sum('montant_paye'))['total'] or 0
+        paye_paiements = Paiements.objects.filter(prospect=obj.client).aggregate(total=Sum('montant_paye'))['total'] or 0
+        total_paye = float(paye_req) + float(paye_paiements)
 
         total_due_amount = 0
         if obj.client:

@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Q, F
 from django.utils.timezone import now
 from t_crm.models import Prospets
-from ..models import DuePaiements, Paiements
+from ..models import DuePaiements, Paiements, clientPaiementsRequestLine
 from t_groupe.models import Groupe, GroupeLine
 from t_formations.models import Promos, Specialites
 
@@ -58,11 +58,13 @@ def ApiSuiviPaiements(request):
         # Total due from the schedule
         total_due = dues_qs.aggregate(total=Sum('montant_due'))['total'] or 0
         
-        # Total paid (exclude refunds)
-        total_paid = Paiements.objects.filter(prospect=p, is_refund=False).aggregate(total=Sum('montant_paye'))['total'] or 0
+        # Total paid (sum all payments; refunds are recorded as negative amounts)
+        total_paid_paiements = Paiements.objects.filter(prospect=p).aggregate(total=Sum('montant_paye'))['total'] or 0
+        total_paid_req = clientPaiementsRequestLine.objects.filter(paiement_request__client=p).aggregate(total=Sum('montant_paye'))['total'] or 0
+        total_paid = float(total_paid_paiements) + float(total_paid_req)
         
         # Remaining balance
-        total_restant = total_due - total_paid
+        total_restant = float(total_due) - total_paid
         
         # Overdue amount: unpaid dues where date_echeance < today
         overdue_amount = dues_qs.filter(is_done=False, date_echeance__lt=today).aggregate(total=Sum('montant_restant'))['total'] or 0

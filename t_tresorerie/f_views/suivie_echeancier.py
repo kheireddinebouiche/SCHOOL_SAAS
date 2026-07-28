@@ -439,7 +439,9 @@ def ApiGetClientEcheancier(request):
             'logo_footer' : voeux.specialite.formation.entite_legal.pied_page_logo.url if voeux.specialite.formation.entite_legal.pied_page_logo else None,
         }
 
-        total_solde = total_initial - total_paiement if has_due_paiement and has_paiement else 0
+        total_initial_val = DuePaiements.objects.filter(client=obj, is_annulated=False).aggregate(total=Sum('montant_due'))['total'] or 0
+        total_paiement_val = Paiements.objects.filter(prospect=obj, context="frais_f").aggregate(total=Sum('montant_paye'))['total'] or 0
+        total_solde_val = float(total_initial_val) - float(total_paiement_val)
 
         data = {
             'user_data' : user_data,
@@ -456,9 +458,9 @@ def ApiGetClientEcheancier(request):
             "all_due_paiement_data" : all_due_paiement_data,
             "has_paiement" : has_paiement,
             "paiements_done_data" : paiements_done_data,
-            "total_paiement" : total_paiement if has_paiement else 0,
-            "total_initial" : total_initial if has_due_paiement else 0,
-            "total_solde" : total_solde ,
+            "total_paiement" : total_paiement_val,
+            "total_initial" : total_initial_val,
+            "total_solde" : total_solde_val,
             "has_pending_refund" : has_pending_refund,
             'has_processed_refund'  : has_processed_refund,
             'is_appliced' : is_appliced,
@@ -710,9 +712,9 @@ def ApiGetClientEcheancierDouble(request):
             "all_due_paiement_data" : all_due_paiement_data,
             "has_paiement" : has_paiement,
             "paiements_done_data" : paiements_done_data,
-            "total_paiement" : total_paiement if has_paiement else 0,
-            "total_initial" : total_initial if has_due_paiement else 0,
-            "total_solde" : total_solde ,
+            "total_paiement" : Paiements.objects.filter(prospect=obj).aggregate(total=Sum('montant_paye'))['total'] or 0,
+            "total_initial" : DuePaiements.objects.filter(client=obj, is_annulated=False).aggregate(total=Sum('montant_due'))['total'] or 0,
+            "total_solde" : float((DuePaiements.objects.filter(client=obj, is_annulated=False).aggregate(total=Sum('montant_due'))['total'] or 0)) - float((Paiements.objects.filter(prospect=obj).aggregate(total=Sum('montant_paye'))['total'] or 0)),
             "has_pending_refund" : has_pending_refund,
             'has_processed_refund'  : has_processed_refund,
             'is_appliced' : is_appliced,
