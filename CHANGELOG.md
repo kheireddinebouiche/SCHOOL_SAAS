@@ -1258,3 +1258,7 @@ M i s e   a   j o u r   d e s   f i l t r e s   d a n s   r e v i e w _ b u d g 
 - Correction du total payé dans le suivi des paiements pour les étudiants convertis en incluant les paiements dont le champ is_refund est NULL.
 - Correction : suppression complète du filtre is_refund dans le calcul du total_paid pour le suivi des paiements, car les remboursements utilisent déjà des montants négatifs pour équilibrer, et certaines entrées de paiement classiques ont is_refund=True par erreur dans la base.
 - Correction : résolution du bug d'affichage des montants dans details-suivie-echeancier (standard et double diplomation) en calculant les totaux (dû, payé, solde) indépendamment du fait que toutes les tranches soient payées ou qu'il n'y ait encore aucun paiement.
+- Correction : inclusion des frais d'inscription dans la ventilation du montant (dispatch LIFO) lors du remboursement dans details_rembourssement.html.
+- Correction : résolution du bug d'affichage de la liste déroulante (select2) pour la sélection de l'entité et de la catégorie dans la modale de remboursement en ajoutant le thème bootstrap-5.
+- Correction : résolution du bug de sélection dans la liste déroulante select2 de l'entité (ajout de trigger('change') lors de l'affectation programmatique).
+- Optimisation : blocage du bouton de confirmation de remboursement lors de la soumission pour éviter les doubles validations et affichage d'un indicateur de chargement.

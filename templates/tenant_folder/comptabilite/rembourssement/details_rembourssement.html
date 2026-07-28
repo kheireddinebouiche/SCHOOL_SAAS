@@ -861,6 +861,7 @@
                     $('#entite_select').html(option);
                     
                     $('#entite_select').select2({
+                        theme: 'bootstrap-5',
                         dropdownParent: $('#confirmationRemboursementModal'),
                         placeholder: "Rechercher une entité...",
                         width: '100%'
@@ -887,6 +888,7 @@
                     $('#category_select').html(option);
                     
                     $('#category_select').select2({
+                        theme: 'bootstrap-5',
                         dropdownParent: $('#confirmationRemboursementModal'),
                         placeholder: "Rechercher un compte...",
                         width: '100%'
@@ -896,6 +898,8 @@
         }
 
         $(document).on('click', '#confirmerRemboursementBtn', function(){
+            var btn = $(this);
+            var originalBtnHtml = btn.html();
             var entite_select = $('#entite_select').val();
             var category_select = $('#category_select').val();
 
@@ -938,6 +942,8 @@
                 return;
             }
 
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Traitement...');
+
             $.ajax({
                 url : "{% url 't_tresorerie:ApiSaveRefundOperation' %}",
                 dataType : 'JSON',
@@ -960,10 +966,12 @@
                             location.reload();
                         }, 1500);
                     }else{
+                        btn.prop('disabled', false).html(originalBtnHtml);
                         alertify.error(response.message || "Une erreur est survenue");
                     }
                 },
                 error: function(){
+                    btn.prop('disabled', false).html(originalBtnHtml);
                     alertify.error("Erreur de connexion au serveur");
                 }
             });
@@ -986,7 +994,7 @@
 
         var paiementsList = [
             {% for paiement in paiements %}
-                {% if not paiement.is_refund and paiement.context != 'frais_i' and not paiement.is_frais_inscription and "inscription" not in paiement.paiement_label|lower %}
+                {% if not paiement.is_refund %}
                 {
                     id: {{ paiement.id|default:0 }},
                     num: "{{ paiement.num|default:'' }}",
@@ -1080,7 +1088,7 @@
                     var singleEntiteId = Array.from(entitiesInvolved)[0];
                     setTimeout(function() {
                         if ($("#entite_select option[value='" + singleEntiteId + "']").length > 0) {
-                            $("#entite_select").val(singleEntiteId);
+                            $("#entite_select").val(singleEntiteId).trigger('change');
                         }
                     }, 500); // Give time for loadEntites() to populate options
                 }
