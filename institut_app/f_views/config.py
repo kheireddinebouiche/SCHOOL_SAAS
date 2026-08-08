@@ -372,6 +372,7 @@ def api_reset_prospect(request, prospect_id):
         # 2. Trésorerie
         DuePaiements.objects.filter(client=p).delete()
         ClientPaiementsRequest.objects.filter(client=p).delete()
+        EcheancierSpecial.objects.filter(prospect=p).delete()
         Paiements.objects.filter(prospect=p).delete()
         Rembourssements.objects.filter(client=p).delete()
         RemiseAppliquerLine.objects.filter(prospect=p).delete()

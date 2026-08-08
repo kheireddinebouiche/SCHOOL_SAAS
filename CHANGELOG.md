@@ -1289,3 +1289,5 @@ M i s e   a   j o u r   d e s   f i l t r e s   d a n s   r e v i e w _ b u d g 
 \n- Ajout de l'affichage du champ Statut (visiteur, prinscrit, etc.) en plus de l'Etat dans la page Gestion des données.
 \n- Ajout d'un bouton de réinitialisation du prospect dans la page Gestion des données pour supprimer les données liées (scolarité, trésorerie) et réinitialiser son statut.
 \n- Lors de la réinitialisation d'un prospect, les fiches de vœux (Standard et Double) sont désormais conservées mais repassent à l'état 'en attente' (is_confirmed=False) au lieu d'être supprimées.
+\n- Correction de la réinitialisation: Suppression des objets EcheancierSpecial liés au prospect.
+\n- Ajout de la pagination et d'un filtre de recherche (via DataTables) sur la liste des échéanciers spéciaux (comptabilite/tresorerie/echeanciers-specials/).
