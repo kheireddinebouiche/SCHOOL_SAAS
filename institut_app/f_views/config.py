@@ -1,3 +1,4 @@
+from decimal import Decimal
 from institut_app.decorators import superuser_required
 from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render
@@ -291,6 +292,7 @@ def ApiProspectHistory(request, prospect_id):
         payms = Paiements.objects.filter(prospect=p).order_by('-date_paiement')
         for p_obj in payms:
             paiements_data.append({
+                'id': p_obj.id,
                 'is_refund': False,
                 'montant': str(p_obj.montant_paye) if hasattr(p_obj, 'montant_paye') else '0',
                 'date': p_obj.date_paiement.strftime('%d/%m/%Y') if hasattr(p_obj, 'date_paiement') and p_obj.date_paiement else '',
@@ -390,3 +392,31 @@ def api_reset_prospect(request, prospect_id):
         return JsonResponse({'status': 'error', 'message': 'Prospect introuvable'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def api_delete_paiement(request, paiement_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': 'Non autorisé'}, status=403)
+        
+    if request.method == 'POST':
+        try:
+            paiement = Paiements.objects.get(id=paiement_id)
+            
+            # Reset montant due if linked
+            if paiement.due_paiements:
+                due = paiement.due_paiements
+                if paiement.montant_paye:
+                    due.montant_restant = Decimal(str(due.montant_restant)) + Decimal(str(paiement.montant_paye))
+                    if due.montant_restant > 0:
+                        due.is_done = False
+                due.save()
+            
+            paiement.delete()
+            return JsonResponse({'status': 'success', 'message': 'Le paiement a été supprimé et le montant dû réinitialisé.'})
+        except Paiements.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Paiement introuvable'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    
+    return JsonResponse({'status': 'error', 'message': 'Méthode non autorisée'}, status=405)

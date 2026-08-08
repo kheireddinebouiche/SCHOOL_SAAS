@@ -8,7 +8,7 @@ from django.conf.urls.static import static
 from .f_views.entreprise import *
 from .f_views.permissions import *
 from .f_views.users import *
-from .f_views.config import general_settings_view, api_update_global_settings, api_update_tenant_settings, ConfigurationDashboardView, GestionDonneesPage, ApiSearchProspects, ApiProspectHistory, api_reset_prospect
+from .f_views.config import general_settings_view, api_update_global_settings, api_update_tenant_settings, ConfigurationDashboardView, GestionDonneesPage, ApiSearchProspects, ApiProspectHistory, api_reset_prospect, api_delete_paiement
 from saas_admin_app.views import ApiGetActiveAnnouncement, ApiMarkAnnouncementRead
 
 app_name="institut_app"
@@ -165,6 +165,7 @@ urlpatterns = [
     path('api/search-prospects/', ApiSearchProspects, name="ApiSearchProspects"),
     path('api/prospect/<int:prospect_id>/history/', ApiProspectHistory, name="ApiProspectHistory"),
     path('api/prospect/<int:prospect_id>/reset/', api_reset_prospect, name="api_reset_prospect"),
+    path('api/paiement/<int:paiement_id>/delete/', api_delete_paiement, name="api_delete_paiement"),
     path('api/update-global-settings/', api_update_global_settings, name="api_update_global_settings"),
     path('api/update-tenant-settings/', api_update_tenant_settings, name="api_update_tenant_settings"),
     path('api/verify-password/', ApiVerifyPassword, name="ApiVerifyPassword"),

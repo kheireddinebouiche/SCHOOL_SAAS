@@ -1291,3 +1291,4 @@ M i s e   a   j o u r   d e s   f i l t r e s   d a n s   r e v i e w _ b u d g 
 \n- Lors de la réinitialisation d'un prospect, les fiches de vœux (Standard et Double) sont désormais conservées mais repassent à l'état 'en attente' (is_confirmed=False) au lieu d'être supprimées.
 \n- Correction de la réinitialisation: Suppression des objets EcheancierSpecial liés au prospect.
 \n- Ajout de la pagination et d'un filtre de recherche (via DataTables) sur la liste des échéanciers spéciaux (comptabilite/tresorerie/echeanciers-specials/).
+\n- Ajout d'une fonctionnalité de suppression de paiement dans configuration/gestion-donnees/ (réinitialise le montant dû associé et rafraîchit l'historique de la trésorerie).
