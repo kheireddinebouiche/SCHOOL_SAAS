@@ -8,7 +8,7 @@ from django.conf.urls.static import static
 from .f_views.entreprise import *
 from .f_views.permissions import *
 from .f_views.users import *
-from .f_views.config import general_settings_view, api_update_global_settings, api_update_tenant_settings, ConfigurationDashboardView, GestionDonneesPage, ApiSearchProspects, ApiProspectHistory, api_reset_prospect, api_delete_paiement
+from .f_views.config import general_settings_view, api_update_global_settings, api_update_tenant_settings, ConfigurationDashboardView, GestionDonneesPage, ApiSearchProspects, ApiProspectHistory, api_reset_prospect, api_delete_paiement, ApiUnlockGestionDonnees
 from saas_admin_app.views import ApiGetActiveAnnouncement, ApiMarkAnnouncementRead
 
 app_name="institut_app"
@@ -162,6 +162,7 @@ urlpatterns = [
     ########################################## Configuration Globale ##########################################
     path('configuration/generale/', general_settings_view, name="general_settings"),
     path('configuration/gestion-donnees/', GestionDonneesPage, name="GestionDonneesPage"),
+    path('api/unlock-gestion-donnees/', ApiUnlockGestionDonnees, name="ApiUnlockGestionDonnees"),
     path('api/search-prospects/', ApiSearchProspects, name="ApiSearchProspects"),
     path('api/prospect/<int:prospect_id>/history/', ApiProspectHistory, name="ApiProspectHistory"),
     path('api/prospect/<int:prospect_id>/reset/', api_reset_prospect, name="api_reset_prospect"),

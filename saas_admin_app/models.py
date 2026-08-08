@@ -126,6 +126,7 @@ class DatabaseBackup(models.Model):
 
 class SaaSGlobalConfiguration(models.Model):
     max_upload_size = models.PositiveIntegerField(default=400, verbose_name=_("Taille max upload globale (KB)"))
+    gestion_donnees_password = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Mot de passe Gestion de Données"))
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

@@ -3,6 +3,7 @@
 {% block title %}Configuration - Gestion des données (Historique){% endblock title %}
 
 {% block content %}
+{% if is_unlocked %}
 <style>
     :root {
         --primary-color: #4361ee;
@@ -594,4 +595,48 @@
 
     }); // End of $(document).ready
 </script>
+{% else %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="card modern-card shadow-lg p-5" style="max-width: 500px; width: 100%;">
+        <div class="text-center mb-4">
+            <i class="ri-lock-password-fill text-primary" style="font-size: 4rem;"></i>
+            <h3 class="mt-3">Accès Sécurisé</h3>
+            <p class="text-muted">Veuillez entrer le mot de passe pour accéder à la gestion des données.</p>
+        </div>
+        <form id="unlock-form">
+            <div class="mb-3">
+                <input type="password" class="form-control form-control-lg" id="unlock-password" placeholder="Mot de passe" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg w-100"><i class="ri-unlock-line me-2"></i>Déverrouiller</button>
+        </form>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#unlock-form').on('submit', function(e) {
+        e.preventDefault();
+        var pwd = $('#unlock-password').val();
+        $.ajax({
+            url: '{% url "institut_app:ApiUnlockGestionDonnees" %}',
+            type: 'POST',
+            data: {
+                'password': pwd,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if(response.status === 'success') {
+                    location.reload();
+                } else {
+                    alert('Mot de passe incorrect.');
+                }
+            },
+            error: function() {
+                alert('Une erreur est survenue.');
+            }
+        });
+    });
+});
+</script>
+{% endif %}
 {% endblock content %}

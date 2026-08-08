@@ -201,11 +201,36 @@ from django.http import JsonResponse
 @superuser_required
 def GestionDonneesPage(request):
     prospects = Prospets.objects.all().order_by('-created_at')
+    
+    from saas_admin_app.models import SaaSGlobalConfiguration
+    config = SaaSGlobalConfiguration.get_solo()
+    
+    # Si aucun mot de passe n'est défini, on considère que c'est toujours déverrouillé
+    is_unlocked = True
+    if config.gestion_donnees_password:
+        is_unlocked = request.session.get('gestion_donnees_unlocked', False)
+        
     context = {
         'tenant': request.tenant,
-        'prospects': prospects
+        'prospects': prospects,
+        'is_unlocked': is_unlocked
     }
     return render(request, 'tenant_folder/configuration/gestion_donnees.html', context)
+
+@login_required
+@superuser_required
+def ApiUnlockGestionDonnees(request):
+    if request.method == 'POST':
+        password = request.POST.get('password')
+        from saas_admin_app.models import SaaSGlobalConfiguration
+        config = SaaSGlobalConfiguration.get_solo()
+        
+        if config.gestion_donnees_password and password == config.gestion_donnees_password:
+            request.session['gestion_donnees_unlocked'] = True
+            return JsonResponse({'status': 'success', 'message': 'Accès déverrouillé'})
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Mot de passe incorrect'})
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
 @login_required
 @superuser_required

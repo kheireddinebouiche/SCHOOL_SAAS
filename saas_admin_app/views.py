@@ -2010,6 +2010,9 @@ def saas_global_config_view(request):
     if request.method == 'POST':
         try:
             config.max_upload_size = int(request.POST.get('max_upload_size', 400))
+            pwd = request.POST.get('gestion_donnees_password')
+            if pwd is not None:
+                config.gestion_donnees_password = pwd
             config.save()
             messages.success(request, 'Configuration globale sauvegardée avec succès')
             return redirect('saas_admin_app:saas_global_config')
