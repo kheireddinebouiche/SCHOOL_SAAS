@@ -276,7 +276,7 @@
                         <div class="card-header bg-transparent border-0 p-4">
                             <div class="row g-3">
                                 <!-- Recherche -->
-                                <div class="col-lg-3 col-md-6">
+                                <div class="col-lg-2 col-md-6">
                                     <div class="search-box">
                                         <i class="ri-search-line"></i>
                                         <input type="text" placeholder="Rechercher..." id="table-filter" class="form-control premium-input" />
@@ -291,9 +291,16 @@
                                 </div>
 
                                 <!-- Formation -->
-                                <div class="col-lg-3 col-md-6">
+                                <div class="col-lg-2 col-md-6">
                                     <select id="formation-filter" class="form-select premium-input w-100">
                                         <option value="0">Toutes les formations</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Spécialité -->
+                                <div class="col-lg-2 col-md-6">
+                                    <select id="specialite-filter" class="form-select premium-input w-100">
+                                        <option value="0">Toutes les spécialités</option>
                                     </select>
                                 </div>
 
@@ -550,6 +557,14 @@
                 });
             }
             
+            var specialiteId = $('#specialite-filter').val();
+            // Apply specialite filter
+            if (specialiteId && specialiteId != "0") {
+                filteredData = filteredData.filter(function(payment) {
+                    return payment.specialite == specialiteId;
+                });
+            }
+            
             // Apply search filter
             if (currentSearchTerm) {
                 filteredData = filteredData.filter(function(payment) {
@@ -639,6 +654,7 @@
             $('#table-filter').val('');
             $('#promo-filter').val('0');
             $('#formation-filter').val('0');
+            $('#specialite-filter').val('0').find('option:not(:first)').remove();
             currentSearchTerm = '';
             
             loadItems();
@@ -694,6 +710,29 @@
 
         // Listen for formation filter change
         $(document).on('change', '#formation-filter', function() {
+            var selectedOption = $(this).find('option:selected');
+            var formationCode = selectedOption.data('code');
+            var specialiteSelect = $('#specialite-filter');
+            specialiteSelect.find('option:not(:first)').remove();
+            
+            if (formationCode && formationCode != "0" && formationCode !== undefined) {
+                $.ajax({
+                    url: "{% url 't_tresorerie:ApiLoadSpecialites' %}",
+                    type: 'GET',
+                    data: { 'formation_id': formationCode },
+                    success: function(specsData) {
+                        $.each(specsData, function(index, spec) {
+                            specialiteSelect.append('<option value="' + spec.id + '">' + spec.label + '</option>');
+                        });
+                    }
+                });
+            }
+            $('#specialite-filter').val('0');
+            applyFilters();
+        });
+
+        // Listen for specialite filter change
+        $(document).on('change', '#specialite-filter', function() {
             applyFilters();
         });
 
@@ -706,7 +745,7 @@
                     select.find('option:not(:first)').remove();
                     if (response) {
                         $.each(response, function(index, formation) {
-                            select.append('<option value="' + formation.id + '">' + formation.nom + '</option>');
+                            select.append('<option value="' + formation.id + '" data-code="' + formation.code + '">' + formation.nom + '</option>');
                         });
                     }
                 }

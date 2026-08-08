@@ -1262,3 +1262,30 @@ M i s e   a   j o u r   d e s   f i l t r e s   d a n s   r e v i e w _ b u d g 
 - Correction : rÃ©solution du bug d'affichage de la liste dÃ©roulante (select2) pour la sÃ©lection de l'entitÃ© et de la catÃ©gorie dans la modale de remboursement en ajoutant le thÃ¨me bootstrap-5.
 - Correction : rÃ©solution du bug de sÃ©lection dans la liste dÃ©roulante select2 de l'entitÃ© (ajout de trigger('change') lors de l'affectation programmatique).
 - Optimisation : blocage du bouton de confirmation de remboursement lors de la soumission pour Ã©viter les doubles validations et affichage d'un indicateur de chargement.
+- Fix: Exclusion des contacts d'Executive Education (context='con') de la liste des étudiants de la scolarité dans t_etudiants/views.py.
+- UI: Affichage de la vue liste par défaut pour la liste des étudiants (Scolarité) au lieu de la vue grille.
+- UI: Ajout de l'affichage de l'avatar (ou des initiales) des étudiants dans la vue liste.
+- UI: Suppression de l'en-tête et des animations de survol (hover) sur le tableau de bord RH.
+- UI: Suppression de l'en-tête et des animations de survol (hover) sur la liste des employés (RH).
+
+## Modification Échéanciers Configurés
+- Ajout de la possibilité de modifier ou supprimer les formations (spécialités) concernées lors de l'édition d'un échéancier configuré standard.
+
+## Correctif Échéanciers Configurés
+- Utilisation du code de la formation au lieu de l'ID pour le filtrage des spécialités lors du chargement des échéanciers.
+
+## Amélioration UI Échéanciers Configurés
+- Correction de la lisibilité des tags Select2 (couleurs du texte et de l'arrière-plan) dans la sélection des spécialités.
+
+## Fonctionnalité Attentes de Paiement
+- Ajout d'un filtre par spécialité (qui se charge dynamiquement lors de la sélection d'une formation) sur la page des attentes de paiements.
+- UI: Suppression des animations de survol (hover) sur le tableau de bord de configuration.
+- UI: Suppression des animations de survol (hover) sur la page liste des utilisateurs.
+\n### Ajout de la page Gestion des données\n- Création de la page **Gestion des données** sous le menu Configuration > Paramètres système permettant d'afficher l'historique complet d'un prospect (CRM, Inscriptions, Pédagogie, Trésorerie).\n- Implémentation d'une barre de recherche asynchrone (Select2) pour récupérer tous les prospects depuis \	_crm.Prospets\.\n- Ajout des routes API \pi/search-prospects/\ et \pi/prospect/<id>/history/\ pour servir les données consolidées.
+\n- Remplacement de la barre de recherche par un tableau interactif listant tous les prospects dans la page Gestion des données.
+\n- Correction de l'URL de l'API dans gestion_donnees.html (suppression du préfixe /institut_app/ qui causait une erreur 404).
+\n- Remplacement du tableau des échéanciers (Montants Dus) par un affichage sous forme de liste visuelle (.timeline-card) dans la vue historique.
+\n- Correction de l'import manquant DuePaiements dans config.py causant l'absence de l'affichage des échéanciers.
+\n- Ajout de l'affichage du champ Statut (visiteur, prinscrit, etc.) en plus de l'Etat dans la page Gestion des données.
+\n- Ajout d'un bouton de réinitialisation du prospect dans la page Gestion des données pour supprimer les données liées (scolarité, trésorerie) et réinitialiser son statut.
+\n- Lors de la réinitialisation d'un prospect, les fiches de vœux (Standard et Double) sont désormais conservées mais repassent à l'état 'en attente' (is_confirmed=False) au lieu d'être supprimées.

@@ -188,3 +188,204 @@ def ConfigurationDashboardView(request):
     }
 
     return render(request, 'tenant_folder/configuration/dashboard.html', context)
+
+from django.db.models import Q
+from t_crm.models import Prospets, NotesProcpects, RendezVous, RelancesProspet, Derogations, DemandeInscription, FicheDeVoeux, FicheVoeuxDouble, RemiseAppliquerLine
+from t_tresorerie.models import EcheancierPaiement, EcheancierSpecial, Paiements, Rembourssements, DuePaiements, ClientPaiementsRequest
+from t_groupe.models import GroupeLine
+from t_exam.models import ExamNote
+from django.http import JsonResponse
+
+@login_required
+@superuser_required
+def GestionDonneesPage(request):
+    prospects = Prospets.objects.all().order_by('-created_at')
+    context = {
+        'tenant': request.tenant,
+        'prospects': prospects
+    }
+    return render(request, 'tenant_folder/configuration/gestion_donnees.html', context)
+
+@login_required
+@superuser_required
+def ApiSearchProspects(request):
+    q = request.GET.get('q', '')
+    query = Q(nom__icontains=q) | Q(prenom__icontains=q) | Q(nin__icontains=q) | Q(email__icontains=q)
+    prospects = Prospets.objects.filter(query)[:20]
+    
+    results = []
+    for p in prospects:
+        results.append({
+            'id': p.id,
+            'text': f"{p.nom or ''} {p.prenom or ''} - {p.nin or ''}"
+        })
+    return JsonResponse({'results': results})
+
+@login_required
+@superuser_required
+def ApiProspectHistory(request, prospect_id):
+    try:
+        p = Prospets.objects.get(id=prospect_id)
+    except Prospets.DoesNotExist:
+        return JsonResponse({'error': 'Prospect not found'}, status=404)
+
+    # CRM
+    notes = NotesProcpects.objects.filter(prospect=p).order_by('-created_at')
+    rendezvous = RendezVous.objects.filter(prospect=p).order_by('-created_at')
+    relances = RelancesProspet.objects.filter(prospect=p).order_by('-date_relance')
+    derogations = Derogations.objects.filter(demandeur=p).order_by('-created_at')
+
+    # SCOLARITE
+    demandes = DemandeInscription.objects.filter(visiteur__nom=p.nom, visiteur__prenom=p.prenom) if hasattr(p, 'nom') else []
+    
+    voeux_std = FicheDeVoeux.objects.filter(prospect=p)
+    voeux_dbl = FicheVoeuxDouble.objects.filter(prospect=p)
+
+    groupes_affecte = []
+    try:
+        lines = GroupeLine.objects.filter(student=p)
+        for l in lines:
+            if l.groupe:
+                groupes_affecte.append({'nom': l.groupe.label})
+    except Exception:
+        pass
+
+    examens = []
+    try:
+        notes_ex = ExamNote.objects.filter(etudiant=p)
+        for n in notes_ex:
+            examens.append({
+                'module': n.type_note.label if hasattr(n, 'type_note') and n.type_note else 'Examen',
+                'date': n.created_at.strftime('%d/%m/%Y') if hasattr(n, 'created_at') else '',
+                'note': str(n.valeur) if hasattr(n, 'valeur') else ''
+            })
+    except Exception:
+        pass
+
+    # TRESORERIE
+    ech_data = []
+    try:
+        dues = DuePaiements.objects.filter(client=p)
+        for d in dues:
+            ech_data.append({
+                'type': d.label if d.label else 'Echéance',
+                'details': 'Montant dû',
+                'montant': str(d.montant_due) if hasattr(d, 'montant_due') and d.montant_due else '0',
+                'restant': str(d.montant_restant) if hasattr(d, 'montant_restant') and d.montant_restant else '0',
+                'date': d.date_echeance.strftime('%d/%m/%Y') if hasattr(d, 'date_echeance') and d.date_echeance else ''
+            })
+        ech_sp = EcheancierSpecial.objects.filter(prospect=p)
+        for e in ech_sp:
+            ech_data.append({
+                'type': 'Spécial',
+                'details': 'Echéancier Spécial',
+                'montant': '0',
+                'restant': '0',
+                'date': ''
+            })
+    except Exception:
+        pass
+
+    paiements_data = []
+    try:
+        payms = Paiements.objects.filter(prospect=p).order_by('-date_paiement')
+        for p_obj in payms:
+            paiements_data.append({
+                'is_refund': False,
+                'montant': str(p_obj.montant_paye) if hasattr(p_obj, 'montant_paye') else '0',
+                'date': p_obj.date_paiement.strftime('%d/%m/%Y') if hasattr(p_obj, 'date_paiement') and p_obj.date_paiement else '',
+                'reference': p_obj.num if hasattr(p_obj, 'num') and p_obj.num else (p_obj.paiement_label if hasattr(p_obj, 'paiement_label') else '')
+            })
+    except Exception:
+        pass
+        
+    try:
+        remb = Rembourssements.objects.filter(client=p)
+        for r_obj in remb:
+            paiements_data.append({
+                'is_refund': True,
+                'montant': str(r_obj.allowed_amount) if hasattr(r_obj, 'allowed_amount') and r_obj.allowed_amount else '0',
+                'date': r_obj.created_at.strftime('%d/%m/%Y') if hasattr(r_obj, 'created_at') else '',
+                'reference': r_obj.motif_rembourssement if hasattr(r_obj, 'motif_rembourssement') else 'Remboursement'
+            })
+    except Exception:
+        pass
+        
+    remises_data = []
+    try:
+        rem_lines = RemiseAppliquerLine.objects.filter(prospect=p)
+        for rl in rem_lines:
+            remises_data.append({
+                'remise_label': rl.remise_appliquer.remise.label if rl.remise_appliquer and rl.remise_appliquer.remise else 'Remise',
+                'date': rl.created_at.strftime('%d/%m/%Y'),
+                'is_applicated': rl.remise_appliquer.is_applicated if rl.remise_appliquer else False
+            })
+    except Exception:
+        pass
+
+    data = {
+        'base': {
+            'nom': p.nom,
+            'prenom': p.prenom,
+            'email': p.email,
+            'telephone': p.telephone,
+            'indic': p.indic,
+            'nin': p.nin,
+            'statut': p.get_statut_display() if hasattr(p, 'get_statut_display') else p.statut,
+            'etat': p.get_etat_display() if hasattr(p, 'get_etat_display') else p.etat,
+        },
+        'crm': {
+            'notes': [{'date': n.created_at.strftime('%d/%m/%Y'), 'note': n.note, 'tag': n.tage} for n in notes],
+            'rendezvous': [{'date': r.date_rendez_vous.strftime('%d/%m/%Y') if r.date_rendez_vous else r.created_at.strftime('%d/%m/%Y'), 'type': r.get_type_display(), 'statut': r.get_statut_display()} for r in rendezvous],
+            'relances': [{'date': r.date_relance.strftime('%d/%m/%Y') if hasattr(r, 'date_relance') and r.date_relance else '', 'canal': r.get_canal_display(), 'objet': r.objet} for r in relances],
+            'derogations': [{'date': d.created_at.strftime('%d/%m/%Y'), 'type': d.type, 'motif': d.motif, 'statut': d.get_statut_display()} for d in derogations],
+        },
+        'scolarite': {
+            'demandes': [{'date': d.created_at.strftime('%d/%m/%Y'), 'formation': d.formation.label if d.formation else '', 'specialite': d.specialite.label if d.specialite else '', 'etat': d.get_etat_display()} for d in demandes],
+            'voeux': [{'type': 'Standard', 'specialite': v.specialite.label if v.specialite else '', 'is_confirmed': v.is_confirmed} for v in voeux_std] + 
+                     [{'type': 'Double Diplomation', 'specialite': v.specialite.label if hasattr(v, 'specialite') and v.specialite else '', 'is_confirmed': v.is_confirmed} for v in voeux_dbl],
+            'groupes': groupes_affecte,
+            'examens': examens,
+        },
+        'tresorerie': {
+            'echeanciers': ech_data,
+            'paiements': paiements_data,
+            'remises': remises_data
+        }
+    }
+    return JsonResponse(data)
+
+def api_reset_prospect(request, prospect_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': 'Non autorisé'}, status=403)
+        
+    try:
+        p = Prospets.objects.get(id=prospect_id)
+        
+        # 1. Scolarité (Voeux, Inscriptions, Groupes, Exams)
+        FicheDeVoeux.objects.filter(prospect=p).update(is_confirmed=False)
+        FicheVoeuxDouble.objects.filter(prospect=p).update(is_confirmed=False)
+        DemandeInscription.objects.filter(visiteur__nom=p.nom, visiteur__prenom=p.prenom).delete()
+        GroupeLine.objects.filter(student=p).delete()
+        ExamNote.objects.filter(etudiant=p).delete()
+        
+        # 2. Trésorerie
+        DuePaiements.objects.filter(client=p).delete()
+        ClientPaiementsRequest.objects.filter(client=p).delete()
+        Paiements.objects.filter(prospect=p).delete()
+        Rembourssements.objects.filter(client=p).delete()
+        RemiseAppliquerLine.objects.filter(prospect=p).delete()
+        
+        # 3. CRM Dérogations
+        Derogations.objects.filter(demandeur=p).delete()
+        
+        # 4. Reset Prospect
+        p.statut = 'visiteur'
+        p.etat = 'en_attente'
+        p.save()
+        
+        return JsonResponse({'status': 'success', 'message': 'Le prospect a été réinitialisé avec succès.'})
+    except Prospets.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Prospect introuvable'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

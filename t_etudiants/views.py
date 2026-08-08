@@ -12,7 +12,7 @@ def ListeStudents(request):
 
 @login_required(login_url="institut_app:login")
 def ApiListeDesEtudiants(request):
-    raw_liste = Prospets.objects.filter(statut="convertit").values(
+    raw_liste = Prospets.objects.filter(statut="convertit").exclude(context="con").values(
         'id','nom','prenom','email','indic','telephone','date_naissance','nin',
         'groupe_line_student__groupe__nom','groupe_line_student__groupe__specialite__label',
         'groupe_line_student__groupe__id', 'photo', 'context', 'is_double'

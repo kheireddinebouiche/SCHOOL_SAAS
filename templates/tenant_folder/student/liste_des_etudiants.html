@@ -280,10 +280,10 @@
                                 <div class="vr mx-1 d-none d-md-block" style="height: 24px;"></div>
 
                                 <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group">
-                                    <button type="button" class="btn btn-white border-0 active px-3" id="btnGridView" title="Vue Grille">
+                                    <button type="button" class="btn btn-white border-0 px-3" id="btnGridView" title="Vue Grille">
                                         <i class="ri-grid-fill"></i>
                                     </button>
-                                    <button type="button" class="btn btn-white border-0 px-3" id="btnListView" title="Vue Liste">
+                                    <button type="button" class="btn btn-white border-0 active px-3" id="btnListView" title="Vue Liste">
                                         <i class="ri-list-settings-line"></i>
                                     </button>
                                 </div>
@@ -293,12 +293,12 @@
 
                     <div class="card glass-card border-0 mb-4 bg-transparent shadow-none">
                         <!-- Card View Container -->
-                        <div id="cardViewContainer" class="card-body p-0">
+                        <div id="cardViewContainer" class="card-body p-0 d-none">
                             <div class="row g-4" id="cardsGrid"></div>
                         </div>
 
                         <!-- Table View Container -->
-                        <div id="tableViewContainer" class="card-body p-0 d-none">
+                        <div id="tableViewContainer" class="card-body p-0">
                             <div class="glass-card overflow-hidden">
                                 <div class="table-responsive">
                                     <table id="example" class="table table-hover align-middle mb-0">
@@ -392,7 +392,13 @@
                             } else {
                                 trackBadge = "<span class='badge bg-success bg-opacity-10 text-success px-2 py-1 mt-1 d-inline-block'><i class='ri-graduation-cap-line me-1'></i>Diplômante</span>";
                             }
-                            tableRows += "<td class='ps-4'><a href='/scolarite/groupes/profile-etudiant/"+p.id+"' class='fw-bold text-dark d-block'>"+p.nom+' '+p.prenom+"</a>" + trackBadge + "</td>";
+                            var photoUrl = p.photo ? '/media/' + p.photo : ''; 
+                            var initials = (p.nom.charAt(0) + (p.prenom ? p.prenom.charAt(0) : '')).toUpperCase();
+                            var listAvatarHtml = photoUrl 
+                                ? `<img src="${photoUrl}" alt="${p.nom}" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">`
+                                : `<div class="rounded-circle shadow-sm bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px; font-size: 14px;">${initials}</div>`;
+
+                            tableRows += "<td class='ps-4'><div class='d-flex align-items-center gap-3'>" + listAvatarHtml + "<div><a href='/scolarite/groupes/profile-etudiant/"+p.id+"' class='fw-bold text-dark d-block'>"+p.nom+' '+p.prenom+"</a>" + trackBadge + "</div></div></td>";
                             tableRows += "<td><span class='text-muted'>"+(p.nin || '-')+"</span></td>";
                             tableRows += "<td>"+(p.indic ||'')+''+p.telephone+"</td>";
                             tableRows += "<td>"+p.email+"</td>";
@@ -527,6 +533,7 @@
         }
         
         // Load items when the page is ready
+        $('#btnListView').click();
         loadItems();
 
         // Search functionality
@@ -800,10 +807,10 @@
             pdfMake.createPdf(docDefinition).download('liste_des_etudiants.pdf');
         });
 
-        // Initialize view state - ensure list is hidden on load
+        // Initialize view state - ensure card view is hidden on load
         // Already handled by classes but good verify:
-        $('#cardViewContainer').removeClass('d-none');
-        $('#tableViewContainer').addClass('d-none');
+        $('#cardViewContainer').addClass('d-none');
+        $('#tableViewContainer').removeClass('d-none');
 
     });
 </script>

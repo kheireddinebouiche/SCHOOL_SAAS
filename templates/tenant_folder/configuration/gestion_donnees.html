@@ -1,0 +1,563 @@
+{% extends 'tenant_folder/base.html' %}
+{% load static %}
+{% block title %}Configuration - Gestion des données (Historique){% endblock title %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-color: #4361ee;
+        --secondary-color: #3f37c9;
+        --accent-color: #4895ef;
+        --success-color: #4cc9f0;
+        --warning-color: #f72585;
+        --info-color: #480ca8;
+        --danger-color: #ef233c;
+    }
+
+    .modern-card {
+        border-radius: 16px;
+        border: none;
+        background: white;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.01);
+    }
+    
+    .card-header-modern {
+        background: transparent;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 1rem 1.25rem;
+    }
+
+    .nav-pills-custom .nav-link {
+        color: #64748b;
+        border-radius: 10px;
+        margin-right: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    .nav-pills-custom .nav-link.active {
+        background-color: rgba(67, 97, 238, 0.1);
+        color: var(--primary-color);
+    }
+    
+    .timeline-card {
+        border-left: 3px solid var(--primary-color);
+        padding-left: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .prospect-row {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .prospect-row:hover {
+        background-color: rgba(67, 97, 238, 0.05);
+    }
+</style>
+
+<div class="main-content">
+<div class="page-content">
+    <div class="container-fluid">
+
+        <!-- Navbar Configuration -->
+        {% include 'tenant_folder/configuration_navbar.html' %}
+
+        <!-- Page Header -->
+        <div class="row mb-3 mt-2">
+            <div class="col-12">
+                <div class="d-flex align-items-center justify-content-between p-3 py-2 bg-white rounded-4 shadow-sm border border-light">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-primary bg-opacity-10 rounded-3 p-2 me-3">
+                            <i class="bx bx-history text-primary fs-3"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-1 fw-bold">Gestion des Données (Historique Prospect)</h4>
+                            <p class="text-muted mb-0 small">Sélectionnez un prospect dans la liste pour consulter l'intégralité de son historique</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="row mb-4" id="list-container">
+            <div class="col-12">
+                <div class="card modern-card border border-light shadow-sm">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="prospects-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nom</th>
+                                        <th>Prénom</th>
+                                        <th>Email</th>
+                                        <th>NIN</th>
+                                        <th>Statut</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for p in prospects %}
+                                    <tr class="prospect-row" data-id="{{ p.id }}">
+                                        <td>#{{ p.id }}</td>
+                                        <td class="fw-bold">{{ p.nom|default:"-" }}</td>
+                                        <td>{{ p.prenom|default:"-" }}</td>
+                                        <td>{{ p.email|default:"-" }}</td>
+                                        <td>{{ p.nin|default:"-" }}</td>
+                                        <td>
+                                            <span class="badge bg-primary bg-opacity-10 text-primary mb-1">{{ p.get_statut_display|default:p.statut }}</span><br>
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ p.get_etat_display|default:p.etat }}</span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary rounded-pill px-3">Voir historique</button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loader -->
+        <div id="loading-spinner" class="text-center d-none py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement...</span>
+            </div>
+            <p class="mt-2 text-muted">Récupération des données en cours...</p>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-container" class="d-none">
+            
+            <div class="mb-3">
+                <button class="btn btn-light shadow-sm border rounded-pill" id="btn-back-to-list">
+                    <i class="bx bx-arrow-back me-1"></i> Retour à la liste
+                </button>
+            </div>
+
+            <!-- Quick Info Header -->
+            <div class="card modern-card mb-4 bg-primary text-white shadow-sm border-0">
+                <div class="card-body d-flex justify-content-between align-items-center p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-lg me-3">
+                            <div class="avatar-title bg-white text-primary rounded-circle fs-2" id="prospect-initials">
+                                -
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="mb-1 text-white fw-bold" id="prospect-fullname">Nom Prénom</h3>
+                            <p class="mb-0 text-white-50"><i class="bx bx-envelope me-1"></i> <span id="prospect-email">email@example.com</span> | <i class="bx bx-phone me-1"></i> <span id="prospect-phone">--</span></p>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <button class="btn btn-sm btn-danger rounded-pill px-3 mb-2 me-2" id="btn-reset-prospect" style="display: none;">
+                            <i class="bx bx-reset"></i> Réinitialiser
+                        </button>
+                        <span class="badge bg-white text-primary fs-6 mb-2" id="prospect-status">Statut</span>
+                        <span class="badge bg-light text-dark fs-6 mb-2 ms-2" id="prospect-etat">Etat</span>
+                        <p class="mb-0 text-white-50 small">NIN: <span id="prospect-nin" class="fw-bold text-white">--</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <ul class="nav nav-pills nav-pills-custom mb-4" id="historyTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="crm-tab" data-bs-toggle="tab" data-bs-target="#crm-content" type="button" role="tab" aria-controls="crm-content" aria-selected="true">
+                        <i class="bx bx-user-circle me-1"></i> CRM & Profil
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="scolarite-tab" data-bs-toggle="tab" data-bs-target="#scolarite-content" type="button" role="tab" aria-controls="scolarite-content" aria-selected="false">
+                        <i class="bx bx-book-open me-1"></i> Scolarité & Examens
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tresorerie-tab" data-bs-toggle="tab" data-bs-target="#tresorerie-content" type="button" role="tab" aria-controls="tresorerie-content" aria-selected="false">
+                        <i class="bx bx-wallet me-1"></i> Trésorerie & Finance
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Contents -->
+            <div class="tab-content" id="historyTabsContent">
+                
+                <!-- CRM TAB -->
+                <div class="tab-pane fade show active" id="crm-content" role="tabpanel" aria-labelledby="crm-tab">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card modern-card shadow-sm border border-light mb-4">
+                                <div class="card-header card-header-modern">
+                                    <h5 class="mb-0 fw-bold"><i class="bx bx-note text-primary me-2"></i>Notes CRM</h5>
+                                </div>
+                                <div class="card-body" id="crm-notes-container">
+                                    <p class="text-muted">Aucune donnée trouvée.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card modern-card shadow-sm border border-light mb-4">
+                                <div class="card-header card-header-modern">
+                                    <h5 class="mb-0 fw-bold"><i class="bx bx-calendar text-primary me-2"></i>Rendez-vous & Relances</h5>
+                                </div>
+                                <div class="card-body" id="crm-events-container">
+                                    <p class="text-muted">Aucune donnée trouvée.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="card modern-card shadow-sm border border-light mb-4">
+                                <div class="card-header card-header-modern">
+                                    <h5 class="mb-0 fw-bold"><i class="bx bx-block text-danger me-2"></i>Dérogations</h5>
+                                </div>
+                                <div class="card-body" id="crm-derogations-container">
+                                    <p class="text-muted">Aucune donnée trouvée.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- SCOLARITE TAB -->
+                <div class="tab-pane fade" id="scolarite-content" role="tabpanel" aria-labelledby="scolarite-tab">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card modern-card shadow-sm border border-light mb-4">
+                                <div class="card-header card-header-modern">
+                                    <h5 class="mb-0 fw-bold"><i class="bx bx-file text-info me-2"></i>Inscriptions & Voeux</h5>
+                                </div>
+                                <div class="card-body" id="scolarite-inscriptions-container">
+                                    <p class="text-muted">Aucune donnée trouvée.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card modern-card shadow-sm border border-light mb-4">
+                                <div class="card-header card-header-modern">
+                                    <h5 class="mb-0 fw-bold"><i class="bx bx-group text-info me-2"></i>Affectation Groupes</h5>
+                                </div>
+                                <div class="card-body" id="scolarite-groupes-container">
+                                    <p class="text-muted">Aucune donnée trouvée.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="card modern-card shadow-sm border border-light mb-4">
+                                <div class="card-header card-header-modern">
+                                    <h5 class="mb-0 fw-bold"><i class="bx bx-award text-success me-2"></i>Notes & Examens</h5>
+                                </div>
+                                <div class="card-body" id="scolarite-examens-container">
+                                    <p class="text-muted">Aucune donnée trouvée.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- TRESORERIE TAB -->
+                <div class="tab-pane fade" id="tresorerie-content" role="tabpanel" aria-labelledby="tresorerie-tab">
+                    
+                    <!-- SUMMARY STATS -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card modern-card shadow-sm border border-light text-center p-3">
+                                <h6 class="text-muted text-uppercase mb-2">Total Dû</h6>
+                                <h3 class="mb-0 fw-bold text-dark" id="stat-total-du">0 DA</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card modern-card shadow-sm border border-light text-center p-3">
+                                <h6 class="text-muted text-uppercase mb-2">Total Payé</h6>
+                                <h3 class="mb-0 fw-bold text-success" id="stat-total-paye">0 DA</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card modern-card shadow-sm border border-light text-center p-3">
+                                <h6 class="text-muted text-uppercase mb-2">Reste à Payer</h6>
+                                <h3 class="mb-0 fw-bold text-danger" id="stat-total-restant">0 DA</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card modern-card shadow-sm border border-light mb-4">
+                                <div class="card-header card-header-modern">
+                                    <h5 class="mb-0 fw-bold"><i class="bx bx-calendar-check text-warning me-2"></i>Échéanciers / Montants Dus</h5>
+                                </div>
+                                <div class="card-body" id="tresorerie-echeanciers-container">
+                                    <p class="text-muted">Aucune donnée trouvée.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card modern-card shadow-sm border border-light mb-4">
+                                <div class="card-header card-header-modern">
+                                    <h5 class="mb-0 fw-bold"><i class="bx bx-money text-success me-2"></i>Paiements & Remboursements</h5>
+                                </div>
+                                <div class="card-body" id="tresorerie-paiements-container">
+                                    <p class="text-muted">Aucune donnée trouvée.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card modern-card shadow-sm border border-light mb-4">
+                                <div class="card-header card-header-modern">
+                                    <h5 class="mb-0 fw-bold"><i class="bx bx-gift text-primary me-2"></i>Remises Appliquées</h5>
+                                </div>
+                                <div class="card-body" id="tresorerie-remises-container">
+                                    <p class="text-muted">Aucune donnée trouvée.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+        </div>
+
+    </div>
+</div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Datatables -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        // Initialize DataTable
+        var table = $('#prospects-table').DataTable({
+            "language": {
+                "url": "https://cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json"
+            },
+            "pageLength": 10,
+            "order": [[0, "desc"]]
+        });
+
+        // Search Functionality
+        $('#searchInput').on('keyup', function() {
+            table.search(this.value).draw();
+        });
+
+        // Click on a prospect row
+        $('.prospect-row').on('click', function() {
+            var prospectId = $(this).data('id');
+            loadProspectHistory(prospectId);
+        });
+
+        // Back to list button
+        $('#btn-back-to-list').on('click', function() {
+            $('#results-container').addClass('d-none');
+            $('#list-container').removeClass('d-none');
+        });
+
+        function loadProspectHistory(prospectId) {
+            $('#list-container').addClass('d-none');
+            $('#results-container').addClass('d-none');
+            $('#loading-spinner').removeClass('d-none');
+
+            $.ajax({
+                url: '/api/prospect/' + prospectId + '/history/',
+                method: 'GET',
+                success: function(response) {
+                    $('#loading-spinner').addClass('d-none');
+                    renderData(response, prospectId);
+                    $('#results-container').removeClass('d-none');
+                },
+                error: function(err) {
+                    $('#loading-spinner').addClass('d-none');
+                    $('#list-container').removeClass('d-none');
+                    alertify.error("Erreur lors de la récupération de l'historique.");
+                }
+            });
+        }
+
+        // Reset Prospect Functionality
+        $('#btn-reset-prospect').on('click', function() {
+            var pid = $(this).attr('data-id');
+            if(!pid) return;
+
+            if(confirm("Êtes-vous sûr ?\nCette action va supprimer toutes les données de scolarité, fiches de voeux et de trésorerie liées à ce prospect pour le réinitialiser. Les notes CRM seront conservées.")) {
+                $.ajax({
+                    url: '/api/prospect/' + pid + '/reset/',
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                    success: function(response) {
+                        if(response.status === 'success') {
+                            alertify.success(response.message);
+                            // Reload history
+                            loadProspectHistory(pid);
+                        } else {
+                            alertify.error(response.message);
+                        }
+                    },
+                    error: function(err) {
+                        alertify.error("Une erreur s'est produite lors de la réinitialisation.");
+                    }
+                });
+            }
+        });
+
+        function renderData(data, id) {
+            // Update Header
+            $('#prospect-fullname').text(data.base.nom + ' ' + data.base.prenom);
+            $('#prospect-email').text(data.base.email || 'Non renseigné');
+            $('#prospect-phone').text((data.base.indic || '') + ' ' + (data.base.telephone || 'Non renseigné'));
+            $('#prospect-nin').text(data.base.nin || 'Non renseigné');
+            $('#prospect-status').text(data.base.statut || 'visiteur');
+            $('#prospect-etat').text(data.base.etat || 'en attente');
+            
+            $('#btn-reset-prospect').attr('data-id', id).show();
+            
+            if(data.base.nom && data.base.prenom){
+                $('#prospect-initials').text(data.base.nom.charAt(0).toUpperCase() + data.base.prenom.charAt(0).toUpperCase());
+            } else {
+                $('#prospect-initials').text('-');
+            }
+
+            // Render CRM Notes
+            var notesHtml = '';
+            if (data.crm.notes.length > 0) {
+                data.crm.notes.forEach(function(note) {
+                    notesHtml += '<div class="timeline-card"><strong>' + note.date + '</strong><br>' + (note.note || 'Pas de note') + ' <span class="badge bg-light text-dark border">' + (note.tag || '') + '</span></div>';
+                });
+            } else {
+                notesHtml = '<p class="text-muted">Aucune note CRM.</p>';
+            }
+            $('#crm-notes-container').html(notesHtml);
+
+            // Render Events (RDV/Relances)
+            var eventsHtml = '';
+            if (data.crm.rendezvous.length > 0) {
+                data.crm.rendezvous.forEach(function(rdv) {
+                    eventsHtml += '<div class="timeline-card border-warning"><strong>RDV ' + rdv.type + '</strong> (' + rdv.date + ')<br>Statut: ' + rdv.statut + '</div>';
+                });
+            }
+            if (data.crm.relances.length > 0) {
+                data.crm.relances.forEach(function(rel) {
+                    eventsHtml += '<div class="timeline-card border-info"><strong>Relance ' + rel.canal + '</strong> (' + rel.date + ')<br>Objet: ' + (rel.objet || '-') + '</div>';
+                });
+            }
+            if (eventsHtml === '') eventsHtml = '<p class="text-muted">Aucun événement.</p>';
+            $('#crm-events-container').html(eventsHtml);
+
+            // Render Derogations
+            var derogHtml = '';
+            if (data.crm.derogations.length > 0) {
+                data.crm.derogations.forEach(function(der) {
+                    var bClass = der.statut === 'acceptee' ? 'success' : (der.statut === 'rejetee' ? 'danger' : 'warning');
+                    derogHtml += '<div class="timeline-card border-' + bClass + '"><strong>' + der.type + '</strong> (' + der.date + ')<br>Motif: ' + der.motif + '<br><span class="badge bg-' + bClass + '">' + der.statut + '</span></div>';
+                });
+            } else {
+                derogHtml = '<p class="text-muted">Aucune dérogation.</p>';
+            }
+            $('#crm-derogations-container').html(derogHtml);
+
+            // Render Inscriptions & Voeux
+            var insHtml = '';
+            if (data.scolarite.demandes.length > 0) {
+                data.scolarite.demandes.forEach(function(dem) {
+                    insHtml += '<div class="timeline-card border-info"><strong>Demande d\'inscription</strong> (' + dem.date + ')<br>' + dem.formation + ' - ' + dem.specialite + '<br>Statut: <span class="badge bg-secondary">' + dem.etat + '</span></div>';
+                });
+            }
+            if (data.scolarite.voeux.length > 0) {
+                data.scolarite.voeux.forEach(function(voeu) {
+                    insHtml += '<div class="timeline-card border-primary"><strong>Fiche de voeux (' + voeu.type + ')</strong><br>' + voeu.specialite + ' (Confirmé: ' + (voeu.is_confirmed ? 'Oui' : 'Non') + ')</div>';
+                });
+            }
+            if (insHtml === '') insHtml = '<p class="text-muted">Aucune inscription ou voeu.</p>';
+            $('#scolarite-inscriptions-container').html(insHtml);
+
+            // Render Groupes
+            var grpHtml = '';
+            if (data.scolarite.groupes.length > 0) {
+                data.scolarite.groupes.forEach(function(grp) {
+                    grpHtml += '<div class="badge bg-primary bg-opacity-10 text-primary border border-primary fs-6 me-2 mb-2">' + grp.nom + '</div>';
+                });
+            } else {
+                grpHtml = '<p class="text-muted">Non affecté à des groupes.</p>';
+            }
+            $('#scolarite-groupes-container').html(grpHtml);
+
+            // Render Examens
+            var examHtml = '';
+            if (data.scolarite.examens.length > 0) {
+                data.scolarite.examens.forEach(function(ex) {
+                    examHtml += '<div class="timeline-card border-success"><strong>' + ex.module + '</strong> (' + ex.date + ')<br>Note: <span class="fw-bold">' + ex.note + '</span> / 20</div>';
+                });
+            } else {
+                examHtml = '<p class="text-muted">Aucun résultat d\'examen.</p>';
+            }
+            $('#scolarite-examens-container').html(examHtml);
+
+            // Render Echeanciers and Calculate Stats
+            var echHtml = '';
+            var totalDu = 0;
+            var totalRestant = 0;
+            if (data.tresorerie.echeanciers.length > 0) {
+                data.tresorerie.echeanciers.forEach(function(ech) {
+                    var mDu = parseFloat(ech.montant) || 0;
+                    var mRest = parseFloat(ech.restant) || 0;
+                    totalDu += mDu;
+                    totalRestant += mRest;
+                    
+                    var bClass = mRest > 0 ? 'warning' : 'success';
+                    var statusText = mRest > 0 ? ('Reste à payer: <span class="fw-bold text-danger">' + mRest.toFixed(2) + ' DA</span>') : '<span class="badge bg-success">Soldé</span>';
+                    
+                    echHtml += '<div class="timeline-card border-' + bClass + ' mb-3">';
+                    echHtml += '<strong>' + ech.type + '</strong> (' + ech.date + ')<br>';
+                    echHtml += '<small class="text-muted">' + ech.details + '</small><br>';
+                    echHtml += 'Montant Total: <span class="fw-bold">' + mDu.toFixed(2) + ' DA</span> | ' + statusText;
+                    echHtml += '</div>';
+                });
+            } else {
+                echHtml = '<p class="text-muted">Aucun échéancier ou montant dû.</p>';
+            }
+            $('#tresorerie-echeanciers-container').html(echHtml);
+
+            // Render Paiements and Calculate Total Paid
+            var payHtml = '';
+            var totalPaye = 0;
+            if (data.tresorerie.paiements.length > 0) {
+                data.tresorerie.paiements.forEach(function(pay) {
+                    var pType = pay.is_refund ? 'Remboursement' : 'Paiement';
+                    var pClass = pay.is_refund ? 'danger' : 'success';
+                    var val = parseFloat(pay.montant) || 0;
+                    if(!pay.is_refund) totalPaye += val;
+                    else totalPaye -= val; // deduct refunds
+                    payHtml += '<div class="timeline-card border-' + pClass + '"><strong>' + pType + '</strong> (' + pay.date + ')<br>Montant: <span class="fw-bold text-' + pClass + '">' + val.toFixed(2) + ' DA</span><br><small class="text-muted">' + (pay.reference || '') + '</small></div>';
+                });
+            } else {
+                payHtml = '<p class="text-muted">Aucun paiement ou remboursement.</p>';
+            }
+            $('#tresorerie-paiements-container').html(payHtml);
+
+            // Update Summary Stats
+            $('#stat-total-du').text(totalDu.toFixed(2) + ' DA');
+            $('#stat-total-paye').text(totalPaye.toFixed(2) + ' DA');
+            $('#stat-total-restant').text(totalRestant.toFixed(2) + ' DA');
+
+            // Render Remises
+            var remHtml = '';
+            if (data.tresorerie.remises.length > 0) {
+                data.tresorerie.remises.forEach(function(rem) {
+                    remHtml += '<div class="timeline-card border-info"><strong>' + rem.remise_label + '</strong> (' + rem.date + ')<br>Appliquée: ' + (rem.is_applicated ? 'Oui' : 'Non') + '</div>';
+                });
+            } else {
+                remHtml = '<p class="text-muted">Aucune remise.</p>';
+            }
+            $('#tresorerie-remises-container').html(remHtml);
+        }
+    });
+</script>
+{% endblock content %}

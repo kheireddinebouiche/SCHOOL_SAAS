@@ -84,6 +84,16 @@ def ApiLoadEcheancierDetails(request):
                 composite_formation_label = f_nom
         else:
             composite_formation_label = ", ".join(specs) if specs else ""
+            
+        specialties_data = []
+        for e in echeanciers:
+            if e.specialite:
+                if not any(sd['label'] == e.specialite.label for sd in specialties_data):
+                    specialties_data.append({
+                        "echeancier_id": e.id,
+                        "specialite_id": e.specialite_id,
+                        "label": e.specialite.label
+                    })
         
         # Récupérer les tranches associées au premier (identiques pour le groupe)
         tranches_qs = EcheancierPaiementLine.objects.filter(echeancier=echeancier).order_by('id')
@@ -198,6 +208,8 @@ def ApiLoadEcheancierDetails(request):
             'prix_spec2': float(echeancier.formation_double.prix_spec2 or 0) if echeancier.formation_double else 0.0,
             'spec1_label': echeancier.formation_double.specialite1.label if (echeancier.formation_double and echeancier.formation_double.specialite1) else "",
             'spec2_label': echeancier.formation_double.specialite2.label if (echeancier.formation_double and echeancier.formation_double.specialite2) else "",
+            'formation_code': echeancier.formation.code if echeancier.formation else None,
+            'specialties_data': specialties_data,
         }
         
         return JsonResponse({'status': 'success', 'data': data}, safe=False)
@@ -810,6 +822,45 @@ def ApiUpdateEcheancier(request):
             tranche_updates_json = request.POST.get('tranche_updates')
             import json
             tranche_updates = json.loads(tranche_updates_json)
+            
+            new_specialties_raw = request.POST.get('new_specialties')
+            if new_specialties_raw:
+                new_specialties = [int(s) for s in new_specialties_raw.split(',') if s.strip()]
+                echeanciers = EcheancierPaiement.objects.filter(id__in=ids)
+                first_echeancier = echeanciers.first()
+                if first_echeancier and first_echeancier.formation and not first_echeancier.formation_double:
+                    existing_specialty_ids = [e.specialite_id for e in echeanciers if e.specialite_id]
+                    
+                    # Identify to delete
+                    for e in echeanciers:
+                        if e.specialite_id and e.specialite_id not in new_specialties:
+                            ids.remove(str(e.id))
+                            e.delete()
+                            
+                    # Identify to add
+                    for s_id in new_specialties:
+                        if s_id not in existing_specialty_ids:
+                            from t_formations.models import Specialites
+                            spec_obj = Specialites.objects.filter(id=s_id).first()
+                            if spec_obj:
+                                current_tarif = spec_obj.prix_double_diplomation if first_echeancier.model.is_double_diplomation else spec_obj.prix
+                                new_echeancier = EcheancierPaiement.objects.create(
+                                    model=first_echeancier.model,
+                                    formation=first_echeancier.formation,
+                                    specialite=spec_obj,
+                                    is_active=first_echeancier.is_active,
+                                    frais_inscription=first_echeancier.frais_inscription,
+                                    date_frais_inscription=first_echeancier.date_frais_inscription,
+                                    remise=first_echeancier.remise,
+                                    type_remise=first_echeancier.type_remise,
+                                    majoration=first_echeancier.majoration,
+                                    type_majoration=first_echeancier.type_majoration,
+                                    has_remise=first_echeancier.has_remise,
+                                    has_majoration=first_echeancier.has_majoration,
+                                    tarif_formation=current_tarif,
+                                    entite_id=first_echeancier.entite_id,
+                                )
+                                ids.append(str(new_echeancier.id))
             
             for eid in ids:
                 echeancier = EcheancierPaiement.objects.filter(id=eid).first()

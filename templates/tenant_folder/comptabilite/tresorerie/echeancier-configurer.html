@@ -19,6 +19,27 @@
     .badge-soft-warning { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
     .badge-soft-info { background-color: rgba(6, 182, 212, 0.1); color: #0891b2; }
 
+    /* Select2 tags style fix */
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: rgba(59, 130, 246, 0.1) !important;
+        color: #3b82f6 !important;
+        border: 1px solid rgba(59, 130, 246, 0.2) !important;
+        border-radius: 0.5rem !important;
+        padding: 2px 6px !important;
+        font-weight: 600 !important;
+        font-size: 0.75rem !important;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+        color: #3b82f6 !important;
+        margin-right: 5px !important;
+        border-right: 1px solid rgba(59, 130, 246, 0.2) !important;
+        padding-right: 5px !important;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+        background-color: transparent !important;
+        color: #1e40af !important;
+    }
+
     .table thead th {
         background: #f8fafc;
         color: #475569;
@@ -723,6 +744,10 @@
                 <div class="col-md-6">
                   <label class="text-secondary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.65rem;">Formation Concernée</label>
                   <div class="p-3 rounded-3 bg-light border border-white fw-bold text-dark lh-sm" id="editFormationLabel">-</div>
+                  <div id="editSpecialtiesContainer" class="d-none mt-2">
+                    <label class="text-secondary small mb-1 fw-bold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.6rem;">Spécialités concernées</label>
+                    <select class="form-select border-0 bg-light p-2 w-100 select2-specialties" id="editEcheancierSpecialties" multiple="multiple" style="border-radius: 0.75rem; font-weight: 500;"></select>
+                  </div>
                 </div>
                 <div class="col-md-6">
                   <label class="text-secondary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.65rem;">Modèle Appliqué</label>
@@ -1422,14 +1447,16 @@ $(document).ready(function () {
         var echeancierId = $(this).data('id');
         var available = $(this).data('available');
         
+        var requestData = {
+            'id': echeancierId,
+            'available': available,
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        };
+
         $.ajax({
             url: "{% url 't_tresorerie:ApiToggleEcheancierAvailability' %}",
             type: 'POST',
-            data: {
-                'id': echeancierId,
-                'available': available,
-                'csrfmiddlewaretoken': '{{ csrf_token }}'
-            },
+            data: requestData,
             success: function(response) {
                 if(response.status === 'success') {
                     alertify.success(response.message);
@@ -1487,15 +1514,53 @@ $(document).ready(function () {
                         let editFormHtml = '';
                         if (data.formation_nom) {
                             editFormHtml += '<div class="mb-2">' + data.formation_nom + '</div>';
+                        } else {
+                            editFormHtml += '<div class="mb-2">-</div>';
                         }
-                        if (data.specialties && data.specialties.length > 0) {
-                            editFormHtml += '<div class="d-flex flex-wrap gap-1 mt-1">';
-                            data.specialties.forEach(function(spec) {
-                                editFormHtml += '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10 px-2 py-1" style="font-size: 0.7rem; font-weight: 600;">' + spec + '</span>';
+                        
+                        $('#editFormationLabel').html(editFormHtml);
+
+                        // If not double diplomation, allow editing specialties
+                        if (data.formation_code && !isDouble && data.specialties_data && data.specialties_data.length > 0) {
+                            $('#editSpecialtiesContainer').removeClass('d-none');
+                            
+                            // Initialize select2
+                            if (!$('#editEcheancierSpecialties').hasClass('select2-hidden-accessible')) {
+                                $('#editEcheancierSpecialties').select2({
+                                    dropdownParent: $('#editEcheancierModal'),
+                                    width: '100%',
+                                    placeholder: "Sélectionner des spécialités"
+                                });
+                            }
+                            
+                            // Load specialties for this formation
+                            $.ajax({
+                                url: "{% url 't_tresorerie:ApiLoadSpecialites' %}",
+                                type: 'GET',
+                                data: { 'formation_id': data.formation_code },
+                                success: function(specsData) {
+                                    let options = '';
+                                    let selectedIds = data.specialties_data.map(s => s.specialite_id.toString());
+                                    
+                                    specsData.forEach(function(spec) {
+                                        let selected = selectedIds.includes(spec.id.toString()) ? 'selected' : '';
+                                        options += `<option value="${spec.id}" ${selected}>${spec.label}</option>`;
+                                    });
+                                    
+                                    $('#editEcheancierSpecialties').html(options).trigger('change');
+                                }
                             });
-                            editFormHtml += '</div>';
+                        } else {
+                            $('#editSpecialtiesContainer').addClass('d-none');
+                            if (data.specialties && data.specialties.length > 0) {
+                                let staticSpecsHtml = '<div class="d-flex flex-wrap gap-1 mt-1">';
+                                data.specialties.forEach(function(spec) {
+                                    staticSpecsHtml += '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10 px-2 py-1" style="font-size: 0.7rem; font-weight: 600;">' + spec + '</span>';
+                                });
+                                staticSpecsHtml += '</div>';
+                                $('#editFormationLabel').append(staticSpecsHtml);
+                            }
                         }
-                        $('#editFormationLabel').html(editFormHtml || '-');
                         
                         // Set the entity value (now that options are loaded)
                         if (data.entite) {
@@ -1758,6 +1823,15 @@ $(document).ready(function () {
             });
         });
         
+        // Gather specialties if visible
+        var new_specialties = "";
+        if (!$('#editSpecialtiesContainer').hasClass('d-none')) {
+            var selectedSpecs = $('#editEcheancierSpecialties').val();
+            if (selectedSpecs && selectedSpecs.length > 0) {
+                new_specialties = selectedSpecs.join(',');
+            }
+        }
+        
         // Prepare data for submission
         var formData = new FormData();
         formData.append('id', echeancierId);
@@ -1770,6 +1844,7 @@ $(document).ready(function () {
         formData.append('majoration', majoration);
         formData.append('type_majoration', type_majoration);
         formData.append('tranche_updates', JSON.stringify(trancheUpdates));
+        formData.append('new_specialties', new_specialties);
         formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
         
         // Show loading indicator
