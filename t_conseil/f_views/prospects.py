@@ -10,7 +10,12 @@ from t_crm.models import Prospets
 @login_required(login_url="institut_app:login")
 @module_permission_required('con', 'view')
 def ApiListeProspect(request):
-    liste = Prospets.objects.filter(type_prospect="entreprise", context="con", is_client=False).values('id','slug','nom','prenom','etat','entreprise','poste_dans_entreprise','observation','context','created_at','telephone','email', 'type_prospect')
+    from django.db.models import Q
+    liste = Prospets.objects.filter(
+        Q(context="con") | Q(context="acc", type_prospect="entreprise"), 
+        type_prospect="entreprise", 
+        is_client=False
+    ).values('id','slug','nom','prenom','etat','entreprise','poste_dans_entreprise','observation','context','created_at','telephone','email', 'type_prospect')
     return JsonResponse(list(liste), safe=False)
 
 @login_required(login_url="institut_app:login")

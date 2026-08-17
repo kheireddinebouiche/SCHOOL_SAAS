@@ -446,7 +446,19 @@ def InscriptionEntreprise(request):
             donnee = form.save(commit=False)
             donnee.created_by = request.user
             donnee.type_prospect = "entreprise"
+            donnee.context = "acc"
             donnee.save()
+            
+            from t_crm.models import ContactEntreprise
+            ContactEntreprise.objects.create(
+                prospect=donnee,
+                nom=donnee.nom,
+                prenom=donnee.prenom,
+                email=donnee.email,
+                telephone=donnee.telephone,
+                is_primary=True
+            )
+            
             messages.success(request, "Prospect ajouté avec succès")
             return redirect('t_crm:ListeDesProspects')
         else:

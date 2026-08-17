@@ -1292,3 +1292,14 @@ M i s e   a   j o u r   d e s   f i l t r e s   d a n s   r e v i e w _ b u d g 
 \n- Correction de la réinitialisation: Suppression des objets EcheancierSpecial liés au prospect.
 \n- Ajout de la pagination et d'un filtre de recherche (via DataTables) sur la liste des échéanciers spéciaux (comptabilite/tresorerie/echeanciers-specials/).
 \n- Ajout d'une fonctionnalité de suppression de paiement dans configuration/gestion-donnees/ (réinitialise le montant dû associé et rafraîchit l'historique de la trésorerie).
+\n- Ajout d'une fenetre modale de modification des informations pour les 'autres paiements' dans comptabilite/tresorerie/paiements/autres/liste/
+\n- Ajout du champ 'CatÃ©gorie de produit' dans la fenÃªtre modale de modification des autres paiements.
+\n- Harmonisation du design de la fenÃªtre modale de modification des autres paiements avec le thÃ¨me premium de la page (arrondis, ombres, icÃ´nes dans les champs).
+
+- Mise à jour: Les entreprises créées dans le CRM sont maintenant visibles dans CRM (Liste des prospects) et dans Conseil (Prospects en instance).
+
+- Correction: Création automatique d'un contact principal (ContactEntreprise) lors de l'ajout d'une entreprise via crm/inscription-entreprise/ afin d'harmoniser avec conseil/prospects-en-instance/.
+
+- Correction: Résolution de l'erreur TypeError (is_main vers is_primary) lors de la création d'un contact entreprise dans InscriptionEntreprise.
+
+- UI: Dans crm/liste-des-prospects/, pour les entreprises, la désignation de l'entreprise s'affiche désormais en premier (à la place du nom du contact), et le nom du contact principal s'affiche en dessous ou dans la deuxième colonne.
