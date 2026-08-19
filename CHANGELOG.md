@@ -1303,3 +1303,5 @@ M i s e   a   j o u r   d e s   f i l t r e s   d a n s   r e v i e w _ b u d g 
 - Correction: Résolution de l'erreur TypeError (is_main vers is_primary) lors de la création d'un contact entreprise dans InscriptionEntreprise.
 
 - UI: Dans crm/liste-des-prospects/, pour les entreprises, la désignation de l'entreprise s'affiche désormais en premier (à la place du nom du contact), et le nom du contact principal s'affiche en dessous ou dans la deuxième colonne.
+
+- Optimisation : RÃ©fractorisation de la fonction get_campaign_realization_data dans associe_app/budget_utils.py pour Ã©liminer le problÃ¨me des requÃªtes N+1 et le timeout de la vue du tableau de bord.

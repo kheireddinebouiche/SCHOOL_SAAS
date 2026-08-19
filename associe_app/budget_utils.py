@@ -56,6 +56,28 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
     # 4. Fetch Budget Postes (Public)
     all_postes = PostesBudgetaire.objects.prefetch_related('payment_categories', 'depense_categories').order_by('-type', 'order', 'label')
     
+    # 4.5. Global Caching for N+1 Optimization
+    with schema_context('public'):
+        global_pay_cats_by_id = {c.id: c for c in GlobalPaymentCategory.objects.all()}
+        global_pay_cats_by_name = {c.name: c for c in GlobalPaymentCategory.objects.all()}
+        global_dep_cats_by_name = {c.name: c for c in GlobalDepensesCategory.objects.all()}
+        
+        global_pay_cat_to_poste = {}
+        global_dep_cat_to_poste = {}
+        for p in all_postes:
+            if p.type == 'recette':
+                for cat in p.payment_categories.all():
+                    global_pay_cat_to_poste[cat.id] = p
+            elif p.type == 'depense':
+                for cat in p.depense_categories.all():
+                    global_dep_cat_to_poste[cat.id] = p
+                    
+        global_pt_cats = {}
+        for pt in GlobalPaymentType.objects.prefetch_related('payment_categories').all():
+            cats = list(pt.payment_categories.all())
+            if cats:
+                global_pt_cats[pt.name] = cats[0]
+
     # 5. Loop Through Instituts and Collect Data
     for inst in target_instituts:
         # A. Collect Allocations (Public Schema)
@@ -156,56 +178,71 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
                 date_paiement__gte=t1_start,
                 date_paiement__lte=t4_end,
                 payment_type__isnull=False
-            ).prefetch_related('lettrages', 'payment_type')
+            ).prefetch_related('lettrages', 'payment_type', 'due_paiements__client', 'due_paiements__promo', 'entite')
+            
+            # --- Caching per tenant ---
+            client_ids = set()
+            promo_ids = set()
+            for p in paiements:
+                if p.due_paiements and p.due_paiements.client_id and p.due_paiements.promo_id:
+                    client_ids.add(p.due_paiements.client_id)
+                    promo_ids.add(p.due_paiements.promo_id)
+                    
+            fiches_std = FicheDeVoeux.objects.filter(is_confirmed=True, prospect_id__in=client_ids, promo_id__in=promo_ids).select_related('specialite')
+            fiches_dbl = FicheVoeuxDouble.objects.filter(is_confirmed=True, prospect_id__in=client_ids, promo_id__in=promo_ids).select_related('specialite')
+            fiches_dict = {(f.prospect_id, f.promo_id): f for f in fiches_std}
+            fiches_double_dict = {(f.prospect_id, f.promo_id): f for f in fiches_dbl}
+            
+            spec_to_compte = {}
+            for sc in SpecialiteCompte.objects.select_related('compte').all():
+                if sc.compte:
+                    spec_to_compte[sc.specialite_id] = sc.compte
+                    
+            from t_formations.models import Specialites
+            spec_to_entite = {}
+            for s in Specialites.objects.select_related('formation').all():
+                spec_to_entite[s.id] = s.formation.entite_legal_id if s.formation else None
+            # --------------------------
             
             for p in paiements:
                 # 1. Verification of Cheque/Transfer validation
-                if p.mode_paiement in ['che', 'vir'] and not p.lettrages.exists(): continue
+                if p.mode_paiement in ['che', 'vir'] and not p.lettrages.all(): continue
                 
                 target_g_cat = None
                 
                 # A. Identify Potential Categories from Student Specialties
                 student_categories = []
                 if p.due_paiements:
-                    client = p.due_paiements.client
-                    promo = p.due_paiements.promo
-                    if client and promo:
-                        # Try Standard Fiche
-                        fiche = FicheDeVoeux.objects.filter(prospect=client, promo=promo, is_confirmed=True).first()
-                        fiches = [fiche] if fiche else []
-                        
-                        # Try Double Diplomation Fiche
-                        fiche_double = FicheVoeuxDouble.objects.filter(prospect=client, promo=promo, is_confirmed=True).first()
-                        if fiche_double: fiches.append(fiche_double)
+                    client_id = p.due_paiements.client_id
+                    promo_id = p.due_paiements.promo_id
+                    if client_id and promo_id:
+                        fiches = []
+                        f_std = fiches_dict.get((client_id, promo_id))
+                        f_dbl = fiches_double_dict.get((client_id, promo_id))
+                        if f_std: fiches.append(f_std)
+                        if f_dbl: fiches.append(f_dbl)
                         
                         for f in fiches:
                             specs = []
-                            # Determine if it's a standard or double fiche
                             if isinstance(f, FicheDeVoeux):
                                 if f.specialite_id: specs.append(f.specialite_id)
                             elif isinstance(f, FicheVoeuxDouble):
-                                # For Double Diplomation, we must follow the relation to the DoubleDiplomation model
                                 dd = f.specialite
                                 if dd:
                                     if dd.specialite1_id: specs.append(dd.specialite1_id)
                                     if dd.specialite2_id: specs.append(dd.specialite2_id)
                             
                             for spec_id in specs:
-                                sc = SpecialiteCompte.objects.filter(specialite_id=spec_id).select_related('compte').first()
-                                if sc and sc.compte:
-                                    with schema_context('public'):
-                                        gc = None
-                                        if sc.compte.global_id:
-                                            gc = GlobalPaymentCategory.objects.filter(id=sc.compte.global_id).first()
-                                        if not gc:
-                                            gc = GlobalPaymentCategory.objects.filter(name=sc.compte.name).first()
+                                compte = spec_to_compte.get(spec_id)
+                                if compte:
+                                    gc = None
+                                    if compte.global_id:
+                                        gc = global_pay_cats_by_id.get(compte.global_id)
+                                    if not gc:
+                                        gc = global_pay_cats_by_name.get(compte.name)
                                     
                                     if gc:
-                                        # Store with entity context for filtering
-                                        from t_formations.models import Specialites
-                                        # This query must run in the tenant context
-                                        s_obj = Specialites.objects.filter(id=spec_id).select_related('formation__entite_legal').first()
-                                        ent_id = s_obj.formation.entite_legal_id if s_obj and s_obj.formation else None
+                                        ent_id = spec_to_entite.get(spec_id)
                                         student_categories.append({'cat': gc, 'ent_id': ent_id})
 
                 # B. Filtering by Payment Entity (Crucial for Double Diplomation)
@@ -222,50 +259,40 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
 
                 # D. Fallback 2: Mapping via PaymentType (Global Configuration)
                 if not target_g_cat and p.payment_type:
-                    with schema_context('public'):
-                        global_pt = GlobalPaymentType.objects.filter(name=p.payment_type.name).prefetch_related('payment_categories').first()
-                        if global_pt:
-                            # Still try to find one matching the entity if possible
-                            cats = list(global_pt.payment_categories.all())
-                            if cats:
-                                target_g_cat = cats[0] # Default to first, NO FRACTIONATION
+                    target_g_cat = global_pt_cats.get(p.payment_type.name)
                 
                 # 2. Add Realization to the correct Budget Poste
                 if target_g_cat:
                     net_montant = p.montant_paye
-                    
-                    with schema_context('public'):
-                        poste = PostesBudgetaire.objects.filter(payment_categories=target_g_cat).first()
-                        if poste and net_montant > 0:
-                            add_real(poste.id, net_montant, p.date_paiement, target_g_cat.id)
+                    poste = global_pay_cat_to_poste.get(target_g_cat.id)
+                    if poste and net_montant > 0:
+                        add_real(poste.id, net_montant, p.date_paiement, target_g_cat.id)
 
             # Autre Produits
             autres = AutreProduit.objects.filter(date_paiement__gte=t1_start, date_paiement__lte=t4_end, payment_category__isnull=False).prefetch_related('lettrages', 'payment_category')
             for ap in autres:
-                if ap.mode_paiement in ['che', 'vir'] and not ap.lettrages.exists(): continue
-                with schema_context('public'):
-                    g_cat = None
-                    if ap.payment_category.global_id:
-                        g_cat = GlobalPaymentCategory.objects.filter(id=ap.payment_category.global_id).first()
-                    if not g_cat:
-                        g_cat = GlobalPaymentCategory.objects.filter(name=ap.payment_category.name).first()
-                        
-                    if g_cat:
-                        poste = PostesBudgetaire.objects.filter(payment_categories=g_cat).first()
-                        if poste: 
-                            add_real(poste.id, ap.montant_paiement, ap.date_paiement, g_cat.id)
+                if ap.mode_paiement in ['che', 'vir'] and not ap.lettrages.all(): continue
+                g_cat = None
+                if ap.payment_category.global_id:
+                    g_cat = global_pay_cats_by_id.get(ap.payment_category.global_id)
+                if not g_cat:
+                    g_cat = global_pay_cats_by_name.get(ap.payment_category.name)
+                    
+                if g_cat:
+                    poste = global_pay_cat_to_poste.get(g_cat.id)
+                    if poste: 
+                        add_real(poste.id, ap.montant_paiement, ap.date_paiement, g_cat.id)
 
             # Depenses
             depenses = Depenses.objects.filter(date_paiement__gte=t1_start, date_paiement__lte=t4_end, lignes__category__isnull=False).distinct().prefetch_related('lignes__category')
             for d in depenses:
                 for ligne in d.lignes.all():
                     if not ligne.category: continue
-                    with schema_context('public'):
-                        g_cat = GlobalDepensesCategory.objects.filter(name=ligne.category.name).first()
-                        if g_cat:
-                            poste = PostesBudgetaire.objects.filter(depense_categories=g_cat).first()
-                            if poste: add_real(poste.id, ligne.montant_ttc, d.date_paiement, g_cat.id)
-
+                    g_cat = global_dep_cats_by_name.get(ligne.category.name)
+                    if g_cat:
+                        poste = global_dep_cat_to_poste.get(g_cat.id)
+                        if poste: 
+                            add_real(poste.id, ligne.montant_ttc, d.date_paiement, g_cat.id)
 
             # Remboursements en tant que Dépenses
             remboursements = Rembourssements.objects.filter(
@@ -276,11 +303,11 @@ def get_campaign_realization_data(campaign, target_instituts, as_of_date=None):
             ).select_related('category')
             
             for r in remboursements:
-                with schema_context('public'):
-                    g_cat = GlobalDepensesCategory.objects.filter(name=r.category.name).first()
-                    if g_cat:
-                        poste = PostesBudgetaire.objects.filter(depense_categories=g_cat).first()
-                        if poste: add_real(poste.id, r.allowed_amount, r.updated_at.date() if r.updated_at else None, g_cat.id)
+                g_cat = global_dep_cats_by_name.get(r.category.name)
+                if g_cat:
+                    poste = global_dep_cat_to_poste.get(g_cat.id)
+                    if poste: 
+                        add_real(poste.id, r.allowed_amount, r.updated_at.date() if r.updated_at else None, g_cat.id)
 
     # 6. Structure Final Data
     structured_postes = []
