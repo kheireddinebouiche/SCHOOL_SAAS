@@ -1305,3 +1305,5 @@ M i s e   a   j o u r   d e s   f i l t r e s   d a n s   r e v i e w _ b u d g 
 - UI: Dans crm/liste-des-prospects/, pour les entreprises, la d�signation de l'entreprise s'affiche d�sormais en premier (� la place du nom du contact), et le nom du contact principal s'affiche en dessous ou dans la deuxi�me colonne.
 
 - Optimisation : Réfractorisation de la fonction get_campaign_realization_data dans associe_app/budget_utils.py pour éliminer le problème des requêtes N+1 et le timeout de la vue du tableau de bord.
+
+- Optimisation : Amélioration drastique du temps de chargement de crm_user_logs via l'utilisation de .values() pour éviter les instanciations de modèles Django et ajout d'une limite d'affichage à 500 logs par tenant pour la vue UI (avec export complet).

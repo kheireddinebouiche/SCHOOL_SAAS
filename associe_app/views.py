@@ -2528,21 +2528,40 @@ def crm_user_logs(request):
     for tenant in tenants:
         try:
             with schema_context(tenant.schema_name):
-                logs = UserActionLog.objects.all().select_related('user').order_by('-created_at')
+                logs = UserActionLog.objects.all().order_by('-created_at')
                 
                 if filter_user:
                     logs = logs.filter(user_id=filter_user)
                 if filter_action:
                     logs = logs.filter(action_type=filter_action)
                     
+                # Optimization: Use .values() instead of full model instantiation for massive speedup.
+                # Also, limit logs for UI to avoid crashing the browser with huge tables, but fetch all for exports using iterator.
+                is_export = request.GET.get('export_csv') == '1' or request.GET.get('export_excel') == '1'
+                
+                logs_values = logs.values(
+                    'user__username',
+                    'action_type',
+                    'target_model',
+                    'details',
+                    'created_at'
+                )
+                
+                if is_export:
+                    logs_qs = logs_values.iterator(chunk_size=2000)
+                else:
+                    logs_qs = logs_values[:500]  # Safe limit for UI
+                
+                action_dict = dict(action_choices)
                 logs_data = []
-                for log in logs:
+                
+                for log in logs_qs:
                     logs_data.append({
-                        'user': log.user.username if log.user else 'Système',
-                        'action': log.get_action_type_display(),
-                        'target_model': log.target_model,
-                        'details': log.details,
-                        'date': log.created_at,
+                        'user': log['user__username'] if log['user__username'] else 'Système',
+                        'action': action_dict.get(log['action_type'], log['action_type']),
+                        'target_model': log['target_model'],
+                        'details': log['details'],
+                        'date': log['created_at'],
                     })
                 
                 if logs_data or not (filter_user or filter_action):
